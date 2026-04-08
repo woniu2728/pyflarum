@@ -357,7 +357,7 @@ function formatDate(dateString) {
 
 .btn-start-discussion {
   width: 100%;
-  padding: 10px 16px;
+  padding: 8px 13px;
   background: #E7672E;
   color: white;
   border: none;
@@ -370,6 +370,9 @@ function formatDate(dateString) {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  line-height: 20px;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .btn-start-discussion:hover {
@@ -393,19 +396,26 @@ function formatDate(dateString) {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
+  gap: 9px;
+  padding: 8px 15px;
   color: #555;
   text-decoration: none;
   transition: all 0.15s;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: normal;
   cursor: pointer;
   border: none;
   background: none;
   width: 100%;
   text-align: left;
   border-radius: 3px;
-  margin-bottom: 2px;
+  margin-bottom: 0;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  box-shadow: none;
 }
 
 .nav-item:hover {
