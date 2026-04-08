@@ -5,27 +5,21 @@
         <div class="logo">
           <router-link to="/">PyFlarum</router-link>
         </div>
-
-        <nav class="nav">
-          <router-link to="/" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>首页</span>
-          </router-link>
-          <router-link to="/discussions" class="nav-item">
-            <i class="fas fa-comments"></i>
-            <span>讨论</span>
-          </router-link>
-        </nav>
       </div>
 
       <div class="header-right">
-        <template v-if="authStore.isAuthenticated">
-          <!-- 发帖按钮 -->
-          <router-link to="/discussions/create" class="btn-compose">
-            <i class="fas fa-edit"></i>
-            <span>发起讨论</span>
-          </router-link>
+        <!-- 搜索框 -->
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            placeholder="搜索论坛"
+            v-model="searchQuery"
+            @keyup.enter="handleSearch"
+          />
+        </div>
 
+        <template v-if="authStore.isAuthenticated">
           <!-- 通知 -->
           <div class="header-icon" @click="toggleNotifications">
             <i class="fas fa-bell"></i>
@@ -93,6 +87,7 @@ const notificationStore = useNotificationStore()
 const router = useRouter()
 
 const showUserMenu = ref(false)
+const searchQuery = ref('')
 
 function toggleUserMenu() {
   showUserMenu.value = !showUserMenu.value
@@ -100,6 +95,12 @@ function toggleUserMenu() {
 
 function toggleNotifications() {
   router.push('/notifications')
+}
+
+function handleSearch() {
+  if (searchQuery.value.trim()) {
+    router.push({ path: '/', query: { search: searchQuery.value } })
+  }
 }
 
 function handleLogout() {
@@ -190,6 +191,42 @@ if (typeof window !== 'undefined') {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f5f8fa;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  width: 200px;
+}
+
+.search-box:focus-within {
+  background: white;
+  border-color: #4d698e;
+}
+
+.search-box i {
+  color: #999;
+  font-size: 14px;
+}
+
+.search-box input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13px;
+  color: #333;
+  width: 100%;
+}
+
+.search-box input::placeholder {
+  color: #999;
 }
 
 /* 发帖按钮 */

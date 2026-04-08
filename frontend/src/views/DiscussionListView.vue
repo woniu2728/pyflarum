@@ -1,183 +1,208 @@
 <template>
-  <div class="discussion-list-page">
+  <div class="index-page">
     <div class="container">
-      <div class="layout">
-        <!-- 侧边栏 -->
-        <aside class="sidebar">
-          <div class="sidebar-section">
-            <h3>导航</h3>
-            <nav class="nav-list">
-              <a href="#" class="nav-item active">全部讨论</a>
-              <a href="#" class="nav-item">关注的</a>
-              <a href="#" class="nav-item">我的讨论</a>
-            </nav>
-          </div>
-
-          <div class="sidebar-section">
-            <h3>标签</h3>
-            <div v-if="loadingTags" class="loading-small">加载中...</div>
-            <div v-else class="tag-list">
-              <a
-                v-for="tag in tags"
-                :key="tag.id"
-                href="#"
-                class="tag-item"
-                :style="{ backgroundColor: tag.color }"
-                @click.prevent="filterByTag(tag.id)"
-              >
-                {{ tag.name }}
+      <!-- 左侧导航栏 -->
+      <aside class="index-nav">
+        <nav class="index-nav-list">
+          <ul>
+            <li>
+              <router-link to="/" class="nav-item" :class="{ active: activeNav === 'all' }">
+                <i class="fas fa-comments"></i>
+                <span>全部讨论</span>
+              </router-link>
+            </li>
+            <li v-if="authStore.isAuthenticated">
+              <a href="#" class="nav-item" @click.prevent="activeNav = 'following'">
+                <i class="fas fa-star"></i>
+                <span>关注的</span>
               </a>
-            </div>
-          </div>
-        </aside>
+            </li>
+            <li v-if="authStore.isAuthenticated">
+              <router-link to="/profile" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span>我的讨论</span>
+              </router-link>
+            </li>
+          </ul>
+        </nav>
 
-        <!-- 主内容区 -->
-        <main class="main-content">
-          <div class="content-header">
-            <h1>讨论</h1>
-            <router-link to="/discussions/create" v-if="authStore.isAuthenticated">
-              <button class="primary">发起讨论</button>
-            </router-link>
-          </div>
+        <div class="index-nav-section">
+          <h4 class="index-nav-heading">标签</h4>
+          <nav class="index-nav-list">
+            <ul>
+              <li v-for="tag in tags" :key="tag.id">
+                <a
+                  href="#"
+                  class="nav-item tag-item"
+                  @click.prevent="filterByTag(tag.id)"
+                  :class="{ active: selectedTag === tag.id }"
+                >
+                  <span class="tag-bullet" :style="{ backgroundColor: tag.color }"></span>
+                  <span>{{ tag.name }}</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </aside>
 
-          <div class="filters">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="搜索讨论..."
-              class="search-input"
-              @input="handleSearch"
-            />
-            <select v-model="sortBy" @change="loadDiscussions" class="sort-select">
-              <option value="-created_at">最新</option>
-              <option value="-last_posted_at">最近回复</option>
-              <option value="-comment_count">最多回复</option>
-            </select>
-          </div>
+      <!-- 主内容区 -->
+      <main class="index-content">
+        <!-- 顶部工具栏 -->
+        <header class="index-toolbar">
+          <ul class="index-toolbar-view">
+            <li>
+              <button class="btn-link" :class="{ active: sortBy === '-created_at' }" @click="changeSortBy('-created_at')">
+                最新
+              </button>
+            </li>
+            <li>
+              <button class="btn-link" :class="{ active: sortBy === '-last_posted_at' }" @click="changeSortBy('-last_posted_at')">
+                最近回复
+              </button>
+            </li>
+            <li>
+              <button class="btn-link" :class="{ active: sortBy === '-comment_count' }" @click="changeSortBy('-comment_count')">
+                热门
+              </button>
+            </li>
+          </ul>
 
-          <div v-if="loading" class="loading">加载中...</div>
-          <div v-else-if="discussions.length === 0" class="empty">
-            <p>暂无讨论</p>
-            <router-link to="/discussions/create" v-if="authStore.isAuthenticated">
-              <button class="primary">发起第一个讨论</button>
-            </router-link>
-          </div>
-          <div v-else class="discussions">
-            <div
-              v-for="discussion in discussions"
-              :key="discussion.id"
-              class="discussion-item"
-              :class="{
-                'is-pinned': discussion.is_pinned,
-                'is-locked': discussion.is_locked,
-                'unread': !discussion.is_read
-              }"
-            >
-              <!-- 用户头像 -->
-              <div class="discussion-avatar">
-                <div class="avatar">
-                  {{ discussion.user.username.charAt(0).toUpperCase() }}
-                </div>
-              </div>
+          <ul class="index-toolbar-action">
+            <li v-if="authStore.isAuthenticated">
+              <button class="btn btn-primary" @click="$router.push('/discussions/create')">
+                <i class="fas fa-edit"></i>
+                发起讨论
+              </button>
+            </li>
+            <li v-else>
+              <button class="btn btn-primary" @click="$router.push('/login')">
+                <i class="fas fa-edit"></i>
+                发起讨论
+              </button>
+            </li>
+          </ul>
+        </header>
 
-              <!-- 主要内容 -->
-              <div class="discussion-main">
-                <div class="discussion-header">
-                  <!-- 标签 -->
-                  <div class="discussion-tags" v-if="discussion.tags && discussion.tags.length">
-                    <span
-                      v-for="tag in discussion.tags"
-                      :key="tag.id"
-                      class="tag"
-                      :style="{ backgroundColor: tag.color }"
-                    >
-                      {{ tag.name }}
-                    </span>
-                  </div>
+        <!-- 讨论列表 -->
+        <div v-if="loading" class="loading-container">
+          <div class="spinner"></div>
+        </div>
 
-                  <!-- 徽章 -->
-                  <div class="discussion-badges">
-                    <span v-if="discussion.is_pinned" class="badge badge-pinned">
-                      <i class="fas fa-thumbtack"></i>
-                    </span>
-                    <span v-if="discussion.is_locked" class="badge badge-locked">
-                      <i class="fas fa-lock"></i>
-                    </span>
-                  </div>
-                </div>
+        <div v-else-if="discussions.length === 0" class="empty-state">
+          <p>暂无讨论</p>
+        </div>
 
-                <!-- 标题 -->
-                <router-link :to="`/discussions/${discussion.id}`" class="discussion-title">
-                  {{ discussion.title }}
-                </router-link>
-
-                <!-- 元信息 -->
-                <div class="discussion-info">
-                  <span class="author">
-                    <strong>{{ discussion.user.username }}</strong>
-                  </span>
-                  <span class="separator">•</span>
-                  <span class="time">{{ formatDate(discussion.created_at) }}</span>
-                  <span class="separator">•</span>
-                  <span class="last-post" v-if="discussion.last_posted_at">
-                    最后回复 {{ formatDate(discussion.last_posted_at) }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- 统计信息 -->
-              <div class="discussion-stats">
-                <div class="stat-item">
-                  <i class="fas fa-comment"></i>
-                  <span>{{ discussion.comment_count }}</span>
-                </div>
+        <div v-else class="discussion-list">
+          <div
+            v-for="discussion in discussions"
+            :key="discussion.id"
+            class="discussion-list-item"
+            :class="{ 'is-pinned': discussion.is_pinned }"
+          >
+            <!-- 用户头像 -->
+            <div class="discussion-avatar">
+              <div class="avatar" :style="{ backgroundColor: getUserColor(discussion.user) }">
+                {{ discussion.user.username.charAt(0).toUpperCase() }}
               </div>
             </div>
-          </div>
 
-          <!-- 分页 -->
-          <div v-if="totalPages > 1" class="pagination">
-            <button
-              @click="changePage(currentPage - 1)"
-              :disabled="currentPage === 1"
-              class="secondary"
-            >
-              上一页
-            </button>
-            <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-            <button
-              @click="changePage(currentPage + 1)"
-              :disabled="currentPage === totalPages"
-              class="secondary"
-            >
-              下一页
-            </button>
+            <!-- 讨论主体 -->
+            <div class="discussion-main">
+              <!-- 徽章 -->
+              <div class="discussion-badges">
+                <span v-if="discussion.is_pinned" class="badge badge-pinned">
+                  <i class="fas fa-thumbtack"></i>
+                </span>
+                <span v-if="discussion.is_locked" class="badge badge-locked">
+                  <i class="fas fa-lock"></i>
+                </span>
+              </div>
+
+              <!-- 标题 -->
+              <router-link :to="`/d/${discussion.id}`" class="discussion-title">
+                {{ discussion.title }}
+              </router-link>
+
+              <!-- 标签 -->
+              <div class="discussion-tags" v-if="discussion.tags && discussion.tags.length">
+                <span
+                  v-for="tag in discussion.tags"
+                  :key="tag.id"
+                  class="tag-label"
+                  :style="{ backgroundColor: tag.color }"
+                >
+                  {{ tag.name }}
+                </span>
+              </div>
+
+              <!-- 元信息 -->
+              <div class="discussion-info">
+                <span class="discussion-author">
+                  {{ discussion.user.username }}
+                </span>
+                <span class="discussion-time">发起于 {{ formatDate(discussion.created_at) }}</span>
+                <span v-if="discussion.last_posted_at" class="discussion-last-post">
+                  <span class="bullet">•</span>
+                  最后回复 {{ formatDate(discussion.last_posted_at) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="discussion-stats">
+              <span class="discussion-replies">
+                <i class="fas fa-comment"></i>
+                {{ discussion.comment_count }}
+              </span>
+            </div>
           </div>
-        </main>
-      </div>
+        </div>
+
+        <!-- 加载更多 -->
+        <div v-if="hasMore" class="load-more">
+          <button class="btn btn-default" @click="loadMore" :disabled="loadingMore">
+            {{ loadingMore ? '加载中...' : '加载更多' }}
+          </button>
+        </div>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRoute } from 'vue-router'
 import api from '@/api'
 
 const authStore = useAuthStore()
+const route = useRoute()
 
 const discussions = ref([])
 const tags = ref([])
 const loading = ref(true)
-const loadingTags = ref(true)
+const loadingMore = ref(false)
 const searchQuery = ref('')
 const sortBy = ref('-created_at')
 const currentPage = ref(1)
-const totalPages = ref(1)
+const hasMore = ref(false)
 const selectedTag = ref(null)
+const activeNav = ref('all')
 
 onMounted(async () => {
+  // 从 URL 获取搜索参数
+  if (route.query.search) {
+    searchQuery.value = route.query.search
+  }
   await Promise.all([loadDiscussions(), loadTags()])
+})
+
+// 监听路由变化
+watch(() => route.query.search, (newSearch) => {
+  searchQuery.value = newSearch || ''
+  currentPage.value = 1
+  loadDiscussions()
 })
 
 async function loadDiscussions() {
@@ -196,9 +221,7 @@ async function loadDiscussions() {
 
     const data = await api.get('/discussions/', { params })
     discussions.value = data.data || data.results || data
-    if (data.total) {
-      totalPages.value = Math.ceil(data.total / 20)
-    }
+    hasMore.value = data.page * data.limit < data.total
   } catch (error) {
     console.error('加载讨论失败:', error)
   } finally {
@@ -207,36 +230,52 @@ async function loadDiscussions() {
 }
 
 async function loadTags() {
-  loadingTags.value = true
   try {
-    const data = await api.get('/tags/')
+    const data = await api.get('/tags')
     tags.value = data.results || data
   } catch (error) {
     console.error('加载标签失败:', error)
-  } finally {
-    loadingTags.value = false
   }
 }
 
 function filterByTag(tagId) {
-  selectedTag.value = tagId
+  selectedTag.value = selectedTag.value === tagId ? null : tagId
   currentPage.value = 1
   loadDiscussions()
 }
 
-let searchTimeout
-function handleSearch() {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1
-    loadDiscussions()
-  }, 500)
+function changeSortBy(sort) {
+  sortBy.value = sort
+  currentPage.value = 1
+  loadDiscussions()
 }
 
-function changePage(page) {
-  currentPage.value = page
-  loadDiscussions()
-  window.scrollTo(0, 0)
+async function loadMore() {
+  loadingMore.value = true
+  currentPage.value++
+  try {
+    const params = {
+      page: currentPage.value,
+      ordering: sortBy.value
+    }
+    if (selectedTag.value) {
+      params.tag = selectedTag.value
+    }
+
+    const data = await api.get('/discussions/', { params })
+    discussions.value.push(...(data.data || data.results || data))
+    hasMore.value = data.page * data.limit < data.total
+  } catch (error) {
+    console.error('加载更多失败:', error)
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+function getUserColor(user) {
+  const colors = ['#4D698E', '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6']
+  const index = user.id % colors.length
+  return colors[index]
 }
 
 function formatDate(dateString) {
@@ -256,236 +295,246 @@ function formatDate(dateString) {
 </script>
 
 <style scoped>
-.discussion-list-page {
+.index-page {
   background: #f5f8fa;
-  min-height: calc(100vh - 200px);
+  min-height: calc(100vh - 56px);
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 20px;
-}
-
-.sidebar {
-  background: white;
-  border-radius: 3px;
-  border: 1px solid #e3e8ed;
-  height: fit-content;
-  position: sticky;
-  top: 20px;
-}
-
-.sidebar-section {
-  padding: 15px;
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.sidebar-section:last-child {
-  border-bottom: none;
-}
-
-.sidebar-section h3 {
-  font-size: 12px;
-  color: #999;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.nav-list {
+  padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 0;
+}
+
+/* 左侧导航 */
+.index-nav {
+  width: 240px;
+  background: white;
+  border-right: 1px solid #e3e8ed;
+  min-height: calc(100vh - 56px);
+  position: sticky;
+  top: 56px;
+}
+
+.index-nav-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .nav-item {
-  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
   color: #555;
-  border-radius: 3px;
-  transition: all 0.2s;
+  text-decoration: none;
+  transition: all 0.15s;
   font-size: 14px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
 }
 
 .nav-item:hover {
   background: #f5f8fa;
   color: #333;
-  text-decoration: none;
 }
 
 .nav-item.active {
-  background: #4d698e;
+  background: #4D698E;
   color: white;
 }
 
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.nav-item i {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.index-nav-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e3e8ed;
+}
+
+.index-nav-heading {
+  padding: 8px 20px;
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin: 0;
 }
 
 .tag-item {
-  padding: 4px 10px;
-  border-radius: 3px;
-  color: white;
-  font-size: 12px;
-  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.tag-item:hover {
-  opacity: 0.8;
-  text-decoration: none;
+.tag-bullet {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.main-content {
+/* 主内容区 */
+.index-content {
+  flex: 1;
   background: white;
-  border-radius: 3px;
-  border: 1px solid #e3e8ed;
 }
 
-.content-header {
+.index-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.content-header h1 {
-  font-size: 20px;
-  color: #333;
-  font-weight: 400;
-}
-
-.filters {
-  display: flex;
-  gap: 10px;
   padding: 15px 20px;
   border-bottom: 1px solid #e3e8ed;
   background: #fafbfc;
 }
 
-.search-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 13px;
+.index-toolbar-view {
+  display: flex;
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.search-input:focus {
-  outline: none;
-  border-color: #4d698e;
+.index-toolbar-action {
+  display: flex;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.sort-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 13px;
-  background: white;
+.btn-link {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
   cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 3px;
+  transition: all 0.15s;
 }
 
-.discussions {
+.btn-link:hover {
+  background: #e3e8ed;
+  color: #333;
+}
+
+.btn-link.active {
+  background: #4D698E;
+  color: white;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: #E7672E;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #D85B1E;
+}
+
+.btn-default {
+  background: #e3e8ed;
+  color: #555;
+}
+
+.btn-default:hover {
+  background: #d3d8dd;
+}
+
+/* 讨论列表 */
+.discussion-list {
   display: flex;
   flex-direction: column;
 }
 
-.discussion-item {
+.discussion-list-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 16px 20px;
+  gap: 15px;
+  padding: 18px 20px;
   border-bottom: 1px solid #e3e8ed;
-  transition: background 0.2s;
-  position: relative;
+  transition: background 0.15s;
+  cursor: pointer;
 }
 
-.discussion-item:hover {
+.discussion-list-item:hover {
   background: #fafbfc;
 }
 
-.discussion-item:last-child {
-  border-bottom: none;
-}
-
-.discussion-item.is-pinned {
+.discussion-list-item.is-pinned {
   background: #fffbf0;
 }
 
-.discussion-item.is-pinned:hover {
+.discussion-list-item.is-pinned:hover {
   background: #fff8e1;
 }
 
-/* 头像 */
 .discussion-avatar {
   flex-shrink: 0;
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: #4d698e;
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  color: white;
+  font-size: 16px;
   font-weight: 600;
 }
 
-/* 主要内容 */
 .discussion-main {
   flex: 1;
   min-width: 0;
 }
 
-.discussion-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.discussion-tags {
-  display: flex;
-  gap: 6px;
-}
-
-.tag {
-  padding: 2px 8px;
-  border-radius: 3px;
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-}
-
 .discussion-badges {
   display: flex;
-  gap: 5px;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .badge-pinned {
-  background: #ffc107;
+  background: #FFC107;
   color: #856404;
 }
 
@@ -495,111 +544,107 @@ function formatDate(dateString) {
 }
 
 .discussion-title {
-  font-size: 15px;
-  font-weight: normal;
-  color: #555;
-  display: block;
-  margin-bottom: 4px;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.discussion-item.unread .discussion-title {
+  font-size: 16px;
   font-weight: 600;
   color: #333;
-}
-
-.discussion-title:hover {
-  color: #4d698e;
+  display: block;
+  margin-bottom: 6px;
+  line-height: 1.4;
   text-decoration: none;
 }
 
+.discussion-title:hover {
+  color: #4D698E;
+}
+
+.discussion-tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.tag-label {
+  padding: 3px 10px;
+  border-radius: 3px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .discussion-info {
+  font-size: 13px;
+  color: #999;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #999;
-  line-height: 1.5;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.discussion-info .author {
+.discussion-author {
   color: #666;
+  font-weight: 500;
 }
 
-.discussion-info .author strong {
-  font-weight: 600;
-}
-
-.separator {
+.bullet {
   color: #ddd;
 }
 
-/* 统计信息 */
 .discussion-stats {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 15px;
   color: #999;
-  font-size: 12px;
+  font-size: 14px;
+  padding-top: 8px;
 }
 
-.stat-item {
+.discussion-replies {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
-.stat-item i {
-  font-size: 14px;
-}
-
-.loading, .empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
-}
-
-.loading-small {
-  text-align: center;
-  padding: 20px;
-  color: #999;
-  font-size: 12px;
-}
-
-.pagination {
+.loading-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 15px;
+  padding: 60px 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e3e8ed;
+  border-top-color: #4D698E;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+  font-size: 15px;
+}
+
+.load-more {
+  text-align: center;
   padding: 20px;
   border-top: 1px solid #e3e8ed;
 }
 
-.page-info {
-  color: #999;
-  font-size: 13px;
-}
-
 @media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    position: static;
-  }
-
-  .discussion-item {
+  .container {
     flex-direction: column;
-    gap: 10px;
   }
 
-  .discussion-stats {
-    align-self: flex-start;
+  .index-nav {
+    width: 100%;
+    position: static;
+    min-height: auto;
   }
 }
 </style>

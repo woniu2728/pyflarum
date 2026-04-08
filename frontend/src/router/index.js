@@ -7,7 +7,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('@/views/HomeView.vue')
+      component: () => import('@/views/DiscussionListView.vue')
     },
     {
       path: '/login',
@@ -21,13 +21,16 @@ const router = createRouter({
     },
     {
       path: '/discussions',
-      name: 'discussions',
-      component: () => import('@/views/DiscussionListView.vue')
+      redirect: '/'
+    },
+    {
+      path: '/d/:id',
+      name: 'discussion-detail',
+      component: () => import('@/views/DiscussionDetailView.vue')
     },
     {
       path: '/discussions/:id',
-      name: 'discussion-detail',
-      component: () => import('@/views/DiscussionDetailView.vue')
+      redirect: to => `/d/${to.params.id}`
     },
     {
       path: '/discussions/create',
