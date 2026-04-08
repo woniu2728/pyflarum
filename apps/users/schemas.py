@@ -1,0 +1,93 @@
+"""
+Pydantic schemas for User API
+"""
+from ninja import Schema
+from datetime import datetime
+from typing import Optional, List
+
+
+class UserRegisterSchema(Schema):
+    """用户注册Schema"""
+    username: str
+    email: str
+    password: str
+
+
+class UserLoginSchema(Schema):
+    """用户登录Schema"""
+    identification: str  # 用户名或邮箱
+    password: str
+
+
+class TokenSchema(Schema):
+    """Token响应Schema"""
+    access: str
+    refresh: str
+
+
+class UserOutSchema(Schema):
+    """用户输出Schema"""
+    id: int
+    username: str
+    display_name: str
+    email: str
+    avatar_url: Optional[str] = None
+    bio: str = ""
+    is_email_confirmed: bool
+    joined_at: datetime
+    last_seen_at: datetime
+    discussion_count: int
+    comment_count: int
+    is_suspended: bool
+    is_staff: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class UserUpdateSchema(Schema):
+    """用户更新Schema"""
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    email: Optional[str] = None
+
+
+class PasswordChangeSchema(Schema):
+    """修改密码Schema"""
+    old_password: str
+    new_password: str
+
+
+class PasswordResetRequestSchema(Schema):
+    """请求重置密码Schema"""
+    email: str
+
+
+class PasswordResetSchema(Schema):
+    """重置密码Schema"""
+    token: str
+    password: str
+
+
+class EmailVerifySchema(Schema):
+    """邮箱验证Schema"""
+    token: str
+
+
+class GroupOutSchema(Schema):
+    """用户组输出Schema"""
+    id: int
+    name: str
+    name_singular: str
+    name_plural: str
+    color: str
+    icon: str
+    is_hidden: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UserDetailSchema(UserOutSchema):
+    """用户详情Schema（包含用户组）"""
+    groups: List[GroupOutSchema] = []
