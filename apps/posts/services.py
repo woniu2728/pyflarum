@@ -1,6 +1,7 @@
 """
 帖子系统业务逻辑层
 """
+from math import ceil
 from typing import Optional, List, Tuple
 from django.db import transaction
 from django.db.models import Q, F, Count, Exists, OuterRef
@@ -150,6 +151,27 @@ class PostService:
                 post.is_liked = False
 
         return posts, total
+
+    @staticmethod
+    def get_page_for_near_post(
+        discussion_id: int,
+        near: int,
+        limit: int = 20,
+        user: Optional[User] = None,
+    ) -> int:
+        queryset = Post.objects.filter(
+            discussion_id=discussion_id,
+            number__lte=near,
+        )
+
+        if not user or not user.is_staff:
+            queryset = queryset.filter(hidden_at__isnull=True)
+
+        position = queryset.count()
+        if position <= 0:
+            return 1
+
+        return max(1, ceil(position / limit))
 
     @staticmethod
     def get_post_by_id(post_id: int, user: Optional[User] = None) -> Optional[Post]:

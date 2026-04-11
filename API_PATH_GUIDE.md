@@ -57,7 +57,7 @@ POST   /api/discussions/read-all    # 全部标记为已读
 
 ### 帖子相关
 ```
-GET    /api/discussions/{id}/posts  # 获取帖子列表
+GET    /api/discussions/{id}/posts  # 获取帖子列表，可传 near 定位楼层所在页
 POST   /api/discussions/{id}/posts  # 创建帖子（回复）
 GET    /api/posts/{id}              # 获取帖子详情
 PATCH  /api/posts/{id}              # 更新帖子

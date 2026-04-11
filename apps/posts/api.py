@@ -146,6 +146,7 @@ def list_posts(
     discussion_id: int,
     page: int = 1,
     limit: int = 20,
+    near: Optional[int] = None,
 ):
     """
     获取帖子列表
@@ -155,6 +156,14 @@ def list_posts(
     - limit: 每页数量
     """
     user = get_optional_user(request)
+    if near:
+        page = PostService.get_page_for_near_post(
+            discussion_id=discussion_id,
+            near=near,
+            limit=limit,
+            user=user,
+        )
+
     posts, total = PostService.get_post_list(
         discussion_id=discussion_id,
         page=page,

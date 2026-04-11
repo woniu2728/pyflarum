@@ -27,13 +27,20 @@
             </div>
           </div>
 
+          <div v-if="hasPrevious" class="load-more load-previous">
+            <button @click="loadPreviousPosts" class="secondary" :disabled="loadingPrevious">
+              {{ loadingPrevious ? '加载中...' : '加载前面的回复' }}
+            </button>
+          </div>
+
           <!-- 帖子列表 -->
           <div class="posts">
             <div
               v-for="post in posts"
               :key="post.id"
+              :id="`post-${post.number}`"
               class="post-item"
-              :class="{ 'is-hidden': post.is_hidden }"
+              :class="{ 'is-hidden': post.is_hidden, 'is-target': highlightedPostNumber === post.number }"
             >
               <div class="post-avatar">
                 <div v-if="!post.user.avatar_url" class="avatar-placeholder">
@@ -153,6 +160,29 @@
             </div>
           </div>
 
+          <div class="sidebar-section">
+            <h3>帖子导航</h3>
+            <div class="scrubber">
+              <div class="scrubber-status">
+                <span>已加载 {{ loadedRangeText }}</span>
+                <span>共 {{ totalPosts || discussion.comment_count }} 楼</span>
+              </div>
+              <input
+                v-model.number="jumpPostNumber"
+                type="range"
+                min="1"
+                :max="discussion.last_post_number || discussion.comment_count || 1"
+                class="scrubber-range"
+                @change="jumpToPost(jumpPostNumber)"
+              />
+              <div class="scrubber-actions">
+                <button @click="jumpToPost(1)" class="secondary">首帖</button>
+                <button @click="jumpToPost(jumpPostNumber)" class="secondary">跳转</button>
+                <button @click="jumpToPost(discussion.last_post_number || discussion.comment_count || 1)" class="secondary">最新</button>
+              </div>
+            </div>
+          </div>
+
           <div class="sidebar-section" v-if="canManageDiscussion">
             <h3>管理操作</h3>
             <button @click="togglePin" class="secondary full-width">
@@ -175,7 +205,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
@@ -196,33 +226,51 @@ const discussion = ref(null)
 const posts = ref([])
 const loading = ref(true)
 const loadingMore = ref(false)
-const hasMore = ref(false)
-const currentPage = ref(1)
+const loadingPrevious = ref(false)
+const firstLoadedPage = ref(1)
+const lastLoadedPage = ref(1)
+const totalPosts = ref(0)
+const pageLimit = 20
 
 const replyContent = ref('')
 const submitting = ref(false)
 const editingPost = ref(null)
 const replyingTo = ref(null)
 const togglingSubscription = ref(false)
+const highlightedPostNumber = ref(null)
+const jumpPostNumber = ref(1)
 
 const canManageDiscussion = computed(() => {
   return authStore.user?.is_staff || authStore.user?.id === discussion.value?.user.id
+})
+
+const hasPrevious = computed(() => firstLoadedPage.value > 1)
+const hasMore = computed(() => totalPosts.value > 0 && lastLoadedPage.value * pageLimit < totalPosts.value)
+const targetNearPost = computed(() => {
+  const value = Number(route.query.near)
+  return Number.isFinite(value) && value > 0 ? value : null
+})
+const loadedRangeText = computed(() => {
+  if (!posts.value.length) return '暂无'
+  return `#${posts.value[0].number} - #${posts.value[posts.value.length - 1].number}`
 })
 
 onMounted(async () => {
   await refreshDiscussion()
 })
 
-watch(() => route.params.id, async () => {
-  currentPage.value = 1
-  posts.value = []
-  loading.value = true
-  await refreshDiscussion()
-})
+watch(
+  () => [route.params.id, route.query.near],
+  async () => {
+    resetPostStream()
+    loading.value = true
+    await refreshDiscussion()
+  }
+)
 
 async function refreshDiscussion() {
   await loadDiscussion()
-  await loadPosts()
+  await loadInitialPosts()
 }
 
 async function loadDiscussion() {
@@ -236,28 +284,121 @@ async function loadDiscussion() {
   }
 }
 
-async function loadPosts() {
+async function loadInitialPosts() {
   try {
-    const data = await api.get(`/discussions/${route.params.id}/posts`, {
-      params: { page: currentPage.value }
-    })
-    const items = unwrapList(data).map(normalizePost)
-    if (currentPage.value === 1) {
-      posts.value = items
-    } else {
-      posts.value.push(...items)
+    const data = await fetchPosts(1, targetNearPost.value)
+    replacePosts(data)
+
+    if (targetNearPost.value) {
+      await scrollToPost(targetNearPost.value)
     }
-    hasMore.value = Boolean(data.total && data.page && data.limit && data.page * data.limit < data.total)
   } catch (error) {
     console.error('加载帖子失败:', error)
   }
 }
 
+async function fetchPosts(page, near = null) {
+  const params = {
+    page,
+    limit: pageLimit
+  }
+
+  if (near) {
+    params.near = near
+  }
+
+  return api.get(`/discussions/${route.params.id}/posts`, { params })
+}
+
+function replacePosts(data) {
+  const items = unwrapList(data).map(normalizePost)
+  posts.value = items
+  firstLoadedPage.value = data.page || 1
+  lastLoadedPage.value = data.page || 1
+  totalPosts.value = data.total || items.length
+  syncJumpNumber()
+}
+
+function appendPosts(data) {
+  const items = unwrapList(data).map(normalizePost)
+  posts.value.push(...items)
+  lastLoadedPage.value = data.page || lastLoadedPage.value + 1
+  totalPosts.value = data.total || totalPosts.value
+  syncJumpNumber()
+}
+
+function prependPosts(data) {
+  const items = unwrapList(data).map(normalizePost)
+  posts.value.unshift(...items)
+  firstLoadedPage.value = data.page || Math.max(1, firstLoadedPage.value - 1)
+  totalPosts.value = data.total || totalPosts.value
+  syncJumpNumber()
+}
+
 async function loadMorePosts() {
   loadingMore.value = true
-  currentPage.value++
-  await loadPosts()
-  loadingMore.value = false
+  try {
+    const data = await fetchPosts(lastLoadedPage.value + 1)
+    appendPosts(data)
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+async function loadPreviousPosts() {
+  if (!hasPrevious.value) return
+
+  loadingPrevious.value = true
+  try {
+    const data = await fetchPosts(firstLoadedPage.value - 1)
+    prependPosts(data)
+  } finally {
+    loadingPrevious.value = false
+  }
+}
+
+async function jumpToPost(number) {
+  const targetNumber = Number(number)
+  if (!targetNumber) return
+
+  router.replace({
+    path: route.path,
+    query: {
+      ...route.query,
+      near: targetNumber
+    }
+  })
+}
+
+async function scrollToPost(number) {
+  await nextTick()
+  const target = document.getElementById(`post-${number}`)
+  if (!target) return
+
+  highlightedPostNumber.value = number
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  setTimeout(() => {
+    if (highlightedPostNumber.value === number) {
+      highlightedPostNumber.value = null
+    }
+  }, 2400)
+}
+
+function resetPostStream() {
+  posts.value = []
+  firstLoadedPage.value = 1
+  lastLoadedPage.value = 1
+  totalPosts.value = 0
+  highlightedPostNumber.value = null
+  jumpPostNumber.value = Number(route.query.near) || 1
+}
+
+function syncJumpNumber() {
+  if (targetNearPost.value) {
+    jumpPostNumber.value = targetNearPost.value
+  } else if (posts.value.length) {
+    jumpPostNumber.value = posts.value[posts.value.length - 1].number
+  }
 }
 
 async function toggleLike(post) {
@@ -318,8 +459,17 @@ async function submitReply() {
       const data = await api.post(`/discussions/${route.params.id}/posts`, {
         content: replyContent.value
       })
-      posts.value.push(normalizePost(data))
+      const newPost = normalizePost(data)
+      const shouldJumpToNewPost = hasMore.value
       discussion.value.comment_count++
+      totalPosts.value++
+      lastLoadedPage.value = Math.max(lastLoadedPage.value, Math.ceil(totalPosts.value / pageLimit))
+      if (shouldJumpToNewPost) {
+        await jumpToPost(newPost.number)
+      } else {
+        posts.value.push(newPost)
+        await scrollToPost(newPost.number)
+      }
       if (authStore.user?.preferences?.follow_after_reply) {
         discussion.value.is_subscribed = true
       }
@@ -343,6 +493,7 @@ async function deletePost(post) {
     await api.delete(`/posts/${post.id}`)
     posts.value = posts.value.filter(p => p.id !== post.id)
     discussion.value.comment_count--
+    totalPosts.value = Math.max(0, totalPosts.value - 1)
   } catch (error) {
     console.error('删除失败:', error)
     alert('删除失败，请稍后重试')
@@ -524,6 +675,11 @@ function formatDate(dateString) {
   opacity: 0.5;
 }
 
+.post-item.is-target {
+  background: #fff8e1;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.38);
+}
+
 .post-avatar img {
   width: 48px;
   height: 48px;
@@ -642,6 +798,10 @@ function formatDate(dateString) {
   margin-bottom: 30px;
 }
 
+.load-previous {
+  margin-top: -10px;
+}
+
 .reply-box {
   padding: 25px;
   background: #fafafa;
@@ -745,6 +905,37 @@ function formatDate(dateString) {
 
 .full-width {
   width: 100%;
+}
+
+.scrubber {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scrubber-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #66717c;
+  font-size: 13px;
+}
+
+.scrubber-range {
+  width: 100%;
+  accent-color: #4d698e;
+}
+
+.scrubber-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.scrubber-actions button {
+  margin-bottom: 0;
+  padding: 8px;
+  font-size: 12px;
 }
 
 .loading, .error {
