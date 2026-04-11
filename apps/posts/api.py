@@ -3,10 +3,10 @@
 """
 from typing import Optional
 from ninja import Router
-from django.shortcuts import get_object_or_404
+from django.db.models import Count
 from django.core.exceptions import PermissionDenied
 
-from apps.posts.models import Post
+from apps.posts.models import Post, PostLike
 from apps.posts.schemas import (
     PostCreateSchema,
     PostUpdateSchema,
@@ -17,6 +17,102 @@ from apps.posts.schemas import (
 from apps.posts.services import PostService
 
 router = Router()
+
+
+def _serialize_post(post, user=None):
+    return {
+        "id": post.id,
+        "discussion_id": post.discussion_id,
+        "number": post.number,
+        "user": {
+            "id": post.user.id,
+            "username": post.user.username,
+            "display_name": post.user.display_name,
+            "avatar_url": post.user.avatar_url,
+        } if post.user else None,
+        "type": post.type,
+        "content": post.content,
+        "content_html": post.content_html,
+        "created_at": post.created_at,
+        "updated_at": post.updated_at,
+        "edited_at": post.edited_at,
+        "edited_user": {
+            "id": post.edited_user.id,
+            "username": post.edited_user.username,
+            "display_name": post.edited_user.display_name,
+            "avatar_url": post.edited_user.avatar_url,
+        } if post.edited_user else None,
+        "discussion": {
+            "id": post.discussion.id,
+            "title": post.discussion.title,
+            "slug": post.discussion.slug,
+        } if getattr(post, "discussion", None) else None,
+        "is_hidden": post.is_hidden,
+        "like_count": getattr(post, "like_count", 0),
+        "is_liked": getattr(post, "is_liked", False),
+        "can_edit": PostService.can_edit_post(post, user) if user else False,
+        "can_delete": PostService.can_delete_post(post, user) if user else False,
+        "can_like": PostService.can_like_post(post, user) if user else False,
+    }
+
+
+@router.get("/posts", response=PostListSchema, tags=["Posts"])
+def list_all_posts(
+    request,
+    author: Optional[str] = None,
+    user_id: Optional[int] = None,
+    page: int = 1,
+    limit: int = 20,
+):
+    """
+    获取全站帖子列表
+
+    参数:
+    - author: 作者用户名
+    - user_id: 作者ID
+    - page: 页码
+    - limit: 每页数量
+    """
+    user = request.user if request.user.is_authenticated else None
+
+    queryset = Post.objects.select_related(
+        "discussion",
+        "user",
+        "edited_user",
+    ).annotate(
+        like_count=Count("likes")
+    ).filter(
+        type="comment",
+        hidden_at__isnull=True,
+    )
+
+    if author:
+        queryset = queryset.filter(user__username=author)
+
+    if user_id:
+        queryset = queryset.filter(user_id=user_id)
+
+    total = queryset.count()
+    start = (page - 1) * limit
+    end = start + limit
+    posts = list(queryset.order_by("-created_at")[start:end])
+
+    if user:
+        liked_post_ids = set(
+            PostLike.objects.filter(
+                post_id__in=[post.id for post in posts],
+                user=user,
+            ).values_list("post_id", flat=True)
+        )
+        for post in posts:
+            post.is_liked = post.id in liked_post_ids
+
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "data": [_serialize_post(post, user) for post in posts],
+    }
 
 
 @router.post("/discussions/{discussion_id}/posts", response=PostOutSchema, tags=["Posts"])
@@ -39,35 +135,9 @@ def create_post(request, discussion_id: int, payload: PostCreateSchema):
             content=payload.content,
             user=request.user,
         )
-
-        # 构建响应
-        user = request.user
-        response_data = {
-            "id": post.id,
-            "discussion_id": post.discussion_id,
-            "number": post.number,
-            "user": {
-                "id": post.user.id,
-                "username": post.user.username,
-                "display_name": post.user.display_name,
-                "avatar_url": post.user.avatar_url,
-            } if post.user else None,
-            "type": post.type,
-            "content": post.content,
-            "content_html": post.content_html,
-            "created_at": post.created_at,
-            "updated_at": post.updated_at,
-            "edited_at": post.edited_at,
-            "edited_user": None,
-            "is_hidden": post.is_hidden,
-            "like_count": 0,
-            "is_liked": False,
-            "can_edit": PostService.can_edit_post(post, user),
-            "can_delete": PostService.can_delete_post(post, user),
-            "can_like": PostService.can_like_post(post, user),
-        }
-
-        return response_data
+        post.like_count = 0
+        post.is_liked = False
+        return _serialize_post(post, request.user)
     except ValueError as e:
         return router.create_response(
             request,
@@ -98,45 +168,11 @@ def list_posts(
         user=user,
     )
 
-    # 构建响应
-    data = []
-    for post in posts:
-        post_data = {
-            "id": post.id,
-            "discussion_id": post.discussion_id,
-            "number": post.number,
-            "user": {
-                "id": post.user.id,
-                "username": post.user.username,
-                "display_name": post.user.display_name,
-                "avatar_url": post.user.avatar_url,
-            } if post.user else None,
-            "type": post.type,
-            "content": post.content,
-            "content_html": post.content_html,
-            "created_at": post.created_at,
-            "updated_at": post.updated_at,
-            "edited_at": post.edited_at,
-            "edited_user": {
-                "id": post.edited_user.id,
-                "username": post.edited_user.username,
-                "display_name": post.edited_user.display_name,
-                "avatar_url": post.edited_user.avatar_url,
-            } if post.edited_user else None,
-            "is_hidden": post.is_hidden,
-            "like_count": post.like_count,
-            "is_liked": post.is_liked,
-            "can_edit": PostService.can_edit_post(post, user) if user else False,
-            "can_delete": PostService.can_delete_post(post, user) if user else False,
-            "can_like": PostService.can_like_post(post, user) if user else False,
-        }
-        data.append(post_data)
-
     return {
         "total": total,
         "page": page,
         "limit": limit,
-        "data": data,
+        "data": [_serialize_post(post, user) for post in posts],
     }
 
 
@@ -155,38 +191,7 @@ def get_post(request, post_id: int):
             status=404
         )
 
-    # 构建响应
-    response_data = {
-        "id": post.id,
-        "discussion_id": post.discussion_id,
-        "number": post.number,
-        "user": {
-            "id": post.user.id,
-            "username": post.user.username,
-            "display_name": post.user.display_name,
-            "avatar_url": post.user.avatar_url,
-        } if post.user else None,
-        "type": post.type,
-        "content": post.content,
-        "content_html": post.content_html,
-        "created_at": post.created_at,
-        "updated_at": post.updated_at,
-        "edited_at": post.edited_at,
-        "edited_user": {
-            "id": post.edited_user.id,
-            "username": post.edited_user.username,
-            "display_name": post.edited_user.display_name,
-            "avatar_url": post.edited_user.avatar_url,
-        } if post.edited_user else None,
-        "is_hidden": post.is_hidden,
-        "like_count": post.like_count,
-        "is_liked": post.is_liked,
-        "can_edit": PostService.can_edit_post(post, user) if user else False,
-        "can_delete": PostService.can_delete_post(post, user) if user else False,
-        "can_like": PostService.can_like_post(post, user) if user else False,
-    }
-
-    return response_data
+    return _serialize_post(post, user)
 
 
 @router.patch("/posts/{post_id}", response=PostOutSchema, tags=["Posts"])
@@ -213,38 +218,7 @@ def update_post(request, post_id: int, payload: PostUpdateSchema):
         # 重新获取帖子数据
         post = PostService.get_post_by_id(post.id, request.user)
 
-        # 构建响应
-        response_data = {
-            "id": post.id,
-            "discussion_id": post.discussion_id,
-            "number": post.number,
-            "user": {
-                "id": post.user.id,
-                "username": post.user.username,
-                "display_name": post.user.display_name,
-                "avatar_url": post.user.avatar_url,
-            } if post.user else None,
-            "type": post.type,
-            "content": post.content,
-            "content_html": post.content_html,
-            "created_at": post.created_at,
-            "updated_at": post.updated_at,
-            "edited_at": post.edited_at,
-            "edited_user": {
-                "id": post.edited_user.id,
-                "username": post.edited_user.username,
-                "display_name": post.edited_user.display_name,
-                "avatar_url": post.edited_user.avatar_url,
-            } if post.edited_user else None,
-            "is_hidden": post.is_hidden,
-            "like_count": post.like_count,
-            "is_liked": post.is_liked,
-            "can_edit": PostService.can_edit_post(post, request.user),
-            "can_delete": PostService.can_delete_post(post, request.user),
-            "can_like": PostService.can_like_post(post, request.user),
-        }
-
-        return response_data
+        return _serialize_post(post, request.user)
     except Post.DoesNotExist:
         return router.create_response(
             request,

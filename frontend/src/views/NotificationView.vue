@@ -88,6 +88,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notification'
 import api from '@/api'
+import { buildDiscussionPath, formatRelativeTime, unwrapList } from '@/utils/forum'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -108,10 +109,9 @@ async function loadNotifications() {
     const data = await api.get('/notifications/', {
       params: { page: currentPage.value }
     })
-    notifications.value = data.results || data
-    if (data.count) {
-      totalPages.value = Math.ceil(data.count / 20)
-    }
+    notifications.value = unwrapList(data)
+    totalPages.value = Math.max(1, Math.ceil((data.total || notifications.value.length) / (data.limit || 20)))
+    notificationStore.unreadCount = data.unread_count || 0
   } catch (error) {
     console.error('加载通知失败:', error)
   } finally {
@@ -166,10 +166,9 @@ function handleNotificationClick(notification) {
 
   // 跳转到相关页面
   if (notification.data?.discussion_id) {
-    router.push(`/discussions/${notification.data.discussion_id}`)
+    router.push(buildDiscussionPath(notification.data.discussion_id))
   } else if (notification.data?.post_id) {
-    // 需要先获取帖子所属的讨论ID
-    router.push(`/discussions/${notification.data.discussion_id || ''}`)
+    router.push(buildDiscussionPath(notification.data.discussion_id || ''))
   }
 }
 
@@ -211,18 +210,7 @@ function getNotificationMessage(notification) {
 }
 
 function formatDate(dateString) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now - date
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  if (days < 30) return `${days}天前`
-  return date.toLocaleDateString('zh-CN')
+  return formatRelativeTime(dateString)
 }
 </script>
 

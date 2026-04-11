@@ -30,6 +30,8 @@ class PostUpdateSchema(BaseModel):
 
 class PostFilterSchema(BaseModel):
     """帖子列表过滤"""
+    author: Optional[str] = Field(None, description="作者用户名")
+    user_id: Optional[int] = Field(None, description="作者用户ID")
     page: int = Field(1, ge=1, description="页码")
     limit: int = Field(20, ge=1, le=100, description="每页数量")
 
@@ -58,6 +60,7 @@ class PostOutSchema(BaseModel):
     updated_at: datetime
     edited_at: Optional[datetime] = None
     edited_user: Optional[UserSimpleSchema] = None
+    discussion: Optional[dict] = None
     is_hidden: bool
     like_count: int = 0
     is_liked: bool = False

@@ -61,6 +61,7 @@ class TagOutSchema(BaseModel):
     is_restricted: bool
     discussion_count: int
     last_posted_at: Optional[datetime] = None
+    last_posted_discussion: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
     children: List['TagOutSchema'] = []

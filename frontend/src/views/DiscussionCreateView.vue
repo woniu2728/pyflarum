@@ -110,6 +110,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -143,8 +144,12 @@ onMounted(async () => {
 
 async function loadTags() {
   try {
-    const data = await api.get('/tags/')
-    tags.value = data.data || data.results || data
+    const data = await api.get('/tags', {
+      params: {
+        include_children: true
+      }
+    })
+    tags.value = flattenTags(unwrapList(data).map(normalizeTag))
   } catch (error) {
     console.error('加载标签失败:', error)
   }
@@ -171,7 +176,7 @@ async function handleSubmit() {
 
     console.log('创建成功:', data)
     // 跳转到新创建的讨论
-    router.push(`/discussions/${data.id}`)
+    router.push(`/d/${data.id}`)
   } catch (err) {
     console.error('创建失败:', err)
     if (err.response?.data) {

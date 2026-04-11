@@ -39,10 +39,25 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/tags',
+      name: 'tags',
+      component: () => import('@/views/TagsView.vue')
+    },
+    {
+      path: '/t/:slug',
+      name: 'tag-detail',
+      component: () => import('@/views/DiscussionListView.vue')
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/ProfileView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/u/:id',
+      name: 'user-profile',
+      component: () => import('@/views/ProfileView.vue')
     },
     {
       path: '/notifications',

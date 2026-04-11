@@ -9,20 +9,21 @@
           <!-- 讨论标题 -->
           <div class="discussion-header">
             <div class="discussion-badges">
-              <span v-if="discussion.is_pinned" class="badge badge-pinned">置顶</span>
+              <span v-if="discussion.is_sticky" class="badge badge-pinned">置顶</span>
               <span v-if="discussion.is_locked" class="badge badge-locked">锁定</span>
               <span v-if="discussion.is_hidden" class="badge badge-hidden">隐藏</span>
             </div>
             <h1>{{ discussion.title }}</h1>
             <div class="discussion-tags" v-if="discussion.tags && discussion.tags.length">
-              <span
+              <router-link
                 v-for="tag in discussion.tags"
                 :key="tag.id"
                 class="tag"
+                :to="buildTagPath(tag)"
                 :style="{ backgroundColor: tag.color }"
               >
                 {{ tag.name }}
-              </span>
+              </router-link>
             </div>
           </div>
 
@@ -47,7 +48,7 @@
 
               <div class="post-content">
                 <div class="post-header">
-                  <span class="post-author">{{ post.user.username }}</span>
+                  <router-link :to="buildUserPath(post.user)" class="post-author">{{ post.user.username }}</router-link>
                   <span class="post-number">#{{ post.number }}</span>
                   <span class="post-time">{{ formatDate(post.created_at) }}</span>
                   <span v-if="post.edited_at" class="post-edited">(已编辑)</span>
@@ -61,7 +62,7 @@
                     class="post-action"
                     :class="{ 'is-liked': post.is_liked }"
                   >
-                    ❤️ {{ post.likes_count || 0 }}
+                    ❤️ {{ post.like_count || 0 }}
                   </button>
                   <button
                     @click="replyToPost(post)"
@@ -126,7 +127,7 @@
             <h3>讨论信息</h3>
             <div class="info-item">
               <span class="label">发起人</span>
-              <span class="value">{{ discussion.user.username }}</span>
+              <router-link :to="buildUserPath(discussion.user)" class="value value-link">{{ discussion.user.username }}</router-link>
             </div>
             <div class="info-item">
               <span class="label">创建时间</span>
@@ -145,7 +146,7 @@
           <div class="sidebar-section" v-if="canManageDiscussion">
             <h3>管理操作</h3>
             <button @click="togglePin" class="secondary full-width">
-              {{ discussion.is_pinned ? '取消置顶' : '置顶' }}
+              {{ discussion.is_sticky ? '取消置顶' : '置顶' }}
             </button>
             <button @click="toggleLock" class="secondary full-width">
               {{ discussion.is_locked ? '解锁' : '锁定' }}
@@ -164,10 +165,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+import {
+  buildTagPath,
+  buildUserPath,
+  formatRelativeTime,
+  normalizeDiscussion,
+  normalizePost,
+  unwrapList
+} from '@/utils/forum'
 
 const route = useRoute()
 const router = useRouter()
@@ -190,14 +199,24 @@ const canManageDiscussion = computed(() => {
 })
 
 onMounted(async () => {
+  await refreshDiscussion()
+})
+
+watch(() => route.params.id, async () => {
+  currentPage.value = 1
+  posts.value = []
+  await refreshDiscussion()
+})
+
+async function refreshDiscussion() {
   await loadDiscussion()
   await loadPosts()
-})
+}
 
 async function loadDiscussion() {
   try {
     const data = await api.get(`/discussions/${route.params.id}`)
-    discussion.value = data
+    discussion.value = normalizeDiscussion(data)
   } catch (error) {
     console.error('加载讨论失败:', error)
   } finally {
@@ -210,17 +229,13 @@ async function loadPosts() {
     const data = await api.get(`/discussions/${route.params.id}/posts`, {
       params: { page: currentPage.value }
     })
+    const items = unwrapList(data).map(normalizePost)
     if (currentPage.value === 1) {
-      posts.value = data.data || data.results || data
+      posts.value = items
     } else {
-      posts.value.push(...(data.data || data.results || data))
+      posts.value.push(...items)
     }
-    // 根据分页信息判断是否有更多
-    if (data.total && data.page && data.limit) {
-      hasMore.value = data.page * data.limit < data.total
-    } else {
-      hasMore.value = !!data.next
-    }
+    hasMore.value = Boolean(data.total && data.page && data.limit && data.page * data.limit < data.total)
   } catch (error) {
     console.error('加载帖子失败:', error)
   }
@@ -242,11 +257,11 @@ async function toggleLike(post) {
   try {
     if (post.is_liked) {
       await api.delete(`/posts/${post.id}/like`)
-      post.likes_count--
+      post.like_count--
       post.is_liked = false
     } else {
       await api.post(`/posts/${post.id}/like`)
-      post.likes_count++
+      post.like_count++
       post.is_liked = true
     }
   } catch (error) {
@@ -284,14 +299,14 @@ async function submitReply() {
       })
       const index = posts.value.findIndex(p => p.id === editingPost.value.id)
       if (index !== -1) {
-        posts.value[index] = data
+        posts.value[index] = normalizePost(data)
       }
     } else {
       // 创建新回复
       const data = await api.post(`/discussions/${route.params.id}/posts`, {
         content: replyContent.value
       })
-      posts.value.push(data)
+      posts.value.push(normalizePost(data))
       discussion.value.comment_count++
     }
 
@@ -330,7 +345,7 @@ function canDeletePost(post) {
 async function togglePin() {
   try {
     await api.post(`/discussions/${discussion.value.id}/pin`)
-    discussion.value.is_pinned = !discussion.value.is_pinned
+    discussion.value.is_sticky = !discussion.value.is_sticky
   } catch (error) {
     console.error('操作失败:', error)
   }
@@ -358,8 +373,8 @@ async function deleteDiscussion() {
   if (!confirm('确定要删除这个讨论吗？此操作不可恢复！')) return
 
   try {
-    await api.delete(`/discussions/${discussion.value.id}/`)
-    router.push('/discussions')
+    await api.delete(`/discussions/${discussion.value.id}`)
+    router.push('/')
   } catch (error) {
     console.error('删除失败:', error)
     alert('删除失败，请稍后重试')
@@ -367,18 +382,7 @@ async function deleteDiscussion() {
 }
 
 function formatDate(dateString) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now - date
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  if (days < 30) return `${days}天前`
-  return date.toLocaleDateString('zh-CN')
+  return formatRelativeTime(dateString)
 }
 </script>
 
@@ -453,6 +457,11 @@ function formatDate(dateString) {
   font-size: 13px;
 }
 
+.tag:hover {
+  text-decoration: none;
+  filter: brightness(0.96);
+}
+
 .posts {
   display: flex;
   flex-direction: column;
@@ -512,6 +521,10 @@ function formatDate(dateString) {
 .post-author {
   font-weight: 600;
   color: #667eea;
+}
+
+.post-author:hover {
+  text-decoration: none;
 }
 
 .post-number {
@@ -671,6 +684,11 @@ function formatDate(dateString) {
   color: #333;
   font-size: 14px;
   font-weight: 500;
+}
+
+.value-link:hover {
+  color: #4d698e;
+  text-decoration: none;
 }
 
 .sidebar-section button {

@@ -38,7 +38,7 @@
 
             <!-- 下拉菜单 -->
             <div v-if="showUserMenu" class="dropdown-menu">
-              <router-link to="/profile" class="dropdown-item">
+              <router-link :to="profilePath()" class="dropdown-item">
                 <i class="fas fa-user"></i>
                 <span>个人资料</span>
               </router-link>
@@ -81,6 +81,7 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useRouter } from 'vue-router'
+import { buildUserPath } from '@/utils/forum'
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -88,6 +89,10 @@ const router = useRouter()
 
 const showUserMenu = ref(false)
 const searchQuery = ref('')
+
+function profilePath() {
+  return authStore.user ? buildUserPath(authStore.user) : '/profile'
+}
 
 function toggleUserMenu() {
   showUserMenu.value = !showUserMenu.value

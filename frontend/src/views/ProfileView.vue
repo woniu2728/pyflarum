@@ -49,7 +49,7 @@
               <ul>
                 <li>
                   <a
-                    @click.prevent="activeTab = 'discussions'"
+                    @click.prevent="switchTab('discussions')"
                     :class="{ active: activeTab === 'discussions' }"
                     class="nav-link"
                   >
@@ -88,7 +88,7 @@
                   class="discussion-item"
                 >
                   <div class="discussion-main">
-                    <router-link :to="`/discussions/${discussion.id}`" class="discussion-title">
+                    <router-link :to="buildDiscussionPath(discussion)" class="discussion-title">
                       {{ discussion.title }}
                     </router-link>
                     <div class="discussion-meta">
@@ -115,7 +115,7 @@
                 <div v-for="post in posts" :key="post.id" class="post-item">
                   <div class="post-header">
                     <router-link
-                      :to="`/discussions/${post.discussion?.id || post.discussion_id}`"
+                      :to="buildDiscussionPath(post.discussion?.id || post.discussion_id)"
                       class="post-discussion-link"
                     >
                       <i class="fas fa-arrow-right"></i>
@@ -123,7 +123,7 @@
                     </router-link>
                     <span class="post-time">{{ formatDate(post.created_at) }}</span>
                   </div>
-                  <div class="post-content" v-html="post.content"></div>
+                  <div class="post-content" v-html="post.content_html || post.content"></div>
                 </div>
               </div>
             </div>
@@ -178,10 +178,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+import {
+  buildDiscussionPath,
+  formatMonth,
+  formatRelativeTime,
+  normalizeDiscussion,
+  normalizePost,
+  unwrapList
+} from '@/utils/forum'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -213,15 +221,27 @@ const isOnline = computed(() => {
 })
 
 onMounted(async () => {
-  await loadUser()
-  loadDiscussions()
+  await refreshProfile()
 })
+
+watch(() => route.params.id, async () => {
+  posts.value = []
+  discussions.value = []
+  await refreshProfile()
+})
+
+async function refreshProfile() {
+  await loadUser()
+  await loadDiscussions()
+}
 
 async function loadUser() {
   loading.value = true
   try {
-    const userId = route.params.id || 'me'
-    const data = await api.get(`/users/${userId}`)
+    const data = route.params.id
+      ? await api.get(`/users/${route.params.id}`)
+      : await api.get('/users/me')
+
     user.value = data
 
     editForm.value = {
@@ -242,11 +262,12 @@ async function loadDiscussions() {
   try {
     const data = await api.get('/discussions/', {
       params: {
-        user: user.value.id,
+        author: user.value.username,
+        sort: 'newest',
         limit: 20,
       }
     })
-    discussions.value = data.results || data
+    discussions.value = unwrapList(data).map(normalizeDiscussion)
   } catch (error) {
     console.error('加载讨论失败:', error)
   } finally {
@@ -259,13 +280,13 @@ async function loadPosts() {
 
   loadingPosts.value = true
   try {
-    const data = await api.get('/posts/', {
+    const data = await api.get('/posts', {
       params: {
-        user: user.value.id,
+        author: user.value.username,
         limit: 20,
       }
     })
-    posts.value = data.results || data
+    posts.value = unwrapList(data).map(normalizePost)
   } catch (error) {
     console.error('加载回复失败:', error)
   } finally {
@@ -295,22 +316,11 @@ async function saveProfile() {
 }
 
 function formatDate(dateString) {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now - date
-  const days = Math.floor(diff / 86400000)
-
-  if (days === 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days}天前`
-  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+  return formatRelativeTime(dateString)
 }
 
 function formatJoinDate(dateString) {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })
+  return formatMonth(dateString)
 }
 
 function formatLastSeen(dateString) {

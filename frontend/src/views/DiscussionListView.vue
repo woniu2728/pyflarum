@@ -1,111 +1,85 @@
 <template>
   <div class="index-page">
     <div class="index-container">
-      <!-- 左侧导航栏 -->
       <aside class="index-nav">
-        <!-- Start a Discussion 按钮 -->
         <div class="index-nav-header">
           <button
-            v-if="authStore.isAuthenticated"
             class="btn-start-discussion"
-            @click="$router.push('/discussions/create')"
-          >
-            <i class="fas fa-edit"></i>
-            发起讨论
-          </button>
-          <button
-            v-else
-            class="btn-start-discussion"
-            @click="$router.push('/login')"
+            @click="authStore.isAuthenticated ? $router.push('/discussions/create') : $router.push('/login')"
           >
             <i class="fas fa-edit"></i>
             发起讨论
           </button>
         </div>
 
-        <!-- 导航列表 -->
         <nav class="index-nav-list">
           <ul>
             <li>
-              <a
-                href="#"
-                class="nav-item"
-                :class="{ active: activeNav === 'all' }"
-                @click.prevent="activeNav = 'all'"
-              >
-                <i class="fas fa-comments"></i>
+              <router-link to="/" class="nav-item" :class="{ active: !currentTagSlug }">
+                <i class="far fa-comments"></i>
                 <span>全部讨论</span>
-              </a>
+              </router-link>
             </li>
-            <li v-if="authStore.isAuthenticated">
-              <a
-                href="#"
-                class="nav-item"
-                @click.prevent="activeNav = 'following'"
-              >
-                <i class="fas fa-star"></i>
-                <span>关注的</span>
-              </a>
+            <li>
+              <router-link to="/tags" class="nav-item">
+                <i class="fas fa-tags"></i>
+                <span>全部标签</span>
+              </router-link>
             </li>
-            <li v-if="authStore.isAuthenticated">
-              <router-link to="/profile" class="nav-item">
+            <li v-if="authStore.user">
+              <router-link :to="buildUserPath(authStore.user)" class="nav-item">
                 <i class="fas fa-user"></i>
-                <span>我的讨论</span>
+                <span>我的主页</span>
               </router-link>
             </li>
           </ul>
         </nav>
 
-        <!-- 标签部分 -->
         <div class="index-nav-section">
           <h4 class="index-nav-heading">标签</h4>
           <nav class="index-nav-list">
             <ul>
-              <li v-for="tag in tags" :key="tag.id">
-                <a
-                  href="#"
+              <li v-for="tag in sidebarTags" :key="tag.id">
+                <router-link
+                  :to="buildTagPath(tag)"
                   class="nav-item tag-item"
-                  @click.prevent="filterByTag(tag.id)"
-                  :class="{ active: selectedTag === tag.id }"
+                  :class="{ active: currentTagSlug === tag.slug }"
                 >
                   <span class="tag-bullet" :style="{ backgroundColor: tag.color }"></span>
                   <span>{{ tag.name }}</span>
-                </a>
+                </router-link>
               </li>
             </ul>
           </nav>
         </div>
       </aside>
 
-      <!-- 主内容区 -->
       <main class="index-content">
-        <!-- 工具栏 -->
+        <section v-if="currentTag" class="tag-hero" :style="{ '--tag-color': currentTag.color }">
+          <div class="tag-hero-inner">
+            <div class="tag-hero-pill">
+              <span class="tag-bullet large" :style="{ backgroundColor: currentTag.color }"></span>
+              {{ currentTag.name }}
+            </div>
+            <h1>{{ currentTag.name }}</h1>
+            <p>{{ currentTag.description || '这个标签下的讨论会集中显示在这里。' }}</p>
+          </div>
+        </section>
+
         <div class="index-toolbar">
           <ul class="index-toolbar-view">
             <li>
-              <button
-                class="btn-view"
-                :class="{ active: sortBy === '-created_at' }"
-                @click="changeSortBy('-created_at')"
-              >
-                最新
+              <button class="btn-view" :class="{ active: sortBy === 'latest' }" @click="changeSortBy('latest')">
+                最新活跃
               </button>
             </li>
             <li>
-              <button
-                class="btn-view"
-                :class="{ active: sortBy === '-last_posted_at' }"
-                @click="changeSortBy('-last_posted_at')"
-              >
-                最近回复
+              <button class="btn-view" :class="{ active: sortBy === 'newest' }" @click="changeSortBy('newest')">
+                新主题
               </button>
             </li>
             <li>
-              <button
-                class="btn-view"
-                :class="{ active: sortBy === '-comment_count' }"
-                @click="changeSortBy('-comment_count')"
-              >
+              <button class="btn-view" :class="{ active: sortBy === 'top' }" @click="changeSortBy('top')">
                 热门
               </button>
             </li>
@@ -113,20 +87,19 @@
 
           <ul class="index-toolbar-action">
             <li>
-              <button class="btn-refresh" @click="loadDiscussions" title="刷新">
+              <button class="btn-refresh" @click="refreshPageData" title="刷新">
                 <i class="fas fa-sync-alt"></i>
               </button>
             </li>
           </ul>
         </div>
 
-        <!-- 讨论列表 -->
         <div v-if="loading" class="loading-container">
           <div class="spinner"></div>
         </div>
 
         <div v-else-if="discussions.length === 0" class="empty-state">
-          <p>暂无讨论</p>
+          <p>{{ currentTag ? '这个标签下还没有讨论。' : '暂无讨论。' }}</p>
         </div>
 
         <ul v-else class="discussion-list">
@@ -134,19 +107,17 @@
             v-for="discussion in discussions"
             :key="discussion.id"
             class="discussion-list-item"
-            :class="{ 'is-pinned': discussion.is_pinned }"
+            :class="{ 'is-sticky': discussion.is_sticky }"
           >
             <div class="discussion-list-item-content">
-              <!-- 用户头像 -->
               <div class="discussion-list-item-author">
-                <a href="#" class="avatar-link">
+                <router-link :to="buildUserPath(discussion.user)" class="avatar-link">
                   <div class="avatar" :style="{ backgroundColor: getUserColor(discussion.user) }">
-                    {{ discussion.user.username.charAt(0).toUpperCase() }}
+                    {{ discussion.user?.username?.charAt(0).toUpperCase() }}
                   </div>
-                </a>
-                <!-- 徽章 -->
+                </router-link>
                 <div class="discussion-list-item-badges">
-                  <span v-if="discussion.is_pinned" class="badge badge-pinned" title="置顶">
+                  <span v-if="discussion.is_sticky" class="badge badge-pinned" title="置顶">
                     <i class="fas fa-thumbtack"></i>
                   </span>
                   <span v-if="discussion.is_locked" class="badge badge-locked" title="锁定">
@@ -155,46 +126,46 @@
                 </div>
               </div>
 
-              <!-- 主要内容 -->
               <div class="discussion-list-item-main">
-                <router-link :to="`/d/${discussion.id}`" class="discussion-list-item-title">
+                <router-link :to="buildDiscussionPath(discussion)" class="discussion-list-item-title">
                   {{ discussion.title }}
                 </router-link>
 
                 <ul class="discussion-list-item-info">
-                  <li class="item-tags" v-if="discussion.tags && discussion.tags.length">
-                    <span
+                  <li v-if="discussion.tags.length" class="item-tags">
+                    <router-link
                       v-for="tag in discussion.tags"
                       :key="tag.id"
+                      :to="buildTagPath(tag)"
                       class="tag-label"
                       :style="{ backgroundColor: tag.color }"
                     >
                       {{ tag.name }}
-                    </span>
+                    </router-link>
                   </li>
                   <li class="item-author">
-                    <span class="username">{{ discussion.user.username }}</span>
-                    发起于 {{ formatDate(discussion.created_at) }}
+                    <router-link :to="buildUserPath(discussion.user)" class="username">
+                      {{ discussion.user?.display_name || discussion.user?.username }}
+                    </router-link>
+                    发起于 {{ formatRelativeTime(discussion.created_at) }}
                   </li>
                   <li v-if="discussion.last_posted_at" class="item-last-post">
                     <i class="fas fa-reply"></i>
-                    最后回复 {{ formatDate(discussion.last_posted_at) }}
+                    最后回复 {{ formatRelativeTime(discussion.last_posted_at) }}
                   </li>
                 </ul>
               </div>
 
-              <!-- 统计信息 -->
               <div class="discussion-list-item-stats">
-                <a href="#" class="discussion-list-item-count">
-                  <i class="fas fa-comment"></i>
+                <span class="discussion-list-item-count">
+                  <i class="far fa-comment"></i>
                   <span>{{ discussion.comment_count }}</span>
-                </a>
+                </span>
               </div>
             </div>
           </li>
         </ul>
 
-        <!-- 加载更多 -->
         <div v-if="hasMore" class="load-more">
           <button class="btn btn-default" @click="loadMore" :disabled="loadingMore">
             {{ loadingMore ? '加载中...' : '加载更多' }}
@@ -206,124 +177,132 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute } from 'vue-router'
 import api from '@/api'
+import {
+  buildDiscussionPath,
+  buildTagPath,
+  buildUserPath,
+  flattenTags,
+  formatRelativeTime,
+  normalizeDiscussion,
+  normalizeTag,
+  unwrapList
+} from '@/utils/forum'
 
 const authStore = useAuthStore()
 const route = useRoute()
 
 const discussions = ref([])
 const tags = ref([])
+const currentTag = ref(null)
 const loading = ref(true)
 const loadingMore = ref(false)
-const searchQuery = ref('')
-const sortBy = ref('-created_at')
+const sortBy = ref('latest')
 const currentPage = ref(1)
-const hasMore = ref(false)
-const selectedTag = ref(null)
-const activeNav = ref('all')
+const total = ref(0)
+
+const currentTagSlug = computed(() => route.params.slug || null)
+const searchQuery = computed(() => route.query.search?.toString().trim() || '')
+const hasMore = computed(() => currentPage.value * 20 < total.value)
+const sidebarTags = computed(() => flattenTags(tags.value))
 
 onMounted(async () => {
-  if (route.query.search) {
-    searchQuery.value = route.query.search
+  await refreshPageData()
+})
+
+watch(
+  () => [route.params.slug, route.query.search],
+  async () => {
+    currentPage.value = 1
+    await refreshPageData()
   }
-  await Promise.all([loadDiscussions(), loadTags()])
-})
+)
 
-watch(() => route.query.search, (newSearch) => {
-  searchQuery.value = newSearch || ''
-  currentPage.value = 1
-  loadDiscussions()
-})
-
-async function loadDiscussions() {
+async function refreshPageData() {
   loading.value = true
   try {
-    const params = {
-      page: currentPage.value,
-      ordering: sortBy.value
-    }
-    if (searchQuery.value) {
-      params.search = searchQuery.value
-    }
-    if (selectedTag.value) {
-      params.tag = selectedTag.value
-    }
-
-    const data = await api.get('/discussions/', { params })
-    discussions.value = data.data || data.results || data
-    hasMore.value = data.page * data.limit < data.total
-  } catch (error) {
-    console.error('加载讨论失败:', error)
+    await Promise.all([loadTags(), loadCurrentTag(), loadDiscussions(false)])
   } finally {
     loading.value = false
   }
 }
 
 async function loadTags() {
+  const response = await api.get('/tags', {
+    params: {
+      include_children: true
+    }
+  })
+  tags.value = unwrapList(response).map(normalizeTag)
+}
+
+async function loadCurrentTag() {
+  if (!currentTagSlug.value) {
+    currentTag.value = null
+    return
+  }
+
   try {
-    const data = await api.get('/tags')
-    tags.value = data.results || data
+    const response = await api.get(`/tags/slug/${currentTagSlug.value}`)
+    currentTag.value = normalizeTag(response)
   } catch (error) {
-    console.error('加载标签失败:', error)
+    currentTag.value = null
+    console.error('加载标签详情失败:', error)
   }
 }
 
-function filterByTag(tagId) {
-  selectedTag.value = selectedTag.value === tagId ? null : tagId
-  currentPage.value = 1
-  loadDiscussions()
+async function loadDiscussions(append) {
+  const response = await api.get('/discussions/', {
+    params: {
+      page: currentPage.value,
+      limit: 20,
+      sort: sortBy.value,
+      q: searchQuery.value || undefined,
+      tag: currentTagSlug.value || undefined
+    }
+  })
+
+  const items = unwrapList(response).map(normalizeDiscussion)
+
+  if (append) {
+    discussions.value.push(...items)
+  } else {
+    discussions.value = items
+  }
+
+  total.value = response.total || items.length
 }
 
-function changeSortBy(sort) {
+async function changeSortBy(sort) {
+  if (sortBy.value === sort) return
   sortBy.value = sort
   currentPage.value = 1
-  loadDiscussions()
+  loading.value = true
+
+  try {
+    await loadDiscussions(false)
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadMore() {
   loadingMore.value = true
-  currentPage.value++
+  currentPage.value += 1
   try {
-    const params = {
-      page: currentPage.value,
-      ordering: sortBy.value
-    }
-    if (selectedTag.value) {
-      params.tag = selectedTag.value
-    }
-
-    const data = await api.get('/discussions/', { params })
-    discussions.value.push(...(data.data || data.results || data))
-    hasMore.value = data.page * data.limit < data.total
-  } catch (error) {
-    console.error('加载更多失败:', error)
+    await loadDiscussions(true)
   } finally {
     loadingMore.value = false
   }
 }
 
 function getUserColor(user) {
-  const colors = ['#4D698E', '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6']
-  const index = user.id % colors.length
+  const colors = ['#4d698e', '#e67e22', '#3498db', '#27ae60', '#c0392b', '#8e44ad']
+  const index = (user?.id || 0) % colors.length
   return colors[index]
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now - date
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  if (days < 30) return `${days}天前`
-  return date.toLocaleDateString('zh-CN')
 }
 </script>
 
@@ -464,10 +443,46 @@ function formatDate(dateString) {
   flex-shrink: 0;
 }
 
+.tag-bullet.large {
+  width: 12px;
+  height: 12px;
+}
+
 /* ========== 主内容区 ========== */
 .index-content {
   flex: 1;
   background: white;
+}
+
+.tag-hero {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tag-color) 20%, white), #f8fbfd);
+  border-bottom: 1px solid #e3e8ed;
+}
+
+.tag-hero-inner {
+  padding: 28px 26px;
+}
+
+.tag-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #44515e;
+  margin-bottom: 12px;
+}
+
+.tag-hero h1 {
+  font-size: 30px;
+  font-weight: 300;
+  color: #2f3c4d;
+  margin-bottom: 8px;
+}
+
+.tag-hero p {
+  color: #61707f;
 }
 
 .index-toolbar {
@@ -541,11 +556,11 @@ function formatDate(dateString) {
   background: #fafbfc;
 }
 
-.discussion-list-item.is-pinned {
+.discussion-list-item.is-sticky {
   background: #fffbf0;
 }
 
-.discussion-list-item.is-pinned:hover {
+.discussion-list-item.is-sticky:hover {
   background: #fff8e1;
 }
 

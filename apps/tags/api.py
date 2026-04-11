@@ -19,6 +19,49 @@ from apps.tags.services import TagService
 router = Router()
 
 
+def _serialize_discussion_summary(discussion):
+    if not discussion:
+        return None
+
+    return {
+        "id": discussion.id,
+        "title": discussion.title,
+        "slug": discussion.slug,
+        "last_post_number": discussion.last_post_number,
+        "last_posted_at": discussion.last_posted_at,
+    }
+
+
+def _serialize_tag(tag, include_children=False):
+    children = []
+    if include_children:
+        children = [
+            _serialize_tag(child, include_children=True)
+            for child in tag.children.all().order_by('position', 'name')
+            if not child.is_hidden
+        ]
+
+    return {
+        'id': tag.id,
+        'name': tag.name,
+        'slug': tag.slug,
+        'description': tag.description,
+        'color': tag.color,
+        'icon': tag.icon,
+        'background_url': tag.background_url,
+        'position': tag.position,
+        'parent_id': tag.parent_id,
+        'is_hidden': tag.is_hidden,
+        'is_restricted': tag.is_restricted,
+        'discussion_count': tag.discussion_count,
+        'last_posted_at': tag.last_posted_at,
+        'last_posted_discussion': _serialize_discussion_summary(tag.last_posted_discussion),
+        'created_at': tag.created_at,
+        'updated_at': tag.updated_at,
+        'children': children,
+    }
+
+
 @router.post("/tags", response=TagOutSchema, tags=["Tags"])
 def create_tag(request, payload: TagCreateSchema):
     """
@@ -71,6 +114,7 @@ def list_tags(
     request,
     parent_id: Optional[int] = None,
     include_hidden: bool = False,
+    include_children: bool = True,
 ):
     """
     获取标签列表
@@ -83,8 +127,7 @@ def list_tags(
     if include_hidden and (not request.user.is_authenticated or not request.user.is_staff):
         include_hidden = False
 
-    # 简化：不加载子标签，避免复杂的嵌套
-    queryset = Tag.objects.all()
+    queryset = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').all()
 
     if parent_id is None:
         queryset = queryset.filter(parent__isnull=True)
@@ -96,29 +139,7 @@ def list_tags(
 
     tags = queryset.order_by('position', 'name')
 
-    # 转换为字典列表
-    tag_list = []
-    for tag in tags:
-        tag_list.append({
-            'id': tag.id,
-            'name': tag.name,
-            'slug': tag.slug,
-            'description': tag.description,
-            'color': tag.color,
-            'icon': tag.icon,
-            'background_url': tag.background_url,
-            'position': tag.position,
-            'parent_id': tag.parent_id,
-            'is_hidden': tag.is_hidden,
-            'is_restricted': tag.is_restricted,
-            'discussion_count': tag.discussion_count,
-            'last_posted_at': tag.last_posted_at,
-            'created_at': tag.created_at,
-            'updated_at': tag.updated_at,
-            'children': []
-        })
-
-    return {"data": tag_list}
+    return {"data": [_serialize_tag(tag, include_children=include_children) for tag in tags]}
 
 
 @router.get("/tags/popular", response=TagListSchema, tags=["Tags"])
@@ -152,7 +173,8 @@ def get_tag(request, tag_id: int):
             status=404
         )
 
-    return tag
+    tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
+    return _serialize_tag(tag, include_children=True)
 
 
 @router.get("/tags/slug/{slug}", response=TagOutSchema, tags=["Tags"])
@@ -169,7 +191,8 @@ def get_tag_by_slug(request, slug: str):
             status=404
         )
 
-    return tag
+    tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
+    return _serialize_tag(tag, include_children=True)
 
 
 @router.patch("/tags/{tag_id}", response=TagOutSchema, tags=["Tags"])
@@ -202,10 +225,8 @@ def update_tag(request, tag_id: int, payload: TagUpdateSchema):
             is_restricted=payload.is_restricted,
         )
 
-        # 重新加载标签数据
-        tag = TagService.get_tag_by_id(tag.id)
-
-        return tag
+        tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
+        return _serialize_tag(tag, include_children=True)
     except Tag.DoesNotExist:
         return router.create_response(
             request,

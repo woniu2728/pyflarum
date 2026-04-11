@@ -264,9 +264,9 @@ def toggle_pin_discussion(request, discussion_id: int):
 
     try:
         discussion = Discussion.objects.get(id=discussion_id)
-        discussion.is_pinned = not discussion.is_pinned
-        discussion.save(update_fields=['is_pinned'])
-        return {"message": "操作成功", "is_pinned": discussion.is_pinned}
+        discussion.is_sticky = not discussion.is_sticky
+        discussion.save(update_fields=['is_sticky'])
+        return {"message": "操作成功", "is_sticky": discussion.is_sticky}
     except Discussion.DoesNotExist:
         return router.create_response(
             request,
