@@ -5,6 +5,7 @@ from ninja_jwt.tokens import RefreshToken
 
 from apps.discussions.services import DiscussionService
 from apps.posts.services import PostService
+from apps.tags.models import Tag
 from apps.users.models import User
 
 
@@ -82,3 +83,29 @@ class DiscussionApiTests(TestCase):
         discussion_payload = response.json()["data"][0]
         self.assertFalse(discussion_payload["is_unread"])
         self.assertEqual(discussion_payload["unread_count"], 0)
+
+    def test_discussion_list_filters_by_tag_slug(self):
+        life_tag = Tag.objects.create(name="生活", slug="life", color="#4d698e")
+        tech_tag = Tag.objects.create(name="技术", slug="tech", color="#3498db")
+
+        life_discussion = DiscussionService.create_discussion(
+            title="Life discussion",
+            content="Only belongs to life.",
+            user=self.author,
+            tag_ids=[life_tag.id],
+        )
+        DiscussionService.create_discussion(
+            title="Tech discussion",
+            content="Only belongs to tech.",
+            user=self.author,
+            tag_ids=[tech_tag.id],
+        )
+
+        response = self.client.get("/api/discussions/", {"tag": life_tag.slug})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["total"], 1)
+        self.assertEqual(len(payload["data"]), 1)
+        self.assertEqual(payload["data"][0]["id"], life_discussion.id)
+        self.assertEqual(payload["data"][0]["tags"][0]["slug"], life_tag.slug)

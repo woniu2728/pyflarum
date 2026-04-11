@@ -127,7 +127,7 @@ class DiscussionService:
 
         # 按标签过滤
         if tag:
-            queryset = queryset.filter(tags__tag__slug=tag)
+            queryset = queryset.filter(discussion_tags__tag__slug=tag)
 
         # 按作者过滤
         if author:
