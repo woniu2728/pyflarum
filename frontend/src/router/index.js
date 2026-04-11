@@ -39,6 +39,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/following',
+      name: 'following',
+      component: () => import('@/views/DiscussionListView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/tags',
       name: 'tags',
       component: () => import('@/views/TagsView.vue')

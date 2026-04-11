@@ -32,6 +32,7 @@ class DiscussionFilterSchema(BaseModel):
     q: Optional[str] = Field(None, description="搜索关键词")
     tag: Optional[str] = Field(None, description="标签slug")
     author: Optional[str] = Field(None, description="作者用户名")
+    subscription: Optional[str] = Field(None, description="订阅过滤: following")
     sort: Optional[str] = Field('latest', description="排序方式: latest, top, oldest, newest")
     page: int = Field(1, ge=1, description="页码")
     limit: int = Field(20, ge=1, le=100, description="每页数量")
@@ -65,6 +66,7 @@ class DiscussionOutSchema(BaseModel):
     is_locked: bool
     is_sticky: bool
     is_hidden: bool
+    is_subscribed: bool = False
     hidden_at: Optional[datetime] = None
     tags: List[dict] = []
 

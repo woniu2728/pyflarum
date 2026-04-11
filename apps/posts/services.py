@@ -8,6 +8,7 @@ from django.db.models import Q, F, Count, Exists, OuterRef
 from django.core.exceptions import PermissionDenied
 from apps.posts.models import Post, PostLike, PostMentionsUser
 from apps.discussions.models import Discussion
+from apps.discussions.models import DiscussionUser
 from apps.users.models import User
 import re
 
@@ -69,6 +70,17 @@ class PostService:
             # 更新用户统计
             user.comment_count = F('comment_count') + 1
             user.save(update_fields=['comment_count'])
+
+            if user.preferences.get('follow_after_reply', False):
+                DiscussionUser.objects.update_or_create(
+                    discussion=discussion,
+                    user=user,
+                    defaults={
+                        'is_subscribed': True,
+                        'last_read_at': datetime.now(),
+                        'last_read_post_number': post.number,
+                    }
+                )
 
             # 处理@提及
             PostService._process_mentions(post, content)

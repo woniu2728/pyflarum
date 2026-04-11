@@ -20,6 +20,7 @@ from .schemas import (
     PasswordResetRequestSchema,
     PasswordResetSchema,
     EmailVerifySchema,
+    UserPreferencesSchema,
 )
 from .services import UserService
 
@@ -135,6 +136,33 @@ def reset_password(request, payload: PasswordResetSchema):
 def get_current_user(request):
     """获取当前用户信息"""
     return request.auth
+
+
+@router.get("/me/preferences", response=UserPreferencesSchema, auth=AuthBearer(), tags=["Users"])
+def get_preferences(request):
+    prefs = request.auth.preferences or {}
+    return {
+        "follow_after_reply": prefs.get("follow_after_reply", False),
+        "follow_after_create": prefs.get("follow_after_create", False),
+        "notify_new_post": prefs.get("notify_new_post", True),
+    }
+
+
+@router.patch("/me/preferences", response=UserPreferencesSchema, auth=AuthBearer(), tags=["Users"])
+def update_preferences(request, payload: UserPreferencesSchema):
+    request.auth.preferences = {
+        **(request.auth.preferences or {}),
+        "follow_after_reply": payload.follow_after_reply,
+        "follow_after_create": payload.follow_after_create,
+        "notify_new_post": payload.notify_new_post,
+    }
+    request.auth.save(update_fields=["preferences"])
+
+    return {
+        "follow_after_reply": request.auth.preferences.get("follow_after_reply", False),
+        "follow_after_create": request.auth.preferences.get("follow_after_create", False),
+        "notify_new_post": request.auth.preferences.get("notify_new_post", True),
+    }
 
 
 @router.get("", response=List[UserOutSchema], tags=["Users"])

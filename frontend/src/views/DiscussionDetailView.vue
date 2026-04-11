@@ -123,6 +123,16 @@
 
         <!-- 侧边栏 -->
         <aside class="sidebar">
+          <div v-if="authStore.isAuthenticated" class="sidebar-section">
+            <h3>关注讨论</h3>
+            <p class="subscription-copy">
+              {{ discussion.is_subscribed ? '你会收到这条讨论的新回复通知。' : '关注后，这条讨论的新回复会进入你的通知列表。' }}
+            </p>
+            <button @click="toggleSubscription" class="secondary full-width" :disabled="togglingSubscription">
+              {{ togglingSubscription ? '提交中...' : (discussion.is_subscribed ? '取消关注' : '关注讨论') }}
+            </button>
+          </div>
+
           <div class="sidebar-section">
             <h3>讨论信息</h3>
             <div class="info-item">
@@ -193,6 +203,7 @@ const replyContent = ref('')
 const submitting = ref(false)
 const editingPost = ref(null)
 const replyingTo = ref(null)
+const togglingSubscription = ref(false)
 
 const canManageDiscussion = computed(() => {
   return authStore.user?.is_staff || authStore.user?.id === discussion.value?.user.id
@@ -205,6 +216,7 @@ onMounted(async () => {
 watch(() => route.params.id, async () => {
   currentPage.value = 1
   posts.value = []
+  loading.value = true
   await refreshDiscussion()
 })
 
@@ -308,6 +320,9 @@ async function submitReply() {
       })
       posts.value.push(normalizePost(data))
       discussion.value.comment_count++
+      if (authStore.user?.preferences?.follow_after_reply) {
+        discussion.value.is_subscribed = true
+      }
     }
 
     replyContent.value = ''
@@ -378,6 +393,29 @@ async function deleteDiscussion() {
   } catch (error) {
     console.error('删除失败:', error)
     alert('删除失败，请稍后重试')
+  }
+}
+
+async function toggleSubscription() {
+  if (!authStore.isAuthenticated || !discussion.value) {
+    router.push('/login')
+    return
+  }
+
+  togglingSubscription.value = true
+  try {
+    if (discussion.value.is_subscribed) {
+      await api.delete(`/discussions/${discussion.value.id}/subscribe`)
+      discussion.value.is_subscribed = false
+    } else {
+      await api.post(`/discussions/${discussion.value.id}/subscribe`)
+      discussion.value.is_subscribed = true
+    }
+  } catch (error) {
+    console.error('更新关注状态失败:', error)
+    alert('操作失败，请稍后重试')
+  } finally {
+    togglingSubscription.value = false
   }
 }
 
@@ -664,6 +702,12 @@ function formatDate(dateString) {
   color: #333;
 }
 
+.subscription-copy {
+  color: #66717c;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
 .info-item {
   display: flex;
   justify-content: space-between;
@@ -697,6 +741,10 @@ function formatDate(dateString) {
 
 .sidebar-section button:last-child {
   margin-bottom: 0;
+}
+
+.full-width {
+  width: 100%;
 }
 
 .loading, .error {

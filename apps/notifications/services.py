@@ -8,6 +8,7 @@ from django.db.models import Q, F, Count
 from django.utils import timezone
 from apps.notifications.models import Notification
 from apps.users.models import User
+from apps.discussions.models import DiscussionUser
 
 
 class NotificationService:
@@ -282,6 +283,32 @@ class NotificationService:
                         'post_id': post_id,
                     }
                 )
+
+            subscribed_user_ids = list(
+                DiscussionUser.objects.filter(
+                    discussion_id=discussion_id,
+                    is_subscribed=True,
+                ).exclude(
+                    user_id=from_user.id
+                ).values_list('user_id', flat=True)
+            )
+
+            if subscribed_user_ids:
+                subscribed_users = User.objects.filter(id__in=subscribed_user_ids)
+                for subscriber in subscribed_users:
+                    if subscriber.preferences.get('notify_new_post', True):
+                        NotificationService.create_notification(
+                            user=subscriber,
+                            type=NotificationService.TYPE_DISCUSSION_REPLY,
+                            from_user=from_user,
+                            subject_type='discussion',
+                            subject_id=discussion_id,
+                            data={
+                                'discussion_id': discussion_id,
+                                'discussion_title': discussion.title,
+                                'post_id': post_id,
+                            }
+                        )
         except Discussion.DoesNotExist:
             pass
 

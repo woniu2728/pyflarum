@@ -15,9 +15,15 @@
         <nav class="index-nav-list">
           <ul>
             <li>
-              <router-link to="/" class="nav-item" :class="{ active: !currentTagSlug }">
+              <router-link to="/" class="nav-item" :class="{ active: isAllDiscussionsPage }">
                 <i class="far fa-comments"></i>
                 <span>全部讨论</span>
+              </router-link>
+            </li>
+            <li v-if="authStore.user">
+              <router-link to="/following" class="nav-item" :class="{ active: isFollowingPage }">
+                <i class="fas fa-bell"></i>
+                <span>关注中</span>
               </router-link>
             </li>
             <li>
@@ -55,6 +61,17 @@
       </aside>
 
       <main class="index-content">
+        <section v-if="isFollowingPage" class="tag-hero following-hero">
+          <div class="tag-hero-inner">
+            <div class="tag-hero-pill following-pill">
+              <i class="fas fa-bell"></i>
+              关注中
+            </div>
+            <h1>关注的讨论</h1>
+            <p>这里会显示你已关注、并在后续收到新回复通知的讨论。</p>
+          </div>
+        </section>
+
         <section v-if="currentTag" class="tag-hero" :style="{ '--tag-color': currentTag.color }">
           <div class="tag-hero-inner">
             <div class="tag-hero-pill">
@@ -99,7 +116,7 @@
         </div>
 
         <div v-else-if="discussions.length === 0" class="empty-state">
-          <p>{{ currentTag ? '这个标签下还没有讨论。' : '暂无讨论。' }}</p>
+          <p>{{ emptyStateText }}</p>
         </div>
 
         <ul v-else class="discussion-list">
@@ -127,9 +144,12 @@
               </div>
 
               <div class="discussion-list-item-main">
-                <router-link :to="buildDiscussionPath(discussion)" class="discussion-list-item-title">
-                  {{ discussion.title }}
-                </router-link>
+                <div class="discussion-title-row">
+                  <router-link :to="buildDiscussionPath(discussion)" class="discussion-list-item-title">
+                    {{ discussion.title }}
+                  </router-link>
+                  <span v-if="discussion.is_subscribed" class="subscription-pill">已关注</span>
+                </div>
 
                 <ul class="discussion-list-item-info">
                   <li v-if="discussion.tags.length" class="item-tags">
@@ -208,13 +228,24 @@ const currentTagSlug = computed(() => route.params.slug || null)
 const searchQuery = computed(() => route.query.search?.toString().trim() || '')
 const hasMore = computed(() => currentPage.value * 20 < total.value)
 const sidebarTags = computed(() => flattenTags(tags.value))
+const isFollowingPage = computed(() => route.name === 'following')
+const isAllDiscussionsPage = computed(() => route.name === 'home' && !currentTagSlug.value)
+const emptyStateText = computed(() => {
+  if (isFollowingPage.value) {
+    return '你还没有关注任何讨论。'
+  }
+  if (currentTag.value) {
+    return '这个标签下还没有讨论。'
+  }
+  return '暂无讨论。'
+})
 
 onMounted(async () => {
   await refreshPageData()
 })
 
 watch(
-  () => [route.params.slug, route.query.search],
+  () => [route.name, route.params.slug, route.query.search],
   async () => {
     currentPage.value = 1
     await refreshPageData()
@@ -240,7 +271,7 @@ async function loadTags() {
 }
 
 async function loadCurrentTag() {
-  if (!currentTagSlug.value) {
+  if (!currentTagSlug.value || isFollowingPage.value) {
     currentTag.value = null
     return
   }
@@ -261,7 +292,8 @@ async function loadDiscussions(append) {
       limit: 20,
       sort: sortBy.value,
       q: searchQuery.value || undefined,
-      tag: currentTagSlug.value || undefined
+      tag: currentTagSlug.value || undefined,
+      subscription: isFollowingPage.value ? 'following' : undefined
     }
   })
 
@@ -459,6 +491,10 @@ function getUserColor(user) {
   border-bottom: 1px solid #e3e8ed;
 }
 
+.following-hero {
+  --tag-color: #4d698e;
+}
+
 .tag-hero-inner {
   padding: 28px 26px;
 }
@@ -627,17 +663,26 @@ function getUserColor(user) {
   min-width: 0;
 }
 
+.discussion-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 3px;
+}
+
 .discussion-list-item-title {
   display: block;
   font-size: 16px;
   font-weight: normal;
   color: #333;
-  margin: 0 0 3px;
+  margin: 0;
   line-height: 1.3;
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .discussion-list-item-title:hover {
@@ -674,6 +719,18 @@ function getUserColor(user) {
   color: white;
   font-size: 11px;
   font-weight: 500;
+}
+
+.subscription-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #edf4fb;
+  color: #4d698e;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .username {

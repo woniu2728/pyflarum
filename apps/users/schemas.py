@@ -91,3 +91,11 @@ class GroupOutSchema(Schema):
 class UserDetailSchema(UserOutSchema):
     """用户详情Schema（包含用户组）"""
     groups: List[GroupOutSchema] = []
+    preferences: dict = {}
+
+
+class UserPreferencesSchema(Schema):
+    """用户偏好Schema"""
+    follow_after_reply: bool = False
+    follow_after_create: bool = False
+    notify_new_post: bool = True

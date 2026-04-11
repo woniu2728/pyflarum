@@ -57,6 +57,7 @@ def list_discussions(
     q: Optional[str] = None,
     tag: Optional[str] = None,
     author: Optional[str] = None,
+    subscription: Optional[str] = None,
     sort: str = 'latest',
     page: int = 1,
     limit: int = 20,
@@ -72,13 +73,17 @@ def list_discussions(
     - page: 页码
     - limit: 每页数量
     """
+    user = request.user if request.user.is_authenticated else None
+
     discussions, total = DiscussionService.get_discussion_list(
         q=q,
         tag=tag,
         author=author,
+        subscription=subscription,
         sort=sort,
         page=page,
         limit=limit,
+        user=user,
     )
 
     # 为每个讨论添加标签数据
@@ -162,6 +167,7 @@ def get_discussion(request, discussion_id: int):
     response_data['can_delete'] = can_delete
     response_data['can_reply'] = can_reply
     response_data['tags'] = tags
+    response_data['is_subscribed'] = DiscussionService.get_subscription_state(discussion, user)
 
     return response_data
 
@@ -341,3 +347,27 @@ def toggle_hide_discussion(request, discussion_id: int):
             {"error": "讨论不存在"},
             status=404
         )
+
+
+@router.post("/{discussion_id}/subscribe", tags=["Discussions"])
+def subscribe_discussion(request, discussion_id: int):
+    if not request.user.is_authenticated:
+        return router.create_response(request, {"error": "需要登录"}, status=401)
+
+    try:
+        DiscussionService.subscribe_discussion(discussion_id, request.user)
+        return {"message": "已关注讨论", "is_subscribed": True}
+    except Discussion.DoesNotExist:
+        return router.create_response(request, {"error": "讨论不存在"}, status=404)
+
+
+@router.delete("/{discussion_id}/subscribe", tags=["Discussions"])
+def unsubscribe_discussion(request, discussion_id: int):
+    if not request.user.is_authenticated:
+        return router.create_response(request, {"error": "需要登录"}, status=401)
+
+    try:
+        DiscussionService.unsubscribe_discussion(discussion_id, request.user)
+        return {"message": "已取消关注", "is_subscribed": False}
+    except Discussion.DoesNotExist:
+        return router.create_response(request, {"error": "讨论不存在"}, status=404)

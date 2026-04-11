@@ -15,6 +15,10 @@
             <i class="far fa-comments"></i>
             全部讨论
           </router-link>
+          <router-link v-if="authStore.user" to="/following" class="nav-item">
+            <i class="fas fa-bell"></i>
+            关注中
+          </router-link>
           <router-link to="/tags" class="nav-item active">
             <i class="fas fa-tags"></i>
             全部标签

@@ -77,6 +77,7 @@ class DiscussionService:
                 user=user,
                 last_read_at=datetime.now(),
                 last_read_post_number=1,
+                is_subscribed=user.preferences.get('follow_after_create', False),
             )
 
             return discussion
@@ -86,9 +87,11 @@ class DiscussionService:
         q: Optional[str] = None,
         tag: Optional[str] = None,
         author: Optional[str] = None,
+        subscription: Optional[str] = None,
         sort: str = 'latest',
         page: int = 1,
         limit: int = 20,
+        user: Optional[User] = None,
     ) -> Tuple[List[Discussion], int]:
         """
         获取讨论列表
@@ -125,6 +128,16 @@ class DiscussionService:
         if author:
             queryset = queryset.filter(user__username=author)
 
+        # 订阅过滤
+        if subscription == 'following':
+            if not user or not user.is_authenticated:
+                return [], 0
+
+            queryset = queryset.filter(
+                user_states__user=user,
+                user_states__is_subscribed=True,
+            )
+
         # 排序
         if sort == 'latest':
             queryset = queryset.order_by('-is_sticky', '-last_posted_at')
@@ -138,9 +151,25 @@ class DiscussionService:
             queryset = queryset.order_by('-is_sticky', '-last_posted_at')
 
         # 分页
+        queryset = queryset.distinct()
         total = queryset.count()
         offset = (page - 1) * limit
         discussions = list(queryset[offset:offset + limit])
+
+        if user and user.is_authenticated and discussions:
+            discussion_ids = [discussion.id for discussion in discussions]
+            subscribed_ids = set(
+                DiscussionUser.objects.filter(
+                    user=user,
+                    discussion_id__in=discussion_ids,
+                    is_subscribed=True,
+                ).values_list('discussion_id', flat=True)
+            )
+            for discussion in discussions:
+                discussion.is_subscribed = discussion.id in subscribed_ids
+        else:
+            for discussion in discussions:
+                discussion.is_subscribed = False
 
         return discussions, total
 
@@ -166,7 +195,7 @@ class DiscussionService:
 
             # 更新用户阅读状态
             if user and user.is_authenticated:
-                DiscussionUser.objects.update_or_create(
+                state, _ = DiscussionUser.objects.update_or_create(
                     discussion=discussion,
                     user=user,
                     defaults={
@@ -174,10 +203,59 @@ class DiscussionService:
                         'last_read_post_number': discussion.last_post_number or 0,
                     }
                 )
+                discussion.is_subscribed = state.is_subscribed
+            else:
+                discussion.is_subscribed = False
 
             return discussion
         except Discussion.DoesNotExist:
             return None
+
+    @staticmethod
+    def get_subscription_state(discussion: Discussion, user: Optional[User]) -> bool:
+        if not user or not user.is_authenticated:
+            return False
+
+        state = DiscussionUser.objects.filter(
+            discussion=discussion,
+            user=user,
+            is_subscribed=True,
+        ).exists()
+        return state
+
+    @staticmethod
+    def subscribe_discussion(discussion_id: int, user: User) -> bool:
+        discussion = Discussion.objects.get(id=discussion_id)
+        state, _ = DiscussionUser.objects.get_or_create(
+            discussion=discussion,
+            user=user,
+            defaults={
+                'last_read_at': datetime.now(),
+                'last_read_post_number': discussion.last_post_number or 0,
+            }
+        )
+        if state.is_subscribed:
+            return False
+        state.is_subscribed = True
+        state.save(update_fields=['is_subscribed'])
+        return True
+
+    @staticmethod
+    def unsubscribe_discussion(discussion_id: int, user: User) -> bool:
+        discussion = Discussion.objects.get(id=discussion_id)
+        state, _ = DiscussionUser.objects.get_or_create(
+            discussion=discussion,
+            user=user,
+            defaults={
+                'last_read_at': datetime.now(),
+                'last_read_post_number': discussion.last_post_number or 0,
+            }
+        )
+        if not state.is_subscribed:
+            return False
+        state.is_subscribed = False
+        state.save(update_fields=['is_subscribed'])
+        return True
 
     @staticmethod
     def update_discussion(

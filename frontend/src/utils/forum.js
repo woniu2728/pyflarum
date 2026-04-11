@@ -18,6 +18,7 @@ export function normalizeDiscussion(discussion = {}) {
   return {
     ...discussion,
     is_sticky: Boolean(discussion.is_sticky ?? discussion.is_pinned),
+    is_subscribed: Boolean(discussion.is_subscribed),
     tags: unwrapList(discussion.tags).map(normalizeTag)
   }
 }
