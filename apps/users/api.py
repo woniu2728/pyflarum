@@ -6,6 +6,7 @@ from ninja.security import HttpBearer
 from ninja_jwt.controller import NinjaJWTDefaultController
 from ninja_jwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from typing import List
 
 from .models import User
@@ -106,8 +107,14 @@ def verify_email(request, payload: EmailVerifySchema):
 def forgot_password(request, payload: PasswordResetRequestSchema):
     """请求重置密码"""
     try:
-        UserService.create_password_reset_token(payload.email)
-        return {"message": "重置密码邮件已发送"}
+        password_token = UserService.create_password_reset_token(payload.email)
+        response = {"message": "重置密码邮件已发送"}
+
+        if settings.DEBUG:
+            response["debug_token"] = password_token.token
+            response["debug_reset_url"] = f"{settings.FRONTEND_URL}/reset-password?token={password_token.token}"
+
+        return response
     except ValueError as e:
         return router.create_response(
             request,

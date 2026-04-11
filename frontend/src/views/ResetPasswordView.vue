@@ -2,51 +2,38 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-card">
-        <h2>注册</h2>
-        <p class="subtitle">加入我们的社区</p>
+        <h2>重置密码</h2>
+        <p class="subtitle">输入新的密码以完成重置。如果你是通过邮件打开页面，令牌会自动填入。</p>
 
-        <form @submit.prevent="handleRegister">
+        <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label>用户名</label>
+            <label>重置令牌</label>
             <input
-              v-model="form.username"
+              v-model="form.token"
               type="text"
-              placeholder="请输入用户名"
-              required
-              minlength="3"
-              maxlength="30"
-            />
-            <small>3-30个字符</small>
-          </div>
-
-          <div class="form-group">
-            <label>邮箱</label>
-            <input
-              v-model="form.email"
-              type="email"
-              placeholder="请输入邮箱"
+              placeholder="请输入邮件中的重置令牌"
               required
             />
           </div>
 
           <div class="form-group">
-            <label>密码</label>
+            <label>新密码</label>
             <input
               v-model="form.password"
               type="password"
-              placeholder="请输入密码"
-              required
+              placeholder="请输入新密码"
               minlength="6"
+              required
             />
-            <small>至少6个字符</small>
           </div>
 
           <div class="form-group">
-            <label>确认密码</label>
+            <label>确认新密码</label>
             <input
-              v-model="form.password_confirm"
+              v-model="form.passwordConfirm"
               type="password"
-              placeholder="请再次输入密码"
+              placeholder="请再次输入新密码"
+              minlength="6"
               required
             />
           </div>
@@ -55,13 +42,12 @@
           <div v-if="success" class="success-message">{{ success }}</div>
 
           <button type="submit" class="primary full-width" :disabled="loading">
-            {{ loading ? '注册中...' : '注册' }}
+            {{ loading ? '提交中...' : '重置密码' }}
           </button>
         </form>
 
         <div class="auth-footer">
-          已有账号？
-          <router-link to="/login" class="link">立即登录</router-link>
+          <router-link to="/login" class="link">返回登录</router-link>
         </div>
       </div>
     </div>
@@ -69,69 +55,52 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import api from '@/api'
 
+const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
 
-const form = ref({
-  username: '',
-  email: '',
+const form = reactive({
+  token: route.query.token?.toString() || '',
   password: '',
-  password_confirm: ''
+  passwordConfirm: ''
 })
 
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
-async function handleRegister() {
-  loading.value = true
+watch(
+  () => route.query.token,
+  (value) => {
+    form.token = value?.toString() || ''
+  }
+)
+
+async function handleSubmit() {
   error.value = ''
   success.value = ''
 
-  // 验证密码
-  if (form.value.password !== form.value.password_confirm) {
-    error.value = '两次输入的密码不一致'
-    loading.value = false
+  if (form.password !== form.passwordConfirm) {
+    error.value = '两次输入的新密码不一致'
     return
   }
 
+  loading.value = true
   try {
-    const result = await authStore.register(
-      form.value.username,
-      form.value.email,
-      form.value.password
-    )
+    await api.post('/users/reset-password', {
+      token: form.token,
+      password: form.password
+    })
 
-    if (!result.success) {
-      error.value = result.error || '注册失败，请稍后重试'
-      return
-    }
-
-    success.value = '注册成功！正在跳转...'
-
-    // 2秒后跳转到首页
+    success.value = '密码已重置，正在返回登录页...'
     setTimeout(() => {
-      router.push('/')
-    }, 2000)
+      router.push('/login')
+    }, 1500)
   } catch (err) {
-    if (err.response?.data) {
-      const data = err.response.data
-      if (data.username) {
-        error.value = `用户名: ${data.username[0]}`
-      } else if (data.email) {
-        error.value = `邮箱: ${data.email[0]}`
-      } else if (data.password) {
-        error.value = `密码: ${data.password[0]}`
-      } else {
-        error.value = data.detail || '注册失败，请稍后重试'
-      }
-    } else {
-      error.value = '注册失败，请稍后重试'
-    }
+    error.value = err.response?.data?.error || '重置失败，请检查令牌或稍后重试'
   } finally {
     loading.value = false
   }
@@ -157,7 +126,7 @@ async function handleRegister() {
   background: white;
   padding: 40px;
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .auth-card h2 {
@@ -169,6 +138,7 @@ async function handleRegister() {
 .subtitle {
   color: #666;
   margin-bottom: 30px;
+  line-height: 1.6;
 }
 
 .form-group {
@@ -196,13 +166,6 @@ async function handleRegister() {
   border-color: #667eea;
 }
 
-.form-group small {
-  display: block;
-  margin-top: 5px;
-  color: #999;
-  font-size: 12px;
-}
-
 .error-message {
   background: #fee;
   color: #c33;
@@ -214,7 +177,7 @@ async function handleRegister() {
 
 .success-message {
   background: #efe;
-  color: #3c3;
+  color: #2f7a36;
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 20px;
@@ -228,8 +191,6 @@ async function handleRegister() {
 .auth-footer {
   text-align: center;
   margin-top: 20px;
-  color: #666;
-  font-size: 14px;
 }
 
 .link {

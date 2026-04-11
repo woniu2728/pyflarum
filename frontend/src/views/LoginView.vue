@@ -75,7 +75,12 @@ async function handleLogin() {
   error.value = ''
 
   try {
-    await authStore.login(form.value.identification, form.value.password)
+    const result = await authStore.login(form.value.identification, form.value.password)
+
+    if (!result.success) {
+      error.value = result.error || '登录失败，请检查用户名和密码'
+      return
+    }
 
     // 连接WebSocket
     notificationStore.connect()
@@ -85,7 +90,7 @@ async function handleLogin() {
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   } catch (err) {
-    error.value = err.response?.data?.detail || '登录失败，请检查用户名和密码'
+    error.value = err.response?.data?.error || '登录失败，请检查用户名和密码'
   } finally {
     loading.value = false
   }

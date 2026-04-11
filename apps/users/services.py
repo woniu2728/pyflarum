@@ -5,11 +5,13 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
 from datetime import timedelta, datetime
 import secrets
 
 from .models import User, Group, EmailToken, PasswordToken
 from apps.core.models import AuditLog
+from apps.core.email_service import EmailService
 
 
 class UserService:
@@ -122,8 +124,11 @@ class UserService:
             expires_at=expires_at,
         )
 
-        # TODO: 发送验证邮件
-        # send_verification_email(user, token)
+        EmailService.send_verification_email(
+            user_email=email_token.email,
+            username=user.display_name or user.username,
+            token=token,
+        )
 
         return email_token
 
@@ -167,8 +172,14 @@ class UserService:
             expires_at=expires_at,
         )
 
-        # TODO: 发送重置密码邮件
-        # send_password_reset_email(user, token)
+        email_sent = EmailService.send_password_reset_email(
+            user_email=user.email,
+            username=user.display_name or user.username,
+            token=token,
+        )
+
+        if not email_sent and not settings.DEBUG:
+            raise ValueError("重置密码邮件发送失败")
 
         return password_token
 
