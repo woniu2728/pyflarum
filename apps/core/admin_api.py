@@ -8,8 +8,11 @@ import functools
 from ninja import Router, Body
 from ninja.security import HttpBearer
 from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from typing import List, Dict, Any
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -74,16 +77,70 @@ class AuthBearer(HttpBearer):
             return None
 
 
+def admin_error(message: str, status: int = 400):
+    return JsonResponse({"error": message}, status=status)
+
+
+def serialize_group(group: Group) -> Dict[str, Any]:
+    return {
+        "id": group.id,
+        "name": group.name,
+        "name_singular": group.name_singular,
+        "name_plural": group.name_plural,
+        "color": group.color,
+        "icon": group.icon,
+        "is_hidden": group.is_hidden,
+    }
+
+
+def serialize_admin_user(user: User, include_details: bool = False) -> Dict[str, Any]:
+    payload = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "display_name": user.display_name,
+        "avatar_url": user.avatar_url,
+        "is_email_confirmed": user.is_email_confirmed,
+        "is_staff": user.is_staff,
+        "is_suspended": user.is_suspended,
+        "joined_at": user.joined_at,
+        "last_seen_at": user.last_seen_at,
+        "discussion_count": user.discussion_count,
+        "comment_count": user.comment_count,
+        "groups": [serialize_group(group) for group in user.user_groups.all().order_by("name")],
+    }
+
+    if include_details:
+        payload.update({
+            "bio": user.bio,
+            "suspended_until": user.suspended_until,
+            "suspend_reason": user.suspend_reason,
+            "suspend_message": user.suspend_message,
+        })
+
+    return payload
+
+
+def parse_optional_datetime(value):
+    if value in (None, "", False):
+        return None
+
+    parsed = parse_datetime(str(value))
+    if not parsed:
+        raise ValueError("封禁截止时间格式无效")
+
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+
+    return parsed
+
+
 def require_staff(func):
     """装饰器：要求管理员权限"""
     @functools.wraps(func)
     def wrapper(request, *args, **kwargs):
         if not request.auth or not request.auth.is_staff:
-            return router.create_response(
-                request,
-                {"error": "需要管理员权限"},
-                status=403
-            )
+            return admin_error("需要管理员权限", status=403)
         return func(request, *args, **kwargs)
     return wrapper
 
@@ -189,11 +246,7 @@ def save_mail_settings(request, payload: Dict[str, Any] = Body(...)):
 def send_test_email(request):
     """发送测试邮件"""
     if not request.auth.email:
-        return router.create_response(
-            request,
-            {"error": "当前管理员没有邮箱地址"},
-            status=400
-        )
+        return admin_error("当前管理员没有邮箱地址", status=400)
 
     mail_settings = get_setting_group("mail", MAIL_SETTINGS_DEFAULTS)
     from_email = mail_settings.get("mail_from_address") or settings.DEFAULT_FROM_EMAIL
@@ -207,11 +260,7 @@ def send_test_email(request):
             fail_silently=False,
         )
     except Exception as e:
-        return router.create_response(
-            request,
-            {"error": str(e)},
-            status=400
-        )
+        return admin_error(str(e), status=400)
 
     return {"message": "测试邮件已发送", "sent_count": sent_count}
 
@@ -238,11 +287,7 @@ def clear_cache(request):
     try:
         cache.clear()
     except Exception as e:
-        return router.create_response(
-            request,
-            {"error": f"缓存清理失败: {e}"},
-            status=503
-        )
+        return admin_error(f"缓存清理失败: {e}", status=503)
 
     return {"message": "缓存已清除"}
 
@@ -254,18 +299,7 @@ def clear_cache(request):
 def list_groups(request):
     """获取用户组列表"""
     groups = Group.objects.all()
-    return [
-        {
-            "id": g.id,
-            "name": g.name,
-            "name_singular": g.name_singular,
-            "name_plural": g.name_plural,
-            "color": g.color,
-            "icon": g.icon,
-            "is_hidden": g.is_hidden,
-        }
-        for g in groups
-    ]
+    return [serialize_group(group) for group in groups]
 
 
 @router.post("/groups", auth=AuthBearer(), tags=["Admin"])
@@ -280,11 +314,7 @@ def create_group(request, payload: Dict[str, Any] = Body(...)):
         icon=payload.get('icon', ''),
         is_hidden=payload.get('is_hidden', False),
     )
-    return {
-        "id": group.id,
-        "name": group.name,
-        "color": group.color,
-    }
+    return serialize_group(group)
 
 
 # ==================== 权限管理 ====================
@@ -331,10 +361,14 @@ def save_permissions(request, payload: Dict[int, List[str]] = Body(...)):
 @require_staff
 def list_admin_users(request, page: int = 1, limit: int = 20, q: str = None):
     """获取用户列表（管理后台）"""
-    queryset = User.objects.all()
+    queryset = User.objects.prefetch_related("user_groups").all().order_by("-joined_at")
 
     if q:
-        queryset = queryset.filter(username__icontains=q) | queryset.filter(email__icontains=q)
+        queryset = queryset.filter(
+            Q(username__icontains=q)
+            | Q(email__icontains=q)
+            | Q(display_name__icontains=q)
+        )
 
     total = queryset.count()
     offset = (page - 1) * limit
@@ -344,21 +378,79 @@ def list_admin_users(request, page: int = 1, limit: int = 20, q: str = None):
         "total": total,
         "page": page,
         "limit": limit,
-        "data": [
-            {
-                "id": u.id,
-                "username": u.username,
-                "email": u.email,
-                "display_name": u.display_name,
-                "is_email_confirmed": u.is_email_confirmed,
-                "is_staff": u.is_staff,
-                "joined_at": u.joined_at,
-                "discussion_count": u.discussion_count,
-                "comment_count": u.comment_count,
-            }
-            for u in users
-        ]
+        "data": [serialize_admin_user(user) for user in users]
     }
+
+
+@router.get("/users/{user_id}", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def get_admin_user(request, user_id: int):
+    """获取单个用户详情（管理后台）"""
+    user = get_object_or_404(User.objects.prefetch_related("user_groups"), id=user_id)
+    return serialize_admin_user(user, include_details=True)
+
+
+@router.put("/users/{user_id}", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def update_admin_user(request, user_id: int, payload: Dict[str, Any] = Body(...)):
+    """更新用户信息（管理后台）"""
+    user = get_object_or_404(User.objects.prefetch_related("user_groups"), id=user_id)
+
+    if user.id == request.auth.id and "is_staff" in payload and not payload.get("is_staff"):
+        return admin_error("不能取消自己的管理员权限", status=400)
+
+    username = payload.get("username")
+    if username and username != user.username:
+        if User.objects.filter(username=username).exclude(id=user.id).exists():
+            return admin_error("用户名已存在", status=400)
+        user.username = username
+
+    email = payload.get("email")
+    if email is not None and email != user.email:
+        if User.objects.filter(email=email).exclude(id=user.id).exists():
+            return admin_error("邮箱已被使用", status=400)
+        user.email = email
+
+    if "display_name" in payload:
+        user.display_name = payload.get("display_name") or ""
+    if "bio" in payload:
+        user.bio = payload.get("bio") or ""
+    if "is_staff" in payload:
+        user.is_staff = bool(payload.get("is_staff"))
+    if "is_email_confirmed" in payload:
+        user.is_email_confirmed = bool(payload.get("is_email_confirmed"))
+
+    try:
+        if "suspended_until" in payload:
+            user.suspended_until = parse_optional_datetime(payload.get("suspended_until"))
+    except ValueError as e:
+        return admin_error(str(e), status=400)
+
+    if "suspend_reason" in payload:
+        user.suspend_reason = payload.get("suspend_reason") or ""
+    if "suspend_message" in payload:
+        user.suspend_message = payload.get("suspend_message") or ""
+
+    group_ids = payload.get("group_ids")
+    if group_ids is not None:
+        try:
+            normalized_group_ids = [int(group_id) for group_id in group_ids]
+        except (TypeError, ValueError):
+            return admin_error("用户组参数无效", status=400)
+
+        groups = list(Group.objects.filter(id__in=normalized_group_ids))
+        if len(groups) != len(set(normalized_group_ids)):
+            return admin_error("包含无效的用户组", status=400)
+    else:
+        groups = None
+
+    user.save()
+
+    if groups is not None:
+        user.user_groups.set(groups)
+
+    user.refresh_from_db()
+    return serialize_admin_user(user, include_details=True)
 
 
 # ==================== 标签管理 ====================
@@ -417,11 +509,7 @@ def create_admin_tag(request, payload: Dict[str, Any] = Body(...)):
             "is_restricted": tag.is_restricted,
         }
     except Exception as e:
-        return router.create_response(
-            request,
-            {"error": str(e)},
-            status=400
-        )
+        return admin_error(str(e), status=400)
 
 
 @router.put("/tags/{tag_id}", auth=AuthBearer(), tags=["Admin"])
@@ -461,11 +549,7 @@ def update_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
             "is_restricted": tag.is_restricted,
         }
     except Exception as e:
-        return router.create_response(
-            request,
-            {"error": str(e)},
-            status=400
-        )
+        return admin_error(str(e), status=400)
 
 
 @router.delete("/tags/{tag_id}", auth=AuthBearer(), tags=["Admin"])

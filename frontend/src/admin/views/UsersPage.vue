@@ -45,6 +45,16 @@
               <td>
                 <strong>{{ user.username }}</strong>
                 <span v-if="user.is_staff" class="UserBadge UserBadge--admin">管理员</span>
+                <div v-if="user.groups?.length" class="UserGroups">
+                  <span
+                    v-for="group in user.groups"
+                    :key="group.id"
+                    class="UserBadge UserBadge--group"
+                    :style="{ backgroundColor: group.color || '#7f8c8d' }"
+                  >
+                    {{ group.name }}
+                  </span>
+                </div>
               </td>
               <td>{{ user.email }}</td>
               <td>{{ user.display_name }}</td>
@@ -54,13 +64,13 @@
               <td>
                 <span
                   class="UserStatus"
-                  :class="user.is_email_confirmed ? 'UserStatus--active' : 'UserStatus--pending'"
+                  :class="statusClass(user)"
                 >
-                  {{ user.is_email_confirmed ? '已激活' : '未激活' }}
+                  {{ statusLabel(user) }}
                 </span>
               </td>
               <td>
-                <button @click="editUser(user)" class="Button Button--small">
+                <button @click="editUser(user)" class="Button Button--small" :disabled="savingDetails">
                   编辑
                 </button>
               </td>
@@ -90,6 +100,110 @@
         </button>
       </div>
     </div>
+
+    <div v-if="showEditModal" class="Modal" @click.self="closeModal">
+      <div class="Modal-content">
+        <div class="Modal-header">
+          <h3>编辑用户</h3>
+          <button @click="closeModal" class="Modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div v-if="loadingDetails" class="Modal-loading">加载中...</div>
+        <div v-else class="Modal-body">
+          <div class="Form-group">
+            <label>用户名</label>
+            <input v-model="formData.username" type="text" class="FormControl" />
+          </div>
+
+          <div class="FormRow">
+            <div class="Form-group">
+              <label>邮箱</label>
+              <input v-model="formData.email" type="email" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>显示名称</label>
+              <input v-model="formData.display_name" type="text" class="FormControl" />
+            </div>
+          </div>
+
+          <div class="Form-group">
+            <label>个人简介</label>
+            <textarea
+              v-model="formData.bio"
+              class="FormControl"
+              rows="3"
+              placeholder="管理员后台可直接维护用户简介"
+            ></textarea>
+          </div>
+
+          <div class="FormRow">
+            <label class="CheckboxField">
+              <input v-model="formData.is_staff" type="checkbox" />
+              <span>管理员</span>
+            </label>
+            <label class="CheckboxField">
+              <input v-model="formData.is_email_confirmed" type="checkbox" />
+              <span>邮箱已验证</span>
+            </label>
+          </div>
+
+          <div class="Form-group">
+            <label>用户组</label>
+            <div class="GroupChecklist">
+              <label v-for="group in availableGroups" :key="group.id" class="CheckboxField CheckboxField--card">
+                <input
+                  :checked="formData.group_ids.includes(group.id)"
+                  type="checkbox"
+                  @change="toggleGroup(group.id, $event)"
+                />
+                <span :style="{ color: group.color || '#4d698e' }">{{ group.name }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="Form-group">
+            <label>封禁截止时间</label>
+            <input
+              v-model="formData.suspended_until"
+              type="datetime-local"
+              class="FormControl"
+            />
+            <small class="Form-help">留空表示未封禁</small>
+          </div>
+
+          <div class="Form-group">
+            <label>封禁原因</label>
+            <input
+              v-model="formData.suspend_reason"
+              type="text"
+              class="FormControl"
+              placeholder="例如：垃圾广告、违规内容"
+            />
+          </div>
+
+          <div class="Form-group">
+            <label>对用户显示的信息</label>
+            <textarea
+              v-model="formData.suspend_message"
+              class="FormControl"
+              rows="3"
+              placeholder="显示给被封禁用户的提示"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="Modal-footer">
+          <button @click="closeModal" class="Button">
+            取消
+          </button>
+          <button @click="saveUser" class="Button Button--primary" :disabled="saving">
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </AdminPage>
 </template>
 
@@ -104,10 +218,19 @@ const searchQuery = ref('')
 const page = ref(1)
 const limit = ref(20)
 const total = ref(0)
+const availableGroups = ref([])
+const showEditModal = ref(false)
+const loadingDetails = ref(false)
+const savingDetails = ref(false)
+const saving = ref(false)
+const editingUserId = ref(null)
 
 let searchTimeout = null
 
+const formData = ref(getEmptyForm())
+
 onMounted(() => {
+  loadGroups()
   loadUsers()
 })
 
@@ -143,14 +266,123 @@ function changePage(newPage) {
   loadUsers()
 }
 
-function editUser(user) {
-  alert(`编辑用户: ${user.username}`)
+async function loadGroups() {
+  try {
+    availableGroups.value = await api.get('/admin/groups')
+  } catch (error) {
+    console.error('加载用户组失败:', error)
+  }
+}
+
+async function editUser(user) {
+  showEditModal.value = true
+  loadingDetails.value = true
+  editingUserId.value = user.id
+  formData.value = getEmptyForm()
+
+  try {
+    const detail = await api.get(`/admin/users/${user.id}`)
+    formData.value = {
+      username: detail.username || '',
+      email: detail.email || '',
+      display_name: detail.display_name || '',
+      bio: detail.bio || '',
+      is_staff: Boolean(detail.is_staff),
+      is_email_confirmed: Boolean(detail.is_email_confirmed),
+      group_ids: (detail.groups || []).map(group => group.id),
+      suspended_until: formatDateTimeLocal(detail.suspended_until),
+      suspend_reason: detail.suspend_reason || '',
+      suspend_message: detail.suspend_message || '',
+    }
+  } catch (error) {
+    console.error('加载用户详情失败:', error)
+    alert('加载用户详情失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    closeModal()
+  } finally {
+    loadingDetails.value = false
+  }
+}
+
+function toggleGroup(groupId, event) {
+  if (event.target.checked) {
+    if (!formData.value.group_ids.includes(groupId)) {
+      formData.value.group_ids.push(groupId)
+    }
+  } else {
+    formData.value.group_ids = formData.value.group_ids.filter(id => id !== groupId)
+  }
+}
+
+async function saveUser() {
+  if (!editingUserId.value) return
+
+  saving.value = true
+  savingDetails.value = true
+  try {
+    await api.put(`/admin/users/${editingUserId.value}`, {
+      ...formData.value,
+      suspended_until: formData.value.suspended_until || null,
+    })
+    closeModal()
+    await loadUsers()
+  } catch (error) {
+    console.error('保存用户失败:', error)
+    alert('保存失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+  } finally {
+    saving.value = false
+    savingDetails.value = false
+  }
+}
+
+function closeModal() {
+  showEditModal.value = false
+  loadingDetails.value = false
+  saving.value = false
+  editingUserId.value = null
+  formData.value = getEmptyForm()
+}
+
+function getEmptyForm() {
+  return {
+    username: '',
+    email: '',
+    display_name: '',
+    bio: '',
+    is_staff: false,
+    is_email_confirmed: false,
+    group_ids: [],
+    suspended_until: '',
+    suspend_reason: '',
+    suspend_message: '',
+  }
+}
+
+function statusLabel(user) {
+  if (user.is_suspended) return '已封禁'
+  if (user.is_email_confirmed) return '已激活'
+  return '未激活'
+}
+
+function statusClass(user) {
+  if (user.is_suspended) return 'UserStatus--suspended'
+  if (user.is_email_confirmed) return 'UserStatus--active'
+  return 'UserStatus--pending'
 }
 
 function formatDate(dateString) {
   if (!dateString) return ''
   const date = new Date(dateString)
   return date.toLocaleDateString('zh-CN')
+}
+
+function formatDateTimeLocal(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const offset = date.getTimezoneOffset()
+  const localDate = new Date(date.getTime() - offset * 60000)
+  return localDate.toISOString().slice(0, 16)
 }
 </script>
 
@@ -227,6 +459,17 @@ function formatDate(dateString) {
   color: white;
 }
 
+.UserBadge--group {
+  color: white;
+}
+
+.UserGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .UserStatus {
   display: inline-block;
   padding: 4px 10px;
@@ -245,6 +488,11 @@ function formatDate(dateString) {
   color: #856404;
 }
 
+.UserStatus--suspended {
+  background: #f8d7da;
+  color: #842029;
+}
+
 .Button {
   background: #f5f8fa;
   border: 1px solid #ddd;
@@ -258,6 +506,17 @@ function formatDate(dateString) {
 .Button:hover:not(:disabled) {
   background: #e8eef5;
   border-color: #4d698e;
+}
+
+.Button--primary {
+  background: #4d698e;
+  border-color: #4d698e;
+  color: white;
+}
+
+.Button--primary:hover:not(:disabled) {
+  background: #3d5875;
+  border-color: #3d5875;
 }
 
 .Button:disabled {
@@ -281,5 +540,123 @@ function formatDate(dateString) {
 .Pagination-info {
   font-size: 14px;
   color: #666;
+}
+
+.Modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.Modal-content {
+  width: min(720px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border-radius: 3px;
+}
+
+.Modal-header,
+.Modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px;
+}
+
+.Modal-header {
+  border-bottom: 1px solid #e3e8ed;
+}
+
+.Modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #e3e8ed;
+}
+
+.Modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.Modal-close {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.Modal-close:hover {
+  color: #333;
+}
+
+.Modal-body,
+.Modal-loading {
+  padding: 20px;
+}
+
+.Modal-loading {
+  text-align: center;
+  color: #999;
+}
+
+.Form-group {
+  margin-bottom: 20px;
+}
+
+.Form-group:last-child {
+  margin-bottom: 0;
+}
+
+.Form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.FormRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.CheckboxField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #44515e;
+}
+
+.CheckboxField--card {
+  padding: 10px 12px;
+  border: 1px solid #dbe2ea;
+  border-radius: 3px;
+  background: #fafbfc;
+}
+
+.GroupChecklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.Form-help {
+  display: block;
+  margin-top: 6px;
+  color: #7f8c8d;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .FormRow {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
