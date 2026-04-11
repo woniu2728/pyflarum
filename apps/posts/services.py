@@ -19,6 +19,16 @@ class PostService:
     """帖子服务"""
 
     @staticmethod
+    def _can_view_post(post: Post, user: Optional[User]) -> bool:
+        if post.hidden_at and not (user and user.is_staff):
+            return False
+        if post.approval_status == Post.APPROVAL_APPROVED:
+            return True
+        if user and user.is_staff:
+            return True
+        return bool(user and user.is_authenticated and post.approval_status == Post.APPROVAL_PENDING and post.user_id == user.id)
+
+    @staticmethod
     def create_post(
         discussion_id: int,
         content: str,
@@ -39,11 +49,15 @@ class PostService:
             ValueError: 讨论不存在或已锁定
         """
         UserService.ensure_not_suspended(user, "回复讨论")
+        requires_approval = UserService.requires_content_approval(user, "replyWithoutApproval")
 
         try:
             discussion = Discussion.objects.get(id=discussion_id)
         except Discussion.DoesNotExist:
             raise ValueError("讨论不存在")
+
+        if discussion.approval_status != Discussion.APPROVAL_APPROVED and not user.is_staff:
+            raise ValueError("讨论正在审核中，暂时无法回复")
 
         if discussion.is_locked and not user.is_staff:
             raise ValueError("讨论已锁定，无法回复")
@@ -61,41 +75,45 @@ class PostService:
                 content=content,
                 content_html=PostService._render_markdown(content),
                 type='comment',
+                approval_status=Post.APPROVAL_PENDING if requires_approval else Post.APPROVAL_APPROVED,
+                approved_at=None if requires_approval else timezone.now(),
+                approved_by=None if requires_approval else user,
             )
 
-            # 更新讨论统计
-            discussion.comment_count = F('comment_count') + 1
-            discussion.last_posted_at = timezone.now()
-            discussion.last_posted_user = user
-            discussion.last_post_id = post.id
-            discussion.last_post_number = post.number
-            discussion.save()
+            if not requires_approval:
+                # 更新讨论统计
+                discussion.comment_count = F('comment_count') + 1
+                discussion.last_posted_at = timezone.now()
+                discussion.last_posted_user = user
+                discussion.last_post_id = post.id
+                discussion.last_post_number = post.number
+                discussion.save()
 
-            # 更新用户统计
-            user.comment_count = F('comment_count') + 1
-            user.save(update_fields=['comment_count'])
+                # 更新用户统计
+                user.comment_count = F('comment_count') + 1
+                user.save(update_fields=['comment_count'])
 
-            if user.preferences.get('follow_after_reply', False):
-                DiscussionUser.objects.update_or_create(
-                    discussion=discussion,
-                    user=user,
-                    defaults={
-                        'is_subscribed': True,
-                        'last_read_at': timezone.now(),
-                        'last_read_post_number': post.number,
-                    }
+                if user.preferences.get('follow_after_reply', False):
+                    DiscussionUser.objects.update_or_create(
+                        discussion=discussion,
+                        user=user,
+                        defaults={
+                            'is_subscribed': True,
+                            'last_read_at': timezone.now(),
+                            'last_read_post_number': post.number,
+                        }
+                    )
+
+                # 处理@提及
+                PostService._process_mentions(post, content)
+
+                # 发送通知：讨论有新回复
+                from apps.notifications.services import NotificationService
+                NotificationService.notify_discussion_reply(
+                    discussion_id=discussion.id,
+                    post_id=post.id,
+                    from_user=user
                 )
-
-            # 处理@提及
-            PostService._process_mentions(post, content)
-
-            # 发送通知：讨论有新回复
-            from apps.notifications.services import NotificationService
-            NotificationService.notify_discussion_reply(
-                discussion_id=discussion.id,
-                post_id=post.id,
-                from_user=user
-            )
 
             return post
 
@@ -129,6 +147,14 @@ class PostService:
         # 过滤隐藏的帖子
         if not user or not user.is_staff:
             queryset = queryset.filter(hidden_at__isnull=True)
+
+        if user and user.is_authenticated and not user.is_staff:
+            queryset = queryset.filter(
+                Q(approval_status=Post.APPROVAL_APPROVED)
+                | Q(approval_status=Post.APPROVAL_PENDING, user=user)
+            )
+        elif not user or not user.is_authenticated:
+            queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
 
         # 排序
         queryset = queryset.order_by('number')
@@ -170,6 +196,14 @@ class PostService:
         if not user or not user.is_staff:
             queryset = queryset.filter(hidden_at__isnull=True)
 
+        if user and user.is_authenticated and not user.is_staff:
+            queryset = queryset.filter(
+                Q(approval_status=Post.APPROVAL_APPROVED)
+                | Q(approval_status=Post.APPROVAL_PENDING, user=user)
+            )
+        elif not user or not user.is_authenticated:
+            queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
+
         position = queryset.count()
         if position <= 0:
             return 1
@@ -194,6 +228,9 @@ class PostService:
             ).annotate(
                 like_count=Count('likes')
             ).get(id=post_id)
+
+            if not PostService._can_view_post(post, user):
+                return None
 
             # 检查点赞状态
             if user and user.is_authenticated:
@@ -381,6 +418,59 @@ class PostService:
         flag.resolved_at = timezone.now()
         flag.save(update_fields=["status", "resolution_note", "resolved_by", "resolved_at"])
         return flag
+
+    @staticmethod
+    def approve_post(post: Post, admin_user: User, note: str = "") -> Post:
+        with transaction.atomic():
+            now = timezone.now()
+            post.approval_status = Post.APPROVAL_APPROVED
+            post.approved_at = now
+            post.approved_by = admin_user
+            post.approval_note = note
+            post.hidden_at = None
+            post.hidden_user = None
+            post.save(update_fields=[
+                'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
+            ])
+
+            discussion = post.discussion
+            discussion.comment_count = F('comment_count') + 1
+            if not discussion.last_post_number or post.number >= discussion.last_post_number:
+                discussion.last_posted_at = now
+                discussion.last_posted_user = post.user
+                discussion.last_post_id = post.id
+                discussion.last_post_number = post.number
+            discussion.save()
+
+            if post.user:
+                post.user.comment_count = F('comment_count') + 1
+                post.user.save(update_fields=['comment_count'])
+
+            PostService._process_mentions(post, post.content)
+
+            from apps.notifications.services import NotificationService
+            NotificationService.notify_discussion_reply(
+                discussion_id=discussion.id,
+                post_id=post.id,
+                from_user=post.user
+            )
+
+        post.refresh_from_db()
+        return post
+
+    @staticmethod
+    def reject_post(post: Post, admin_user: User, note: str = "") -> Post:
+        rejected_at = timezone.now()
+        post.approval_status = Post.APPROVAL_REJECTED
+        post.approved_at = rejected_at
+        post.approved_by = admin_user
+        post.approval_note = note
+        post.hidden_at = rejected_at
+        post.hidden_user = admin_user
+        post.save(update_fields=[
+            'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
+        ])
+        return post
 
     @staticmethod
     def unlike_post(post_id: int, user: User) -> bool:

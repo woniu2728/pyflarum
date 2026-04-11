@@ -110,9 +110,12 @@
                   class="discussion-item"
                 >
                   <div class="discussion-main">
-                    <router-link :to="buildDiscussionPath(discussion)" class="discussion-title">
-                      {{ discussion.title }}
-                    </router-link>
+                    <div class="discussion-title-row">
+                      <router-link :to="buildDiscussionPath(discussion)" class="discussion-title">
+                        {{ discussion.title }}
+                      </router-link>
+                      <span v-if="discussion.approval_status === 'pending'" class="approval-pill">待审核</span>
+                    </div>
                     <div class="discussion-meta">
                       <span>{{ formatDate(discussion.created_at) }}</span>
                     </div>
@@ -136,13 +139,16 @@
               <div v-else class="post-list">
                 <div v-for="post in posts" :key="post.id" class="post-item">
                   <div class="post-header">
-                    <router-link
-                      :to="buildDiscussionPath(post.discussion?.id || post.discussion_id)"
-                      class="post-discussion-link"
-                    >
-                      <i class="fas fa-arrow-right"></i>
-                      {{ post.discussion?.title || '讨论' }}
-                    </router-link>
+                    <div class="post-header-main">
+                      <router-link
+                        :to="buildDiscussionPath(post.discussion?.id || post.discussion_id)"
+                        class="post-discussion-link"
+                      >
+                        <i class="fas fa-arrow-right"></i>
+                        {{ post.discussion?.title || '讨论' }}
+                      </router-link>
+                      <span v-if="post.approval_status === 'pending'" class="approval-pill">待审核</span>
+                    </div>
                     <span class="post-time">{{ formatDate(post.created_at) }}</span>
                   </div>
                   <div class="post-content" v-html="post.content_html || post.content"></div>
@@ -743,6 +749,13 @@ function formatLastSeen(dateString) {
   text-decoration: none;
 }
 
+.discussion-title-row,
+.post-header-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .discussion-meta {
   font-size: 13px;
   color: #aaa;
@@ -794,6 +807,18 @@ function formatLastSeen(dateString) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.approval-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #856404;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .post-discussion-link {

@@ -6,7 +6,7 @@ from ninja_jwt.tokens import RefreshToken
 from apps.discussions.services import DiscussionService
 from apps.posts.models import PostFlag
 from apps.posts.services import PostService
-from apps.users.models import User
+from apps.users.models import Group, Permission, User
 
 
 class PostPaginationTests(TestCase):
@@ -108,3 +108,17 @@ class PostFlagApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403, response.content)
         self.assertIn("封禁期间不可互动", response.json()["error"])
+
+    def test_post_can_enter_approval_queue(self):
+        trusted_group = Group.objects.create(name="Trusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")
+
+        response = self.client.post(
+            f"/api/discussions/{self.discussion.id}/posts",
+            data='{"content":"需要审核的回复"}',
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["approval_status"], "pending")

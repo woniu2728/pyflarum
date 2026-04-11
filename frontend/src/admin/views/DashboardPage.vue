@@ -68,6 +68,15 @@
               </div>
             </div>
             <div class="StatsWidget-item">
+              <div class="StatsWidget-icon StatsWidget-icon--info">
+                <i class="fas fa-user-check"></i>
+              </div>
+              <div class="StatsWidget-info">
+                <div class="StatsWidget-value">{{ stats.pendingApprovals || 0 }}</div>
+                <div class="StatsWidget-label">待审核内容</div>
+              </div>
+            </div>
+            <div class="StatsWidget-item">
               <div class="StatsWidget-icon StatsWidget-icon--warning">
                 <i class="fas fa-flag"></i>
               </div>
@@ -99,6 +108,10 @@
               <i class="fas fa-users"></i>
               <span>管理用户</span>
             </router-link>
+            <router-link to="/admin/approval" class="ActionsWidget-item">
+              <i class="fas fa-user-check"></i>
+              <span>处理审核</span>
+            </router-link>
             <router-link to="/admin/flags" class="ActionsWidget-item">
               <i class="fas fa-flag"></i>
               <span>处理举报</span>
@@ -127,6 +140,7 @@ const stats = ref({
   totalUsers: 0,
   totalDiscussions: 0,
   totalPosts: 0,
+  pendingApprovals: 0,
   openFlags: 0,
 })
 
@@ -227,6 +241,10 @@ onMounted(async () => {
 
 .StatsWidget-icon--warning {
   background: #e67e22;
+}
+
+.StatsWidget-icon--info {
+  background: #3498db;
 }
 
 .StatsWidget-info {

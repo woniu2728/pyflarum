@@ -3,7 +3,7 @@
 """
 from typing import Optional
 from ninja import Router
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 
@@ -51,6 +51,8 @@ def _serialize_post(post, user=None):
             "slug": post.discussion.slug,
         } if getattr(post, "discussion", None) else None,
         "is_hidden": post.is_hidden,
+        "approval_status": post.approval_status,
+        "approval_note": post.approval_note,
         "like_count": getattr(post, "like_count", 0),
         "is_liked": getattr(post, "is_liked", False),
         "can_edit": PostService.can_edit_post(post, user) if user else False,
@@ -122,6 +124,14 @@ def list_all_posts(
         type="comment",
         hidden_at__isnull=True,
     )
+
+    if user and user.is_authenticated and not user.is_staff:
+        queryset = queryset.filter(
+            Q(approval_status=Post.APPROVAL_APPROVED)
+            | Q(approval_status=Post.APPROVAL_PENDING, user=user)
+        )
+    elif not user or not user.is_authenticated:
+        queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
 
     if author:
         queryset = queryset.filter(user__username=author)

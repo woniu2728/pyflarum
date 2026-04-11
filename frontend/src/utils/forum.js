@@ -18,6 +18,8 @@ export function normalizeDiscussion(discussion = {}) {
   const unreadCount = Number(discussion.unread_count || 0)
   return {
     ...discussion,
+    approval_status: discussion.approval_status || 'approved',
+    approval_note: discussion.approval_note || '',
     is_sticky: Boolean(discussion.is_sticky ?? discussion.is_pinned),
     is_subscribed: Boolean(discussion.is_subscribed),
     is_unread: Boolean(discussion.is_unread || unreadCount > 0),
@@ -30,6 +32,8 @@ export function normalizeDiscussion(discussion = {}) {
 export function normalizePost(post = {}) {
   return {
     ...post,
+    approval_status: post.approval_status || 'approved',
+    approval_note: post.approval_note || '',
     like_count: post.like_count ?? post.likes_count ?? 0,
     discussion: post.discussion || (post.discussion_id ? {
       id: post.discussion_id,

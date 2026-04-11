@@ -7,6 +7,15 @@ class Discussion(models.Model):
     """
     讨论模型 - 对标Flarum的Discussion模型
     """
+    APPROVAL_APPROVED = "approved"
+    APPROVAL_PENDING = "pending"
+    APPROVAL_REJECTED = "rejected"
+    APPROVAL_STATUS_CHOICES = [
+        (APPROVAL_APPROVED, "已通过"),
+        (APPROVAL_PENDING, "待审核"),
+        (APPROVAL_REJECTED, "已拒绝"),
+    ]
+
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=255, unique=True, db_index=True)
 
@@ -43,6 +52,23 @@ class Discussion(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='hidden_discussions'
     )
 
+    # 审核相关
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default=APPROVAL_APPROVED,
+        db_index=True,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_discussions',
+    )
+    approval_note = models.TextField(blank=True)
+
     # 浏览次数
     view_count = models.IntegerField(default=0)
 
@@ -76,6 +102,14 @@ class Discussion(models.Model):
     def is_hidden(self):
         """检查讨论是否被隐藏"""
         return self.hidden_at is not None
+
+    @property
+    def is_approved(self):
+        return self.approval_status == self.APPROVAL_APPROVED
+
+    @property
+    def is_pending_approval(self):
+        return self.approval_status == self.APPROVAL_PENDING
 
     def increment_comment_count(self):
         """增加评论数"""

@@ -179,6 +179,7 @@ const permissionSections = [
     label: '发起权限',
     permissions: [
       { name: 'startDiscussion', label: '发起讨论', icon: 'fas fa-edit' },
+      { name: 'startDiscussionWithoutApproval', label: '发起讨论免审核', icon: 'fas fa-user-check' },
       { name: 'uploadFiles', label: '上传文件', icon: 'fas fa-upload' },
     ],
   },
@@ -187,6 +188,7 @@ const permissionSections = [
     label: '回复权限',
     permissions: [
       { name: 'reply', label: '回复讨论', icon: 'fas fa-reply' },
+      { name: 'replyWithoutApproval', label: '回复免审核', icon: 'fas fa-user-check' },
       { name: 'editOwnPosts', label: '编辑自己的帖子', icon: 'fas fa-pencil-alt' },
       { name: 'deleteOwnPosts', label: '删除自己的帖子', icon: 'fas fa-times' },
     ],

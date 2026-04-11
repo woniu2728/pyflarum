@@ -199,7 +199,9 @@ async function handleSubmit() {
     })
 
     console.log('创建成功:', data)
-    // 跳转到新创建的讨论
+    if (data.approval_status === 'pending') {
+      alert('讨论已提交审核，管理员通过后会显示在论坛列表中。')
+    }
     router.push(`/d/${data.id}`)
   } catch (err) {
     console.error('创建失败:', err)

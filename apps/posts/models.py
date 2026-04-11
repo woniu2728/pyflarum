@@ -7,6 +7,15 @@ class Post(models.Model):
     """
     帖子模型 - 对标Flarum的Post模型
     """
+    APPROVAL_APPROVED = "approved"
+    APPROVAL_PENDING = "pending"
+    APPROVAL_REJECTED = "rejected"
+    APPROVAL_STATUS_CHOICES = [
+        (APPROVAL_APPROVED, "已通过"),
+        (APPROVAL_PENDING, "待审核"),
+        (APPROVAL_REJECTED, "已拒绝"),
+    ]
+
     discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE, related_name='posts')
     number = models.IntegerField()  # 楼层号
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='posts')
@@ -37,6 +46,23 @@ class Post(models.Model):
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='hidden_posts'
     )
 
+    # 审核相关
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default=APPROVAL_APPROVED,
+        db_index=True,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_posts',
+    )
+    approval_note = models.TextField(blank=True)
+
     # 私密标志
     is_private = models.BooleanField(default=False)
 
@@ -65,6 +91,14 @@ class Post(models.Model):
     def is_hidden(self):
         """检查帖子是否被隐藏"""
         return self.hidden_at is not None
+
+    @property
+    def is_approved(self):
+        return self.approval_status == self.APPROVAL_APPROVED
+
+    @property
+    def is_pending_approval(self):
+        return self.approval_status == self.APPROVAL_PENDING
 
 
 class PostLike(models.Model):

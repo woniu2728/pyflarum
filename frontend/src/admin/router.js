@@ -4,6 +4,7 @@ import BasicsPage from './views/BasicsPage.vue'
 import PermissionsPage from './views/PermissionsPage.vue'
 import UsersPage from './views/UsersPage.vue'
 import FlagsPage from './views/FlagsPage.vue'
+import ApprovalQueuePage from './views/ApprovalQueuePage.vue'
 import AppearancePage from './views/AppearancePage.vue'
 import TagsPage from './views/TagsPage.vue'
 import MailPage from './views/MailPage.vue'
@@ -43,6 +44,11 @@ const routes = [
     path: '/admin/flags',
     name: 'admin-flags',
     component: FlagsPage,
+  },
+  {
+    path: '/admin/approval',
+    name: 'admin-approval',
+    component: ApprovalQueuePage,
   },
   {
     path: '/admin/tags',

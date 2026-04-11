@@ -78,6 +78,8 @@ class PostOutSchema(BaseModel):
     edited_user: Optional[UserSimpleSchema] = None
     discussion: Optional[dict] = None
     is_hidden: bool
+    approval_status: str = "approved"
+    approval_note: str = ""
     like_count: int = 0
     is_liked: bool = False
     can_edit: bool = False

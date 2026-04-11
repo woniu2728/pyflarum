@@ -18,6 +18,21 @@ class DiscussionService:
     """讨论服务"""
 
     @staticmethod
+    def _can_view_discussion(discussion: Discussion, user: Optional[User]) -> bool:
+        if discussion.hidden_at and not (user and user.is_staff):
+            return False
+        if discussion.approval_status == Discussion.APPROVAL_APPROVED:
+            return True
+        if user and user.is_staff:
+            return True
+        return bool(
+            user
+            and user.is_authenticated
+            and discussion.approval_status == Discussion.APPROVAL_PENDING
+            and discussion.user_id == user.id
+        )
+
+    @staticmethod
     def create_discussion(
         title: str,
         content: str,
@@ -37,6 +52,10 @@ class DiscussionService:
             Discussion: 创建的讨论对象
         """
         UserService.ensure_not_suspended(user, "发布讨论")
+        requires_approval = UserService.requires_content_approval(user, "startDiscussionWithoutApproval")
+        approval_status = Discussion.APPROVAL_PENDING if requires_approval else Discussion.APPROVAL_APPROVED
+        approved_at = None if requires_approval else timezone.now()
+        approved_by = None if requires_approval else user
 
         with transaction.atomic():
             # 创建讨论
@@ -45,6 +64,9 @@ class DiscussionService:
                 user=user,
                 last_posted_at=timezone.now(),
                 last_posted_user=user,
+                approval_status=approval_status,
+                approved_at=approved_at,
+                approved_by=approved_by,
             )
 
             # 创建第一条帖子
@@ -55,6 +77,9 @@ class DiscussionService:
                 content=content,
                 content_html=DiscussionService._render_markdown(content),
                 type='comment',
+                approval_status=Post.APPROVAL_PENDING if requires_approval else Post.APPROVAL_APPROVED,
+                approved_at=approved_at,
+                approved_by=approved_by,
             )
 
             # 更新讨论的第一条帖子ID
@@ -74,8 +99,9 @@ class DiscussionService:
                 TagService.refresh_tag_stats(list(tags.values_list('id', flat=True)))
 
             # 更新用户统计
-            user.discussion_count = F('discussion_count') + 1
-            user.save(update_fields=['discussion_count'])
+            if not requires_approval:
+                user.discussion_count = F('discussion_count') + 1
+                user.save(update_fields=['discussion_count'])
 
             # 创建用户阅读状态
             DiscussionUser.objects.create(
@@ -118,7 +144,16 @@ class DiscussionService:
         ).prefetch_related('discussion_tags__tag')
 
         # 过滤隐藏的讨论
-        queryset = queryset.filter(hidden_at__isnull=True)
+        if not user or not user.is_staff:
+            queryset = queryset.filter(hidden_at__isnull=True)
+
+        if user and user.is_authenticated and not user.is_staff:
+            queryset = queryset.filter(
+                Q(approval_status=Discussion.APPROVAL_APPROVED)
+                | Q(approval_status=Discussion.APPROVAL_PENDING, user=user)
+            )
+        elif not user or not user.is_authenticated:
+            queryset = queryset.filter(approval_status=Discussion.APPROVAL_APPROVED)
 
         # 搜索
         if q:
@@ -184,6 +219,9 @@ class DiscussionService:
             discussion = Discussion.objects.select_related(
                 'user', 'last_posted_user'
             ).prefetch_related('discussion_tags__tag').get(id=discussion_id)
+
+            if not DiscussionService._can_view_discussion(discussion, user):
+                return None
 
             # 增加浏览次数
             discussion.increment_view_count()
@@ -375,6 +413,61 @@ class DiscussionService:
             return discussion
 
     @staticmethod
+    def approve_discussion(discussion: Discussion, admin_user: User, note: str = "") -> Discussion:
+        with transaction.atomic():
+            discussion.approval_status = Discussion.APPROVAL_APPROVED
+            discussion.approved_at = timezone.now()
+            discussion.approved_by = admin_user
+            discussion.approval_note = note
+            discussion.hidden_at = None
+            discussion.hidden_user = None
+            discussion.save(update_fields=[
+                'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
+            ])
+
+            Post.objects.filter(id=discussion.first_post_id).update(
+                approval_status=Post.APPROVAL_APPROVED,
+                approved_at=discussion.approved_at,
+                approved_by=admin_user,
+                approval_note=note,
+                hidden_at=None,
+                hidden_user=None,
+            )
+
+            if discussion.user:
+                discussion.user.discussion_count = F('discussion_count') + 1
+                discussion.user.save(update_fields=['discussion_count'])
+
+        discussion.refresh_from_db()
+        return discussion
+
+    @staticmethod
+    def reject_discussion(discussion: Discussion, admin_user: User, note: str = "") -> Discussion:
+        rejected_at = timezone.now()
+        with transaction.atomic():
+            discussion.approval_status = Discussion.APPROVAL_REJECTED
+            discussion.approved_at = rejected_at
+            discussion.approved_by = admin_user
+            discussion.approval_note = note
+            discussion.hidden_at = rejected_at
+            discussion.hidden_user = admin_user
+            discussion.save(update_fields=[
+                'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
+            ])
+
+            Post.objects.filter(id=discussion.first_post_id).update(
+                approval_status=Post.APPROVAL_REJECTED,
+                approved_at=rejected_at,
+                approved_by=admin_user,
+                approval_note=note,
+                hidden_at=rejected_at,
+                hidden_user=admin_user,
+            )
+
+        discussion.refresh_from_db()
+        return discussion
+
+    @staticmethod
     def delete_discussion(discussion_id: int, user: User) -> bool:
         """
         删除讨论
@@ -422,6 +515,8 @@ class DiscussionService:
             return False
         if user.is_suspended:
             return False
+        if discussion.approval_status == Discussion.APPROVAL_REJECTED and not user.is_staff:
+            return False
         if user.is_staff or user.is_superuser:
             return True
         if discussion.user_id == user.id:
@@ -435,6 +530,8 @@ class DiscussionService:
             return False
         if user.is_suspended:
             return False
+        if discussion.approval_status == Discussion.APPROVAL_REJECTED and not user.is_staff:
+            return False
         if user.is_staff or user.is_superuser:
             return True
         # 只有管理员可以删除讨论
@@ -446,6 +543,8 @@ class DiscussionService:
         if not user or not user.is_authenticated:
             return False
         if user.is_suspended:
+            return False
+        if discussion.approval_status != Discussion.APPROVAL_APPROVED and not user.is_staff:
             return False
         if discussion.is_locked and not user.is_staff:
             return False

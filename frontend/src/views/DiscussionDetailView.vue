@@ -12,6 +12,7 @@
               <span v-if="discussion.is_sticky" class="badge badge-pinned">置顶</span>
               <span v-if="discussion.is_locked" class="badge badge-locked">锁定</span>
               <span v-if="discussion.is_hidden" class="badge badge-hidden">隐藏</span>
+              <span v-if="discussion.approval_status === 'pending'" class="badge badge-pending">待审核</span>
             </div>
             <h1>{{ discussion.title }}</h1>
             <div class="discussion-tags" v-if="discussion.tags && discussion.tags.length">
@@ -58,6 +59,7 @@
                   <router-link :to="buildUserPath(post.user)" class="post-author">{{ post.user.username }}</router-link>
                   <span class="post-number">#{{ post.number }}</span>
                   <span class="post-time">{{ formatDate(post.created_at) }}</span>
+                  <span v-if="post.approval_status === 'pending'" class="post-status">待审核</span>
                   <span v-if="post.edited_at" class="post-edited">(已编辑)</span>
                 </div>
 
@@ -958,6 +960,9 @@ async function submitReply() {
         posts.value.push(newPost)
         await scrollToPost(newPost.number)
       }
+      if (newPost.approval_status === 'pending') {
+        alert('回复已提交审核，管理员通过后会向其他用户显示。')
+      }
       if (authStore.user?.preferences?.follow_after_reply) {
         discussion.value.is_subscribed = true
       }
@@ -1174,6 +1179,11 @@ function formatAbsoluteDate(value) {
   color: white;
 }
 
+.badge-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
 .discussion-header h1 {
   font-size: 32px;
   color: #333;
@@ -1278,6 +1288,15 @@ function formatAbsoluteDate(value) {
 .post-edited {
   color: #999;
   font-style: italic;
+}
+
+.post-status {
+  color: #856404;
+  background: #fff3cd;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .post-body {

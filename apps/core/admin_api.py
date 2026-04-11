@@ -20,6 +20,7 @@ from django.core.mail import send_mail
 from apps.core.models import Setting
 from apps.users.models import User, Group, Permission
 from apps.discussions.models import Discussion
+from apps.discussions.services import DiscussionService
 from apps.posts.models import Post, PostFlag
 from apps.posts.services import PostService
 from apps.tags.models import Tag
@@ -214,6 +215,14 @@ def get_stats(request):
         "totalDiscussions": Discussion.objects.count(),
         "totalPosts": Post.objects.count(),
         "openFlags": PostFlag.objects.filter(status=PostFlag.STATUS_OPEN).count(),
+        "pendingApprovals": (
+            Discussion.objects.filter(approval_status=Discussion.APPROVAL_PENDING).count()
+            + Post.objects.filter(approval_status=Post.APPROVAL_PENDING).exclude(
+                id__in=Discussion.objects.filter(
+                    approval_status=Discussion.APPROVAL_PENDING
+                ).values_list("first_post_id", flat=True)
+            ).count()
+        ),
     }
 
 
@@ -389,6 +398,56 @@ def serialize_post_flag(flag: PostFlag) -> Dict[str, Any]:
     }
 
 
+def serialize_approval_item(content_type: str, item) -> Dict[str, Any]:
+    if content_type == "discussion":
+        first_post = Post.objects.filter(id=item.first_post_id).select_related("user").first()
+        return {
+            "type": "discussion",
+            "id": item.id,
+            "title": item.title,
+            "content": first_post.content if first_post else "",
+            "created_at": item.created_at,
+            "approval_status": item.approval_status,
+            "approval_note": item.approval_note,
+            "author": {
+                "id": item.user.id,
+                "username": item.user.username,
+                "display_name": item.user.display_name,
+            } if item.user else None,
+            "discussion": {
+                "id": item.id,
+                "title": item.title,
+            },
+            "post": {
+                "id": first_post.id,
+                "number": first_post.number,
+            } if first_post else None,
+        }
+
+    return {
+        "type": "post",
+        "id": item.id,
+        "title": item.discussion.title if item.discussion else "回复审核",
+        "content": item.content,
+        "created_at": item.created_at,
+        "approval_status": item.approval_status,
+        "approval_note": item.approval_note,
+        "author": {
+            "id": item.user.id,
+            "username": item.user.username,
+            "display_name": item.user.display_name,
+        } if item.user else None,
+        "discussion": {
+            "id": item.discussion.id,
+            "title": item.discussion.title,
+        } if item.discussion else None,
+        "post": {
+            "id": item.id,
+            "number": item.number,
+        },
+    }
+
+
 # ==================== 权限管理 ====================
 
 @router.get("/permissions", auth=AuthBearer(), tags=["Admin"])
@@ -536,6 +595,75 @@ def list_post_flags(request, page: int = 1, limit: int = 20, status: str = PostF
         "limit": limit,
         "data": [serialize_post_flag(flag) for flag in flags],
     }
+
+
+@router.get("/approval-queue", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def list_approval_queue(request, page: int = 1, limit: int = 20, content_type: str = "all"):
+    items = []
+
+    if content_type in {"all", "discussion"}:
+        discussions = Discussion.objects.filter(
+            approval_status=Discussion.APPROVAL_PENDING
+        ).select_related("user").order_by("-created_at")
+        items.extend([serialize_approval_item("discussion", discussion) for discussion in discussions])
+
+    if content_type in {"all", "post"}:
+        discussion_first_post_ids = Discussion.objects.filter(
+            approval_status=Discussion.APPROVAL_PENDING
+        ).values_list("first_post_id", flat=True)
+        posts = Post.objects.filter(
+            approval_status=Post.APPROVAL_PENDING
+        ).exclude(
+            id__in=discussion_first_post_ids
+        ).select_related("user", "discussion").order_by("-created_at")
+        items.extend([serialize_approval_item("post", post) for post in posts])
+
+    items.sort(key=lambda item: item["created_at"], reverse=True)
+    total = len(items)
+    offset = (page - 1) * limit
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "data": items[offset:offset + limit],
+    }
+
+
+@router.post("/approval-queue/{content_type}/{content_id}/approve", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def approve_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
+    note = payload.get("note", "")
+
+    if content_type == "discussion":
+        discussion = get_object_or_404(Discussion, id=content_id, approval_status=Discussion.APPROVAL_PENDING)
+        approved = DiscussionService.approve_discussion(discussion, request.auth, note=note)
+        return serialize_approval_item("discussion", approved)
+
+    if content_type == "post":
+        post = get_object_or_404(Post.objects.select_related("discussion", "user"), id=content_id, approval_status=Post.APPROVAL_PENDING)
+        approved = PostService.approve_post(post, request.auth, note=note)
+        return serialize_approval_item("post", approved)
+
+    return admin_error("无效的审核内容类型", status=400)
+
+
+@router.post("/approval-queue/{content_type}/{content_id}/reject", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def reject_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
+    note = payload.get("note", "")
+
+    if content_type == "discussion":
+        discussion = get_object_or_404(Discussion, id=content_id, approval_status=Discussion.APPROVAL_PENDING)
+        rejected = DiscussionService.reject_discussion(discussion, request.auth, note=note)
+        return serialize_approval_item("discussion", rejected)
+
+    if content_type == "post":
+        post = get_object_or_404(Post.objects.select_related("discussion", "user"), id=content_id, approval_status=Post.APPROVAL_PENDING)
+        rejected = PostService.reject_post(post, request.auth, note=note)
+        return serialize_approval_item("post", rejected)
+
+    return admin_error("无效的审核内容类型", status=400)
 
 
 @router.post("/flags/{flag_id}/resolve", auth=AuthBearer(), tags=["Admin"])

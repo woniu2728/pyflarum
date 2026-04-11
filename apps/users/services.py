@@ -10,7 +10,7 @@ from django.conf import settings
 from datetime import timedelta, datetime
 import secrets
 
-from .models import User, Group, EmailToken, PasswordToken
+from .models import User, Group, Permission, EmailToken, PasswordToken
 from apps.core.models import AuditLog
 from apps.core.email_service import EmailService
 
@@ -40,6 +40,34 @@ class UserService:
         """禁止被封禁用户执行写操作"""
         if user and user.is_suspended:
             raise PermissionDenied(UserService.build_suspension_notice(user, action_label))
+
+    @staticmethod
+    def has_forum_permission(user: User, permission_names) -> bool:
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_staff or user.is_superuser:
+            return True
+
+        if isinstance(permission_names, str):
+            permission_names = [permission_names]
+
+        return Permission.objects.filter(
+            group__users=user,
+            permission__in=permission_names,
+        ).exists()
+
+    @staticmethod
+    def requires_content_approval(user: User, bypass_permission: str) -> bool:
+        """只有在后台显式配置了免审核权限后，未命中该权限的用户才需进入审核队列"""
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_staff or user.is_superuser:
+            return False
+
+        if not Permission.objects.filter(permission=bypass_permission).exists():
+            return False
+
+        return not UserService.has_forum_permission(user, bypass_permission)
 
     @staticmethod
     def create_user(username: str, email: str, password: str) -> User:

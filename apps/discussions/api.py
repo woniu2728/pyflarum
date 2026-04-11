@@ -151,6 +151,8 @@ def get_discussion(request, discussion_id: int):
                 } if post.user else None,
                 "created_at": post.created_at,
                 "updated_at": post.updated_at,
+                "approval_status": post.approval_status,
+                "approval_note": post.approval_note,
             }
         except Post.DoesNotExist:
             pass

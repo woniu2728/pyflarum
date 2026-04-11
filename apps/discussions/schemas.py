@@ -66,6 +66,8 @@ class DiscussionOutSchema(BaseModel):
     is_locked: bool
     is_sticky: bool
     is_hidden: bool
+    approval_status: str = "approved"
+    approval_note: str = ""
     is_subscribed: bool = False
     is_unread: bool = False
     unread_count: int = 0

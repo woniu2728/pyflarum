@@ -164,6 +164,7 @@
                   <router-link :to="buildDiscussionPath(discussion)" class="discussion-list-item-title">
                     {{ discussion.title }}
                   </router-link>
+                  <span v-if="discussion.approval_status === 'pending'" class="approval-pill">待审核</span>
                   <span v-if="discussion.is_unread" class="unread-pill">{{ discussion.unread_count }} 条未读</span>
                   <span v-if="discussion.is_subscribed" class="subscription-pill">已关注</span>
                 </div>
@@ -791,6 +792,18 @@ function getUserColor(user) {
   border-radius: 999px;
   background: #edf4fb;
   color: #4d698e;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.approval-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #856404;
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;

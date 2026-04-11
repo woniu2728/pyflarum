@@ -11,7 +11,7 @@ from apps.core.websocket_auth import get_user_from_token
 from apps.discussions.services import DiscussionService
 from apps.posts.models import PostFlag
 from apps.posts.services import PostService
-from apps.users.models import Group, User
+from apps.users.models import Group, Permission, User
 
 
 class ChineseSearchTests(TestCase):
@@ -335,3 +335,90 @@ class AdminFlagManagementApiTests(TestCase):
         self.assertEqual(self.flag.status, "resolved")
         self.assertEqual(self.flag.resolution_note, "已联系发帖人并隐藏内容")
         self.assertEqual(self.flag.resolved_by_id, self.admin.id)
+
+
+class AdminApprovalQueueApiTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="admin-approval-mgr",
+            email="admin-approval@example.com",
+            password="password123",
+        )
+        self.trusted_group = Group.objects.create(
+            name="Trusted",
+            name_singular="Trusted",
+            name_plural="Trusted",
+            color="#4d698e",
+        )
+        Permission.objects.create(group=self.trusted_group, permission="startDiscussionWithoutApproval")
+        Permission.objects.create(group=self.trusted_group, permission="replyWithoutApproval")
+
+        self.author = User.objects.create_user(
+            username="approval-author",
+            email="approval-author@example.com",
+            password="password123",
+        )
+        self.author.user_groups.add(self.trusted_group)
+        self.pending_author = User.objects.create_user(
+            username="approval-pending-author",
+            email="approval-pending-author@example.com",
+            password="password123",
+        )
+        self.replier = User.objects.create_user(
+            username="approval-replier",
+            email="approval-replier@example.com",
+            password="password123",
+        )
+
+        self.pending_discussion = DiscussionService.create_discussion(
+            title="待审核讨论",
+            content="首帖需要审核",
+            user=self.pending_author,
+        )
+        self.discussion = DiscussionService.create_discussion(
+            title="已通过讨论",
+            content="已发布首帖",
+            user=self.author,
+        )
+        self.post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="这是一条待审核回复",
+            user=self.replier,
+        )
+
+    def auth_header(self):
+        token = RefreshToken.for_user(self.admin).access_token
+        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    def test_admin_can_list_and_approve_queue(self):
+        response = self.client.get(
+            "/api/admin/approval-queue",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["total"], 2)
+
+        response = self.client.post(
+            f"/api/admin/approval-queue/discussion/{self.pending_discussion.id}/approve",
+            data=json.dumps({"note": "讨论符合规范"}),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.pending_discussion.refresh_from_db()
+        self.assertEqual(self.pending_discussion.approval_status, "approved")
+
+        response = self.client.post(
+            f"/api/admin/approval-queue/post/{self.post.id}/reject",
+            data=json.dumps({"note": "回复质量不足"}),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.approval_status, "rejected")
+        self.assertIsNotNone(self.post.hidden_at)

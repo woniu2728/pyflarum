@@ -8,7 +8,7 @@ from ninja_jwt.tokens import RefreshToken
 from apps.discussions.services import DiscussionService
 from apps.posts.services import PostService
 from apps.tags.models import Tag
-from apps.users.models import User
+from apps.users.models import Group, Permission, User
 
 
 class DiscussionApiTests(TestCase):
@@ -131,3 +131,21 @@ class DiscussionApiTests(TestCase):
         self.assertEqual(response.status_code, 403, response.content)
         self.assertIn("账号已被封禁", response.json()["error"])
         self.assertIn("封禁期间不可发帖", response.json()["error"])
+
+    def test_discussion_can_enter_approval_queue(self):
+        trusted_group = Group.objects.create(name="Trusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="startDiscussionWithoutApproval")
+
+        response = self.client.post(
+            "/api/discussions/",
+            data=json.dumps({
+                "title": "Pending discussion",
+                "content": "Needs approval",
+                "tag_ids": [],
+            }),
+            content_type="application/json",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["approval_status"], "pending")
