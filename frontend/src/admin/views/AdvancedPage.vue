@@ -3,7 +3,7 @@
     className="AdvancedPage"
     icon="fas fa-cog"
     title="高级设置"
-    description="配置缓存、队列和维护模式"
+    description="配置缓存、队列、维护模式与文件存储"
   >
     <div class="AdvancedPage-content">
       <div class="Form-section">
@@ -61,6 +61,289 @@
           </label>
           <p class="Form-help">异步处理耗时任务</p>
         </div>
+      </div>
+
+      <div class="Form-section">
+        <h3 class="Section-title">文件存储</h3>
+
+        <div class="Form-group">
+          <label>存储驱动</label>
+          <select v-model="settings.storage_driver" class="FormControl">
+            <option value="local">本地存储</option>
+            <option value="s3">Amazon S3 / S3 兼容</option>
+            <option value="r2">Cloudflare R2</option>
+            <option value="oss">阿里云 OSS</option>
+            <option value="imagebed">通用图床</option>
+          </select>
+          <p class="Form-help">composer 上传、头像上传和后续附件能力都会读取这里的运行时配置</p>
+        </div>
+
+        <div class="Form-grid">
+          <div class="Form-group">
+            <label>附件目录</label>
+            <input
+              v-model="settings.storage_attachments_dir"
+              type="text"
+              class="FormControl"
+              placeholder="attachments"
+            />
+            <p class="Form-help">统一的附件对象目录，支持多级路径</p>
+          </div>
+
+          <div class="Form-group">
+            <label>头像目录</label>
+            <input
+              v-model="settings.storage_avatars_dir"
+              type="text"
+              class="FormControl"
+              placeholder="avatars"
+            />
+            <p class="Form-help">头像和缩略图的对象目录</p>
+          </div>
+        </div>
+
+        <template v-if="settings.storage_driver === 'local'">
+          <div class="Form-grid">
+            <div class="Form-group">
+              <label>本地保存目录</label>
+              <input
+                v-model="settings.storage_local_path"
+                type="text"
+                class="FormControl"
+                placeholder="D:\\data\\pyflarum\\media"
+              />
+              <p class="Form-help">可填写绝对路径，也可填写相对项目根目录的路径</p>
+            </div>
+
+            <div class="Form-group">
+              <label>本地访问基地址</label>
+              <input
+                v-model="settings.storage_local_base_url"
+                type="text"
+                class="FormControl"
+                placeholder="/media/"
+              />
+              <p class="Form-help">上传完成后生成给前台的 URL 前缀</p>
+            </div>
+          </div>
+        </template>
+
+        <template v-if="settings.storage_driver === 's3'">
+          <div class="Form-grid">
+            <div class="Form-group">
+              <label>Bucket</label>
+              <input v-model="settings.storage_s3_bucket" type="text" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>Region</label>
+              <input
+                v-model="settings.storage_s3_region"
+                type="text"
+                class="FormControl"
+                placeholder="ap-southeast-1"
+              />
+            </div>
+            <div class="Form-group">
+              <label>Endpoint</label>
+              <input
+                v-model="settings.storage_s3_endpoint"
+                type="text"
+                class="FormControl"
+                placeholder="https://s3.amazonaws.com"
+              />
+              <p class="Form-help">使用 MinIO、Wasabi 等兼容服务时填写自定义 Endpoint</p>
+            </div>
+            <div class="Form-group">
+              <label>公共访问 URL</label>
+              <input
+                v-model="settings.storage_s3_public_url"
+                type="text"
+                class="FormControl"
+                placeholder="https://cdn.example.com"
+              />
+              <p class="Form-help">如留空，系统会按标准 S3 域名尝试拼接</p>
+            </div>
+            <div class="Form-group">
+              <label>Access Key ID</label>
+              <input v-model="settings.storage_s3_access_key_id" type="text" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>Secret Access Key</label>
+              <input v-model="settings.storage_s3_secret_access_key" type="password" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>对象前缀</label>
+              <input
+                v-model="settings.storage_s3_object_prefix"
+                type="text"
+                class="FormControl"
+                placeholder="pyflarum"
+              />
+            </div>
+            <div class="Form-group Form-group--checkbox">
+              <label>
+                <input
+                  v-model="settings.storage_s3_path_style"
+                  type="checkbox"
+                  class="FormControl-checkbox"
+                />
+                使用 Path Style
+              </label>
+              <p class="Form-help">兼容部分 S3 服务或自建对象存储</p>
+            </div>
+          </div>
+        </template>
+
+        <template v-if="settings.storage_driver === 'r2'">
+          <div class="Form-grid">
+            <div class="Form-group">
+              <label>Bucket</label>
+              <input v-model="settings.storage_r2_bucket" type="text" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>Endpoint</label>
+              <input
+                v-model="settings.storage_r2_endpoint"
+                type="text"
+                class="FormControl"
+                placeholder="https://&lt;accountid&gt;.r2.cloudflarestorage.com"
+              />
+            </div>
+            <div class="Form-group">
+              <label>公共访问 URL / CDN 域名</label>
+              <input
+                v-model="settings.storage_r2_public_url"
+                type="text"
+                class="FormControl"
+                placeholder="https://pub-xxx.r2.dev"
+              />
+              <p class="Form-help">R2 通常需要单独的公开域名，否则前台生成的附件链接不可访问</p>
+            </div>
+            <div class="Form-group">
+              <label>Access Key ID</label>
+              <input v-model="settings.storage_r2_access_key_id" type="text" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>Secret Access Key</label>
+              <input v-model="settings.storage_r2_secret_access_key" type="password" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>对象前缀</label>
+              <input
+                v-model="settings.storage_r2_object_prefix"
+                type="text"
+                class="FormControl"
+                placeholder="pyflarum"
+              />
+            </div>
+          </div>
+        </template>
+
+        <template v-if="settings.storage_driver === 'oss'">
+          <div class="Form-grid">
+            <div class="Form-group">
+              <label>Bucket</label>
+              <input v-model="settings.storage_oss_bucket" type="text" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>Endpoint</label>
+              <input
+                v-model="settings.storage_oss_endpoint"
+                type="text"
+                class="FormControl"
+                placeholder="oss-cn-hangzhou.aliyuncs.com"
+              />
+            </div>
+            <div class="Form-group">
+              <label>公共访问 URL</label>
+              <input
+                v-model="settings.storage_oss_public_url"
+                type="text"
+                class="FormControl"
+                placeholder="https://cdn.example.com"
+              />
+              <p class="Form-help">如留空，将按 Bucket + Endpoint 生成标准 OSS 访问地址</p>
+            </div>
+            <div class="Form-group">
+              <label>Access Key ID</label>
+              <input v-model="settings.storage_oss_access_key_id" type="text" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>Access Key Secret</label>
+              <input v-model="settings.storage_oss_access_key_secret" type="password" class="FormControl" />
+            </div>
+            <div class="Form-group">
+              <label>对象前缀</label>
+              <input
+                v-model="settings.storage_oss_object_prefix"
+                type="text"
+                class="FormControl"
+                placeholder="pyflarum"
+              />
+            </div>
+          </div>
+        </template>
+
+        <template v-if="settings.storage_driver === 'imagebed'">
+          <div class="Form-grid">
+            <div class="Form-group">
+              <label>上传接口地址</label>
+              <input
+                v-model="settings.storage_imagebed_endpoint"
+                type="text"
+                class="FormControl"
+                placeholder="https://example.com/api/upload"
+              />
+            </div>
+            <div class="Form-group">
+              <label>请求方法</label>
+              <select v-model="settings.storage_imagebed_method" class="FormControl">
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+            </div>
+            <div class="Form-group">
+              <label>文件字段名</label>
+              <input
+                v-model="settings.storage_imagebed_file_field"
+                type="text"
+                class="FormControl"
+                placeholder="file"
+              />
+            </div>
+            <div class="Form-group">
+              <label>响应 URL 路径</label>
+              <input
+                v-model="settings.storage_imagebed_url_path"
+                type="text"
+                class="FormControl"
+                placeholder="data.url"
+              />
+              <p class="Form-help">支持点路径，例如 `data.url`、`result.images.0.url`</p>
+            </div>
+          </div>
+
+          <div class="Form-group">
+            <label>请求头 JSON</label>
+            <textarea
+              v-model="settings.storage_imagebed_headers"
+              class="FormControl"
+              rows="4"
+              placeholder='{"Authorization":"Bearer token"}'
+            ></textarea>
+          </div>
+
+          <div class="Form-group">
+            <label>额外表单参数 JSON</label>
+            <textarea
+              v-model="settings.storage_imagebed_form_data"
+              class="FormControl"
+              rows="4"
+              placeholder='{"album":"forum"}'
+            ></textarea>
+          </div>
+        </template>
       </div>
 
       <div class="Form-section">
@@ -133,7 +416,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
 import api from '../../api'
 
@@ -146,6 +429,37 @@ const settings = ref({
   maintenance_message: '',
   debug_mode: false,
   log_queries: false,
+  storage_driver: 'local',
+  storage_attachments_dir: 'attachments',
+  storage_avatars_dir: 'avatars',
+  storage_local_path: '',
+  storage_local_base_url: '/media/',
+  storage_s3_bucket: '',
+  storage_s3_region: '',
+  storage_s3_endpoint: '',
+  storage_s3_access_key_id: '',
+  storage_s3_secret_access_key: '',
+  storage_s3_public_url: '',
+  storage_s3_object_prefix: '',
+  storage_s3_path_style: false,
+  storage_r2_bucket: '',
+  storage_r2_endpoint: '',
+  storage_r2_access_key_id: '',
+  storage_r2_secret_access_key: '',
+  storage_r2_public_url: '',
+  storage_r2_object_prefix: '',
+  storage_oss_bucket: '',
+  storage_oss_endpoint: '',
+  storage_oss_access_key_id: '',
+  storage_oss_access_key_secret: '',
+  storage_oss_public_url: '',
+  storage_oss_object_prefix: '',
+  storage_imagebed_endpoint: '',
+  storage_imagebed_method: 'POST',
+  storage_imagebed_file_field: 'file',
+  storage_imagebed_headers: '{}',
+  storage_imagebed_form_data: '{}',
+  storage_imagebed_url_path: 'data.url'
 })
 
 const saving = ref(false)
@@ -196,7 +510,7 @@ async function clearCache() {
 
 <style scoped>
 .AdvancedPage-content {
-  max-width: 800px;
+  max-width: 920px;
 }
 
 .Form-section {
@@ -216,6 +530,12 @@ async function clearCache() {
   border-bottom: 1px solid #e3e8ed;
 }
 
+.Form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
 .Form-group {
   margin-bottom: 20px;
 }
@@ -230,6 +550,10 @@ async function clearCache() {
   font-weight: 500;
   color: #333;
   font-size: 14px;
+}
+
+.Form-group--checkbox label {
+  margin-bottom: 6px;
 }
 
 .FormControl {
@@ -256,6 +580,7 @@ async function clearCache() {
   margin: 6px 0 0 0;
   font-size: 13px;
   color: #999;
+  line-height: 1.6;
 }
 
 .Form-actions {
@@ -306,5 +631,11 @@ async function clearCache() {
   color: #e74c3c;
   font-size: 14px;
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .Form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

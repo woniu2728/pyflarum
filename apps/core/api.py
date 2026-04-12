@@ -1,7 +1,9 @@
 """
 搜索功能API端点
 """
+import os
 from typing import Optional
+from django.http import JsonResponse
 from ninja import Router
 from apps.core.schemas import (
     SearchQuerySchema,
@@ -10,7 +12,10 @@ from apps.core.schemas import (
     DiscussionSearchResultSchema,
     PostSearchResultSchema,
     UserSearchResultSchema,
+    UploadFileOutSchema,
 )
+from apps.core.auth import AuthBearer
+from apps.core.file_service import FileUploadService
 from apps.core.settings_service import get_public_forum_settings
 from apps.core.services import SearchService
 
@@ -21,6 +26,29 @@ router = Router()
 def get_forum_settings(request):
     """获取前台公开论坛设置"""
     return get_public_forum_settings()
+
+
+@router.post("/uploads", response=UploadFileOutSchema, auth=AuthBearer(), tags=["Uploads"])
+def upload_attachment(request):
+    """上传 composer 附件或图片"""
+    file = request.FILES.get("file")
+    if not file:
+        return JsonResponse({"error": "请选择要上传的文件"}, status=400)
+
+    try:
+        file_url, file_info = FileUploadService.upload_attachment(file, request.auth.id)
+    except ValueError as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    ext = os.path.splitext(file.name)[1].lower()
+    return {
+        "url": file_url,
+        "original_name": file_info.get("original_name") or file.name,
+        "size": file_info.get("size") or file.size,
+        "mime_type": file_info.get("mime_type") or file.content_type,
+        "hash": file_info.get("hash"),
+        "is_image": ext in FileUploadService.ALLOWED_IMAGE_EXTENSIONS,
+    }
 
 
 def serialize_discussion_search_result(discussion):

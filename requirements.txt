@@ -39,6 +39,8 @@ python-dateutil==2.9.0
 
 # HTTP Client
 httpx==0.27.0
+boto3==1.34.69
+oss2==2.18.5
 
 # Development
 django-debug-toolbar==4.3.0

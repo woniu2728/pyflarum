@@ -82,3 +82,13 @@ class SearchResultSchema(BaseModel):
 class SearchSuggestionSchema(BaseModel):
     """搜索建议"""
     suggestions: List[str]
+
+
+class UploadFileOutSchema(BaseModel):
+    """Composer 附件上传结果"""
+    url: str
+    original_name: str
+    size: int
+    mime_type: Optional[str] = None
+    hash: Optional[str] = None
+    is_image: bool = False

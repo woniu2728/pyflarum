@@ -1,34 +1,33 @@
 """
 文件上传功能业务逻辑层
 """
+import hashlib
 import os
 import uuid
-from typing import Optional, Tuple
+from io import BytesIO
+from typing import Tuple
+
 from django.core.files.uploadedfile import UploadedFile
-from django.conf import settings
 from PIL import Image
-import hashlib
+
+from apps.core.storage_service import get_storage_backend
 
 
 class FileUploadService:
     """文件上传服务"""
 
-    # 允许的图片格式
     ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 
-    # 允许的附件格式
     ALLOWED_ATTACHMENT_EXTENSIONS = [
-        '.jpg', '.jpeg', '.png', '.gif', '.webp',  # 图片
-        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',  # 文档
-        '.txt', '.md', '.csv',  # 文本
-        '.zip', '.rar', '.7z',  # 压缩包
+        '.jpg', '.jpeg', '.png', '.gif', '.webp',
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+        '.txt', '.md', '.csv',
+        '.zip', '.rar', '.7z',
     ]
 
-    # 文件大小限制（字节）
-    MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2MB
-    MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024  # 10MB
+    MAX_AVATAR_SIZE = 2 * 1024 * 1024
+    MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
 
-    # 头像尺寸
     AVATAR_SIZES = {
         'small': (50, 50),
         'medium': (100, 100),
@@ -37,245 +36,152 @@ class FileUploadService:
 
     @staticmethod
     def upload_avatar(file: UploadedFile, user_id: int) -> Tuple[str, dict]:
-        """
-        上传头像
-
-        Args:
-            file: 上传的文件
-            user_id: 用户ID
-
-        Returns:
-            Tuple[str, dict]: (文件URL, 缩略图URLs)
-
-        Raises:
-            ValueError: 文件验证失败
-        """
-        # 验证文件
         FileUploadService._validate_image(file, FileUploadService.MAX_AVATAR_SIZE)
 
-        # 生成文件名
         ext = os.path.splitext(file.name)[1].lower()
         filename = f"{uuid.uuid4().hex}{ext}"
+        backend = get_storage_backend()
 
-        # 保存路径
-        upload_dir = os.path.join(settings.MEDIA_ROOT, 'avatars', str(user_id))
-        os.makedirs(upload_dir, exist_ok=True)
-
-        file_path = os.path.join(upload_dir, filename)
-
-        # 保存原图
-        with open(file_path, 'wb+') as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
-
-        # 生成缩略图
-        thumbnails = FileUploadService._generate_thumbnails(
-            file_path,
-            FileUploadService.AVATAR_SIZES
+        original_bytes = FileUploadService._read_uploaded_file(file)
+        original_key = backend.build_user_key(backend.avatars_dir, user_id, filename)
+        original_url = backend.save_bytes(
+            original_key,
+            original_bytes,
+            content_type=backend.guess_content_type(filename, file.content_type),
         )
 
-        # 返回URL
-        file_url = f"/media/avatars/{user_id}/{filename}"
-        thumbnail_urls = {
-            size: f"/media/avatars/{user_id}/{os.path.basename(thumb_path)}"
-            for size, thumb_path in thumbnails.items()
-        }
+        thumbnails = FileUploadService._generate_thumbnail_bytes(original_bytes, ext)
+        thumbnail_urls = {}
+        for size_name, thumb_bytes in thumbnails.items():
+            thumb_filename = f"{os.path.splitext(filename)[0]}_{size_name}{ext}"
+            thumb_key = backend.build_user_key(backend.avatars_dir, user_id, thumb_filename)
+            thumbnail_urls[size_name] = backend.save_bytes(
+                thumb_key,
+                thumb_bytes,
+                content_type=backend.guess_content_type(thumb_filename, file.content_type),
+            )
 
-        return file_url, thumbnail_urls
+        return original_url, thumbnail_urls
 
     @staticmethod
     def upload_attachment(file: UploadedFile, user_id: int) -> Tuple[str, dict]:
-        """
-        上传附件
-
-        Args:
-            file: 上传的文件
-            user_id: 用户ID
-
-        Returns:
-            Tuple[str, dict]: (文件URL, 文件信息)
-
-        Raises:
-            ValueError: 文件验证失败
-        """
-        # 验证文件
         FileUploadService._validate_attachment(file, FileUploadService.MAX_ATTACHMENT_SIZE)
 
-        # 生成文件名
         ext = os.path.splitext(file.name)[1].lower()
         filename = f"{uuid.uuid4().hex}{ext}"
+        backend = get_storage_backend()
+        content = FileUploadService._read_uploaded_file(file)
+        object_key = backend.build_user_key(backend.attachments_dir, user_id, filename)
+        file_url = backend.save_bytes(
+            object_key,
+            content,
+            content_type=backend.guess_content_type(filename, file.content_type),
+        )
 
-        # 保存路径
-        upload_dir = os.path.join(settings.MEDIA_ROOT, 'attachments', str(user_id))
-        os.makedirs(upload_dir, exist_ok=True)
-
-        file_path = os.path.join(upload_dir, filename)
-
-        # 保存文件
-        with open(file_path, 'wb+') as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
-
-        # 计算文件哈希
-        file_hash = FileUploadService._calculate_file_hash(file_path)
-
-        # 文件信息
         file_info = {
             'original_name': file.name,
             'size': file.size,
             'mime_type': file.content_type,
-            'hash': file_hash,
+            'hash': FileUploadService._calculate_file_hash(content),
         }
-
-        # 返回URL
-        file_url = f"/media/attachments/{user_id}/{filename}"
-
         return file_url, file_info
 
     @staticmethod
     def _validate_image(file: UploadedFile, max_size: int):
-        """
-        验证图片文件
-
-        Args:
-            file: 上传的文件
-            max_size: 最大文件大小
-
-        Raises:
-            ValueError: 验证失败
-        """
-        # 检查文件扩展名
         ext = os.path.splitext(file.name)[1].lower()
         if ext not in FileUploadService.ALLOWED_IMAGE_EXTENSIONS:
             raise ValueError(f"不支持的图片格式，仅支持: {', '.join(FileUploadService.ALLOWED_IMAGE_EXTENSIONS)}")
 
-        # 检查文件大小
         if file.size > max_size:
             max_size_mb = max_size / (1024 * 1024)
             raise ValueError(f"文件大小超过限制（最大{max_size_mb}MB）")
 
-        # 验证是否为有效图片
         try:
             image = Image.open(file)
             image.verify()
-        except Exception:
-            raise ValueError("无效的图片文件")
+        except Exception as exc:
+            raise ValueError("无效的图片文件") from exc
+        finally:
+            if hasattr(file, 'seek'):
+                file.seek(0)
 
     @staticmethod
     def _validate_attachment(file: UploadedFile, max_size: int):
-        """
-        验证附件文件
-
-        Args:
-            file: 上传的文件
-            max_size: 最大文件大小
-
-        Raises:
-            ValueError: 验证失败
-        """
-        # 检查文件扩展名
         ext = os.path.splitext(file.name)[1].lower()
         if ext not in FileUploadService.ALLOWED_ATTACHMENT_EXTENSIONS:
-            raise ValueError(f"不支持的文件格式")
+            raise ValueError("不支持的文件格式")
 
-        # 检查文件大小
         if file.size > max_size:
             max_size_mb = max_size / (1024 * 1024)
             raise ValueError(f"文件大小超过限制（最大{max_size_mb}MB）")
 
     @staticmethod
-    def _generate_thumbnails(image_path: str, sizes: dict) -> dict:
-        """
-        生成缩略图
-
-        Args:
-            image_path: 原图路径
-            sizes: 尺寸字典 {name: (width, height)}
-
-        Returns:
-            dict: 缩略图路径字典 {name: path}
-        """
+    def _generate_thumbnail_bytes(image_bytes: bytes, ext: str) -> dict:
         thumbnails = {}
 
         try:
-            image = Image.open(image_path)
-
-            # 转换RGBA为RGB
+            image = Image.open(BytesIO(image_bytes))
             if image.mode in ('RGBA', 'LA', 'P'):
                 background = Image.new('RGB', image.size, (255, 255, 255))
                 if image.mode == 'P':
                     image = image.convert('RGBA')
                 background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
                 image = background
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
 
-            for size_name, (width, height) in sizes.items():
-                # 创建缩略图
+            output_format = FileUploadService._image_output_format(ext)
+            for size_name, (width, height) in FileUploadService.AVATAR_SIZES.items():
                 thumb = image.copy()
                 thumb.thumbnail((width, height), Image.Resampling.LANCZOS)
 
-                # 保存缩略图
-                base_path = os.path.splitext(image_path)[0]
-                ext = os.path.splitext(image_path)[1]
-                thumb_path = f"{base_path}_{size_name}{ext}"
-
-                thumb.save(thumb_path, quality=85, optimize=True)
-                thumbnails[size_name] = thumb_path
-
-        except Exception as e:
-            # 如果生成缩略图失败，返回空字典
-            pass
+                buffer = BytesIO()
+                save_kwargs = {'format': output_format}
+                if output_format in ('JPEG', 'WEBP'):
+                    save_kwargs.update({'quality': 85, 'optimize': True})
+                thumb.save(buffer, **save_kwargs)
+                thumbnails[size_name] = buffer.getvalue()
+        except Exception:
+            return {}
 
         return thumbnails
 
     @staticmethod
-    def _calculate_file_hash(file_path: str) -> str:
-        """
-        计算文件哈希值
+    def _image_output_format(ext: str) -> str:
+        if ext in ('.jpg', '.jpeg'):
+            return 'JPEG'
+        if ext == '.webp':
+            return 'WEBP'
+        if ext == '.gif':
+            return 'GIF'
+        return 'PNG'
 
-        Args:
-            file_path: 文件路径
+    @staticmethod
+    def _read_uploaded_file(file: UploadedFile) -> bytes:
+        if hasattr(file, 'seek'):
+            file.seek(0)
+        content = b''.join(file.chunks())
+        if hasattr(file, 'seek'):
+            file.seek(0)
+        return content
 
-        Returns:
-            str: SHA256哈希值
-        """
-        sha256_hash = hashlib.sha256()
-
-        with open(file_path, "rb") as f:
-            for byte_block in iter(lambda: f.read(4096), b""):
-                sha256_hash.update(byte_block)
-
-        return sha256_hash.hexdigest()
+    @staticmethod
+    def _calculate_file_hash(content: bytes) -> str:
+        return hashlib.sha256(content).hexdigest()
 
     @staticmethod
     def delete_file(file_url: str) -> bool:
-        """
-        删除文件
+        backend = get_storage_backend()
+        deleted = backend.delete(file_url)
 
-        Args:
-            file_url: 文件URL
+        if FileUploadService._looks_like_avatar(file_url):
+            base, ext = os.path.splitext(file_url)
+            for size_name in FileUploadService.AVATAR_SIZES.keys():
+                backend.delete(f"{base}_{size_name}{ext}")
 
-        Returns:
-            bool: 是否删除成功
-        """
-        try:
-            # 从URL提取文件路径
-            if file_url.startswith('/media/'):
-                file_path = os.path.join(settings.MEDIA_ROOT, file_url[7:])
+        return deleted
 
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-
-                    # 删除缩略图
-                    base_path = os.path.splitext(file_path)[0]
-                    ext = os.path.splitext(file_path)[1]
-
-                    for size_name in FileUploadService.AVATAR_SIZES.keys():
-                        thumb_path = f"{base_path}_{size_name}{ext}"
-                        if os.path.exists(thumb_path):
-                            os.remove(thumb_path)
-
-                    return True
-        except Exception:
-            pass
-
-        return False
+    @staticmethod
+    def _looks_like_avatar(file_url: str) -> bool:
+        normalized = str(file_url or '').lower()
+        return '/avatars/' in normalized or normalized.endswith('/avatars')

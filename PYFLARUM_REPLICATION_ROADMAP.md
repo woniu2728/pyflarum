@@ -56,7 +56,7 @@
 
 - 忘记密码前端缺失，登录页已有入口，但此前无对应页面和路由。
 - 重置密码虽有后端接口，但此前未形成完整前端闭环。
-- 头像上传接口仍是待实现状态：[apps/users/api.py](/D:/files/project/tmp/pyflarum/apps/users/api.py#L244)
+- 头像上传、前台展示与缓存刷新链路已补齐，但用户资料体系仍与 Flarum 存在细节差距。
 - `AccessToken`、封禁字段存在于模型中，但没有前后台完整闭环：
   - [apps/users/models.py](/D:/files/project/tmp/pyflarum/apps/users/models.py#L39)
   - [apps/users/models.py](/D:/files/project/tmp/pyflarum/apps/users/models.py#L144)
@@ -66,7 +66,9 @@
 
 - Flarum 的 Composer、Scrubber、Modal 流程更完整，当前 `pyflarum` 仍有明显差距。
 - 前台已补全局浮层发帖 Composer，并支持最小化、全屏、标签预选、本地草稿恢复与拖拽调高。
-- 讨论详情页的回复/编辑 Composer 已迁入同一套全局状态，支持跨路由保留、统一最小化/全屏和结果回流，但与 Flarum 相比仍缺少更完整的退出确认和移动端细节。
+- 讨论详情页的回复/编辑 Composer 已迁入同一套全局状态，支持跨路由保留、统一最小化/全屏和结果回流。
+- Composer 已补真实附件上传、图片本地选择上传、表情面板、刷新/登出离开确认与移动端覆盖态，但仍缺少更完整的 @提及补全、预览和扩展工具栏能力。
+- 上传链路已开始具备后台存储配置能力，本地保存目录、S3/R2、阿里云 OSS 与通用图床已纳入运行时配置，但仍缺少管理后台中的测试连通性、签名策略说明和迁移工具。
 - 讨论页已补 `near` 定位和浮层回复编辑器，但滚动、恢复、移动端细节仍不足。
 - 帖子操作仍缺少审核、举报、恢复、更多版主操作。
 
@@ -199,6 +201,9 @@
 - [x] 设置即时生效链路
 - [x] WebSocket 地址与环境适配
 - [x] 全局浮层发帖 Composer
+- [x] 统一回复 / 编辑 Composer
+- [x] Composer 附件上传 / 图片选择 / 表情面板
+- [x] 后台文件存储驱动配置（本地 / S3 / R2 / OSS / 图床）
 
 ## 六、执行原则
 

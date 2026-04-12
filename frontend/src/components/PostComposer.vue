@@ -1,14 +1,23 @@
 <template>
   <Teleport to="body">
+    <div v-if="showBackdrop" class="composer-backdrop" aria-hidden="true"></div>
     <div
       v-if="showComposer"
       class="floating-composer"
-      :class="{ 'is-minimized': composerStore.isMinimized, 'is-expanded': composerStore.isExpanded }"
+      :class="{
+        'is-minimized': composerStore.isMinimized,
+        'is-expanded': composerStore.isExpanded,
+        'is-phone-overlay': isPhoneOverlay
+      }"
       :style="composerInlineStyle"
     >
       <div class="composer-handle" aria-hidden="true" @mousedown.prevent="startResize"></div>
       <div class="composer-header">
-        <div class="composer-title">
+        <div
+          class="composer-title"
+          :class="{ 'composer-title--clickable': composerStore.isMinimized }"
+          @click="handleHeaderSummaryClick"
+        >
           <span>{{ composerTitle }}</span>
           <small>
             <router-link :to="discussionLink" class="composer-link" @click="handleHeaderLinkClick">
@@ -47,35 +56,66 @@
       </div>
 
       <div v-show="!composerStore.isMinimized" class="composer-body">
+        <div
+          v-if="uploadNotice"
+          class="composer-notice"
+          :class="{
+            'composer-notice-success': uploadNoticeTone === 'success',
+            'composer-notice-error': uploadNoticeTone === 'error'
+          }"
+        >
+          {{ uploadNotice }}
+        </div>
         <textarea
           ref="composerTextarea"
           v-model="replyContent"
           placeholder="输入你的回复... 支持 Markdown、@用户名 和代码块"
           rows="7"
+          :disabled="submitting || uploading"
         ></textarea>
 
         <div class="composer-toolbar">
           <button
             type="button"
             class="composer-submit"
-            :disabled="submitting || !replyContent.trim()"
+            :disabled="submitting || uploading || !replyContent.trim()"
             @click="submitReply"
           >
             <i class="fas fa-paper-plane"></i>
-            {{ submitting ? '提交中...' : (isEditing ? '更新回复' : '发布回复') }}
+            {{ submitting ? '提交中...' : (uploading ? '上传中...' : (isEditing ? '更新回复' : '发布回复')) }}
           </button>
 
           <div class="composer-formatting" aria-label="格式化工具栏">
-            <button
-              v-for="tool in composerTools"
-              :key="tool.key"
-              type="button"
-              :title="tool.title"
-              @click="applyComposerTool(tool)"
-            >
-              <i v-if="tool.icon" :class="tool.icon"></i>
-              <span v-else>{{ tool.label }}</span>
-            </button>
+            <template v-for="tool in composerTools" :key="tool.key">
+              <div v-if="tool.key === 'emoji'" :ref="setEmojiToolRef" class="composer-tool">
+                <button
+                  type="button"
+                  :title="tool.title"
+                  :disabled="submitting || uploading"
+                  :class="{ 'is-active': showEmojiPicker }"
+                  @click="applyComposerTool(tool)"
+                >
+                  <i v-if="tool.icon" :class="tool.icon"></i>
+                  <span v-else>{{ tool.label }}</span>
+                </button>
+                <ComposerEmojiPicker
+                  v-if="showEmojiPicker"
+                  :groups="emojiGroups"
+                  :style-object="emojiPickerStyle"
+                  @select="handleEmojiSelect"
+                />
+              </div>
+              <button
+                v-else
+                type="button"
+                :title="tool.title"
+                :disabled="submitting || uploading"
+                @click="applyComposerTool(tool)"
+              >
+                <i v-if="tool.icon" :class="tool.icon"></i>
+                <span v-else>{{ tool.label }}</span>
+              </button>
+            </template>
           </div>
 
           <button
@@ -88,6 +128,22 @@
           </button>
           <button v-if="isEditing" type="button" class="composer-secondary" @click="cancelEdit">取消编辑</button>
         </div>
+
+        <input
+          ref="attachmentInput"
+          type="file"
+          class="composer-file-input"
+          :disabled="submitting || uploading"
+          @change="handleAttachmentSelected"
+        />
+        <input
+          ref="imageInput"
+          type="file"
+          accept="image/*"
+          class="composer-file-input"
+          :disabled="submitting || uploading"
+          @change="handleImageSelected"
+        />
       </div>
     </div>
   </Teleport>
@@ -96,9 +152,19 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ComposerEmojiPicker from '@/components/ComposerEmojiPicker.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import api from '@/api'
+import {
+  EMOJI_GROUPS,
+  buildComposerToolReplacement,
+  buildUploadedFileMarkdown,
+  defaultToolCursorOffset,
+  getComposerErrorMessage,
+  replaceSelection,
+  uploadComposerFile
+} from '@/utils/composer'
 import { normalizePost } from '@/utils/forum'
 
 const route = useRoute()
@@ -108,10 +174,18 @@ const composerStore = useComposerStore()
 
 const replyContent = ref('')
 const submitting = ref(false)
+const uploading = ref(false)
 const composerTextarea = ref(null)
+const attachmentInput = ref(null)
+const imageInput = ref(null)
+const emojiToolRef = ref(null)
 const composerDraftSavedAt = ref('')
+const uploadNotice = ref('')
+const uploadNoticeTone = ref('info')
+const showEmojiPicker = ref(false)
 const composerHeight = ref(loadComposerHeight())
 const resizing = ref(false)
+const viewportWidth = ref(typeof window === 'undefined' ? 1280 : window.innerWidth)
 let resizeStartY = 0
 let resizeStartHeight = composerHeight.value
 
@@ -129,13 +203,21 @@ const composerTools = [
   { key: 'bullets', title: '无序列表', icon: 'fas fa-list-ul' },
   { key: 'ordered', title: '有序列表', icon: 'fas fa-list-ol' },
   { key: 'mention', title: '@ 提及', icon: 'fas fa-at', before: '@', after: '' },
-  { key: 'emoji', title: '表情', icon: 'far fa-smile', before: '😊', after: '' }
+  { key: 'emoji', title: '表情', icon: 'far fa-smile' }
 ]
+const emojiGroups = EMOJI_GROUPS
 
 const showComposer = computed(() => {
   return composerStore.isOpen && ['reply', 'edit'].includes(composerStore.current.type) && authStore.isAuthenticated
 })
 const isEditing = computed(() => composerStore.current.type === 'edit')
+const dirtyState = computed(() => {
+  if (!showComposer.value) return false
+  if (isEditing.value) {
+    return replyContent.value.trim() !== String(composerStore.current.initialContent || '').trim()
+  }
+  return Boolean(replyContent.value.trim())
+})
 const discussionId = computed(() => Number(composerStore.current.discussionId || 0))
 const discussionLink = computed(() => {
   if (!discussionId.value) return '/'
@@ -150,6 +232,7 @@ const composerTitle = computed(() => {
   return `回复：${composerStore.current.discussionTitle || '讨论'}`
 })
 const composerSubtitle = computed(() => {
+  if (composerStore.isMinimized) return minimizedSummary.value
   if (isEditing.value) {
     return `${composerStore.current.discussionTitle || '讨论'} · 编辑后会直接更新原帖`
   }
@@ -159,9 +242,41 @@ const composerSubtitle = computed(() => {
   }
   return composerStore.current.discussionTitle || '讨论'
 })
+const minimizedSummary = computed(() => {
+  const content = replyContent.value.trim()
+  if (content) {
+    return content.length > 36 ? `${content.slice(0, 36)}...` : content
+  }
+  if (isEditing.value) return `编辑 #${composerStore.current.postNumber || ''}`.trim()
+  if (composerStore.current.postNumber) return `回复 #${composerStore.current.postNumber}`
+  return composerStore.current.discussionTitle || '回复讨论'
+})
+const isPhoneViewport = computed(() => viewportWidth.value <= 768)
+const isPhoneOverlay = computed(() => isPhoneViewport.value && showComposer.value && !composerStore.isMinimized)
+const showBackdrop = computed(() => isPhoneOverlay.value)
 const composerInlineStyle = computed(() => {
-  if (composerStore.isMinimized || composerStore.isExpanded) return {}
+  if (composerStore.isMinimized || composerStore.isExpanded || isPhoneOverlay.value) return {}
   return { height: `${composerHeight.value}px` }
+})
+const emojiPickerStyle = computed(() => {
+  const anchor = emojiToolRef.value
+  if (!anchor) return {}
+
+  const rect = anchor.getBoundingClientRect()
+  const pickerWidth = Math.min(320, Math.max(220, window.innerWidth - 32))
+  const left = Math.max(16, Math.min(rect.right - pickerWidth, window.innerWidth - pickerWidth - 16))
+  const top = Math.max(16, rect.top - 12)
+
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    transform: 'translateY(-100%)'
+  }
+})
+const unsavedExitMessage = computed(() => {
+  return isEditing.value
+    ? '你有未保存的帖子编辑内容。确定要离开当前页面吗？'
+    : '你有未发布的回复内容。确定要离开当前页面吗？'
 })
 
 watch(
@@ -195,21 +310,65 @@ watch(
   }
 )
 
+watch(
+  [dirtyState, unsavedExitMessage],
+  ([value, message]) => {
+    composerStore.setUnsavedState(value, message)
+  },
+  { immediate: true }
+)
+
+watch(
+  [
+    showComposer,
+    () => composerStore.isMinimized,
+    () => composerStore.isExpanded,
+    composerHeight,
+    isPhoneViewport
+  ],
+  () => {
+    syncComposerViewportEffects()
+  },
+  { immediate: true }
+)
+
 onMounted(() => {
+  window.addEventListener('resize', handleViewportResize)
   window.addEventListener('mousemove', handleResizeMove)
   window.addEventListener('mouseup', stopResize)
+  document.addEventListener('mousedown', handleDocumentMouseDown)
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleViewportResize)
   window.removeEventListener('mousemove', handleResizeMove)
   window.removeEventListener('mouseup', stopResize)
+  document.removeEventListener('mousedown', handleDocumentMouseDown)
+  clearComposerViewportEffects()
 })
 
-function handleHeaderLinkClick() {
+function handleHeaderLinkClick(event) {
+  if (composerStore.isMinimized) {
+    event.preventDefault()
+    composerStore.showComposer()
+    nextTick(() => composerTextarea.value?.focus())
+    return
+  }
+
   if (composerStore.isExpanded) {
     composerStore.toggleExpanded()
     composerStore.showComposer()
   }
+}
+
+function handleHeaderSummaryClick() {
+  if (!composerStore.isMinimized) return
+  composerStore.showComposer()
+  nextTick(() => composerTextarea.value?.focus())
+}
+
+function handleViewportResize() {
+  viewportWidth.value = window.innerWidth
 }
 
 function startResize(event) {
@@ -246,10 +405,14 @@ function toggleComposerExpanded() {
 }
 
 function closeComposer(force = false) {
-  if (!force && replyContent.value.trim() && !confirm('确定要关闭回复框吗？当前草稿会被清空。')) {
+  if (!force && dirtyState.value && !confirm(isEditing.value ? '确定要关闭编辑器吗？未保存修改将丢失。' : '确定要关闭回复框吗？当前内容会保留在本地草稿中。')) {
     return
   }
 
+  showEmojiPicker.value = false
+  if (!isEditing.value) {
+    saveComposerDraft()
+  }
   resetComposerState()
 }
 
@@ -260,7 +423,13 @@ function cancelEdit() {
 function resetComposerState() {
   composerStore.closeComposer()
   composerDraftSavedAt.value = ''
+  uploadNotice.value = ''
+  showEmojiPicker.value = false
   replyContent.value = ''
+}
+
+function hasUnsavedChanges() {
+  return dirtyState.value
 }
 
 function getComposerDraftKey() {
@@ -336,6 +505,21 @@ async function applyComposerTool(tool) {
   composerStore.showComposer()
   await nextTick()
 
+  if (tool.key === 'upload') {
+    showEmojiPicker.value = false
+    attachmentInput.value?.click()
+    return
+  }
+  if (tool.key === 'image') {
+    showEmojiPicker.value = false
+    imageInput.value?.click()
+    return
+  }
+  if (tool.key === 'emoji') {
+    showEmojiPicker.value = !showEmojiPicker.value
+    return
+  }
+
   const textarea = composerTextarea.value
   if (!textarea) return
 
@@ -343,78 +527,86 @@ async function applyComposerTool(tool) {
   const end = textarea.selectionEnd ?? replyContent.value.length
   const selected = replyContent.value.slice(start, end)
   const replacement = buildComposerToolReplacement(tool, selected)
+  const cursor = selected ? start + replacement.length : start + defaultToolCursorOffset(tool)
 
-  replyContent.value = `${replyContent.value.slice(0, start)}${replacement}${replyContent.value.slice(end)}`
+  await insertComposerText(replacement, { start, end, cursor })
+}
+
+async function handleAttachmentSelected(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  await uploadAndInsertFile(file, false)
+}
+
+async function handleImageSelected(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  await uploadAndInsertFile(file, true)
+}
+
+async function uploadAndInsertFile(file, asImage) {
+  uploading.value = true
+  uploadNoticeTone.value = 'info'
+  uploadNotice.value = `正在上传${asImage ? '图片' : '附件'}：${file.name}`
+  showEmojiPicker.value = false
+
+  try {
+    const uploaded = await uploadComposerFile(file)
+    if (!showComposer.value) return
+
+    const markdown = buildUploadedFileMarkdown(uploaded.original_name || file.name, uploaded.url, {
+      image: asImage
+    })
+    await insertComposerText(markdown)
+    uploadNoticeTone.value = 'success'
+    uploadNotice.value = `${asImage ? '图片' : '附件'}已插入编辑器`
+  } catch (error) {
+    const message = getComposerErrorMessage(error, asImage ? '图片上传失败' : '附件上传失败')
+    uploadNoticeTone.value = 'error'
+    uploadNotice.value = message
+    alert(message)
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function handleEmojiSelect(emoji) {
+  showEmojiPicker.value = false
+  await insertComposerText(emoji)
+}
+
+async function insertComposerText(replacement, options = {}) {
+  await nextTick()
+
+  const textarea = composerTextarea.value
+  const content = replyContent.value
+  const start = options.start ?? textarea?.selectionStart ?? content.length
+  const end = options.end ?? textarea?.selectionEnd ?? content.length
+  const cursor = options.cursor ?? start + replacement.length
+
+  replyContent.value = replaceSelection(content, start, end, replacement)
 
   await nextTick()
-  textarea.focus()
-  const cursor = selected
-    ? start + replacement.length
-    : start + defaultToolCursorOffset(tool)
-  textarea.setSelectionRange(cursor, cursor)
+  composerTextarea.value?.focus()
+  composerTextarea.value?.setSelectionRange(cursor, cursor)
 }
 
-function buildComposerToolReplacement(tool, selected) {
-  if (tool.key === 'link') {
-    return selected ? `[${selected}](https://)` : '[链接文字](https://)'
-  }
-  if (tool.key === 'image') {
-    return selected ? `![图片描述](${selected})` : '![图片描述](https://)'
-  }
-  if (tool.key === 'upload') {
-    return selected ? `[附件说明](${selected})` : '[附件说明](上传后的附件地址)'
-  }
-  if (tool.key === 'quote') {
-    return prefixLines(selected || '引用内容', '> ')
-  }
-  if (tool.key === 'bullets') {
-    return prefixLines(selected || '列表项', '- ')
-  }
-  if (tool.key === 'ordered') {
-    return prefixOrderedLines(selected || '列表项')
-  }
-
-  const before = tool.before || ''
-  const after = tool.after || ''
-  return `${before}${selected || defaultToolText(tool)}${after}`
+function handleDocumentMouseDown(event) {
+  if (!showEmojiPicker.value) return
+  if (emojiToolRef.value?.contains(event.target)) return
+  showEmojiPicker.value = false
 }
 
-function defaultToolCursorOffset(tool) {
-  const replacement = buildComposerToolReplacement(tool, '')
-  if (tool.key === 'image') return replacement.indexOf('https://') + 'https://'.length
-  if (tool.key === 'upload') return replacement.indexOf('上传后的附件地址')
-  if (tool.key === 'link') return replacement.indexOf('链接文字') + '链接文字'.length
-  if (tool.key === 'emoji') return replacement.length
-  return replacement.length
-}
-
-function prefixLines(content, prefix) {
-  return content
-    .split('\n')
-    .map(line => `${prefix}${line || '内容'}`)
-    .join('\n')
-}
-
-function prefixOrderedLines(content) {
-  return content
-    .split('\n')
-    .map((line, index) => `${index + 1}. ${line || '内容'}`)
-    .join('\n')
-}
-
-function defaultToolText(tool) {
-  if (tool.key === 'link') return '链接文字'
-  if (tool.key === 'code') return 'code'
-  if (tool.key === 'heading') return '标题'
-  if (tool.key === 'upload') return '附件'
-  if (tool.key === 'image') return 'https://'
-  if (tool.key === 'emoji') return ''
-  return '文本'
+function setEmojiToolRef(element) {
+  emojiToolRef.value = element
 }
 
 async function submitReply() {
   if (!replyContent.value.trim() || !discussionId.value) return
 
+  showEmojiPicker.value = false
   submitting.value = true
   try {
     if (isEditing.value) {
@@ -494,6 +686,26 @@ function clampComposerHeight(value) {
   const max = typeof window === 'undefined' ? 680 : Math.max(320, window.innerHeight - 72)
   return Math.max(min, Math.min(value, max))
 }
+
+function syncComposerViewportEffects() {
+  if (typeof document === 'undefined') return
+  if (composerStore.isOpen && !showComposer.value) return
+
+  const activeDesktopComposer =
+    showComposer.value &&
+    !composerStore.isMinimized &&
+    !composerStore.isExpanded &&
+    !isPhoneViewport.value
+
+  document.documentElement.style.setProperty('--composer-offset', activeDesktopComposer ? `${composerHeight.value + 24}px` : '0px')
+  document.body.style.overflow = showBackdrop.value ? 'hidden' : ''
+}
+
+function clearComposerViewportEffects() {
+  if (typeof document === 'undefined') return
+  document.documentElement.style.setProperty('--composer-offset', '0px')
+  document.body.style.overflow = ''
+}
 </script>
 
 <style scoped>
@@ -518,6 +730,17 @@ function clampComposerHeight(value) {
 }
 
 .floating-composer.is-expanded {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.floating-composer.is-phone-overlay {
   left: 0;
   right: 0;
   top: 0;
@@ -558,6 +781,10 @@ function clampComposerHeight(value) {
   flex-direction: column;
   gap: 2px;
   font-weight: 400;
+}
+
+.composer-title--clickable {
+  cursor: pointer;
 }
 
 .composer-title span,
@@ -625,6 +852,25 @@ function clampComposerHeight(value) {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.composer-notice {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #edf4fb;
+  color: #325b88;
+  line-height: 1.6;
+}
+
+.composer-notice-success {
+  background: #edf9f1;
+  color: #256b3c;
+}
+
+.composer-notice-error {
+  background: #fdf0f0;
+  color: #b33a3a;
 }
 
 .composer-body textarea {
@@ -700,6 +946,11 @@ function clampComposerHeight(value) {
   white-space: nowrap;
 }
 
+.composer-tool {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .composer-formatting button {
   border: 0;
   background: transparent;
@@ -718,6 +969,11 @@ function clampComposerHeight(value) {
 .composer-formatting button:hover {
   background: #e8edf3;
   color: #354152;
+}
+
+.composer-formatting button.is-active {
+  background: #e3ecf5;
+  color: #325b88;
 }
 
 .composer-formatting button i {
@@ -739,6 +995,17 @@ function clampComposerHeight(value) {
 .composer-secondary:hover {
   background: #e8edf3;
   color: #425062;
+}
+
+.composer-file-input {
+  display: none;
+}
+
+.composer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 30, 38, 0.4);
+  z-index: 899;
 }
 
 @media (max-width: 768px) {

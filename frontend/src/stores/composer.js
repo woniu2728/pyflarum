@@ -19,6 +19,8 @@ export const useComposerStore = defineStore('composer', () => {
   const isMinimized = ref(false)
   const isExpanded = ref(false)
   const current = ref({ ...EMPTY_STATE })
+  const hasUnsavedChanges = ref(false)
+  const unsavedMessage = ref('')
 
   function openComposerState(nextState = {}, options = {}) {
     current.value = {
@@ -69,6 +71,8 @@ export const useComposerStore = defineStore('composer', () => {
     isOpen.value = false
     isMinimized.value = false
     isExpanded.value = false
+    hasUnsavedChanges.value = false
+    unsavedMessage.value = ''
     current.value = {
       ...EMPTY_STATE,
       requestId: current.value.requestId
@@ -95,17 +99,25 @@ export const useComposerStore = defineStore('composer', () => {
     }
   }
 
+  function setUnsavedState(value, message = '') {
+    hasUnsavedChanges.value = Boolean(value)
+    unsavedMessage.value = value ? message : ''
+  }
+
   return {
     isOpen,
     isMinimized,
     isExpanded,
     current,
+    hasUnsavedChanges,
+    unsavedMessage,
     openDiscussionComposer,
     openReplyComposer,
     openEditPostComposer,
     showComposer,
     closeComposer,
     toggleMinimized,
-    toggleExpanded
+    toggleExpanded,
+    setUnsavedState
   }
 })

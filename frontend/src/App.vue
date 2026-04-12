@@ -11,16 +11,24 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
 import DiscussionComposer from './components/DiscussionComposer.vue'
 import PostComposer from './components/PostComposer.vue'
 import { useAuthStore } from './stores/auth'
+import { useComposerStore } from './stores/composer'
 import { useNotificationStore } from './stores/notification'
 
 const authStore = useAuthStore()
+const composerStore = useComposerStore()
 const notificationStore = useNotificationStore()
+
+function handleBeforeUnload(event) {
+  if (!composerStore.hasUnsavedChanges) return
+  event.preventDefault()
+  event.returnValue = composerStore.unsavedMessage || ''
+}
 
 onMounted(() => {
   // 初始化认证状态
@@ -30,6 +38,12 @@ onMounted(() => {
   if (authStore.isAuthenticated) {
     notificationStore.connect()
   }
+
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
@@ -51,6 +65,7 @@ body {
 :root {
   --forum-primary-color: #4d698e;
   --forum-accent-color: #e74c3c;
+  --composer-offset: 0px;
 }
 
 #app {
@@ -61,6 +76,8 @@ body {
 
 .main-content {
   flex: 1;
+  padding-bottom: var(--composer-offset);
+  transition: padding-bottom 0.15s ease;
 }
 
 a {

@@ -1,12 +1,18 @@
 import json
+from pathlib import Path
+import shutil
+import uuid
 
 from django.contrib.auth.models import AnonymousUser
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from ninja_jwt.tokens import RefreshToken
+from unittest.mock import patch
 
 from apps.core.models import Setting
+from apps.core.file_service import FileUploadService
 from apps.core.services import SearchService
 from apps.core.websocket_auth import get_user_from_token
 from apps.discussions.services import DiscussionService
@@ -153,7 +159,9 @@ class AdminSettingsApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertIn("cache_driver", response.json())
+        payload = response.json()
+        self.assertIn("cache_driver", payload)
+        self.assertIn("storage_driver", payload)
 
         response = self.client.post(
             "/api/admin/cache/clear",
@@ -162,6 +170,39 @@ class AdminSettingsApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["message"], "缓存已清除")
+
+    def test_advanced_settings_persist_storage_config(self):
+        response = self.client.post(
+            "/api/admin/advanced",
+            data=json.dumps({
+                "storage_driver": "r2",
+                "storage_attachments_dir": "uploads/files",
+                "storage_local_path": "custom-media",
+                "storage_r2_bucket": "forum-assets",
+                "storage_r2_endpoint": "https://example.r2.cloudflarestorage.com",
+                "storage_r2_public_url": "https://cdn.example.com",
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            json.loads(Setting.objects.get(key="advanced.storage_driver").value),
+            "r2",
+        )
+
+        response = self.client.get(
+            "/api/admin/advanced",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["storage_driver"], "r2")
+        self.assertEqual(payload["storage_attachments_dir"], "uploads/files")
+        self.assertEqual(payload["storage_r2_bucket"], "forum-assets")
+        self.assertEqual(payload["storage_r2_public_url"], "https://cdn.example.com")
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_mail_settings_affect_test_email_sender(self):
@@ -295,6 +336,129 @@ class AdminUserManagementApiTests(TestCase):
             set(self.user.user_groups.values_list("id", flat=True)),
             {self.member_group.id, self.moderator_group.id},
         )
+
+
+class ComposerUploadApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="composer-user",
+            email="composer@example.com",
+            password="password123",
+        )
+
+    def auth_header(self):
+        token = RefreshToken.for_user(self.user).access_token
+        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    @patch("apps.core.api.FileUploadService.upload_attachment")
+    def test_authenticated_user_can_upload_attachment(self, upload_attachment):
+        upload_attachment.return_value = (
+            f"/media/attachments/{self.user.id}/guide.pdf",
+            {
+                "original_name": "guide.pdf",
+                "size": 128,
+                "mime_type": "application/pdf",
+                "hash": "abc123",
+            },
+        )
+        file = SimpleUploadedFile("guide.pdf", b"dummy-pdf", content_type="application/pdf")
+
+        response = self.client.post(
+            "/api/uploads",
+            {"file": file},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["url"], f"/media/attachments/{self.user.id}/guide.pdf")
+        self.assertEqual(payload["original_name"], "guide.pdf")
+        self.assertEqual(payload["mime_type"], "application/pdf")
+        self.assertFalse(payload["is_image"])
+        upload_attachment.assert_called_once()
+
+    @patch("apps.core.api.FileUploadService.upload_attachment")
+    def test_upload_image_marks_response_as_image(self, upload_attachment):
+        upload_attachment.return_value = (
+            f"/media/attachments/{self.user.id}/photo.png",
+            {
+                "original_name": "photo.png",
+                "size": 256,
+                "mime_type": "image/png",
+                "hash": "def456",
+            },
+        )
+        file = SimpleUploadedFile("photo.png", b"png-data", content_type="image/png")
+
+        response = self.client.post(
+            "/api/uploads",
+            {"file": file},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()["is_image"])
+
+    def test_upload_requires_file(self):
+        response = self.client.post(
+            "/api/uploads",
+            {},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(response.json()["error"], "请选择要上传的文件")
+
+    @patch("apps.core.api.FileUploadService.upload_attachment")
+    def test_upload_validation_error_returns_400(self, upload_attachment):
+        upload_attachment.side_effect = ValueError("不支持的文件格式")
+        file = SimpleUploadedFile("virus.exe", b"bad", content_type="application/octet-stream")
+
+        response = self.client.post(
+            "/api/uploads",
+            {"file": file},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(response.json()["error"], "不支持的文件格式")
+
+
+class LocalStorageSettingsTests(TestCase):
+    def test_attachment_upload_respects_custom_local_storage_settings(self):
+        tmpdir = Path.cwd() / "media" / f"storage-test-{uuid.uuid4().hex}"
+        tmpdir.mkdir(parents=True, exist_ok=True)
+        try:
+            Setting.objects.update_or_create(
+                key="advanced.storage_driver",
+                defaults={"value": json.dumps("local")},
+            )
+            Setting.objects.update_or_create(
+                key="advanced.storage_local_path",
+                defaults={"value": json.dumps(str(tmpdir))},
+            )
+            Setting.objects.update_or_create(
+                key="advanced.storage_local_base_url",
+                defaults={"value": json.dumps("/uploads/")},
+            )
+            Setting.objects.update_or_create(
+                key="advanced.storage_attachments_dir",
+                defaults={"value": json.dumps("forum-files")},
+            )
+
+            file = SimpleUploadedFile("guide.txt", b"hello storage", content_type="text/plain")
+
+            file_url, file_info = FileUploadService.upload_attachment(file, 9)
+
+            self.assertTrue(file_url.startswith("/uploads/forum-files/9/"))
+            self.assertEqual(file_info["original_name"], "guide.txt")
+
+            relative_key = file_url.removeprefix("/uploads/")
+            stored_path = Path(tmpdir).joinpath(*relative_key.split("/"))
+            self.assertTrue(stored_path.exists())
+            self.assertEqual(stored_path.read_bytes(), b"hello storage")
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 class AdminGroupManagementApiTests(TestCase):
