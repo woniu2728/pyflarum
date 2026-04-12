@@ -105,9 +105,6 @@
           @click="handleEditorInteraction"
           @keyup="handleEditorInteraction"
           @keydown="handleEditorKeydown"
-          @keydown.ctrl.enter.prevent="submitDiscussion"
-          @keydown.meta.enter.prevent="submitDiscussion"
-          @keydown.esc.prevent="closeComposer"
         ></textarea>
         <div v-if="showPreview" class="composer-preview">
           <div class="composer-preview-header">
@@ -752,6 +749,34 @@ function handleEditorInteraction() {
 }
 
 function handleEditorKeydown(event) {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault()
+    submitDiscussion()
+    return
+  }
+
+  if (event.key === 'Escape') {
+    if (showMentionPicker.value) {
+      event.preventDefault()
+      clearMentionSuggestions()
+      return
+    }
+    if (showEmojiPicker.value) {
+      event.preventDefault()
+      showEmojiPicker.value = false
+      return
+    }
+    if (showPreview.value) {
+      event.preventDefault()
+      showPreview.value = false
+      nextTick(() => composerTextarea.value?.focus())
+      return
+    }
+    event.preventDefault()
+    closeComposer()
+    return
+  }
+
   if (!showMentionPicker.value) return
 
   if (event.key === 'ArrowDown') {

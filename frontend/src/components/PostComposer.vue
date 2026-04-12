@@ -647,6 +647,34 @@ function handleEditorInteraction() {
 }
 
 function handleEditorKeydown(event) {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault()
+    submitReply()
+    return
+  }
+
+  if (event.key === 'Escape') {
+    if (showMentionPicker.value) {
+      event.preventDefault()
+      clearMentionSuggestions()
+      return
+    }
+    if (showEmojiPicker.value) {
+      event.preventDefault()
+      showEmojiPicker.value = false
+      return
+    }
+    if (showPreview.value) {
+      event.preventDefault()
+      showPreview.value = false
+      nextTick(() => composerTextarea.value?.focus())
+      return
+    }
+    event.preventDefault()
+    closeComposer()
+    return
+  }
+
   if (!showMentionPicker.value) return
 
   if (event.key === 'ArrowDown') {
