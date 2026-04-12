@@ -2,6 +2,7 @@ import json
 from io import BytesIO
 from unittest.mock import patch
 
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
@@ -9,6 +10,7 @@ from datetime import timedelta
 from PIL import Image
 from ninja_jwt.tokens import RefreshToken
 
+from apps.core.models import Setting
 from apps.users.models import PasswordToken, User
 
 
@@ -38,6 +40,30 @@ class PasswordResetApiTests(TestCase):
 
         token = PasswordToken.objects.get(user=self.user)
         self.assertTrue(token.token)
+
+    def test_forgot_password_uses_runtime_mail_settings(self):
+        Setting.objects.update_or_create(
+            key="mail.mail_driver",
+            defaults={"value": json.dumps("sendmail")},
+        )
+        Setting.objects.update_or_create(
+            key="mail.mail_from_address",
+            defaults={"value": json.dumps("reset@example.com")},
+        )
+        Setting.objects.update_or_create(
+            key="mail.mail_from_name",
+            defaults={"value": json.dumps("Reset Service")},
+        )
+
+        response = self.client.post(
+            "/api/users/forgot-password",
+            data=json.dumps({"email": self.user.email}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].from_email, "Reset Service <reset@example.com>")
 
 
 class AvatarUploadApiTests(TestCase):

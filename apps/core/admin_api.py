@@ -15,9 +15,9 @@ from typing import List, Dict, Any
 from django.db.models import Count, Q
 from django.conf import settings
 from django.core.cache import cache
-from django.core.mail import send_mail
 
 from apps.core.models import Setting
+from apps.core.email_service import EmailService
 from apps.users.models import User, Group, Permission
 from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
@@ -280,17 +280,8 @@ def send_test_email(request):
     if not request.auth.email:
         return admin_error("当前管理员没有邮箱地址", status=400)
 
-    mail_settings = get_setting_group("mail", MAIL_SETTINGS_DEFAULTS)
-    from_email = mail_settings.get("mail_from_address") or settings.DEFAULT_FROM_EMAIL
-
     try:
-        sent_count = send_mail(
-            subject="PyFlarum 测试邮件",
-            message="如果你收到这封邮件，说明 PyFlarum 的邮件发送链路可用。",
-            from_email=from_email,
-            recipient_list=[request.auth.email],
-            fail_silently=False,
-        )
+        sent_count = EmailService.send_test_email(request.auth.email)
     except Exception as e:
         return admin_error(str(e), status=400)
 

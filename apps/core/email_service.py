@@ -1,17 +1,81 @@
 """
 邮件发送服务
 """
-from django.core.mail import send_mail, EmailMultiAlternatives
-from django.template.loader import render_to_string
+import json
+from email.utils import formataddr
+
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.conf import settings
-from typing import Optional, List
+from typing import Optional
 import logging
+
+from apps.core.models import Setting
 
 logger = logging.getLogger(__name__)
 
 
 class EmailService:
     """邮件发送服务"""
+
+    @staticmethod
+    def get_runtime_mail_settings() -> dict:
+        defaults = {
+            "mail_driver": "smtp",
+            "mail_host": getattr(settings, "EMAIL_HOST", ""),
+            "mail_port": getattr(settings, "EMAIL_PORT", 587),
+            "mail_encryption": "tls" if getattr(settings, "EMAIL_USE_TLS", False) else "",
+            "mail_username": getattr(settings, "EMAIL_HOST_USER", ""),
+            "mail_password": "",
+            "mail_from_address": getattr(settings, "DEFAULT_FROM_EMAIL", ""),
+            "mail_from_name": "PyFlarum",
+            "_customized": False,
+        }
+
+        stored_settings = Setting.objects.filter(
+            key__in=[f"mail.{key}" for key in defaults.keys()]
+        )
+
+        defaults["_customized"] = stored_settings.exists()
+
+        for setting in stored_settings:
+            key = setting.key.split(".", 1)[1]
+            try:
+                defaults[key] = json.loads(setting.value)
+            except json.JSONDecodeError:
+                defaults[key] = setting.value
+
+        if not defaults["mail_password"]:
+            defaults["mail_password"] = getattr(settings, "EMAIL_HOST_PASSWORD", "")
+
+        return defaults
+
+    @staticmethod
+    def build_from_email(from_address: str, from_name: str) -> str:
+        if from_name:
+            return formataddr((from_name, from_address))
+        return from_address
+
+    @staticmethod
+    def build_connection():
+        mail_settings = EmailService.get_runtime_mail_settings()
+        driver = mail_settings.get("mail_driver") or "smtp"
+
+        if not mail_settings.get("_customized"):
+            return get_connection(backend=getattr(settings, "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"))
+
+        if driver == "smtp":
+            return get_connection(
+                backend="django.core.mail.backends.smtp.EmailBackend",
+                host=mail_settings.get("mail_host") or getattr(settings, "EMAIL_HOST", ""),
+                port=int(mail_settings.get("mail_port") or getattr(settings, "EMAIL_PORT", 587)),
+                username=mail_settings.get("mail_username") or getattr(settings, "EMAIL_HOST_USER", ""),
+                password=mail_settings.get("mail_password") or getattr(settings, "EMAIL_HOST_PASSWORD", ""),
+                use_tls=(mail_settings.get("mail_encryption") == "tls"),
+                use_ssl=(mail_settings.get("mail_encryption") == "ssl"),
+                fail_silently=False,
+            )
+
+        return get_connection(backend=getattr(settings, "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"))
 
     @staticmethod
     def send_verification_email(user_email: str, username: str, token: str) -> bool:
@@ -329,15 +393,22 @@ class EmailService:
             bool: 是否发送成功
         """
         try:
+            mail_settings = EmailService.get_runtime_mail_settings()
+            connection = EmailService.build_connection()
+
             if from_email is None:
-                from_email = settings.DEFAULT_FROM_EMAIL
+                from_email = EmailService.build_from_email(
+                    mail_settings.get("mail_from_address") or settings.DEFAULT_FROM_EMAIL,
+                    mail_settings.get("mail_from_name") or "",
+                )
 
             # 创建邮件
             email = EmailMultiAlternatives(
                 subject=subject,
                 body=text_content,
                 from_email=from_email,
-                to=[to_email]
+                to=[to_email],
+                connection=connection,
             )
 
             # 添加HTML内容
@@ -352,3 +423,20 @@ class EmailService:
         except Exception as e:
             logger.error(f"邮件发送失败: {to_email} - {subject} - {str(e)}")
             return False
+
+    @staticmethod
+    def send_test_email(to_email: str) -> int:
+        mail_settings = EmailService.get_runtime_mail_settings()
+        from_email = EmailService.build_from_email(
+            mail_settings.get("mail_from_address") or settings.DEFAULT_FROM_EMAIL,
+            mail_settings.get("mail_from_name") or "",
+        )
+
+        email = EmailMultiAlternatives(
+            subject="PyFlarum 测试邮件",
+            body="如果你收到这封邮件，说明 PyFlarum 的邮件发送链路可用。",
+            from_email=from_email,
+            to=[to_email],
+            connection=EmailService.build_connection(),
+        )
+        return email.send()

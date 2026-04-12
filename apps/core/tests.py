@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.models import AnonymousUser
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from ninja_jwt.tokens import RefreshToken
@@ -130,6 +131,30 @@ class AdminSettingsApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["message"], "缓存已清除")
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_mail_settings_affect_test_email_sender(self):
+        response = self.client.post(
+            "/api/admin/mail",
+            data=json.dumps({
+                "mail_driver": "sendmail",
+                "mail_from_address": "service@example.com",
+                "mail_from_name": "PyFlarum Mailer",
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+
+        response = self.client.post(
+            "/api/admin/mail/test",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].from_email, "PyFlarum Mailer <service@example.com>")
 
 
 class AdminUserManagementApiTests(TestCase):
