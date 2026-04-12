@@ -28,7 +28,7 @@
             </div>
           </div>
 
-          <div v-if="hasPrevious" class="load-more load-previous">
+          <div v-if="hasPrevious" ref="previousTrigger" class="load-more load-previous">
             <button @click="loadPreviousPosts" class="secondary" :disabled="loadingPrevious">
               {{ loadingPrevious ? '加载中...' : '加载前面的回复' }}
             </button>
@@ -108,7 +108,7 @@
           </div>
 
           <!-- 加载更多 -->
-          <div v-if="hasMore" class="load-more">
+          <div v-if="hasMore" ref="nextTrigger" class="load-more">
             <button @click="loadMorePosts" class="secondary" :disabled="loadingMore">
               {{ loadingMore ? '加载中...' : '加载更多' }}
             </button>
@@ -283,6 +283,8 @@ const firstLoadedPage = ref(1)
 const lastLoadedPage = ref(1)
 const totalPosts = ref(0)
 const pageLimit = 20
+const previousTrigger = ref(null)
+const nextTrigger = ref(null)
 
 const togglingSubscription = ref(false)
 const highlightedPostNumber = ref(null)
@@ -414,7 +416,10 @@ function replacePosts(data) {
   lastLoadedPage.value = data.page || 1
   totalPosts.value = data.total || items.length
   syncJumpNumber()
-  nextTick(updateVisiblePostFromScroll)
+  nextTick(() => {
+    updateVisiblePostFromScroll()
+    maybeAutoLoadPosts()
+  })
 }
 
 function appendPosts(data) {
@@ -423,7 +428,10 @@ function appendPosts(data) {
   lastLoadedPage.value = data.page || lastLoadedPage.value + 1
   totalPosts.value = data.total || totalPosts.value
   syncJumpNumber()
-  nextTick(updateVisiblePostFromScroll)
+  nextTick(() => {
+    updateVisiblePostFromScroll()
+    maybeAutoLoadPosts()
+  })
 }
 
 function prependPosts(data) {
@@ -442,6 +450,7 @@ function prependPosts(data) {
       }
     }
     updateVisiblePostFromScroll()
+    maybeAutoLoadPosts()
   })
 }
 
@@ -526,7 +535,24 @@ function handlePostScroll() {
   scrollFrame = requestAnimationFrame(() => {
     scrollFrame = null
     updateVisiblePostFromScroll()
+    maybeAutoLoadPosts()
   })
+}
+
+function maybeAutoLoadPosts() {
+  if (hasPrevious.value && !loadingPrevious.value && previousTrigger.value) {
+    const previousRect = previousTrigger.value.getBoundingClientRect()
+    if (previousRect.top <= 220) {
+      loadPreviousPosts()
+    }
+  }
+
+  if (hasMore.value && !loadingMore.value && nextTrigger.value) {
+    const nextRect = nextTrigger.value.getBoundingClientRect()
+    if (nextRect.top - window.innerHeight <= 280) {
+      loadMorePosts()
+    }
+  }
 }
 
 function updateVisiblePostFromScroll() {

@@ -5,6 +5,7 @@
       :style="styleObject"
       role="listbox"
       aria-label="提及用户"
+      ref="pickerRef"
       @mousedown.stop
       @click.stop
     >
@@ -14,6 +15,7 @@
         v-for="(item, index) in items"
         v-else
         :key="item.id"
+        :ref="element => setItemRef(element, index)"
         type="button"
         class="composer-mention-item"
         :class="{ 'is-active': index === activeIndex }"
@@ -34,7 +36,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { nextTick, ref, watch } from 'vue'
+
+const props = defineProps({
   items: {
     type: Array,
     default: () => []
@@ -54,6 +58,44 @@ defineProps({
 })
 
 defineEmits(['select', 'highlight'])
+
+const pickerRef = ref(null)
+const itemRefs = ref([])
+
+watch(
+  () => [props.activeIndex, props.items.length],
+  () => {
+    nextTick(() => {
+      const container = pickerRef.value
+      const activeItem = itemRefs.value[props.activeIndex]
+      if (!container || !activeItem) return
+
+      const itemTop = activeItem.offsetTop
+      const itemBottom = itemTop + activeItem.offsetHeight
+      const visibleTop = container.scrollTop
+      const visibleBottom = visibleTop + container.clientHeight
+
+      if (itemTop < visibleTop) {
+        container.scrollTop = itemTop
+        return
+      }
+
+      if (itemBottom > visibleBottom) {
+        container.scrollTop = itemBottom - container.clientHeight
+      }
+    })
+  },
+  { immediate: true }
+)
+
+function setItemRef(element, index) {
+  if (!element) {
+    delete itemRefs.value[index]
+    return
+  }
+
+  itemRefs.value[index] = element
+}
 </script>
 
 <style scoped>

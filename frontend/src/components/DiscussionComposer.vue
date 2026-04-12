@@ -104,6 +104,7 @@
           @input="handleEditorInteraction"
           @click="handleEditorInteraction"
           @keyup="handleEditorInteraction"
+          @scroll="handleEditorInteraction"
           @keydown="handleEditorKeydown"
         ></textarea>
         <div v-if="showPreview" class="composer-preview">
@@ -216,6 +217,7 @@ import { useComposerStore } from '@/stores/composer'
 import api from '@/api'
 import {
   EMOJI_GROUPS,
+  buildMentionTrigger,
   buildMentionReplacement,
   buildComposerToolReplacement,
   buildUploadedFileMarkdown,
@@ -223,6 +225,7 @@ import {
   defaultToolCursorOffset,
   fetchComposerPreview,
   getComposerErrorMessage,
+  getTextareaCaretCoordinates,
   replaceSelection,
   uploadComposerFile
 } from '@/utils/composer'
@@ -253,6 +256,7 @@ const uploadNoticeTone = ref('info')
 const showEmojiPicker = ref(false)
 const mentionUsers = ref([])
 const mentionState = ref(null)
+const mentionCaret = ref(null)
 const mentionLoading = ref(false)
 const mentionActiveIndex = ref(0)
 const showPreview = ref(false)
@@ -355,17 +359,18 @@ const emojiPickerStyle = computed(() => {
   }
 })
 const mentionPickerStyle = computed(() => {
-  const anchor = composerTextarea.value
+  const anchor = mentionCaret.value
   if (!anchor) return {}
 
-  const rect = anchor.getBoundingClientRect()
   const pickerWidth = Math.min(320, Math.max(240, window.innerWidth - 32))
-  const left = Math.max(16, Math.min(rect.left, window.innerWidth - pickerWidth - 16))
-  const openAbove = rect.bottom + 240 > window.innerHeight - 16 && rect.top > 280
+  const pickerHeight = Math.min(280, Math.max(180, window.innerHeight - 32))
+  const left = Math.max(16, Math.min(anchor.left, window.innerWidth - pickerWidth - 16))
+  const belowTop = anchor.top + anchor.lineHeight + 8
+  const openAbove = belowTop + pickerHeight > window.innerHeight - 16 && anchor.top > pickerHeight + 24
 
   return {
     left: `${left}px`,
-    top: openAbove ? `${rect.top - 8}px` : `${rect.bottom + 8}px`,
+    top: openAbove ? `${anchor.top - 8}px` : `${belowTop}px`,
     transform: openAbove ? 'translateY(-100%)' : 'none'
   }
 })
@@ -542,6 +547,7 @@ function toggleExpanded() {
 function togglePreview() {
   showPreview.value = !showPreview.value
   previewError.value = ''
+  showEmojiPicker.value = false
   clearMentionSuggestions()
 
   if (showPreview.value) {
@@ -561,6 +567,11 @@ function handleHeaderSummaryClick() {
 
 function handleViewportResize() {
   viewportWidth.value = window.innerWidth
+  if (mentionState.value) {
+    nextTick(() => {
+      syncMentionSuggestions()
+    })
+  }
 }
 
 function startResize(event) {
@@ -719,16 +730,26 @@ async function applyComposerTool(tool) {
 
   if (tool.key === 'upload') {
     showEmojiPicker.value = false
+    clearMentionSuggestions()
     attachmentInput.value?.click()
     return
   }
   if (tool.key === 'image') {
     showEmojiPicker.value = false
+    clearMentionSuggestions()
     imageInput.value?.click()
     return
   }
   if (tool.key === 'emoji') {
+    clearMentionSuggestions()
+    if (showPreview.value) {
+      showPreview.value = false
+      await nextTick()
+    }
     showEmojiPicker.value = !showEmojiPicker.value
+    if (showEmojiPicker.value) {
+      composerTextarea.value?.focus()
+    }
     return
   }
 
@@ -737,6 +758,15 @@ async function applyComposerTool(tool) {
 
   const start = textarea.selectionStart ?? form.value.content.length
   const end = textarea.selectionEnd ?? form.value.content.length
+  if (tool.key === 'mention') {
+    const replacement = buildMentionTrigger(form.value.content, start)
+    await insertComposerText(replacement, {
+      start,
+      end,
+      cursor: start + replacement.length
+    })
+    return
+  }
   const selected = form.value.content.slice(start, end)
   const replacement = buildComposerToolReplacement(tool, selected)
   const cursor = selected ? start + replacement.length : start + defaultToolCursorOffset(tool)
@@ -744,7 +774,13 @@ async function applyComposerTool(tool) {
   await insertComposerText(replacement, { start, end, cursor })
 }
 
-function handleEditorInteraction() {
+function handleEditorInteraction(event) {
+  if (
+    event?.type === 'keyup' &&
+    ['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(event.key)
+  ) {
+    return
+  }
   syncMentionSuggestions()
 }
 
@@ -869,6 +905,7 @@ function syncMentionSuggestions() {
   }
 
   mentionState.value = detected
+  mentionCaret.value = getTextareaCaretCoordinates(textarea, detected.start)
   scheduleMentionSearch(detected.query)
 }
 
@@ -985,6 +1022,7 @@ function clearMentionSuggestions() {
   mentionLoading.value = false
   mentionUsers.value = []
   mentionState.value = null
+  mentionCaret.value = null
   mentionActiveIndex.value = 0
 }
 

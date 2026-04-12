@@ -94,8 +94,88 @@ export function detectMentionQuery(content, cursorPosition) {
   }
 }
 
+export function getTextareaCaretCoordinates(textarea, position) {
+  if (!textarea || typeof window === 'undefined' || typeof document === 'undefined') {
+    return null
+  }
+
+  const value = String(textarea.value || '')
+  const safePosition = Math.max(0, Math.min(position ?? value.length, value.length))
+  const style = window.getComputedStyle(textarea)
+  const mirror = document.createElement('div')
+  const marker = document.createElement('span')
+  const mirroredProperties = [
+    'boxSizing',
+    'width',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'borderTopWidth',
+    'borderRightWidth',
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'borderTopStyle',
+    'borderRightStyle',
+    'borderBottomStyle',
+    'borderLeftStyle',
+    'fontFamily',
+    'fontSize',
+    'fontStyle',
+    'fontVariant',
+    'fontWeight',
+    'letterSpacing',
+    'lineHeight',
+    'textAlign',
+    'textIndent',
+    'textTransform',
+    'whiteSpace',
+    'wordBreak',
+    'overflowWrap',
+    'tabSize'
+  ]
+
+  mirror.setAttribute('aria-hidden', 'true')
+  mirror.style.position = 'fixed'
+  mirror.style.top = '0'
+  mirror.style.left = '-9999px'
+  mirror.style.visibility = 'hidden'
+  mirror.style.pointerEvents = 'none'
+  mirror.style.whiteSpace = 'pre-wrap'
+  mirror.style.wordBreak = 'break-word'
+  mirror.style.overflowWrap = 'break-word'
+  mirror.style.overflow = 'hidden'
+
+  mirroredProperties.forEach(property => {
+    mirror.style[property] = style[property]
+  })
+
+  mirror.textContent = value.slice(0, safePosition)
+  marker.textContent = value.slice(safePosition) || '.'
+  mirror.appendChild(marker)
+  document.body.appendChild(mirror)
+
+  const rect = textarea.getBoundingClientRect()
+  const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.4 || 20
+  const coordinates = {
+    left: rect.left + marker.offsetLeft - textarea.scrollLeft,
+    top: rect.top + marker.offsetTop - textarea.scrollTop,
+    lineHeight
+  }
+
+  mirror.remove()
+  return coordinates
+}
+
 export function buildMentionReplacement(username) {
   return `@${String(username || '').trim()} `
+}
+
+export function buildMentionTrigger(content, start) {
+  const safeContent = String(content || '')
+  const safeStart = Math.max(0, Math.min(start ?? safeContent.length, safeContent.length))
+  const previousCharacter = safeContent.slice(Math.max(0, safeStart - 1), safeStart)
+  return /[\s(]/.test(previousCharacter) || !previousCharacter ? '@' : ' @'
 }
 
 export function isImageFile(file) {
