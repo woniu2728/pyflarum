@@ -11,9 +11,55 @@ from apps.core.schemas import (
     PostSearchResultSchema,
     UserSearchResultSchema,
 )
+from apps.core.settings_service import get_public_forum_settings
 from apps.core.services import SearchService
 
 router = Router()
+
+
+@router.get("/forum", tags=["Forum"])
+def get_forum_settings(request):
+    """获取前台公开论坛设置"""
+    return get_public_forum_settings()
+
+
+def serialize_discussion_search_result(discussion):
+    return {
+        'id': discussion.id,
+        'title': discussion.title,
+        'slug': discussion.slug,
+        'user': {
+            'id': discussion.user.id,
+            'username': discussion.user.username,
+            'display_name': discussion.user.display_name,
+            'avatar_url': discussion.user.avatar_url,
+        } if discussion.user else None,
+        'comment_count': discussion.comment_count,
+        'view_count': discussion.view_count,
+        'is_sticky': discussion.is_sticky,
+        'is_locked': discussion.is_locked,
+        'created_at': discussion.created_at,
+        'last_posted_at': discussion.last_posted_at,
+        'excerpt': discussion.excerpt,
+    }
+
+
+def serialize_post_search_result(post):
+    return {
+        'id': post.id,
+        'discussion_id': post.discussion_id,
+        'discussion_title': post.discussion_title,
+        'number': post.number,
+        'user': {
+            'id': post.user.id,
+            'username': post.user.username,
+            'display_name': post.user.display_name,
+            'avatar_url': post.user.avatar_url,
+        } if post.user else None,
+        'content': post.content,
+        'created_at': post.created_at,
+        'excerpt': post.excerpt,
+    }
 
 
 @router.get("/search", response=SearchResultSchema, tags=["Search"])
@@ -39,47 +85,40 @@ def search(
             'page': page,
             'limit': limit,
             'type': type,
+            'discussion_total': 0,
+            'post_total': 0,
+            'user_total': 0,
             'discussions': [],
             'posts': [],
             'users': [],
         }
 
     query = q.strip()
+    discussion_total = SearchService._discussion_queryset(query).count()
+    post_total = SearchService._post_queryset(query).count()
+    user_total = SearchService._user_queryset(query).count()
 
     if type == 'all':
         result = SearchService.search_all(query, page, limit)
-        return result
+        return {
+            **result,
+            'discussions': [serialize_discussion_search_result(item) for item in result['discussions']],
+            'posts': [serialize_post_search_result(item) for item in result['posts']],
+        }
 
     elif type == 'discussions':
         discussions, total = SearchService.search_discussions(query, page, limit)
 
-        # 构建响应
-        discussion_data = []
-        for discussion in discussions:
-            discussion_data.append({
-                'id': discussion.id,
-                'title': discussion.title,
-                'slug': discussion.slug,
-                'user': {
-                    'id': discussion.user.id,
-                    'username': discussion.user.username,
-                    'display_name': discussion.user.display_name,
-                    'avatar_url': discussion.user.avatar_url,
-                } if discussion.user else None,
-                'comment_count': discussion.comment_count,
-                'view_count': discussion.view_count,
-                'is_sticky': discussion.is_sticky,
-                'is_locked': discussion.is_locked,
-                'created_at': discussion.created_at,
-                'last_posted_at': discussion.last_posted_at,
-                'excerpt': discussion.excerpt,
-            })
+        discussion_data = [serialize_discussion_search_result(discussion) for discussion in discussions]
 
         return {
             'total': total,
             'page': page,
             'limit': limit,
             'type': type,
+            'discussion_total': discussion_total,
+            'post_total': post_total,
+            'user_total': user_total,
             'discussions': discussion_data,
             'posts': [],
             'users': [],
@@ -88,30 +127,16 @@ def search(
     elif type == 'posts':
         posts, total = SearchService.search_posts(query, page, limit)
 
-        # 构建响应
-        post_data = []
-        for post in posts:
-            post_data.append({
-                'id': post.id,
-                'discussion_id': post.discussion_id,
-                'discussion_title': post.discussion_title,
-                'number': post.number,
-                'user': {
-                    'id': post.user.id,
-                    'username': post.user.username,
-                    'display_name': post.user.display_name,
-                    'avatar_url': post.user.avatar_url,
-                } if post.user else None,
-                'content': post.content,
-                'created_at': post.created_at,
-                'excerpt': post.excerpt,
-            })
+        post_data = [serialize_post_search_result(post) for post in posts]
 
         return {
             'total': total,
             'page': page,
             'limit': limit,
             'type': type,
+            'discussion_total': discussion_total,
+            'post_total': post_total,
+            'user_total': user_total,
             'discussions': [],
             'posts': post_data,
             'users': [],
@@ -125,6 +150,9 @@ def search(
             'page': page,
             'limit': limit,
             'type': type,
+            'discussion_total': discussion_total,
+            'post_total': post_total,
+            'user_total': user_total,
             'discussions': [],
             'posts': [],
             'users': users,

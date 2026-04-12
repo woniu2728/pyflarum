@@ -44,6 +44,11 @@ body {
   line-height: 1.6;
 }
 
+:root {
+  --forum-primary-color: #4d698e;
+  --forum-accent-color: #e74c3c;
+}
+
 #app {
   min-height: 100vh;
   display: flex;
@@ -55,7 +60,7 @@ body {
 }
 
 a {
-  color: #4d698e;
+  color: var(--forum-primary-color);
   text-decoration: none;
 }
 
@@ -80,12 +85,12 @@ button:disabled {
 }
 
 button.primary {
-  background: #4d698e;
+  background: var(--forum-primary-color);
   color: white;
 }
 
 button.primary:hover:not(:disabled) {
-  background: #3d5875;
+  filter: brightness(0.92);
 }
 
 button.secondary {
@@ -121,7 +126,7 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #4d698e;
+  border-color: var(--forum-primary-color);
 }
 
 .container {

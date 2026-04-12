@@ -71,6 +71,9 @@ class SearchResultSchema(BaseModel):
     page: int
     limit: int
     type: str
+    discussion_total: int = 0
+    post_total: int = 0
+    user_total: int = 0
     discussions: List[DiscussionSearchResultSchema] = []
     posts: List[PostSearchResultSchema] = []
     users: List[UserSearchResultSchema] = []

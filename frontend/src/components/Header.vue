@@ -3,7 +3,15 @@
     <div class="container">
       <div class="header-left">
         <div class="logo">
-          <router-link to="/">PyFlarum</router-link>
+          <router-link to="/">
+            <img
+              v-if="forumStore.settings.logo_url"
+              :src="forumStore.settings.logo_url"
+              :alt="forumStore.settings.forum_title"
+              class="logo-image"
+            />
+            <span v-else>{{ forumStore.settings.forum_title }}</span>
+          </router-link>
         </div>
       </div>
 
@@ -130,13 +138,16 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useForumStore } from '@/stores/forum'
 import { useNotificationStore } from '@/stores/notification'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/api'
 import { buildDiscussionPath, buildUserPath, formatRelativeTime } from '@/utils/forum'
 
 const authStore = useAuthStore()
+const forumStore = useForumStore()
 const notificationStore = useNotificationStore()
+const route = useRoute()
 const router = useRouter()
 
 const showUserMenu = ref(false)
@@ -145,6 +156,7 @@ const showSearchDropdown = ref(false)
 const searchLoading = ref(false)
 const searchResults = ref({ discussions: [], posts: [], users: [] })
 const activeSearchIndex = ref(-1)
+const syncingSearchQuery = ref(false)
 let searchTimer = null
 let searchRequestId = 0
 
@@ -165,7 +177,7 @@ function handleSearch() {
   if (!query) return
 
   closeSearchDropdown()
-  router.push({ path: '/', query: { search: query } })
+  router.push({ path: '/search', query: { q: query } })
 }
 
 function handleLogout() {
@@ -212,6 +224,10 @@ const searchSections = computed(() => {
 })
 
 watch(searchQuery, (value) => {
+  if (syncingSearchQuery.value) {
+    return
+  }
+
   const query = value.trim()
   activeSearchIndex.value = -1
 
@@ -229,6 +245,18 @@ watch(searchQuery, (value) => {
     fetchSearchResults(query)
   }, 220)
 })
+
+watch(
+  () => route.query.q ?? route.query.search ?? '',
+  (value) => {
+    syncingSearchQuery.value = true
+    searchQuery.value = String(value || '')
+    queueMicrotask(() => {
+      syncingSearchQuery.value = false
+    })
+  },
+  { immediate: true }
+)
 
 async function fetchSearchResults(query) {
   const requestId = ++searchRequestId
@@ -366,14 +394,22 @@ onBeforeUnmount(() => {
 }
 
 .logo a {
+  display: inline-flex;
+  align-items: center;
   font-size: 18px;
   font-weight: 600;
-  color: #4d698e;
+  color: var(--forum-primary-color);
   letter-spacing: -0.5px;
 }
 
 .logo a:hover {
   text-decoration: none;
+}
+
+.logo-image {
+  max-height: 32px;
+  max-width: 180px;
+  object-fit: contain;
 }
 
 .nav {
@@ -429,7 +465,7 @@ onBeforeUnmount(() => {
 
 .search-box:focus-within {
   background: white;
-  border-color: #4d698e;
+  border-color: var(--forum-primary-color);
 }
 
 .search-box i {
@@ -541,7 +577,7 @@ onBeforeUnmount(() => {
 .search-all {
   border-top: 1px solid #edf1f5;
   margin-top: 5px;
-  color: #4d698e;
+  color: var(--forum-primary-color);
   font-weight: 600;
   justify-content: center;
 }
@@ -632,7 +668,7 @@ onBeforeUnmount(() => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #4d698e;
+  background: var(--forum-primary-color);
   color: white;
   display: flex;
   align-items: center;
@@ -726,12 +762,12 @@ onBeforeUnmount(() => {
 }
 
 .btn-signup {
-  background: #4d698e;
+  background: var(--forum-primary-color);
   color: white;
 }
 
 .btn-signup:hover {
-  background: #3d5875;
+  filter: brightness(0.92);
   text-decoration: none;
 }
 

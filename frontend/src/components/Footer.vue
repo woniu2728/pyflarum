@@ -1,10 +1,16 @@
 <template>
   <footer class="footer">
     <div class="container">
-      <p>Powered by <strong>PyFlarum</strong> - Django + Vue 3</p>
+      <p>Powered by <strong>{{ forumStore.settings.forum_title }}</strong> - Django + Vue 3</p>
     </div>
   </footer>
 </template>
+
+<script setup>
+import { useForumStore } from '@/stores/forum'
+
+const forumStore = useForumStore()
+</script>
 
 <style scoped>
 .footer {
@@ -28,7 +34,7 @@
 }
 
 .footer strong {
-  color: #4d698e;
+  color: var(--forum-primary-color);
   font-weight: 600;
 }
 </style>

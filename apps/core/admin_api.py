@@ -1,7 +1,6 @@
 """
 管理后台API端点
 """
-import json
 import sys
 import functools
 
@@ -13,11 +12,17 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from typing import List, Dict, Any
 from django.db.models import Count, Q
-from django.conf import settings
 from django.core.cache import cache
 
-from apps.core.models import Setting
 from apps.core.email_service import EmailService
+from apps.core.settings_service import (
+    ADVANCED_SETTINGS_DEFAULTS,
+    APPEARANCE_SETTINGS_DEFAULTS,
+    BASIC_SETTINGS_DEFAULTS,
+    MAIL_SETTINGS_DEFAULTS,
+    get_setting_group,
+    save_setting_group,
+)
 from apps.users.models import User, Group, Permission
 from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
@@ -26,46 +31,6 @@ from apps.posts.services import PostService
 from apps.tags.models import Tag
 
 router = Router()
-
-BASIC_SETTINGS_DEFAULTS = {
-    "forum_title": "PyFlarum",
-    "forum_description": "",
-    "welcome_title": "欢迎来到PyFlarum",
-    "welcome_message": "这是一个基于Django和Vue 3的现代化论坛",
-    "default_locale": "zh-CN",
-    "show_language_selector": False,
-}
-
-APPEARANCE_SETTINGS_DEFAULTS = {
-    "primary_color": "#4d698e",
-    "accent_color": "#e74c3c",
-    "logo_url": "",
-    "favicon_url": "",
-    "custom_css": "",
-    "custom_header": "",
-}
-
-MAIL_SETTINGS_DEFAULTS = {
-    "mail_driver": "smtp",
-    "mail_host": getattr(settings, "EMAIL_HOST", ""),
-    "mail_port": getattr(settings, "EMAIL_PORT", 587),
-    "mail_encryption": "tls" if getattr(settings, "EMAIL_USE_TLS", False) else "",
-    "mail_username": getattr(settings, "EMAIL_HOST_USER", ""),
-    "mail_password": "",
-    "mail_from_address": getattr(settings, "DEFAULT_FROM_EMAIL", ""),
-    "mail_from_name": "PyFlarum",
-}
-
-ADVANCED_SETTINGS_DEFAULTS = {
-    "cache_driver": "redis" if "redis" in settings.CACHES.get("default", {}).get("BACKEND", "").lower() else "file",
-    "cache_lifetime": 3600,
-    "queue_driver": "redis" if "redis" in getattr(settings, "CELERY_BROKER_URL", "") else "sync",
-    "queue_enabled": False,
-    "maintenance_mode": False,
-    "maintenance_message": "论坛正在维护中，请稍后再试...",
-    "debug_mode": settings.DEBUG,
-    "log_queries": False,
-}
 
 
 class AuthBearer(HttpBearer):
@@ -166,38 +131,6 @@ def require_staff(func):
             return admin_error("需要管理员权限", status=403)
         return func(request, *args, **kwargs)
     return wrapper
-
-
-def get_setting_group(prefix: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    values = defaults.copy()
-    stored_settings = Setting.objects.filter(
-        key__in=[f"{prefix}.{key}" for key in defaults.keys()]
-    )
-
-    for setting in stored_settings:
-        key = setting.key.split(".", 1)[1]
-        try:
-            values[key] = json.loads(setting.value)
-        except json.JSONDecodeError:
-            values[key] = setting.value
-
-    return values
-
-
-def save_setting_group(prefix: str, defaults: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
-    values = get_setting_group(prefix, defaults)
-
-    for key in defaults.keys():
-        if key not in payload:
-            continue
-
-        values[key] = payload[key]
-        Setting.objects.update_or_create(
-            key=f"{prefix}.{key}",
-            defaults={"value": json.dumps(payload[key], ensure_ascii=False)}
-        )
-
-    return values
 
 
 # ==================== 统计数据 ====================

@@ -84,22 +84,29 @@ class SearchService:
         Returns:
             Dict: 搜索结果
         """
+        discussion_total = SearchService._discussion_queryset(query).count()
+        post_total = SearchService._post_queryset(query).count()
+        user_total = SearchService._user_queryset(query).count()
+
         # 搜索讨论
-        discussions = SearchService._search_discussions(query, limit=5)
+        discussions = SearchService._search_discussions(query, limit=min(limit, 5))
 
         # 搜索帖子
-        posts = SearchService._search_posts(query, limit=5)
+        posts = SearchService._search_posts(query, limit=min(limit, 5))
 
         # 搜索用户
-        users = SearchService._search_users(query, limit=5)
+        users = SearchService._search_users(query, limit=min(limit, 5))
 
-        total = len(discussions) + len(posts) + len(users)
+        total = discussion_total + post_total + user_total
 
         return {
             'total': total,
             'page': page,
             'limit': limit,
             'type': 'all',
+            'discussion_total': discussion_total,
+            'post_total': post_total,
+            'user_total': user_total,
             'discussions': discussions,
             'posts': posts,
             'users': users,

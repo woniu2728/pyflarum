@@ -61,6 +61,14 @@
       </aside>
 
       <main class="index-content">
+        <section v-if="showForumHero" class="forum-hero">
+          <div class="forum-hero-inner">
+            <div class="forum-hero-pill">{{ forumStore.settings.forum_title }}</div>
+            <h1>{{ forumStore.settings.welcome_title }}</h1>
+            <p>{{ forumStore.settings.welcome_message }}</p>
+          </div>
+        </section>
+
         <section v-if="isFollowingPage" class="tag-hero following-hero">
           <div class="tag-hero-inner">
             <div class="tag-hero-pill following-pill">
@@ -217,6 +225,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useForumStore } from '@/stores/forum'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import {
@@ -231,6 +240,7 @@ import {
 } from '@/utils/forum'
 
 const authStore = useAuthStore()
+const forumStore = useForumStore()
 const route = useRoute()
 
 const discussions = ref([])
@@ -249,6 +259,7 @@ const hasMore = computed(() => currentPage.value * 20 < total.value)
 const sidebarTags = computed(() => flattenTags(tags.value))
 const isFollowingPage = computed(() => route.name === 'following')
 const isAllDiscussionsPage = computed(() => route.name === 'home' && !currentTagSlug.value)
+const showForumHero = computed(() => isAllDiscussionsPage.value && !searchQuery.value)
 const emptyStateText = computed(() => {
   if (isFollowingPage.value) {
     return '你还没有关注任何讨论。'
@@ -409,7 +420,7 @@ function getUserColor(user) {
 .btn-start-discussion {
   width: 100%;
   padding: 8px 13px;
-  background: #E7672E;
+  background: var(--forum-accent-color);
   color: white;
   border: none;
   border-radius: 3px;
@@ -427,7 +438,7 @@ function getUserColor(user) {
 }
 
 .btn-start-discussion:hover {
-  background: #D85B1E;
+  filter: brightness(0.92);
 }
 
 .btn-start-discussion i {
@@ -476,7 +487,7 @@ function getUserColor(user) {
 }
 
 .nav-item.active {
-  background: #4D698E;
+  background: var(--forum-primary-color);
   color: white;
 }
 
@@ -526,13 +537,45 @@ function getUserColor(user) {
   background: white;
 }
 
+.forum-hero {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--forum-primary-color) 16%, white), #f8fbfd);
+  border-bottom: 1px solid #e3e8ed;
+}
+
+.forum-hero-inner {
+  padding: 30px 26px;
+}
+
+.forum-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--forum-primary-color);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.forum-hero h1 {
+  font-size: 30px;
+  font-weight: 300;
+  color: #2f3c4d;
+  margin-bottom: 8px;
+}
+
+.forum-hero p {
+  color: #61707f;
+}
+
 .tag-hero {
   background: linear-gradient(135deg, color-mix(in srgb, var(--tag-color) 20%, white), #f8fbfd);
   border-bottom: 1px solid #e3e8ed;
 }
 
 .following-hero {
-  --tag-color: #4d698e;
+  --tag-color: var(--forum-primary-color);
 }
 
 .tag-hero-inner {
@@ -596,7 +639,7 @@ function getUserColor(user) {
 }
 
 .btn-view.active {
-  background: #4D698E;
+  background: var(--forum-primary-color);
   color: white;
 }
 
@@ -750,7 +793,7 @@ function getUserColor(user) {
 }
 
 .discussion-list-item-title:hover {
-  color: #4D698E;
+  color: var(--forum-primary-color);
   text-decoration: none;
 }
 
@@ -791,7 +834,7 @@ function getUserColor(user) {
   padding: 2px 8px;
   border-radius: 999px;
   background: #edf4fb;
-  color: #4d698e;
+  color: var(--forum-primary-color);
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
@@ -814,7 +857,7 @@ function getUserColor(user) {
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #4d698e;
+  background: var(--forum-primary-color);
   color: white;
   font-size: 11px;
   font-weight: 600;
@@ -863,7 +906,7 @@ function getUserColor(user) {
   width: 40px;
   height: 40px;
   border: 3px solid #e3e8ed;
-  border-top-color: #4D698E;
+  border-top-color: var(--forum-primary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

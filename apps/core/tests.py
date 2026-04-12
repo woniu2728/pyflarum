@@ -53,6 +53,37 @@ class ChineseSearchTests(TestCase):
         self.assertIn("中文搜索", tokens)
         self.assertTrue({"中文", "搜索"}.intersection(tokens))
 
+    def test_search_api_all_returns_section_totals(self):
+        DiscussionService.create_discussion(
+            title="搜索讨论标题",
+            content="这里有搜索内容",
+            user=self.user,
+        )
+        discussion = DiscussionService.create_discussion(
+            title="另一个搜索讨论",
+            content="讨论里包含搜索关键字",
+            user=self.user,
+        )
+        PostService.create_post(
+            discussion_id=discussion.id,
+            content="这是一条搜索帖子内容",
+            user=self.user,
+        )
+        User.objects.create_user(
+            username="search-keyword",
+            email="search-keyword@example.com",
+            password="password123",
+            bio="搜索用户简介",
+        )
+
+        response = self.client.get("/api/search", {"q": "搜索", "type": "all"})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertGreaterEqual(payload["discussion_total"], 2)
+        self.assertGreaterEqual(payload["post_total"], 1)
+        self.assertGreaterEqual(payload["user_total"], 1)
+
 
 class WebSocketJwtAuthTests(TestCase):
     def setUp(self):
@@ -155,6 +186,33 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].from_email, "PyFlarum Mailer <service@example.com>")
+
+    def test_public_forum_settings_include_basic_and_appearance(self):
+        Setting.objects.update_or_create(
+            key="basic.forum_title",
+            defaults={"value": json.dumps("运行时论坛名称")},
+        )
+        Setting.objects.update_or_create(
+            key="basic.welcome_title",
+            defaults={"value": json.dumps("欢迎来到运行时论坛")},
+        )
+        Setting.objects.update_or_create(
+            key="appearance.primary_color",
+            defaults={"value": json.dumps("#123456")},
+        )
+        Setting.objects.update_or_create(
+            key="appearance.logo_url",
+            defaults={"value": json.dumps("/media/runtime-logo.png")},
+        )
+
+        response = self.client.get("/api/forum")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["forum_title"], "运行时论坛名称")
+        self.assertEqual(payload["welcome_title"], "欢迎来到运行时论坛")
+        self.assertEqual(payload["primary_color"], "#123456")
+        self.assertEqual(payload["logo_url"], "/media/runtime-logo.png")
 
 
 class AdminUserManagementApiTests(TestCase):
