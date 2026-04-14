@@ -148,6 +148,12 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  async function fetchStats() {
+    const data = await api.get('/notifications/stats')
+    unreadCount.value = Number(data.unread_count || 0)
+    return data
+  }
+
   async function ensureFetched(params = {}) {
     if (initialized.value && notifications.value.length) {
       return notifications.value
@@ -196,8 +202,17 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   async function clearReadNotifications() {
-    await api.delete('/notifications/read')
+    await api.delete('/notifications/read/clear')
     notifications.value = notifications.value.filter(notification => !notification.is_read)
+  }
+
+  function resetState() {
+    notifications.value = []
+    unreadCount.value = 0
+    loading.value = false
+    initialized.value = false
+    websocketDisabled.value = false
+    consecutiveConnectFailures = 0
   }
 
   // 获取通知消息
@@ -230,7 +245,9 @@ export const useNotificationStore = defineStore('notification', () => {
     initialized,
     connect,
     disconnect,
+    resetState,
     fetchNotifications,
+    fetchStats,
     ensureFetched,
     markAsRead,
     markAllAsRead,

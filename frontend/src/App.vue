@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, watch } from 'vue'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
 import DiscussionComposer from './components/DiscussionComposer.vue'
@@ -30,17 +30,40 @@ function handleBeforeUnload(event) {
   event.returnValue = composerStore.unsavedMessage || ''
 }
 
-onMounted(() => {
+async function syncNotificationState() {
+  try {
+    await notificationStore.fetchStats()
+  } catch (error) {
+    console.error('同步通知角标失败:', error)
+  }
+
+  notificationStore.connect()
+}
+
+onMounted(async () => {
   // 初始化认证状态
-  authStore.checkAuth()
+  await authStore.checkAuth()
 
   // 如果已登录，连接WebSocket
   if (authStore.isAuthenticated) {
-    notificationStore.connect()
+    await syncNotificationState()
   }
 
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
+
+watch(
+  () => authStore.isAuthenticated,
+  async isAuthenticated => {
+    if (isAuthenticated) {
+      await syncNotificationState()
+      return
+    }
+
+    notificationStore.disconnect()
+    notificationStore.resetState()
+  }
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)

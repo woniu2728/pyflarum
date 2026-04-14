@@ -3,11 +3,9 @@
 """
 from typing import Optional
 from ninja import Router
-from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
 
-from apps.notifications.models import Notification
 from apps.notifications.schemas import (
-    NotificationFilterSchema,
     NotificationOutSchema,
     NotificationListSchema,
     NotificationStatsSchema,
@@ -75,13 +73,21 @@ def get_notification(request, notification_id: int):
     notification = NotificationService.get_notification_by_id(notification_id, request.auth)
 
     if not notification:
-        return router.create_response(
-            request,
-            {"error": "通知不存在"},
-            status=404
-        )
+        return JsonResponse({"error": "通知不存在"}, status=404)
 
     return notification
+
+
+@router.delete("/notifications/read/clear", auth=AuthBearer(), tags=["Notifications"])
+def delete_all_read(request):
+    """
+    删除所有已读通知
+
+    需要认证
+    """
+    count = NotificationService.delete_all_read(request.auth)
+
+    return {"message": f"已删除{count}条已读通知", "count": count}
 
 
 @router.post("/notifications/{notification_id}/read", auth=AuthBearer(), tags=["Notifications"])
@@ -94,11 +100,7 @@ def mark_notification_as_read(request, notification_id: int):
     success = NotificationService.mark_as_read(notification_id, request.auth)
 
     if not success:
-        return router.create_response(
-            request,
-            {"error": "通知不存在"},
-            status=404
-        )
+        return JsonResponse({"error": "通知不存在"}, status=404)
 
     return {"message": "已标记为已读"}
 
@@ -125,22 +127,6 @@ def delete_notification(request, notification_id: int):
     success = NotificationService.delete_notification(notification_id, request.auth)
 
     if not success:
-        return router.create_response(
-            request,
-            {"error": "通知不存在"},
-            status=404
-        )
+        return JsonResponse({"error": "通知不存在"}, status=404)
 
     return {"message": "通知已删除"}
-
-
-@router.delete("/notifications/read", auth=AuthBearer(), tags=["Notifications"])
-def delete_all_read(request):
-    """
-    删除所有已读通知
-
-    需要认证
-    """
-    count = NotificationService.delete_all_read(request.auth)
-
-    return {"message": f"已删除{count}条已读通知", "count": count}

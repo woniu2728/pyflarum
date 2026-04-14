@@ -4,54 +4,20 @@
       <div class="notification-card">
         <div class="header">
           <h1>通知</h1>
-          <button
-            v-if="notifications.length > 0"
-            @click="markAllAsRead"
-            class="secondary"
-            :disabled="marking"
-          >
-            全部标记为已读
-          </button>
-        </div>
-
-        <section class="preferences-panel">
-          <div class="preferences-panel-header">
-            <div>
-              <h2>通知偏好</h2>
-              <p>控制自动关注和关注讨论的新回复通知。</p>
-            </div>
-            <button @click="savePreferences" class="secondary" :disabled="loadingPreferences || savingPreferences">
-              {{ savingPreferences ? '保存中...' : '保存设置' }}
+          <div class="header-actions">
+            <button
+              v-if="notifications.length > 0"
+              @click="markAllAsRead"
+              class="secondary"
+              :disabled="marking"
+            >
+              全部标记为已读
             </button>
+            <router-link to="/profile" class="preferences-link">
+              通知偏好请前往个人设置
+            </router-link>
           </div>
-
-          <div v-if="loadingPreferences" class="preferences-loading">加载偏好中...</div>
-          <div v-else class="preferences-list">
-            <label class="preference-item">
-              <span class="preference-copy">
-                <strong>回复后自动关注</strong>
-                <small>参与讨论后，自动把该讨论加入关注列表。</small>
-              </span>
-              <input v-model="preferences.follow_after_reply" type="checkbox">
-            </label>
-
-            <label class="preference-item">
-              <span class="preference-copy">
-                <strong>发起讨论后自动关注</strong>
-                <small>你创建的新讨论会默认出现在关注中。</small>
-              </span>
-              <input v-model="preferences.follow_after_create" type="checkbox">
-            </label>
-
-            <label class="preference-item">
-              <span class="preference-copy">
-                <strong>关注讨论有新回复时通知我</strong>
-                <small>关闭后，仍会保留关注状态，但不再接收新回复通知。</small>
-              </span>
-              <input v-model="preferences.notify_new_post" type="checkbox">
-            </label>
-          </div>
-        </section>
+        </div>
 
         <div v-if="loading" class="loading">加载中...</div>
         <div v-else-if="notifications.length === 0" class="empty">
@@ -123,7 +89,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -139,16 +105,9 @@ const loading = ref(true)
 const marking = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
-const loadingPreferences = ref(true)
-const savingPreferences = ref(false)
-const preferences = reactive({
-  follow_after_reply: false,
-  follow_after_create: false,
-  notify_new_post: true
-})
 
 onMounted(async () => {
-  await Promise.all([loadNotifications(), loadPreferences()])
+  await loadNotifications()
 })
 
 async function loadNotifications() {
@@ -169,11 +128,10 @@ async function loadNotifications() {
 
 async function markAsRead(notificationId) {
   try {
-    await api.post(`/notifications/${notificationId}/read`)
+    await notificationStore.markAsRead(notificationId)
     const notification = notifications.value.find(n => n.id === notificationId)
     if (notification) {
       notification.is_read = true
-      notificationStore.unreadCount = Math.max(0, notificationStore.unreadCount - 1)
     }
   } catch (error) {
     console.error('标记失败:', error)
@@ -183,11 +141,10 @@ async function markAsRead(notificationId) {
 async function markAllAsRead() {
   marking.value = true
   try {
-    await api.post('/notifications/read-all')
+    await notificationStore.markAllAsRead()
     notifications.value.forEach(n => {
       n.is_read = true
     })
-    notificationStore.unreadCount = 0
   } catch (error) {
     console.error('标记失败:', error)
   } finally {
@@ -200,11 +157,8 @@ async function deleteNotification(notificationId) {
 
   try {
     const notification = notifications.value.find(n => n.id === notificationId)
-    await api.delete(`/notifications/${notificationId}`)
+    await notificationStore.deleteNotification(notificationId)
     notifications.value = notifications.value.filter(n => n.id !== notificationId)
-    if (notification && !notification.is_read) {
-      notificationStore.unreadCount = Math.max(0, notificationStore.unreadCount - 1)
-    }
   } catch (error) {
     console.error('删除失败:', error)
   }
@@ -223,42 +177,6 @@ function handleNotificationClick(notification) {
     router.push(buildDiscussionPath(notification.data.discussion_id))
   } else if (notification.data?.post_id) {
     router.push(buildDiscussionPath(notification.data.discussion_id || ''))
-  }
-}
-
-async function loadPreferences() {
-  loadingPreferences.value = true
-  try {
-    const data = await api.get('/users/me/preferences')
-    preferences.follow_after_reply = Boolean(data.follow_after_reply)
-    preferences.follow_after_create = Boolean(data.follow_after_create)
-    preferences.notify_new_post = Boolean(data.notify_new_post)
-    if (authStore.user) {
-      authStore.user.preferences = { ...data }
-    }
-  } catch (error) {
-    console.error('加载通知偏好失败:', error)
-  } finally {
-    loadingPreferences.value = false
-  }
-}
-
-async function savePreferences() {
-  savingPreferences.value = true
-  try {
-    const data = await api.patch('/users/me/preferences', {
-      follow_after_reply: preferences.follow_after_reply,
-      follow_after_create: preferences.follow_after_create,
-      notify_new_post: preferences.notify_new_post
-    })
-    if (authStore.user) {
-      authStore.user.preferences = { ...data }
-    }
-  } catch (error) {
-    console.error('保存通知偏好失败:', error)
-    alert('保存失败，请稍后重试')
-  } finally {
-    savingPreferences.value = false
   }
 }
 
@@ -336,72 +254,26 @@ function formatDate(dateString) {
   color: #333;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.preferences-link {
+  color: #6f7f8f;
+  font-size: 13px;
+}
+
+.preferences-link:hover {
+  color: #4d698e;
+  text-decoration: none;
+}
+
 .notification-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.preferences-panel {
-  margin-bottom: 24px;
-  padding: 22px 24px;
-  border: 1px solid #e5ebf0;
-  border-radius: 10px;
-  background: #fafcfd;
-}
-
-.preferences-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.preferences-panel-header h2 {
-  font-size: 18px;
-  color: #24313f;
-  margin-bottom: 6px;
-}
-
-.preferences-panel-header p,
-.preferences-loading {
-  color: #6d7c89;
-}
-
-.preferences-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.preference-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: white;
-  border: 1px solid #e7edf2;
-}
-
-.preference-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: #324150;
-}
-
-.preference-copy small {
-  color: #7d8b97;
-}
-
-.preference-item input {
-  width: 18px;
-  height: 18px;
-  accent-color: #4d698e;
-  flex-shrink: 0;
 }
 
 .notification-item {
@@ -527,6 +399,12 @@ function formatDate(dateString) {
     gap: 15px;
   }
 
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .notification-item {
     padding: 15px;
   }
@@ -535,12 +413,6 @@ function formatDate(dateString) {
     width: 36px;
     height: 36px;
     font-size: 20px;
-  }
-
-  .preferences-panel-header,
-  .preference-item {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 </style>

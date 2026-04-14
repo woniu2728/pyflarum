@@ -1,4 +1,5 @@
 from django.test import TestCase
+from ninja_jwt.tokens import RefreshToken
 
 from apps.discussions.services import DiscussionService
 from apps.notifications.models import Notification
@@ -87,3 +88,37 @@ class NotificationServiceTests(TestCase):
         self.assertEqual(notification.data["discussion_id"], self.discussion.id)
         self.assertEqual(notification.data["post_id"], post.id)
         self.assertEqual(notification.data["post_number"], post.number)
+
+    def auth_header(self, user):
+        token = RefreshToken.for_user(user).access_token
+        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    def test_delete_all_read_endpoint_uses_clear_route(self):
+        unread_before = Notification.objects.filter(user=self.author, is_read=False).count()
+        Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            is_read=True,
+            data={"post_id": self.initial_reply.id},
+        )
+        Notification.objects.create(
+            user=self.author,
+            from_user=self.participant,
+            type="postReply",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            is_read=False,
+            data={"post_id": self.initial_reply.id},
+        )
+
+        response = self.client.delete(
+            "/api/notifications/read/clear",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(Notification.objects.filter(user=self.author, is_read=True).count(), 0)
+        self.assertEqual(Notification.objects.filter(user=self.author, is_read=False).count(), unread_before + 1)

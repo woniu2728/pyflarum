@@ -174,7 +174,7 @@
               <div class="section-header">
                 <div>
                   <h2>个人设置</h2>
-                  <p>维护你的显示名称、邮箱和个人简介。</p>
+                  <p>维护你的显示名称、邮箱、个人简介和通知偏好。</p>
                 </div>
               </div>
 
@@ -219,6 +219,47 @@
                   <button @click="saveProfile" class="btn-primary" :disabled="saving">
                     {{ saving ? '保存中...' : '保存资料' }}
                   </button>
+                </div>
+              </div>
+
+              <div class="settings-card settings-card--stacked">
+                <div class="settings-card-header">
+                  <div>
+                    <h3>通知偏好</h3>
+                    <p>按照 Flarum 的习惯，把自动关注和新回复通知放在个人设置中管理。</p>
+                  </div>
+                  <button @click="savePreferences" class="btn-secondary" :disabled="loadingPreferences || savingPreferences">
+                    {{ savingPreferences ? '保存中...' : '保存偏好' }}
+                  </button>
+                </div>
+
+                <div v-if="preferencesSuccess" class="success-banner">{{ preferencesSuccess }}</div>
+                <div v-if="preferencesError" class="error-banner">{{ preferencesError }}</div>
+                <div v-if="loadingPreferences" class="loading-small loading-small--inline">加载偏好中...</div>
+                <div v-else class="preferences-list">
+                  <label class="preference-item">
+                    <span class="preference-copy">
+                      <strong>回复后自动关注</strong>
+                      <small>参与讨论后，自动把该讨论加入关注列表。</small>
+                    </span>
+                    <input v-model="preferences.follow_after_reply" type="checkbox">
+                  </label>
+
+                  <label class="preference-item">
+                    <span class="preference-copy">
+                      <strong>发起讨论后自动关注</strong>
+                      <small>你创建的新讨论会默认出现在关注中。</small>
+                    </span>
+                    <input v-model="preferences.follow_after_create" type="checkbox">
+                  </label>
+
+                  <label class="preference-item">
+                    <span class="preference-copy">
+                      <strong>关注讨论有新回复时通知我</strong>
+                      <small>关闭后，仍会保留关注状态，但不再接收新回复通知。</small>
+                    </span>
+                    <input v-model="preferences.notify_new_post" type="checkbox">
+                  </label>
                 </div>
               </div>
             </div>
@@ -356,6 +397,10 @@ const verificationError = ref('')
 const changingPassword = ref(false)
 const passwordSuccess = ref('')
 const passwordError = ref('')
+const loadingPreferences = ref(false)
+const savingPreferences = ref(false)
+const preferencesSuccess = ref('')
+const preferencesError = ref('')
 
 const editForm = ref({
   display_name: '',
@@ -367,6 +412,11 @@ const passwordForm = ref({
   old_password: '',
   new_password: '',
   confirm_password: '',
+})
+const preferences = ref({
+  follow_after_reply: false,
+  follow_after_create: false,
+  notify_new_post: true,
 })
 
 const isOwnProfile = computed(() => {
@@ -398,6 +448,9 @@ watch(isOwnProfile, (value) => {
 
 async function refreshProfile() {
   await loadUser()
+  if (isOwnProfile.value) {
+    await loadPreferences()
+  }
   await loadDiscussions()
 }
 
@@ -507,6 +560,51 @@ async function saveProfile() {
     settingsError.value = error.response?.data?.error || error.message || '保存失败'
   } finally {
     saving.value = false
+  }
+}
+
+async function loadPreferences() {
+  loadingPreferences.value = true
+  preferencesError.value = ''
+
+  try {
+    const data = await api.get('/users/me/preferences')
+    preferences.value = {
+      follow_after_reply: Boolean(data.follow_after_reply),
+      follow_after_create: Boolean(data.follow_after_create),
+      notify_new_post: Boolean(data.notify_new_post),
+    }
+    if (authStore.user) {
+      authStore.user.preferences = { ...data }
+    }
+  } catch (error) {
+    preferencesError.value = error.response?.data?.error || error.message || '加载通知偏好失败'
+  } finally {
+    loadingPreferences.value = false
+  }
+}
+
+async function savePreferences() {
+  savingPreferences.value = true
+  preferencesSuccess.value = ''
+  preferencesError.value = ''
+
+  try {
+    const data = await api.patch('/users/me/preferences', {
+      follow_after_reply: preferences.value.follow_after_reply,
+      follow_after_create: preferences.value.follow_after_create,
+      notify_new_post: preferences.value.notify_new_post,
+    })
+
+    preferences.value = { ...data }
+    if (authStore.user) {
+      authStore.user.preferences = { ...data }
+    }
+    preferencesSuccess.value = '通知偏好已保存'
+  } catch (error) {
+    preferencesError.value = error.response?.data?.error || error.message || '保存通知偏好失败'
+  } finally {
+    savingPreferences.value = false
   }
 }
 
@@ -1074,6 +1172,29 @@ function formatLastSeen(dateString) {
   background: #fbfcfd;
 }
 
+.settings-card--stacked {
+  margin-top: 18px;
+}
+
+.settings-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.settings-card-header h3 {
+  font-size: 18px;
+  color: #24313f;
+  margin-bottom: 6px;
+}
+
+.settings-card-header p {
+  color: #6b7a88;
+  line-height: 1.6;
+}
+
 .security-grid {
   display: grid;
   gap: 18px;
@@ -1189,6 +1310,45 @@ function formatLastSeen(dateString) {
   gap: 10px;
 }
 
+.preferences-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preference-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e7edf2;
+}
+
+.preference-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #324150;
+}
+
+.preference-copy small {
+  color: #7d8b97;
+}
+
+.preference-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: #4d698e;
+  flex-shrink: 0;
+}
+
+.loading-small--inline {
+  padding: 16px 0;
+}
+
 .btn-primary,
 .btn-secondary {
   padding: 8px 16px;
@@ -1248,6 +1408,12 @@ function formatLastSeen(dateString) {
 
   .security-card-header {
     flex-direction: column;
+  }
+
+  .settings-card-header,
+  .preference-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
