@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Q, F, Count
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
+from apps.core.db import sqlite_write_retry
 from apps.discussions.models import Discussion, DiscussionUser
 from apps.posts.models import Post
 from apps.users.models import User
@@ -33,6 +34,7 @@ class DiscussionService:
         )
 
     @staticmethod
+    @sqlite_write_retry()
     def create_discussion(
         title: str,
         content: str,

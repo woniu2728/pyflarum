@@ -26,6 +26,7 @@ def configure_sqlite_pragmas(sender, connection, **kwargs):
             # WAL lets reads and writes overlap better in the local SQLite dev setup.
             cursor.execute("PRAGMA journal_mode=WAL;")
             cursor.execute("PRAGMA synchronous=NORMAL;")
+            cursor.execute("PRAGMA busy_timeout=10000;")
     except Exception:
         return
 

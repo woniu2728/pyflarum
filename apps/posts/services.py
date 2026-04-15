@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q, F, Count, Exists, OuterRef
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
+from apps.core.db import sqlite_write_retry
 from apps.posts.models import Post, PostLike, PostMentionsUser, PostFlag
 from apps.discussions.models import Discussion
 from apps.discussions.models import DiscussionUser
@@ -30,6 +31,7 @@ class PostService:
         return bool(user and user.is_authenticated and post.approval_status == Post.APPROVAL_PENDING and post.user_id == user.id)
 
     @staticmethod
+    @sqlite_write_retry()
     def create_post(
         discussion_id: int,
         content: str,

@@ -1,9 +1,13 @@
+from unittest.mock import patch
+
+from django.db import OperationalError
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
 from ninja_jwt.tokens import RefreshToken
 
 from apps.discussions.services import DiscussionService
+from apps.posts.models import Post
 from apps.posts.models import PostFlag
 from apps.posts.services import PostService
 from apps.users.models import Group, Permission, User
@@ -39,6 +43,32 @@ class PostPaginationTests(TestCase):
         )
 
         self.assertEqual(page, 3)
+
+    def test_create_post_retries_on_transient_sqlite_lock(self):
+        discussion = DiscussionService.create_discussion(
+            title="Retry post discussion",
+            content="First post",
+            user=self.user,
+        )
+        original_create = Post.objects.create
+        state = {"failed": False}
+
+        def flaky_create(*args, **kwargs):
+            if not state["failed"]:
+                state["failed"] = True
+                raise OperationalError("database is locked")
+            return original_create(*args, **kwargs)
+
+        with patch("apps.core.db.time.sleep", return_value=None):
+            with patch("apps.posts.services.Post.objects.create", side_effect=flaky_create):
+                post = PostService.create_post(
+                    discussion_id=discussion.id,
+                    content="Retry reply",
+                    user=self.user,
+                )
+
+        self.assertTrue(state["failed"])
+        self.assertEqual(post.content, "Retry reply")
 
 
 class PostFlagApiTests(TestCase):

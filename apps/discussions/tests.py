@@ -1,10 +1,13 @@
 import json
+from unittest.mock import patch
 
 from django.test import TestCase, Client
+from django.db import OperationalError
 from django.utils import timezone
 from datetime import timedelta
 from ninja_jwt.tokens import RefreshToken
 
+from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
 from apps.posts.services import PostService
 from apps.tags.models import Tag
@@ -45,6 +48,27 @@ class DiscussionApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["title"], "JWT backed discussion")
         self.assertEqual(payload["user"]["id"], self.author.id)
+
+    def test_create_discussion_retries_on_transient_sqlite_lock(self):
+        original_create = Discussion.objects.create
+        state = {"failed": False}
+
+        def flaky_create(*args, **kwargs):
+            if not state["failed"]:
+                state["failed"] = True
+                raise OperationalError("database is locked")
+            return original_create(*args, **kwargs)
+
+        with patch("apps.core.db.time.sleep", return_value=None):
+            with patch("apps.discussions.services.Discussion.objects.create", side_effect=flaky_create):
+                discussion = DiscussionService.create_discussion(
+                    title="Retry discussion",
+                    content="Retry body",
+                    user=self.author,
+                )
+
+        self.assertTrue(state["failed"])
+        self.assertEqual(discussion.title, "Retry discussion")
 
     def test_discussion_list_exposes_unread_state_and_mark_all_read(self):
         discussion = DiscussionService.create_discussion(
