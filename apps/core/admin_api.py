@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from typing import List, Dict, Any
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.core.cache import cache
 
 from apps.core.email_service import EmailService
@@ -29,6 +29,7 @@ from apps.discussions.services import DiscussionService
 from apps.posts.models import Post, PostFlag
 from apps.posts.services import PostService
 from apps.tags.models import Tag
+from apps.tags.services import TagService
 
 router = Router()
 
@@ -58,6 +59,41 @@ def serialize_group(group: Group) -> Dict[str, Any]:
         "icon": group.icon,
         "is_hidden": group.is_hidden,
     }
+
+
+def serialize_admin_tag(tag: Tag) -> Dict[str, Any]:
+    return {
+        "id": tag.id,
+        "name": tag.name,
+        "slug": tag.slug,
+        "description": tag.description,
+        "color": tag.color or "#888",
+        "icon": tag.icon,
+        "position": tag.position,
+        "parent_id": tag.parent_id,
+        "parent_name": tag.parent.name if tag.parent else None,
+        "discussion_count": tag.discussion_count,
+        "is_hidden": tag.is_hidden,
+        "is_restricted": tag.is_restricted,
+    }
+
+
+def normalize_optional_tag_parent(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = dict(payload)
+    if "parent_id" in normalized:
+        parent_id = normalized.get("parent_id")
+        normalized["parent_id"] = None if parent_id in ("", 0, "0") else parent_id
+    return normalized
+
+
+def normalize_tag_position(payload: Dict[str, Any], parent_id=None, current_tag: Tag = None) -> int:
+    if "position" in payload and payload.get("position") is not None:
+        return int(payload["position"])
+
+    queryset = Tag.objects.filter(parent_id=parent_id)
+    if current_tag is not None:
+        queryset = queryset.exclude(id=current_tag.id)
+    return (queryset.aggregate(max_position=Max("position")).get("max_position") or 0) + 1
 
 
 def validate_group_payload(payload: Dict[str, Any], group: Group = None):
@@ -614,26 +650,10 @@ def resolve_post_flag(request, flag_id: int, payload: Dict[str, Any] = Body(...)
 @require_staff
 def list_admin_tags(request):
     """获取标签列表（管理后台）"""
-    from apps.tags.services import TagService
     TagService.refresh_tag_stats()
 
-    tags = Tag.objects.all().order_by('position', 'name')
-
-    return [
-        {
-            "id": tag.id,
-            "name": tag.name,
-            "slug": tag.slug,
-            "description": tag.description,
-            "color": tag.color or "#888",
-            "icon": tag.icon,
-            "position": tag.position,
-            "discussion_count": tag.discussion_count,
-            "is_hidden": tag.is_hidden,
-            "is_restricted": tag.is_restricted,
-        }
-        for tag in tags
-    ]
+    tags = Tag.objects.select_related("parent").all().order_by("position", "name")
+    return [serialize_admin_tag(tag) for tag in tags]
 
 
 @router.post("/tags", auth=AuthBearer(), tags=["Admin"])
@@ -641,28 +661,27 @@ def list_admin_tags(request):
 def create_admin_tag(request, payload: Dict[str, Any] = Body(...)):
     """创建标签"""
     try:
-        tag = Tag.objects.create(
-            name=payload.get('name'),
-            description=payload.get('description', ''),
-            color=payload.get('color', '#888'),
-            icon=payload.get('icon', ''),
-            position=payload.get('position', 0),
-            is_hidden=payload.get('is_hidden', False),
-            is_restricted=payload.get('is_restricted', False),
+        normalized = normalize_optional_tag_parent(payload)
+        name = (normalized.get("name") or "").strip()
+        if not name:
+            raise ValueError("标签名称不能为空")
+        parent_id = normalized.get("parent_id")
+        tag = TagService.create_tag(
+            name=name,
+            slug=(normalized.get("slug") or "").strip() or None,
+            description=normalized.get("description", ""),
+            color=normalized.get("color") or "#888",
+            icon=(normalized.get("icon") or "").strip(),
+            position=normalize_tag_position(normalized, parent_id=parent_id),
+            parent_id=parent_id,
+            is_hidden=bool(normalized.get("is_hidden", False)),
+            is_restricted=bool(normalized.get("is_restricted", False)),
+            user=request.auth,
         )
-
-        return {
-            "id": tag.id,
-            "name": tag.name,
-            "slug": tag.slug,
-            "description": tag.description,
-            "color": tag.color,
-            "icon": tag.icon,
-            "position": tag.position,
-            "discussion_count": tag.discussion_count,
-            "is_hidden": tag.is_hidden,
-            "is_restricted": tag.is_restricted,
-        }
+        tag = Tag.objects.select_related("parent").get(id=tag.id)
+        return serialize_admin_tag(tag)
+    except ValueError as e:
+        return admin_error(str(e), status=400)
     except Exception as e:
         return admin_error(str(e), status=400)
 
@@ -673,36 +692,43 @@ def update_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
     """更新标签"""
     try:
         tag = get_object_or_404(Tag, id=tag_id)
+        normalized = normalize_optional_tag_parent(payload)
 
-        if 'name' in payload:
-            tag.name = payload['name']
-        if 'description' in payload:
-            tag.description = payload['description']
-        if 'color' in payload:
-            tag.color = payload['color']
-        if 'icon' in payload:
-            tag.icon = payload['icon']
-        if 'position' in payload:
-            tag.position = payload['position']
-        if 'is_hidden' in payload:
-            tag.is_hidden = payload['is_hidden']
-        if 'is_restricted' in payload:
-            tag.is_restricted = payload['is_restricted']
-
+        if "name" in normalized:
+            name = (normalized.get("name") or "").strip()
+            if not name:
+                raise ValueError("标签名称不能为空")
+            tag.name = name
+        if "slug" in normalized:
+            tag.slug = (normalized.get("slug") or "").strip()
+        if "description" in normalized:
+            tag.description = normalized.get("description") or ""
+        if "color" in normalized:
+            tag.color = normalized.get("color") or "#888"
+        if "icon" in normalized:
+            tag.icon = (normalized.get("icon") or "").strip()
+        if "position" in normalized and normalized.get("position") is not None:
+            tag.position = int(normalized["position"])
+        if "parent_id" in normalized:
+            parent_id = normalized.get("parent_id")
+            if parent_id is None:
+                tag.parent = None
+            else:
+                if int(parent_id) == tag.id:
+                    raise ValueError("标签不能设置自己为父标签")
+                parent = get_object_or_404(Tag, id=parent_id)
+                if TagService._would_create_cycle(tag, parent):
+                    raise ValueError("不能设置子标签为父标签")
+                tag.parent = parent
+        if "is_hidden" in normalized:
+            tag.is_hidden = bool(normalized["is_hidden"])
+        if "is_restricted" in normalized:
+            tag.is_restricted = bool(normalized["is_restricted"])
         tag.save()
-
-        return {
-            "id": tag.id,
-            "name": tag.name,
-            "slug": tag.slug,
-            "description": tag.description,
-            "color": tag.color,
-            "icon": tag.icon,
-            "position": tag.position,
-            "discussion_count": tag.discussion_count,
-            "is_hidden": tag.is_hidden,
-            "is_restricted": tag.is_restricted,
-        }
+        tag.refresh_from_db()
+        return serialize_admin_tag(tag)
+    except ValueError as e:
+        return admin_error(str(e), status=400)
     except Exception as e:
         return admin_error(str(e), status=400)
 
@@ -711,7 +737,8 @@ def update_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
 @require_staff
 def delete_admin_tag(request, tag_id: int):
     """删除标签"""
-    tag = get_object_or_404(Tag, id=tag_id)
-    tag.delete()
-
-    return {"message": "标签删除成功"}
+    try:
+        TagService.delete_tag(tag_id, request.auth)
+        return {"message": "标签删除成功"}
+    except ValueError as e:
+        return admin_error(str(e), status=400)

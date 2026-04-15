@@ -18,6 +18,7 @@ from apps.core.websocket_auth import get_user_from_token
 from apps.discussions.services import DiscussionService
 from apps.posts.models import PostFlag
 from apps.posts.services import PostService
+from apps.tags.models import Tag
 from apps.users.models import Group, Permission, User
 
 
@@ -625,6 +626,97 @@ class AdminFlagManagementApiTests(TestCase):
         self.assertEqual(self.flag.status, "resolved")
         self.assertEqual(self.flag.resolution_note, "已联系发帖人并隐藏内容")
         self.assertEqual(self.flag.resolved_by_id, self.admin.id)
+
+
+class AdminTagManagementApiTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="admin-tag-mgr",
+            email="admin-tag@example.com",
+            password="password123",
+        )
+        self.parent_tag = Tag.objects.create(
+            name="开发",
+            slug="development",
+            color="#4d698e",
+            position=0,
+        )
+        self.child_tag = Tag.objects.create(
+            name="后端",
+            slug="backend",
+            color="#0f766e",
+            position=1,
+            parent=self.parent_tag,
+        )
+
+    def auth_header(self):
+        token = RefreshToken.for_user(self.admin).access_token
+        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    def test_admin_can_create_update_and_clear_tag_parent(self):
+        response = self.client.post(
+            "/api/admin/tags",
+            data=json.dumps({
+                "name": "接口设计",
+                "slug": "api-design",
+                "description": "讨论接口约定",
+                "color": "#3c78d8",
+                "icon": "fas fa-code",
+                "parent_id": self.parent_tag.id,
+                "position": 3,
+                "is_hidden": True,
+                "is_restricted": True,
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["slug"], "api-design")
+        self.assertEqual(payload["parent_id"], self.parent_tag.id)
+        self.assertEqual(payload["parent_name"], self.parent_tag.name)
+        self.assertTrue(payload["is_hidden"])
+        self.assertTrue(payload["is_restricted"])
+
+        created_tag = Tag.objects.get(id=payload["id"])
+        self.assertEqual(created_tag.parent_id, self.parent_tag.id)
+
+        response = self.client.put(
+            f"/api/admin/tags/{created_tag.id}",
+            data=json.dumps({
+                "name": "接口规范",
+                "slug": "api-guidelines",
+                "parent_id": None,
+                "position": 6,
+                "is_hidden": False,
+                "is_restricted": False,
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["name"], "接口规范")
+        self.assertEqual(payload["slug"], "api-guidelines")
+        self.assertIsNone(payload["parent_id"])
+        self.assertIsNone(payload["parent_name"])
+        self.assertFalse(payload["is_hidden"])
+        self.assertFalse(payload["is_restricted"])
+
+        created_tag.refresh_from_db()
+        self.assertIsNone(created_tag.parent_id)
+        self.assertEqual(created_tag.position, 6)
+
+    def test_admin_cannot_delete_tag_with_children(self):
+        response = self.client.delete(
+            f"/api/admin/tags/{self.parent_tag.id}",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn("子标签", response.json()["error"])
 
 
 class AdminApprovalQueueApiTests(TestCase):

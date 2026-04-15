@@ -17,39 +17,60 @@
         <table class="TagTable">
           <thead>
             <tr>
-              <th style="width: 180px">预览</th>
+              <th style="width: 190px">预览</th>
               <th>标签名称</th>
               <th>别名</th>
-              <th>描述</th>
+              <th>层级</th>
+              <th>状态</th>
               <th>讨论数</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="6" class="TagTable-loading">加载中...</td>
+              <td colspan="7" class="TagTable-loading">加载中...</td>
             </tr>
-            <tr v-else-if="tags.length === 0">
-              <td colspan="6" class="TagTable-empty">暂无标签</td>
+            <tr v-else-if="!tagRows.length">
+              <td colspan="7" class="TagTable-empty">暂无标签</td>
             </tr>
-            <tr v-for="tag in tags" v-else :key="tag.id">
+            <tr v-for="row in tagRows" v-else :key="row.tag.id">
               <td>
-                <span class="TagBadgePreview" :style="getTagBadgeStyle(tag.color)">
-                  <i v-if="tag.icon" :class="tag.icon"></i>
-                  <span>{{ tag.name }}</span>
+                <span class="TagBadgePreview" :style="getTagBadgeStyle(row.tag)">
+                  <i v-if="row.tag.icon" :class="row.tag.icon"></i>
+                  <span>{{ row.tag.name }}</span>
                 </span>
               </td>
               <td>
-                <strong>{{ tag.name }}</strong>
+                <div class="TagNameCell" :style="{ '--tag-depth': row.depth }">
+                  <span class="TagNameCell-line" :class="{ 'is-child': row.depth > 0 }"></span>
+                  <div class="TagNameCell-main">
+                    <strong>{{ row.tag.name }}</strong>
+                    <small>排序 {{ row.tag.position }}</small>
+                  </div>
+                </div>
               </td>
-              <td>{{ tag.slug }}</td>
-              <td>{{ tag.description || '-' }}</td>
-              <td>{{ tag.discussion_count }}</td>
               <td>
-                <button @click="editTag(tag)" class="Button Button--small">
+                <code class="TagSlug">{{ row.tag.slug }}</code>
+              </td>
+              <td>
+                <div class="TagHierarchy">
+                  <span>{{ row.depth > 0 ? '子标签' : '顶级标签' }}</span>
+                  <small v-if="row.parentName">隶属 {{ row.parentName }}</small>
+                </div>
+              </td>
+              <td>
+                <div class="TagStatusList">
+                  <span v-if="row.tag.is_hidden" class="TagStatus TagStatus--muted">隐藏</span>
+                  <span v-if="row.tag.is_restricted" class="TagStatus TagStatus--warning">限制发帖</span>
+                  <span v-if="!row.tag.is_hidden && !row.tag.is_restricted" class="TagStatus">公开</span>
+                </div>
+              </td>
+              <td>{{ row.tag.discussion_count }}</td>
+              <td>
+                <button @click="editTag(row.tag)" class="Button Button--small">
                   编辑
                 </button>
-                <button @click="deleteTag(tag)" class="Button Button--small Button--danger">
+                <button @click="deleteTag(row.tag)" class="Button Button--small Button--danger">
                   删除
                 </button>
               </td>
@@ -64,7 +85,7 @@
         <div class="Modal-header">
           <div>
             <h3>{{ showEditModal ? '编辑标签' : '创建标签' }}</h3>
-            <p class="Modal-subtitle">参考 Flarum 的标签编辑流程，提供实时颜色和图标预览。</p>
+            <p class="Modal-subtitle">参考 Flarum 的标签编辑流程，并补齐父子层级、排序和显示状态配置。</p>
           </div>
           <button @click="closeModal" class="Modal-close">
             <i class="fas fa-times"></i>
@@ -75,32 +96,80 @@
           <div class="TagPreviewPanel">
             <span class="TagPreviewPanel-label">实时预览</span>
             <div class="TagPreviewPanel-card">
-              <span class="TagBadgePreview TagBadgePreview--large" :style="getTagBadgeStyle(formData.color)">
-                <i v-if="formData.icon" :class="formData.icon"></i>
-                <span>{{ formData.name || '新标签' }}</span>
-              </span>
-              <small>{{ formData.description || '这里会显示标签在讨论列表中的视觉效果。' }}</small>
+              <div class="TagPreviewPanel-badge">
+                <span class="TagBadgePreview TagBadgePreview--large" :style="getTagBadgeStyle(formData)">
+                  <i v-if="formData.icon" :class="formData.icon"></i>
+                  <span>{{ formData.name || '新标签' }}</span>
+                </span>
+              </div>
+              <div class="TagPreviewPanel-meta">
+                <small>
+                  {{ formData.parent_id ? '当前会作为子标签显示在父标签下方。' : '当前会作为顶级标签显示在列表中。' }}
+                </small>
+              </div>
             </div>
           </div>
 
-          <div class="Form-group">
-            <label>标签名称 *</label>
-            <input
-              v-model="formData.name"
-              type="text"
-              class="FormControl"
-              placeholder="例如：技术讨论"
-            />
+          <div class="FormRow">
+            <div class="Form-group">
+              <label>标签名称 *</label>
+              <input
+                v-model.trim="formData.name"
+                type="text"
+                class="FormControl"
+                placeholder="例如：技术讨论"
+              />
+            </div>
+
+            <div class="Form-group">
+              <label>别名 / Slug</label>
+              <input
+                v-model.trim="formData.slug"
+                type="text"
+                class="FormControl"
+                placeholder="例如：tech-talk"
+              />
+              <div class="Form-help">留空时自动生成，建议使用短横线风格。</div>
+            </div>
           </div>
 
           <div class="Form-group">
             <label>描述</label>
             <textarea
-              v-model="formData.description"
+              v-model.trim="formData.description"
               class="FormControl"
               rows="3"
               placeholder="标签的简短描述"
             ></textarea>
+          </div>
+
+          <div class="FormRow">
+            <div class="Form-group">
+              <label>父标签</label>
+              <select v-model="formData.parent_id" class="FormControl">
+                <option :value="null">作为顶级标签</option>
+                <option
+                  v-for="option in availableParentOptions"
+                  :key="option.id"
+                  :value="option.id"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+              <div class="Form-help">设置后，这个标签会显示在对应父标签下方。</div>
+            </div>
+
+            <div class="Form-group">
+              <label>排序位置</label>
+              <input
+                v-model.number="formData.position"
+                type="number"
+                min="0"
+                class="FormControl"
+                placeholder="0"
+              />
+              <div class="Form-help">数字越小越靠前，和 Flarum 的排序思路一致。</div>
+            </div>
           </div>
 
           <div class="Form-group">
@@ -164,11 +233,26 @@
 
             <div class="Form-help">标签仍然保存为 Font Awesome 类名，但现在可以直接搜索和点选。</div>
             <input
-              v-model="formData.icon"
+              v-model.trim="formData.icon"
               type="text"
               class="FormControl FormControl--subtle"
               placeholder="高级模式：手动输入 Font Awesome 类名"
             />
+          </div>
+
+          <div class="Form-group">
+            <label>显示与发帖限制</label>
+            <div class="CheckboxRow">
+              <label class="CheckboxChip">
+                <input v-model="formData.is_hidden" type="checkbox" />
+                <span>隐藏标签</span>
+              </label>
+
+              <label class="CheckboxChip">
+                <input v-model="formData.is_restricted" type="checkbox" />
+                <span>限制发帖</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -252,12 +336,7 @@ const saving = ref(false)
 const editingTag = ref(null)
 const iconSearch = ref('')
 
-const formData = ref({
-  name: '',
-  description: '',
-  color: '#888888',
-  icon: '',
-})
+const formData = ref(getEmptyForm())
 
 const filteredIconOptions = computed(() => {
   const query = iconSearch.value.trim().toLowerCase()
@@ -268,6 +347,20 @@ const filteredIconOptions = computed(() => {
   )
 })
 
+const tagTree = computed(() => buildTagTree(tags.value))
+const tagRows = computed(() => flattenTagTree(tagTree.value))
+const availableParentOptions = computed(() => {
+  const editingId = editingTag.value?.id || null
+  const blockedIds = editingId ? new Set([editingId, ...collectDescendantIds(tags.value, editingId)]) : new Set()
+
+  return tagRows.value
+    .filter(row => !blockedIds.has(row.tag.id))
+    .map(row => ({
+      id: row.tag.id,
+      label: `${'— '.repeat(row.depth)}${row.tag.name}`
+    }))
+})
+
 onMounted(() => {
   loadTags()
 })
@@ -276,7 +369,7 @@ async function loadTags() {
   loading.value = true
   try {
     const data = await api.get('/admin/tags')
-    tags.value = data
+    tags.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('加载标签失败:', error)
   } finally {
@@ -285,19 +378,28 @@ async function loadTags() {
 }
 
 function openCreateModal() {
+  editingTag.value = null
   iconSearch.value = ''
+  formData.value = getEmptyForm({
+    position: getNextPosition(tags.value, null),
+  })
   showCreateModal.value = true
 }
 
 function editTag(tag) {
   editingTag.value = tag
   iconSearch.value = ''
-  formData.value = {
+  formData.value = getEmptyForm({
     name: tag.name,
+    slug: tag.slug,
     description: tag.description,
     color: tag.color,
     icon: tag.icon,
-  }
+    position: tag.position,
+    parent_id: tag.parent_id ?? null,
+    is_hidden: Boolean(tag.is_hidden),
+    is_restricted: Boolean(tag.is_restricted),
+  })
   showEditModal.value = true
 }
 
@@ -309,34 +411,47 @@ async function saveTag() {
 
   saving.value = true
   try {
+    const payload = {
+      ...formData.value,
+      name: formData.value.name.trim(),
+      slug: (formData.value.slug || '').trim(),
+      description: (formData.value.description || '').trim(),
+      color: formData.value.color || '#888888',
+      icon: (formData.value.icon || '').trim(),
+      position: Number(formData.value.position || 0),
+      parent_id: formData.value.parent_id ?? null,
+      is_hidden: Boolean(formData.value.is_hidden),
+      is_restricted: Boolean(formData.value.is_restricted),
+    }
+
     if (showEditModal.value) {
-      await api.put(`/admin/tags/${editingTag.value.id}`, formData.value)
+      await api.put(`/admin/tags/${editingTag.value.id}`, payload)
     } else {
-      await api.post('/admin/tags', formData.value)
+      await api.post('/admin/tags', payload)
     }
 
     closeModal()
-    loadTags()
+    await loadTags()
   } catch (error) {
     console.error('保存标签失败:', error)
     const errorMsg = error.response?.data?.error
       || error.response?.data?.detail
       || error.message
       || '未知错误'
-    alert('保存失败: ' + errorMsg)
+    alert(`保存失败: ${errorMsg}`)
   } finally {
     saving.value = false
   }
 }
 
 async function deleteTag(tag) {
-  if (!confirm(`确定要删除标签"${tag.name}"吗？这将影响 ${tag.discussion_count} 个讨论。`)) {
+  if (!confirm(`确定要删除标签“${tag.name}”吗？`)) {
     return
   }
 
   try {
     await api.delete(`/admin/tags/${tag.id}`)
-    loadTags()
+    await loadTags()
   } catch (error) {
     alert('删除失败: ' + (error.response?.data?.error || '未知错误'))
   }
@@ -347,11 +462,21 @@ function closeModal() {
   showEditModal.value = false
   editingTag.value = null
   iconSearch.value = ''
-  formData.value = {
+  formData.value = getEmptyForm()
+}
+
+function getEmptyForm(overrides = {}) {
+  return {
     name: '',
+    slug: '',
     description: '',
     color: '#888888',
     icon: '',
+    position: 0,
+    parent_id: null,
+    is_hidden: false,
+    is_restricted: false,
+    ...overrides,
   }
 }
 
@@ -359,10 +484,66 @@ function normalizeColor(value) {
   return String(value || '').trim().toLowerCase()
 }
 
-function getTagBadgeStyle(color) {
+function getTagBadgeStyle(tag) {
+  const color = tag.color || '#888888'
   return {
-    '--tag-bg': color || '#888888',
+    '--tag-bg': color,
+    opacity: tag.is_hidden ? 0.55 : 1,
   }
+}
+
+function buildTagTree(sourceTags) {
+  const records = sourceTags.map(tag => ({
+    ...tag,
+    children: [],
+  }))
+  const byId = new Map(records.map(tag => [tag.id, tag]))
+  const roots = []
+
+  for (const tag of records) {
+    const parent = tag.parent_id ? byId.get(tag.parent_id) : null
+    if (parent) {
+      parent.children.push(tag)
+    } else {
+      roots.push(tag)
+    }
+  }
+
+  sortTagNodes(roots)
+  return roots
+}
+
+function sortTagNodes(nodes) {
+  nodes.sort((left, right) => {
+    const leftPosition = Number(left.position ?? 0)
+    const rightPosition = Number(right.position ?? 0)
+    if (leftPosition !== rightPosition) return leftPosition - rightPosition
+    return String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN')
+  })
+
+  for (const node of nodes) {
+    sortTagNodes(node.children)
+  }
+}
+
+function flattenTagTree(nodes, depth = 0, parentName = null) {
+  return nodes.flatMap(node => [
+    { tag: node, depth, parentName },
+    ...flattenTagTree(node.children, depth + 1, node.name)
+  ])
+}
+
+function collectDescendantIds(sourceTags, tagId) {
+  const children = sourceTags.filter(tag => tag.parent_id === tagId)
+  return children.flatMap(child => [child.id, ...collectDescendantIds(sourceTags, child.id)])
+}
+
+function getNextPosition(sourceTags, parentId) {
+  const siblingPositions = sourceTags
+    .filter(tag => (tag.parent_id ?? null) === (parentId ?? null))
+    .map(tag => Number(tag.position || 0))
+
+  return siblingPositions.length ? Math.max(...siblingPositions) + 1 : 0
 }
 </script>
 
@@ -447,6 +628,7 @@ function getTagBadgeStyle(color) {
   padding: 12px;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
+  vertical-align: middle;
 }
 
 .TagTable tbody tr:hover {
@@ -476,22 +658,101 @@ function getTagBadgeStyle(color) {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
 
+.TagBadgePreview span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .TagBadgePreview i {
   font-size: 12px;
 }
 
 .TagBadgePreview--large {
   min-height: 38px;
+  max-width: min(320px, 100%);
   padding: 0 14px;
   font-size: 14px;
 }
 
+.TagNameCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: calc(var(--tag-depth, 0) * 16px);
+}
+
+.TagNameCell-line {
+  width: 10px;
+  height: 1px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.TagNameCell-line.is-child {
+  background: rgba(120, 132, 146, 0.42);
+}
+
+.TagNameCell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.TagNameCell-main small,
+.TagHierarchy small {
+  color: #8694a1;
+}
+
+.TagSlug {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f5f8fb;
+  color: #4b5d6e;
+  font-size: 12px;
+}
+
+.TagHierarchy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.TagStatusList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.TagStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: #506274;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.TagStatus--muted {
+  background: #f1f3f5;
+  color: #788591;
+}
+
+.TagStatus--warning {
+  background: #fff1dc;
+  color: #b56a18;
+}
+
 .Modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -505,7 +766,8 @@ function getTagBadgeStyle(color) {
   width: 90%;
   max-width: 760px;
   max-height: 90vh;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .Modal-header {
@@ -576,11 +838,22 @@ function getTagBadgeStyle(color) {
 .TagPreviewPanel-card {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
   padding: 16px 18px;
   border: 1px solid #e3e8ed;
   border-radius: 12px;
   background: linear-gradient(180deg, #fbfdff, #f4f7fa);
+}
+
+.TagPreviewPanel-badge {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.TagPreviewPanel-meta {
+  min-width: 0;
+  width: 100%;
 }
 
 .TagPreviewPanel-card small {
@@ -614,6 +887,7 @@ function getTagBadgeStyle(color) {
 
 .FormControl {
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 3px;
@@ -636,6 +910,16 @@ function getTagBadgeStyle(color) {
   margin-top: 10px;
   color: #7a8794;
   font-size: 13px;
+}
+
+.FormRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.FormRow > * {
+  min-width: 0;
 }
 
 .ColorPicker {
@@ -741,9 +1025,54 @@ function getTagBadgeStyle(color) {
   text-decoration: underline;
 }
 
+.CheckboxRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.CheckboxChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #dce4ec;
+  border-radius: 999px;
+  background: #fbfdff;
+  color: #44515e;
+  line-height: 1;
+  margin-bottom: 0;
+  font-weight: 500;
+  width: auto;
+}
+
+.CheckboxChip input {
+  margin: 0;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  align-self: center;
+  transform: translateY(-0.5px);
+}
+
+.CheckboxChip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .Modal-content {
     width: calc(100vw - 24px);
+  }
+
+  .FormRow {
+    grid-template-columns: 1fr;
   }
 
   .ColorPicker {
