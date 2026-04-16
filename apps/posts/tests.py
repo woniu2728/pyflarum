@@ -234,6 +234,64 @@ class PostFlagApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["approval_status"], "pending")
 
+    def test_author_can_still_view_rejected_reply_and_note(self):
+        admin = User.objects.create_superuser(
+            username="reply-approval-admin",
+            email="reply-approval-admin@example.com",
+            password="password123",
+        )
+        rejected_post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="需要补充说明",
+            user=self.reporter,
+        )
+        PostService.reject_post(rejected_post, admin, note="请补充更完整的回复内容")
+
+        detail_response = self.client.get(
+            f"/api/posts/{rejected_post.id}",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(detail_response.status_code, 200, detail_response.content)
+        self.assertEqual(detail_response.json()["approval_status"], "rejected")
+        self.assertEqual(detail_response.json()["approval_note"], "请补充更完整的回复内容")
+
+        list_response = self.client.get(
+            f"/api/discussions/{self.discussion.id}/posts",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(list_response.status_code, 200, list_response.content)
+        target = next(item for item in list_response.json()["data"] if item["id"] == rejected_post.id)
+        self.assertEqual(target["approval_status"], "rejected")
+
+    def test_other_member_cannot_view_rejected_reply(self):
+        admin = User.objects.create_superuser(
+            username="reply-approval-admin-other",
+            email="reply-approval-admin-other@example.com",
+            password="password123",
+        )
+        rejected_post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="需要补充说明",
+            user=self.reporter,
+        )
+        PostService.reject_post(rejected_post, admin, note="请补充更完整的回复内容")
+
+        reader = User.objects.create_user(
+            username="reader-posts",
+            email="reader-posts@example.com",
+            password="password123",
+        )
+        token = RefreshToken.for_user(reader).access_token
+
+        detail_response = self.client.get(
+            f"/api/posts/{rejected_post.id}",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertEqual(detail_response.status_code, 404, detail_response.content)
+
     def test_cannot_reply_in_tag_without_reply_permission(self):
         admin = User.objects.create_superuser(
             username="reply-admin",

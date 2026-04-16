@@ -193,9 +193,13 @@
                     {{ discussion.title }}
                   </router-link>
                   <span v-if="discussion.approval_status === 'pending'" class="approval-pill">待审核</span>
+                  <span v-else-if="discussion.approval_status === 'rejected'" class="approval-pill approval-pill--rejected">已拒绝</span>
                   <span v-if="discussion.is_unread" class="unread-pill">{{ discussion.unread_count }} 条未读</span>
                   <span v-if="discussion.is_subscribed" class="subscription-pill">已关注</span>
                 </div>
+                <p v-if="discussion.approval_status === 'rejected' && discussion.approval_note" class="approval-note">
+                  审核反馈：{{ discussion.approval_note }}
+                </p>
 
                 <ul class="discussion-list-item-info">
                   <li v-if="discussion.tags.length" class="item-tags">
@@ -1055,6 +1059,18 @@ function isSidebarTagActive(tag) {
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
+}
+
+.approval-pill--rejected {
+  background: #fdeeee;
+  color: #b14545;
+}
+
+.approval-note {
+  margin: 0 0 6px;
+  color: #9a5050;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .unread-pill {

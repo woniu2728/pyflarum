@@ -130,7 +130,11 @@
                         {{ discussion.title }}
                       </router-link>
                       <span v-if="discussion.approval_status === 'pending'" class="approval-pill">待审核</span>
+                      <span v-else-if="discussion.approval_status === 'rejected'" class="approval-pill approval-pill--rejected">已拒绝</span>
                     </div>
+                    <p v-if="discussion.approval_status === 'rejected' && discussion.approval_note" class="approval-note">
+                      审核反馈：{{ discussion.approval_note }}
+                    </p>
                     <div class="discussion-meta">
                       <span>{{ formatDate(discussion.created_at) }}</span>
                     </div>
@@ -162,9 +166,13 @@
                         {{ post.discussion?.title || '讨论' }}
                       </router-link>
                       <span v-if="post.approval_status === 'pending'" class="approval-pill">待审核</span>
+                      <span v-else-if="post.approval_status === 'rejected'" class="approval-pill approval-pill--rejected">已拒绝</span>
                     </div>
                     <span class="post-time">{{ formatDate(post.created_at) }}</span>
                   </div>
+                  <p v-if="post.approval_status === 'rejected' && post.approval_note" class="approval-note">
+                    审核反馈：{{ post.approval_note }}
+                  </p>
                   <div class="post-content" v-html="post.content_html || post.content"></div>
                 </div>
               </div>
@@ -1140,6 +1148,18 @@ function formatLastSeen(dateString) {
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
+}
+
+.approval-pill--rejected {
+  background: #fdeeee;
+  color: #b14545;
+}
+
+.approval-note {
+  margin: 10px 0 0;
+  color: #9a5050;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .post-discussion-link {

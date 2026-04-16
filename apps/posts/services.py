@@ -54,14 +54,26 @@ class PostService:
     @staticmethod
     def _can_view_post(post: Post, user: Optional[User]) -> bool:
         if post.hidden_at and not (user and user.is_staff):
-            return False
+            can_view_rejected_own_post = bool(
+                user
+                and user.is_authenticated
+                and post.approval_status == Post.APPROVAL_REJECTED
+                and post.user_id == user.id
+            )
+            if not can_view_rejected_own_post:
+                return False
         if not TagService.can_view_discussion_tags(post.discussion, user):
             return False
         if post.approval_status == Post.APPROVAL_APPROVED:
             return True
         if user and user.is_staff:
             return True
-        return bool(user and user.is_authenticated and post.approval_status == Post.APPROVAL_PENDING and post.user_id == user.id)
+        return bool(
+            user
+            and user.is_authenticated
+            and post.approval_status in {Post.APPROVAL_PENDING, Post.APPROVAL_REJECTED}
+            and post.user_id == user.id
+        )
 
     @staticmethod
     @sqlite_write_retry()
@@ -199,12 +211,19 @@ class PostService:
 
         # 过滤隐藏的帖子
         if not user or not user.is_staff:
-            queryset = queryset.filter(hidden_at__isnull=True)
+            if user and user.is_authenticated:
+                queryset = queryset.filter(
+                    Q(hidden_at__isnull=True)
+                    | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
+                )
+            else:
+                queryset = queryset.filter(hidden_at__isnull=True)
 
         if user and user.is_authenticated and not user.is_staff:
             queryset = queryset.filter(
                 Q(approval_status=Post.APPROVAL_APPROVED)
                 | Q(approval_status=Post.APPROVAL_PENDING, user=user)
+                | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
             )
         elif not user or not user.is_authenticated:
             queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
@@ -249,12 +268,19 @@ class PostService:
         )
 
         if not user or not user.is_staff:
-            queryset = queryset.filter(hidden_at__isnull=True)
+            if user and user.is_authenticated:
+                queryset = queryset.filter(
+                    Q(hidden_at__isnull=True)
+                    | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
+                )
+            else:
+                queryset = queryset.filter(hidden_at__isnull=True)
 
         if user and user.is_authenticated and not user.is_staff:
             queryset = queryset.filter(
                 Q(approval_status=Post.APPROVAL_APPROVED)
                 | Q(approval_status=Post.APPROVAL_PENDING, user=user)
+                | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
             )
         elif not user or not user.is_authenticated:
             queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)

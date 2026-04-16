@@ -26,6 +26,26 @@
                 {{ tag.name }}
               </router-link>
             </div>
+            <div
+              v-if="discussion.approval_status === 'pending' || discussion.approval_status === 'rejected'"
+              class="discussion-review-banner"
+              :class="{ 'discussion-review-banner--rejected': discussion.approval_status === 'rejected' }"
+            >
+              <strong>{{ discussion.approval_status === 'pending' ? '讨论正在审核中' : '讨论审核未通过' }}</strong>
+              <p>
+                {{ discussion.approval_status === 'pending'
+                  ? '这条讨论当前仅你和管理员可见，审核通过后才会出现在论坛列表中。'
+                  : (discussion.approval_note || '管理员拒绝了这条讨论，请根据反馈调整后重新发布。') }}
+              </p>
+              <div v-if="canModeratePendingDiscussion" class="review-action-row">
+                <button type="button" class="review-action review-action--approve" @click="moderateDiscussion('approve')">
+                  审核通过
+                </button>
+                <button type="button" class="review-action review-action--reject" @click="moderateDiscussion('reject')">
+                  拒绝讨论
+                </button>
+              </div>
+            </div>
           </div>
 
           <div v-if="hasPrevious" ref="previousTrigger" class="load-more load-previous">
@@ -85,6 +105,7 @@
                         </time>
                         <span v-if="post.edited_at" class="post-edited" :title="formatAbsoluteDate(post.edited_at)">已编辑</span>
                         <span v-if="post.approval_status === 'pending'" class="post-status">待审核</span>
+                        <span v-else-if="post.approval_status === 'rejected'" class="post-status post-status--rejected">已拒绝</span>
                         <span v-if="post.viewer_has_open_flag && !post.can_moderate_flags" class="post-status post-status--info">已举报</span>
                         <span v-if="post.open_flag_count > 0 && post.can_moderate_flags" class="post-status post-status--warning">
                           {{ post.open_flag_count }} 条举报待处理
@@ -137,6 +158,23 @@
                     </header>
 
                     <div class="post-body" v-html="post.content_html"></div>
+                    <div
+                      v-if="post.approval_status === 'pending' || post.approval_status === 'rejected'"
+                      class="post-review-banner"
+                      :class="{ 'post-review-banner--rejected': post.approval_status === 'rejected' }"
+                    >
+                      {{ post.approval_status === 'pending'
+                        ? '这条回复正在审核中，目前仅你和管理员可见。'
+                        : (post.approval_note || '这条回复未通过审核，请根据管理员反馈调整内容。') }}
+                      <div v-if="canModeratePendingPost(post)" class="review-action-row">
+                        <button type="button" class="review-action review-action--approve" @click="moderatePost(post, 'approve')">
+                          审核通过
+                        </button>
+                        <button type="button" class="review-action review-action--reject" @click="moderatePost(post, 'reject')">
+                          拒绝回复
+                        </button>
+                      </div>
+                    </div>
                     <div v-if="post.can_moderate_flags && post.open_flag_count > 0" class="post-flag-panel">
                       <div class="post-flag-panel-header">
                         <strong>前台举报处理</strong>
@@ -217,6 +255,12 @@
 
           <div v-else-if="discussion.is_locked" class="locked-notice">
             此讨论已被锁定，无法回复
+          </div>
+          <div v-else-if="discussion.approval_status === 'pending'" class="locked-notice">
+            讨论正在审核中，暂时无法继续回复
+          </div>
+          <div v-else-if="discussion.approval_status === 'rejected'" class="locked-notice">
+            讨论未通过审核，需调整后重新发布
           </div>
           <div v-else-if="authStore.isAuthenticated" class="locked-notice">
             当前没有在此讨论下回复的权限
@@ -379,6 +423,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
+import ModerationActionModal from '@/components/modals/ModerationActionModal.vue'
 import PostReportModal from '@/components/modals/PostReportModal.vue'
 import api from '@/api'
 import {
@@ -437,6 +482,9 @@ let scrubberDragStartNumber = 1
 
 const canManageDiscussion = computed(() => {
   return authStore.user?.is_staff || authStore.user?.id === discussion.value?.user.id
+})
+const canModeratePendingDiscussion = computed(() => {
+  return Boolean(authStore.user?.is_staff && discussion.value?.approval_status === 'pending')
 })
 const isSuspended = computed(() => Boolean(authStore.user?.is_suspended))
 const suspensionNotice = computed(() => {
@@ -1285,12 +1333,80 @@ function canReportPost(post) {
   return true
 }
 
+function canModeratePendingPost(post) {
+  return Boolean(authStore.user?.is_staff && post?.approval_status === 'pending')
+}
+
 function upsertPost(rawPost) {
   const updatedPost = normalizePost(rawPost)
   const index = posts.value.findIndex(post => post.id === updatedPost.id)
   if (index !== -1) {
     posts.value[index] = updatedPost
   }
+}
+
+async function moderateDiscussion(action) {
+  if (!discussion.value || !canModeratePendingDiscussion.value) return
+
+  const isApprove = action === 'approve'
+  const result = await modalStore.show(
+    ModerationActionModal,
+    {
+      title: isApprove ? '审核通过讨论' : '拒绝讨论',
+      description: isApprove
+        ? '通过后，这条讨论会立即对其他用户可见。'
+        : '拒绝后，讨论作者仍可在前台看到你的审核反馈。',
+      confirmText: isApprove ? '通过审核' : '确认拒绝',
+      confirmTone: isApprove ? 'primary' : 'danger',
+      placeholder: isApprove ? '例如：内容符合社区规范，已放行' : '例如：标题与正文需要补充后再发布',
+      submitAction: ({ note }) => api.post(
+        `/admin/approval-queue/discussion/${discussion.value.id}/${action}`,
+        { note }
+      )
+    },
+    {
+      size: 'small'
+    }
+  )
+
+  if (!result) return
+  await refreshDiscussion()
+  await modalStore.alert({
+    title: isApprove ? '讨论已通过' : '讨论已拒绝',
+    message: isApprove ? '这条讨论现在已经对其他用户可见。' : '作者现在可以在前台看到你的审核反馈。'
+  })
+}
+
+async function moderatePost(post, action) {
+  if (!post || !canModeratePendingPost(post)) return
+
+  const isApprove = action === 'approve'
+  const result = await modalStore.show(
+    ModerationActionModal,
+    {
+      title: isApprove ? `审核通过 #${post.number}` : `拒绝 #${post.number}`,
+      description: isApprove
+        ? '通过后，这条回复会立刻出现在讨论流中。'
+        : '拒绝后，回复作者仍可在前台看到你的审核反馈。',
+      confirmText: isApprove ? '通过审核' : '确认拒绝',
+      confirmTone: isApprove ? 'primary' : 'danger',
+      placeholder: isApprove ? '例如：内容符合社区规范，已放行' : '例如：回复缺少上下文，请补充后重新提交',
+      submitAction: ({ note }) => api.post(
+        `/admin/approval-queue/post/${post.id}/${action}`,
+        { note }
+      )
+    },
+    {
+      size: 'small'
+    }
+  )
+
+  if (!result) return
+  await refreshDiscussion()
+  await modalStore.alert({
+    title: isApprove ? '回复已通过' : '回复已拒绝',
+    message: isApprove ? '这条回复现在已经加入讨论流。' : '作者现在可以在前台看到你的审核反馈。'
+  })
 }
 
 async function openReportModal(post) {
@@ -1542,6 +1658,61 @@ function formatAbsoluteDate(value) {
   gap: 8px;
 }
 
+.discussion-review-banner {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #ffe1a8;
+  border-radius: 10px;
+  background: #fff8e7;
+  color: #8b6521;
+}
+
+.discussion-review-banner strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.discussion-review-banner p {
+  margin: 0;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.review-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.review-action {
+  border: 0;
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-action--approve {
+  background: #2f855a;
+  color: #fff;
+}
+
+.review-action--reject {
+  background: #fff;
+  color: #9a4b4b;
+  box-shadow: inset 0 0 0 1px rgba(154, 75, 75, 0.22);
+}
+
+.discussion-review-banner--rejected {
+  border-color: #f1c3c3;
+  background: #fdf1f1;
+  color: #9a4b4b;
+}
+
 .tag {
   padding: 4px 12px;
   border-radius: 4px;
@@ -1721,6 +1892,11 @@ function formatAbsoluteDate(value) {
   background: #fff1df;
 }
 
+.post-status--rejected {
+  color: #a24848;
+  background: #fdeeee;
+}
+
 .post-body {
   position: relative;
   overflow: auto;
@@ -1810,6 +1986,21 @@ function formatAbsoluteDate(value) {
 .post-body :deep(img),
 .post-body :deep(iframe) {
   max-width: 100%;
+}
+
+.post-review-banner {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff8e7;
+  color: #8b6521;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.post-review-banner--rejected {
+  background: #fdf1f1;
+  color: #9a4b4b;
 }
 
 .post-flag-panel {

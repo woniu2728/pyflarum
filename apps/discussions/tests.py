@@ -243,6 +243,57 @@ class DiscussionApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["approval_status"], "pending")
 
+    def test_author_can_still_view_rejected_discussion_and_note(self):
+        discussion = DiscussionService.create_discussion(
+            title="Rejected discussion",
+            content="Needs moderation",
+            user=self.author,
+        )
+        admin = User.objects.create_superuser(
+            username="approval-admin",
+            email="approval-admin@example.com",
+            password="password123",
+        )
+        DiscussionService.reject_discussion(discussion, admin, note="内容需要补充上下文")
+
+        detail_response = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(detail_response.status_code, 200, detail_response.content)
+        self.assertEqual(detail_response.json()["approval_status"], "rejected")
+        self.assertEqual(detail_response.json()["approval_note"], "内容需要补充上下文")
+
+        list_response = self.client.get(
+            "/api/discussions/",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(list_response.status_code, 200, list_response.content)
+        items = list_response.json()["data"]
+        self.assertTrue(any(item["id"] == discussion.id and item["approval_status"] == "rejected" for item in items))
+
+    def test_other_member_cannot_view_rejected_discussion(self):
+        discussion = DiscussionService.create_discussion(
+            title="Rejected discussion",
+            content="Needs moderation",
+            user=self.author,
+        )
+        admin = User.objects.create_superuser(
+            username="approval-admin-other",
+            email="approval-admin-other@example.com",
+            password="password123",
+        )
+        DiscussionService.reject_discussion(discussion, admin, note="拒绝原因")
+
+        detail_response = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            **self.auth_header(self.reader),
+        )
+
+        self.assertEqual(detail_response.status_code, 404, detail_response.content)
+
     def test_discussion_list_hides_staff_only_tag_for_non_staff(self):
         staff_tag = Tag.objects.create(
             name="Staff",

@@ -22,7 +22,14 @@ class DiscussionService:
     @staticmethod
     def _can_view_discussion(discussion: Discussion, user: Optional[User]) -> bool:
         if discussion.hidden_at and not (user and user.is_staff):
-            return False
+            can_view_rejected_own_discussion = bool(
+                user
+                and user.is_authenticated
+                and discussion.approval_status == Discussion.APPROVAL_REJECTED
+                and discussion.user_id == user.id
+            )
+            if not can_view_rejected_own_discussion:
+                return False
         if not TagService.can_view_discussion_tags(discussion, user):
             return False
         if discussion.approval_status == Discussion.APPROVAL_APPROVED:
@@ -32,7 +39,7 @@ class DiscussionService:
         return bool(
             user
             and user.is_authenticated
-            and discussion.approval_status == Discussion.APPROVAL_PENDING
+            and discussion.approval_status in {Discussion.APPROVAL_PENDING, Discussion.APPROVAL_REJECTED}
             and discussion.user_id == user.id
         )
 
@@ -149,12 +156,19 @@ class DiscussionService:
 
         # 过滤隐藏的讨论
         if not user or not user.is_staff:
-            queryset = queryset.filter(hidden_at__isnull=True)
+            if user and user.is_authenticated:
+                queryset = queryset.filter(
+                    Q(hidden_at__isnull=True)
+                    | Q(approval_status=Discussion.APPROVAL_REJECTED, user=user)
+                )
+            else:
+                queryset = queryset.filter(hidden_at__isnull=True)
 
         if user and user.is_authenticated and not user.is_staff:
             queryset = queryset.filter(
                 Q(approval_status=Discussion.APPROVAL_APPROVED)
                 | Q(approval_status=Discussion.APPROVAL_PENDING, user=user)
+                | Q(approval_status=Discussion.APPROVAL_REJECTED, user=user)
             )
         elif not user or not user.is_authenticated:
             queryset = queryset.filter(approval_status=Discussion.APPROVAL_APPROVED)
