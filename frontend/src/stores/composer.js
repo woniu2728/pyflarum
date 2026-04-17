@@ -7,10 +7,13 @@ const EMPTY_STATE = {
   source: '',
   discussionId: null,
   discussionTitle: '',
+  initialTitle: '',
   postId: null,
   postNumber: null,
   username: '',
   initialContent: '',
+  initialPrimaryTagId: '',
+  initialSecondaryTagId: '',
   requestId: 0
 }
 
@@ -38,6 +41,19 @@ export const useComposerStore = defineStore('composer', () => {
       type: 'discussion',
       tagId: options.tagId ? String(options.tagId) : '',
       source: options.source || ''
+    }, options)
+  }
+
+  function openEditDiscussionComposer(options = {}) {
+    openComposerState({
+      type: 'edit-discussion',
+      source: options.source || '',
+      discussionId: options.discussionId ?? null,
+      discussionTitle: options.discussionTitle || '',
+      initialTitle: options.initialTitle || '',
+      initialContent: options.initialContent || '',
+      initialPrimaryTagId: options.initialPrimaryTagId ? String(options.initialPrimaryTagId) : '',
+      initialSecondaryTagId: options.initialSecondaryTagId ? String(options.initialSecondaryTagId) : ''
     }, options)
   }
 
@@ -112,6 +128,7 @@ export const useComposerStore = defineStore('composer', () => {
     hasUnsavedChanges,
     unsavedMessage,
     openDiscussionComposer,
+    openEditDiscussionComposer,
     openReplyComposer,
     openEditPostComposer,
     showComposer,

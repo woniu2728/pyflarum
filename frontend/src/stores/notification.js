@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/api'
+import { useAuthStore } from '@/stores/auth'
 import { unwrapList } from '@/utils/forum'
 
 export const useNotificationStore = defineStore('notification', () => {
@@ -71,6 +72,11 @@ export const useNotificationStore = defineStore('notification', () => {
         notifications.value.unshift(data.notification)
         unreadCount.value++
         initialized.value = true
+
+        if (['userSuspended', 'userUnsuspended'].includes(data.notification?.type)) {
+          const authStore = useAuthStore()
+          authStore.fetchUser().catch(() => {})
+        }
 
         // 显示浏览器通知
         if ('Notification' in window && Notification.permission === 'granted') {
@@ -226,6 +232,18 @@ export const useNotificationStore = defineStore('notification', () => {
         return '有人@了您'
       case 'postReply':
         return '有人回复了您的帖子'
+      case 'discussionApproved':
+        return '你的讨论已通过审核'
+      case 'discussionRejected':
+        return '你的讨论未通过审核'
+      case 'postApproved':
+        return '你的回复已通过审核'
+      case 'postRejected':
+        return '你的回复未通过审核'
+      case 'userSuspended':
+        return '你的账号已被封禁'
+      case 'userUnsuspended':
+        return '你的账号已解除封禁'
       default:
         return '您有新通知'
     }

@@ -18,7 +18,7 @@
           :class="{ 'composer-title--clickable': composerStore.isMinimized }"
           @click="handleHeaderSummaryClick"
         >
-          <span>发起讨论</span>
+          <span>{{ composerHeading }}</span>
           <small>{{ composerStatusText }}</small>
         </div>
         <div class="composer-controls">
@@ -152,7 +152,7 @@
             @click="submitDiscussion"
           >
             <i class="fas fa-paper-plane"></i>
-            {{ submitting ? '发布中...' : (uploading ? '上传中...' : '发布讨论') }}
+            {{ submitting ? composerSubmittingText : (uploading ? '上传中...' : composerSubmitText) }}
           </button>
 
           <div class="composer-formatting" aria-label="格式化工具栏">
@@ -245,7 +245,7 @@ import {
   replaceSelection,
   uploadComposerFile
 } from '@/utils/composer'
-import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
+import { flattenTags, normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -316,6 +316,7 @@ const secondaryTagOptions = computed(() => {
   const primaryTag = primaryTags.value.find(tag => String(tag.id) === String(form.value.primary_tag_id))
   return primaryTag?.children || []
 })
+const isEditingDiscussion = computed(() => composerStore.current.type === 'edit-discussion')
 const selectedTagIds = computed(() => {
   return [form.value.primary_tag_id, form.value.secondary_tag_id]
     .filter(Boolean)
@@ -324,7 +325,11 @@ const selectedTagIds = computed(() => {
 })
 const hasStartableTags = computed(() => primaryTags.value.length > 0)
 const showComposer = computed(() => {
-  return composerStore.isOpen && composerStore.current.type === 'discussion' && authStore.isAuthenticated
+  return (
+    composerStore.isOpen
+    && ['discussion', 'edit-discussion'].includes(composerStore.current.type)
+    && authStore.isAuthenticated
+  )
 })
 const hasDraftContent = computed(() => {
   return Boolean(
@@ -357,14 +362,19 @@ const composerStatusText = computed(() => {
   if (composerStore.isMinimized) return minimizedSummary.value
   if (draftMessage.value) return draftMessage.value
   if (draftSavedAt.value) return `草稿保存于 ${formatDraftTime(draftSavedAt.value)}`
+  if (isEditingDiscussion.value) return '修改后可重新提交审核或直接更新讨论。'
   if (selectedTagName.value) return `将发布到 ${selectedTagName.value}`
   return '支持 Markdown，可最小化继续编辑。'
 })
 const minimizedSummary = computed(() => {
   if (form.value.title.trim()) return form.value.title.trim()
+  if (isEditingDiscussion.value) return '编辑讨论'
   if (selectedTagName.value) return `新讨论 · ${selectedTagName.value}`
   return '发起讨论'
 })
+const composerHeading = computed(() => (isEditingDiscussion.value ? '编辑讨论' : '发起讨论'))
+const composerSubmitText = computed(() => (isEditingDiscussion.value ? '保存讨论' : '发布讨论'))
+const composerSubmittingText = computed(() => (isEditingDiscussion.value ? '保存中...' : '发布中...'))
 const unsavedExitMessage = '你有未发布的讨论内容。确定要离开当前页面吗？'
 const isPhoneViewport = computed(() => viewportWidth.value <= 768)
 const isPhoneOverlay = computed(() => isPhoneViewport.value && showComposer.value && !composerStore.isMinimized)
@@ -514,13 +524,25 @@ async function prepareComposer() {
 
   await ensureTagsLoaded()
 
-  if (!hasDraftContent.value) {
+  if (isEditingDiscussion.value) {
+    form.value = {
+      title: composerStore.current.initialTitle || '',
+      content: composerStore.current.initialContent || '',
+      primary_tag_id: composerStore.current.initialPrimaryTagId || '',
+      secondary_tag_id: composerStore.current.initialSecondaryTagId || ''
+    }
+    handlePrimaryTagChange()
+    draftSavedAt.value = ''
+    draftMessage.value = ''
+  } else if (!hasDraftContent.value) {
     restoreDraft()
   } else {
     draftMessage.value = ''
   }
 
-  applyRequestedTag()
+  if (!isEditingDiscussion.value) {
+    applyRequestedTag()
+  }
   await focusPreferredField()
 }
 
@@ -685,7 +707,11 @@ async function closeComposer() {
 }
 
 function getDraftKey() {
-  return `pyflarum:create-discussion-draft:${authStore.user?.id || 'guest'}`
+  const userId = authStore.user?.id || 'guest'
+  if (isEditingDiscussion.value && composerStore.current.discussionId) {
+    return `pyflarum:edit-discussion-draft:${userId}:${composerStore.current.discussionId}`
+  }
+  return `pyflarum:create-discussion-draft:${userId}`
 }
 
 function restoreDraft() {
@@ -790,23 +816,51 @@ async function submitDiscussion() {
   draftMessage.value = ''
 
   try {
-    const data = await api.post('/discussions/', {
-      title: form.value.title,
-      content: form.value.content,
-      tag_ids: selectedTagIds.value
-    })
-
-    if (data.approval_status === 'pending') {
-      await modalStore.alert({
-        title: '讨论已进入审核队列',
-        message: '管理员通过后，这条讨论才会显示在论坛列表中。'
+    let data
+    if (isEditingDiscussion.value) {
+      data = await api.patch(`/discussions/${composerStore.current.discussionId}`, {
+        title: form.value.title,
+        content: form.value.content,
+        tag_ids: selectedTagIds.value
       })
+
+      window.dispatchEvent(new CustomEvent('pyflarum:discussion-updated', {
+        detail: {
+          discussionId: data.id,
+          discussion: normalizeDiscussion(data)
+        }
+      }))
+
+      if (data.approval_status === 'pending') {
+        await modalStore.alert({
+          title: '讨论已重新提交审核',
+          message: '请根据审核反馈继续完善内容，管理员通过后会重新公开显示。'
+        })
+      } else {
+        await modalStore.alert({
+          title: '讨论已更新',
+          message: '新的讨论内容已经保存。'
+        })
+      }
+    } else {
+      data = await api.post('/discussions/', {
+        title: form.value.title,
+        content: form.value.content,
+        tag_ids: selectedTagIds.value
+      })
+
+      if (data.approval_status === 'pending') {
+        await modalStore.alert({
+          title: '讨论已进入审核队列',
+          message: '管理员通过后，这条讨论才会显示在论坛列表中。'
+        })
+      }
     }
 
     resetComposer()
     await router.push(`/d/${data.id}`)
   } catch (error) {
-    console.error('创建讨论失败:', error)
+    console.error(isEditingDiscussion.value ? '更新讨论失败:' : '创建讨论失败:', error)
     const message =
       error.response?.data?.title?.[0] ||
       error.response?.data?.content?.[0] ||
@@ -815,7 +869,7 @@ async function submitDiscussion() {
       error.message ||
       '发布失败，请稍后重试'
     await modalStore.alert({
-      title: '发布失败',
+      title: isEditingDiscussion.value ? '保存失败' : '发布失败',
       message,
       tone: 'danger'
     })

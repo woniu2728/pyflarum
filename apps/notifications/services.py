@@ -18,6 +18,12 @@ class NotificationService:
     TYPE_POST_LIKED = 'postLiked'
     TYPE_USER_MENTIONED = 'userMentioned'
     TYPE_POST_REPLY = 'postReply'
+    TYPE_DISCUSSION_APPROVED = 'discussionApproved'
+    TYPE_DISCUSSION_REJECTED = 'discussionRejected'
+    TYPE_POST_APPROVED = 'postApproved'
+    TYPE_POST_REJECTED = 'postRejected'
+    TYPE_USER_SUSPENDED = 'userSuspended'
+    TYPE_USER_UNSUSPENDED = 'userUnsuspended'
 
     @staticmethod
     def create_notification(
@@ -416,6 +422,108 @@ class NotificationService:
             )
         except Post.DoesNotExist:
             pass
+
+    @staticmethod
+    def notify_discussion_approved(discussion, admin_user: User, note: str = ""):
+        if not getattr(discussion, "user", None):
+            return
+
+        NotificationService.create_notification(
+            user=discussion.user,
+            type=NotificationService.TYPE_DISCUSSION_APPROVED,
+            from_user=admin_user,
+            subject_type='discussion',
+            subject_id=discussion.id,
+            data={
+                'discussion_id': discussion.id,
+                'discussion_title': discussion.title,
+                'approval_note': note or "",
+            }
+        )
+
+    @staticmethod
+    def notify_discussion_rejected(discussion, admin_user: User, note: str = ""):
+        if not getattr(discussion, "user", None):
+            return
+
+        NotificationService.create_notification(
+            user=discussion.user,
+            type=NotificationService.TYPE_DISCUSSION_REJECTED,
+            from_user=admin_user,
+            subject_type='discussion',
+            subject_id=discussion.id,
+            data={
+                'discussion_id': discussion.id,
+                'discussion_title': discussion.title,
+                'approval_note': note or "",
+            }
+        )
+
+    @staticmethod
+    def notify_post_approved(post, admin_user: User, note: str = ""):
+        if not getattr(post, "user", None):
+            return
+
+        NotificationService.create_notification(
+            user=post.user,
+            type=NotificationService.TYPE_POST_APPROVED,
+            from_user=admin_user,
+            subject_type='post',
+            subject_id=post.id,
+            data={
+                'discussion_id': post.discussion_id,
+                'discussion_title': post.discussion.title if getattr(post, "discussion", None) else "",
+                'post_id': post.id,
+                'post_number': post.number,
+                'approval_note': note or "",
+            }
+        )
+
+    @staticmethod
+    def notify_post_rejected(post, admin_user: User, note: str = ""):
+        if not getattr(post, "user", None):
+            return
+
+        NotificationService.create_notification(
+            user=post.user,
+            type=NotificationService.TYPE_POST_REJECTED,
+            from_user=admin_user,
+            subject_type='post',
+            subject_id=post.id,
+            data={
+                'discussion_id': post.discussion_id,
+                'discussion_title': post.discussion.title if getattr(post, "discussion", None) else "",
+                'post_id': post.id,
+                'post_number': post.number,
+                'approval_note': note or "",
+            }
+        )
+
+    @staticmethod
+    def notify_user_suspended(user: User, admin_user: Optional[User] = None):
+        NotificationService.create_notification(
+            user=user,
+            type=NotificationService.TYPE_USER_SUSPENDED,
+            from_user=admin_user,
+            subject_type='user',
+            subject_id=user.id,
+            data={
+                'suspended_until': user.suspended_until.isoformat() if user.suspended_until else None,
+                'suspend_reason': user.suspend_reason or "",
+                'suspend_message': user.suspend_message or "",
+            }
+        )
+
+    @staticmethod
+    def notify_user_unsuspended(user: User, admin_user: Optional[User] = None):
+        NotificationService.create_notification(
+            user=user,
+            type=NotificationService.TYPE_USER_UNSUSPENDED,
+            from_user=admin_user,
+            subject_type='user',
+            subject_id=user.id,
+            data={}
+        )
 
     @staticmethod
     def _send_websocket_notification(notification):

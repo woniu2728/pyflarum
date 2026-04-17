@@ -190,6 +190,8 @@ function handleNotificationClick(notification) {
     router.push(buildDiscussionPath(notification.data.discussion_id))
   } else if (notification.data?.post_id) {
     router.push(buildDiscussionPath(notification.data.discussion_id || ''))
+  } else if (notification.type === 'userSuspended' || notification.type === 'userUnsuspended') {
+    router.push('/profile')
   }
 }
 
@@ -205,6 +207,12 @@ function getNotificationIcon(type) {
     postLiked: '❤️',
     userMentioned: '@',
     postReply: '↩️',
+    discussionApproved: '✅',
+    discussionRejected: '⛔',
+    postApproved: '✅',
+    postRejected: '⛔',
+    userSuspended: '🚫',
+    userUnsuspended: '🟢',
     discussionCreated: '📝',
     postCreated: '💭',
     default: '🔔'
@@ -224,6 +232,18 @@ function getNotificationMessage(notification) {
       return `${fromUser?.username || '有人'} 在回复中提到了你`
     case 'postReply':
       return `${fromUser?.username || '有人'} 回复了你的帖子`
+    case 'discussionApproved':
+      return `${fromUser?.username || '管理员'} 通过了你的讨论 "${data?.discussion_title || ''}"`
+    case 'discussionRejected':
+      return `${fromUser?.username || '管理员'} 拒绝了你的讨论 "${data?.discussion_title || ''}"${data?.approval_note ? `：${data.approval_note}` : ''}`
+    case 'postApproved':
+      return `${fromUser?.username || '管理员'} 通过了你在 "${data?.discussion_title || ''}" 中的回复`
+    case 'postRejected':
+      return `${fromUser?.username || '管理员'} 拒绝了你在 "${data?.discussion_title || ''}" 中的回复${data?.approval_note ? `：${data.approval_note}` : ''}`
+    case 'userSuspended':
+      return `${fromUser?.username || '管理员'} 已封禁你的账号${data?.suspend_message ? `：${data.suspend_message}` : ''}`
+    case 'userUnsuspended':
+      return `${fromUser?.username || '管理员'} 已解除你的账号封禁`
     case 'discussionCreated':
       return `${fromUser?.username || '有人'} 发起了新讨论 "${data?.discussion_title || ''}"`
     case 'postCreated':

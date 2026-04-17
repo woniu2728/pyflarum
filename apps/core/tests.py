@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import shutil
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
@@ -18,6 +19,7 @@ from apps.core.settings_service import clear_runtime_setting_caches
 from apps.core.services import SearchService
 from apps.core.websocket_auth import get_user_from_token
 from apps.discussions.services import DiscussionService
+from apps.notifications.models import Notification
 from apps.posts.models import PostFlag
 from apps.posts.services import PostService
 from apps.tags.models import Tag
@@ -530,6 +532,43 @@ class AdminUserManagementApiTests(TestCase):
             set(self.user.user_groups.values_list("id", flat=True)),
             {self.member_group.id, self.moderator_group.id},
         )
+
+        suspended_notification = Notification.objects.get(
+            user=self.user,
+            type="userSuspended",
+            subject_id=self.user.id,
+        )
+        self.assertEqual(suspended_notification.from_user_id, self.admin.id)
+        self.assertEqual(suspended_notification.data["suspend_reason"], "spam")
+        self.assertEqual(suspended_notification.data["suspend_message"], "请联系管理员处理")
+
+    def test_admin_unsuspending_user_creates_recovery_notification(self):
+        self.user.suspended_until = timezone.now() + timedelta(days=2)
+        self.user.suspend_reason = "temporary"
+        self.user.suspend_message = "请等待处理"
+        self.user.save(update_fields=["suspended_until", "suspend_reason", "suspend_message"])
+
+        response = self.client.put(
+            f"/api/admin/users/{self.user.id}",
+            data=json.dumps({
+                "suspended_until": None,
+                "suspend_reason": "",
+                "suspend_message": "",
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_suspended)
+
+        unsuspended_notification = Notification.objects.get(
+            user=self.user,
+            type="userUnsuspended",
+            subject_id=self.user.id,
+        )
+        self.assertEqual(unsuspended_notification.from_user_id, self.admin.id)
 
 
 class ComposerUploadApiTests(TestCase):
@@ -1065,6 +1104,13 @@ class AdminApprovalQueueApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.pending_discussion.refresh_from_db()
         self.assertEqual(self.pending_discussion.approval_status, "approved")
+        approved_notification = Notification.objects.get(
+            user=self.pending_author,
+            type="discussionApproved",
+            subject_id=self.pending_discussion.id,
+        )
+        self.assertEqual(approved_notification.from_user_id, self.admin.id)
+        self.assertEqual(approved_notification.data["approval_note"], "讨论符合规范")
 
         response = self.client.post(
             f"/api/admin/approval-queue/post/{self.post.id}/reject",
@@ -1077,3 +1123,28 @@ class AdminApprovalQueueApiTests(TestCase):
         self.post.refresh_from_db()
         self.assertEqual(self.post.approval_status, "rejected")
         self.assertIsNotNone(self.post.hidden_at)
+        rejected_notification = Notification.objects.get(
+            user=self.replier,
+            type="postRejected",
+            subject_id=self.post.id,
+        )
+        self.assertEqual(rejected_notification.from_user_id, self.admin.id)
+        self.assertEqual(rejected_notification.data["approval_note"], "回复质量不足")
+
+    def test_non_staff_cannot_access_or_process_approval_queue(self):
+        member_token = RefreshToken.for_user(self.pending_author).access_token
+        auth = {"HTTP_AUTHORIZATION": f"Bearer {member_token}"}
+
+        list_response = self.client.get(
+            "/api/admin/approval-queue",
+            **auth,
+        )
+        self.assertEqual(list_response.status_code, 403, list_response.content)
+
+        approve_response = self.client.post(
+            f"/api/admin/approval-queue/discussion/{self.pending_discussion.id}/approve",
+            data=json.dumps({"note": "尝试越权审核"}),
+            content_type="application/json",
+            **auth,
+        )
+        self.assertEqual(approve_response.status_code, 403, approve_response.content)

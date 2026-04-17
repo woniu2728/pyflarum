@@ -32,6 +32,7 @@ from apps.posts.models import Post, PostFlag
 from apps.posts.services import PostService
 from apps.tags.models import Tag
 from apps.tags.services import TagService
+from apps.notifications.services import NotificationService
 
 router = Router()
 
@@ -504,6 +505,7 @@ def get_admin_user(request, user_id: int):
 def update_admin_user(request, user_id: int, payload: Dict[str, Any] = Body(...)):
     """更新用户信息（管理后台）"""
     user = get_object_or_404(User.objects.prefetch_related("user_groups"), id=user_id)
+    was_suspended = user.is_suspended
 
     if user.id == request.auth.id and "is_staff" in payload and not payload.get("is_staff"):
         return admin_error("不能取消自己的管理员权限", status=400)
@@ -554,6 +556,16 @@ def update_admin_user(request, user_id: int, payload: Dict[str, Any] = Body(...)
         groups = None
 
     user.save()
+    is_suspended = user.is_suspended
+
+    touched_suspension_fields = bool(
+        {"suspended_until", "suspend_reason", "suspend_message"} & set(payload.keys())
+    )
+    if touched_suspension_fields:
+        if is_suspended:
+            NotificationService.notify_user_suspended(user, request.auth)
+        elif was_suspended:
+            NotificationService.notify_user_unsuspended(user, request.auth)
 
     if groups is not None:
         user.user_groups.set(groups)

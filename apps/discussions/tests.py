@@ -294,6 +294,49 @@ class DiscussionApiTests(TestCase):
 
         self.assertEqual(detail_response.status_code, 404, detail_response.content)
 
+    def test_author_editing_rejected_discussion_resubmits_it_for_review(self):
+        discussion = DiscussionService.create_discussion(
+            title="Rejected discussion",
+            content="Needs moderation",
+            user=self.author,
+        )
+        admin = User.objects.create_superuser(
+            username="approval-admin-resubmit",
+            email="approval-admin-resubmit@example.com",
+            password="password123",
+        )
+        DiscussionService.reject_discussion(discussion, admin, note="请补充上下文")
+
+        response = self.client.patch(
+            f"/api/discussions/{discussion.id}",
+            data=json.dumps({
+                "title": "Rejected discussion updated",
+                "content": "Updated context for approval",
+                "tag_ids": [],
+            }),
+            content_type="application/json",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["approval_status"], "pending")
+
+        detail_response = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            **self.auth_header(self.author),
+        )
+        self.assertEqual(detail_response.status_code, 200, detail_response.content)
+        self.assertEqual(detail_response.json()["approval_status"], "pending")
+        self.assertEqual(detail_response.json()["title"], "Rejected discussion updated")
+        self.assertEqual(detail_response.json()["first_post"]["content"], "Updated context for approval")
+        self.assertEqual(detail_response.json()["approval_note"], "")
+
+        reader_response = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            **self.auth_header(self.reader),
+        )
+        self.assertEqual(reader_response.status_code, 404, reader_response.content)
+
     def test_discussion_list_hides_staff_only_tag_for_non_staff(self):
         staff_tag = Tag.objects.create(
             name="Staff",

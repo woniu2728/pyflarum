@@ -292,6 +292,50 @@ class PostFlagApiTests(TestCase):
 
         self.assertEqual(detail_response.status_code, 404, detail_response.content)
 
+    def test_author_editing_rejected_reply_resubmits_it_for_review(self):
+        admin = User.objects.create_superuser(
+            username="reply-approval-admin-resubmit",
+            email="reply-approval-admin-resubmit@example.com",
+            password="password123",
+        )
+        rejected_post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="需要补充说明",
+            user=self.reporter,
+        )
+        PostService.reject_post(rejected_post, admin, note="请补充更完整的回复内容")
+
+        response = self.client.patch(
+            f"/api/posts/{rejected_post.id}",
+            data='{"content":"已经补充完整说明"}',
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["approval_status"], "pending")
+        self.assertEqual(response.json()["approval_note"], "")
+
+        detail_response = self.client.get(
+            f"/api/posts/{rejected_post.id}",
+            **self.auth_header(),
+        )
+        self.assertEqual(detail_response.status_code, 200, detail_response.content)
+        self.assertEqual(detail_response.json()["approval_status"], "pending")
+        self.assertEqual(detail_response.json()["content"], "已经补充完整说明")
+
+        reader = User.objects.create_user(
+            username="reader-posts-pending",
+            email="reader-posts-pending@example.com",
+            password="password123",
+        )
+        token = RefreshToken.for_user(reader).access_token
+        reader_detail_response = self.client.get(
+            f"/api/posts/{rejected_post.id}",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(reader_detail_response.status_code, 404, reader_detail_response.content)
+
     def test_cannot_reply_in_tag_without_reply_permission(self):
         admin = User.objects.create_superuser(
             username="reply-admin",

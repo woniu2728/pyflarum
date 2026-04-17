@@ -966,6 +966,13 @@ async function submitReply() {
         }
       }))
 
+      if (post.approval_status === 'pending') {
+        await modalStore.alert({
+          title: '回复已重新提交审核',
+          message: '管理员通过后，这条回复才会重新显示给其他用户。'
+        })
+      }
+
       if (!isViewingCurrentDiscussion()) {
         await router.push(`/d/${discussionId.value}?near=${post.number || composerStore.current.postNumber || 1}`)
       }

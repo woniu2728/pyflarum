@@ -326,6 +326,10 @@ async function resolveNotificationPath(notification) {
     return buildDiscussionPath(discussionId)
   }
 
+  if (notification.type === 'userSuspended' || notification.type === 'userUnsuspended') {
+    return '/profile'
+  }
+
   return '/notifications'
 }
 
@@ -349,6 +353,18 @@ function getNotificationIconClass(type) {
       return 'fas fa-at'
     case 'postReply':
       return 'fas fa-comment'
+    case 'discussionApproved':
+      return 'fas fa-circle-check'
+    case 'discussionRejected':
+      return 'fas fa-circle-xmark'
+    case 'postApproved':
+      return 'fas fa-check'
+    case 'postRejected':
+      return 'fas fa-xmark'
+    case 'userSuspended':
+      return 'fas fa-user-lock'
+    case 'userUnsuspended':
+      return 'fas fa-user-check'
     default:
       return 'fas fa-bell'
   }
@@ -366,6 +382,18 @@ function getNotificationText(notification) {
       return `${fromUser} 提到了你`
     case 'postReply':
       return `${fromUser} 回复了你的帖子`
+    case 'discussionApproved':
+      return `${fromUser} 通过了你的讨论`
+    case 'discussionRejected':
+      return `${fromUser} 拒绝了你的讨论`
+    case 'postApproved':
+      return `${fromUser} 通过了你的回复`
+    case 'postRejected':
+      return `${fromUser} 拒绝了你的回复`
+    case 'userSuspended':
+      return `${fromUser} 封禁了你的账号`
+    case 'userUnsuspended':
+      return `${fromUser} 解除了你的账号封禁`
     default:
       return notificationStore.getNotificationMessage(notification)
   }

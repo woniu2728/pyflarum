@@ -360,7 +360,24 @@ class PostService:
             post.content_html = PostService._render_markdown(content)
             post.edited_at = timezone.now()
             post.edited_user = user
-            post.save()
+            update_fields = ['content', 'content_html', 'edited_at', 'edited_user']
+
+            if (
+                post.approval_status == Post.APPROVAL_REJECTED
+                and not user.is_staff
+                and post.user_id == user.id
+            ):
+                post.approval_status = Post.APPROVAL_PENDING
+                post.approved_at = None
+                post.approved_by = None
+                post.approval_note = ""
+                post.hidden_at = None
+                post.hidden_user = None
+                update_fields.extend([
+                    'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
+                ])
+
+            post.save(update_fields=update_fields)
 
             # 重新处理@提及
             PostMentionsUser.objects.filter(post=post).delete()
@@ -570,6 +587,7 @@ class PostService:
                 post_id=post.id,
                 from_user=post.user
             )
+            NotificationService.notify_post_approved(post, admin_user, note=note)
 
         post.refresh_from_db()
         return post
@@ -586,6 +604,9 @@ class PostService:
         post.save(update_fields=[
             'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
         ])
+
+        from apps.notifications.services import NotificationService
+        NotificationService.notify_post_rejected(post, admin_user, note=note)
         return post
 
     @staticmethod

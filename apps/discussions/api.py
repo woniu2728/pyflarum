@@ -209,6 +209,8 @@ def update_discussion(request, discussion_id: int, payload: DiscussionUpdateSche
             discussion_id=discussion_id,
             user=request.auth,
             title=payload.title,
+            content=payload.content,
+            tag_ids=payload.tag_ids,
             is_locked=payload.is_locked,
             is_sticky=payload.is_sticky,
             is_hidden=payload.is_hidden,

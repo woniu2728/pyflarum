@@ -402,6 +402,8 @@ class DiscussionService:
         discussion_id: int,
         user: User,
         title: Optional[str] = None,
+        content: Optional[str] = None,
+        tag_ids: Optional[List[int]] = None,
         is_locked: Optional[bool] = None,
         is_sticky: Optional[bool] = None,
         is_hidden: Optional[bool] = None,
@@ -431,8 +433,27 @@ class DiscussionService:
             raise PermissionDenied("没有权限编辑此讨论")
 
         with transaction.atomic():
+            previous_tag_ids = list(discussion.discussion_tags.values_list('tag_id', flat=True))
+            first_post = None
+            if content is not None:
+                first_post = Post.objects.get(id=discussion.first_post_id)
+
             if title is not None:
                 discussion.title = title
+            if content is not None and first_post is not None:
+                first_post.content = content
+                first_post.content_html = DiscussionService._render_markdown(content)
+                first_post.edited_at = timezone.now()
+                first_post.edited_user = user
+                first_post.save(update_fields=['content', 'content_html', 'edited_at', 'edited_user'])
+
+            if tag_ids is not None:
+                tags = TagService.ensure_can_start_discussion(user, tag_ids)
+                DiscussionTag.objects.filter(discussion=discussion).delete()
+                DiscussionTag.objects.bulk_create([
+                    DiscussionTag(discussion=discussion, tag=tag)
+                    for tag in tags
+                ])
 
             if is_locked is not None:
                 if not user.is_staff:
@@ -454,10 +475,35 @@ class DiscussionService:
                     discussion.hidden_at = None
                     discussion.hidden_user = None
 
+            if (
+                discussion.approval_status == Discussion.APPROVAL_REJECTED
+                and not user.is_staff
+                and discussion.user_id == user.id
+            ):
+                discussion.approval_status = Discussion.APPROVAL_PENDING
+                discussion.approved_at = None
+                discussion.approved_by = None
+                discussion.approval_note = ""
+                discussion.hidden_at = None
+                discussion.hidden_user = None
+
+                if first_post is None:
+                    first_post = Post.objects.get(id=discussion.first_post_id)
+                first_post.approval_status = Post.APPROVAL_PENDING
+                first_post.approved_at = None
+                first_post.approved_by = None
+                first_post.approval_note = ""
+                first_post.hidden_at = None
+                first_post.hidden_user = None
+                first_post.save(update_fields=[
+                    'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
+                ])
+
             discussion.save()
-            if is_hidden is not None:
-                from apps.tags.services import TagService
-                TagService.refresh_tag_stats(list(discussion.discussion_tags.values_list('tag_id', flat=True)))
+            if is_hidden is not None or tag_ids is not None:
+                refreshed_tag_ids = set(previous_tag_ids) | set(discussion.discussion_tags.values_list('tag_id', flat=True))
+                if refreshed_tag_ids:
+                    TagService.refresh_tag_stats(list(refreshed_tag_ids))
             return discussion
 
     @staticmethod
@@ -486,6 +532,9 @@ class DiscussionService:
                 discussion.user.discussion_count = F('discussion_count') + 1
                 discussion.user.save(update_fields=['discussion_count'])
 
+            from apps.notifications.services import NotificationService
+            NotificationService.notify_discussion_approved(discussion, admin_user, note=note)
+
         discussion.refresh_from_db()
         return discussion
 
@@ -511,6 +560,9 @@ class DiscussionService:
                 hidden_at=rejected_at,
                 hidden_user=admin_user,
             )
+
+            from apps.notifications.services import NotificationService
+            NotificationService.notify_discussion_rejected(discussion, admin_user, note=note)
 
         discussion.refresh_from_db()
         return discussion
@@ -562,8 +614,6 @@ class DiscussionService:
         if not user or not user.is_authenticated:
             return False
         if user.is_suspended:
-            return False
-        if discussion.approval_status == Discussion.APPROVAL_REJECTED and not user.is_staff:
             return False
         if user.is_staff or user.is_superuser:
             return True

@@ -45,6 +45,11 @@
                   拒绝讨论
                 </button>
               </div>
+              <div v-else-if="discussion.approval_status === 'rejected' && canEditDiscussion" class="review-action-row">
+                <button type="button" class="review-action review-action--approve" @click="editDiscussion">
+                  修改后重新提交
+                </button>
+              </div>
             </div>
           </div>
 
@@ -172,6 +177,11 @@
                         </button>
                         <button type="button" class="review-action review-action--reject" @click="moderatePost(post, 'reject')">
                           拒绝回复
+                        </button>
+                      </div>
+                      <div v-else-if="post.approval_status === 'rejected' && canEditPost(post)" class="review-action-row">
+                        <button type="button" class="review-action review-action--approve" @click="editPost(post)">
+                          修改后重新提交
                         </button>
                       </div>
                     </div>
@@ -303,7 +313,7 @@
                 class="discussion-follow-action"
                 :class="{
                   'is-active': discussion.is_subscribed,
-                  'is-standalone': !canManageDiscussion
+                  'is-standalone': !canShowDiscussionMenu
                 }"
                 :disabled="togglingSubscription"
                 @click="toggleSubscription"
@@ -312,7 +322,7 @@
                 {{ togglingSubscription ? '提交中...' : (discussion.is_subscribed ? '取消关注' : '关注') }}
               </button>
               <button
-                v-if="canManageDiscussion"
+                v-if="canShowDiscussionMenu"
                 type="button"
                 class="discussion-menu-toggle"
                 :class="{ 'is-active': showDiscussionMenu }"
@@ -323,19 +333,22 @@
             </div>
 
             <div
-              v-if="showDiscussionMenu && canManageDiscussion"
+              v-if="showDiscussionMenu && canShowDiscussionMenu"
               class="discussion-actions-menu"
             >
-              <button type="button" @click="handleDiscussionMenuAction(togglePin)">
+              <button v-if="canEditDiscussion" type="button" @click="handleDiscussionMenuAction(editDiscussion)">
+                编辑讨论
+              </button>
+              <button v-if="canModerateDiscussionSettings" type="button" @click="handleDiscussionMenuAction(togglePin)">
                 {{ discussion.is_sticky ? '取消置顶' : '置顶讨论' }}
               </button>
-              <button type="button" @click="handleDiscussionMenuAction(toggleLock)">
+              <button v-if="canModerateDiscussionSettings" type="button" @click="handleDiscussionMenuAction(toggleLock)">
                 {{ discussion.is_locked ? '解除锁定' : '锁定讨论' }}
               </button>
-              <button type="button" @click="handleDiscussionMenuAction(toggleHide)">
+              <button v-if="canModerateDiscussionSettings" type="button" @click="handleDiscussionMenuAction(toggleHide)">
                 {{ discussion.is_hidden ? '恢复显示' : '隐藏讨论' }}
               </button>
-              <button type="button" class="is-danger" @click="handleDiscussionMenuAction(deleteDiscussion)">
+              <button v-if="canModerateDiscussionSettings" type="button" class="is-danger" @click="handleDiscussionMenuAction(deleteDiscussion)">
                 删除讨论
               </button>
             </div>
@@ -480,9 +493,13 @@ let scrubberResizeObserver = null
 let scrubberDragStartY = 0
 let scrubberDragStartNumber = 1
 
-const canManageDiscussion = computed(() => {
-  return authStore.user?.is_staff || authStore.user?.id === discussion.value?.user.id
-})
+const canEditDiscussion = computed(() => Boolean(
+  authStore.isAuthenticated
+  && discussion.value?.can_edit
+  && !isSuspended.value
+))
+const canModerateDiscussionSettings = computed(() => Boolean(authStore.user?.is_staff))
+const canShowDiscussionMenu = computed(() => canEditDiscussion.value || canModerateDiscussionSettings.value)
 const canModeratePendingDiscussion = computed(() => {
   return Boolean(authStore.user?.is_staff && discussion.value?.approval_status === 'pending')
 })
@@ -623,6 +640,7 @@ onMounted(async () => {
   window.addEventListener('resize', syncScrubberTrackMetrics, { passive: true })
   window.addEventListener('pyflarum:reply-created', handleReplyCreated)
   window.addEventListener('pyflarum:post-updated', handlePostUpdated)
+  window.addEventListener('pyflarum:discussion-updated', handleDiscussionUpdated)
   document.addEventListener('mousedown', handleDocumentMouseDown)
   await nextTick()
   syncScrubberTrackMetrics()
@@ -636,6 +654,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncScrubberTrackMetrics)
   window.removeEventListener('pyflarum:reply-created', handleReplyCreated)
   window.removeEventListener('pyflarum:post-updated', handlePostUpdated)
+  window.removeEventListener('pyflarum:discussion-updated', handleDiscussionUpdated)
   document.removeEventListener('mousedown', handleDocumentMouseDown)
   detachScrubberDragListeners()
   detachScrubberObserver()
@@ -1210,6 +1229,27 @@ function editPost(post) {
   })
 }
 
+function editDiscussion() {
+  if (!discussion.value || !canEditDiscussion.value) return
+  if (isSuspended.value) {
+    showSuspensionAlert()
+    return
+  }
+
+  const primaryTag = (discussion.value.tags || []).find(tag => !tag.parent_id)
+  const secondaryTag = (discussion.value.tags || []).find(tag => tag.parent_id)
+
+  composerStore.openEditDiscussionComposer({
+    source: 'discussion-detail',
+    discussionId: discussion.value.id,
+    discussionTitle: discussion.value.title || '',
+    initialTitle: discussion.value.title || '',
+    initialContent: discussion.value.first_post?.content || '',
+    initialPrimaryTagId: primaryTag?.id || '',
+    initialSecondaryTagId: secondaryTag?.id || ''
+  })
+}
+
 function openComposer() {
   if (isSuspended.value) {
     showSuspensionAlert()
@@ -1282,6 +1322,12 @@ function handlePostUpdated(event) {
   if (!detail.post) return
 
   upsertPost(detail.post)
+}
+
+async function handleDiscussionUpdated(event) {
+  const detail = event.detail || {}
+  if (!discussion.value || Number(detail.discussionId) !== Number(discussion.value.id)) return
+  await refreshDiscussion()
 }
 
 async function deletePost(post) {
