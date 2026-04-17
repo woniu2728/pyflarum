@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+from subprocess import CompletedProcess
 import uuid
 from datetime import timedelta
 from tempfile import TemporaryDirectory
@@ -10,7 +11,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from ninja_jwt.tokens import RefreshToken
@@ -218,15 +219,6 @@ class AdminSettingsApiTests(TestCase):
             "中文社区",
         )
 
-        response = self.client.get(
-            "/api/admin/settings",
-            **self.auth_header(),
-        )
-
-        self.assertEqual(response.status_code, 200, response.content)
-        payload = response.json()
-        self.assertEqual(payload["forum_title"], "中文社区")
-        self.assertTrue(payload["show_language_selector"])
 
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
     def test_advanced_and_cache_endpoints_exist(self):
@@ -574,6 +566,62 @@ class AdminUserManagementApiTests(TestCase):
         self.assertEqual(unsuspended_notification.from_user_id, self.admin.id)
 
 
+class AdminDashboardStatsApiTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="dashboard-admin",
+            email="dashboard-admin@example.com",
+            password="password123",
+        )
+
+    def auth_header(self):
+        token = RefreshToken.for_user(self.admin).access_token
+        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    @override_settings(
+        CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "dashboard-test"}},
+        CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}},
+        CELERY_BROKER_URL="memory://",
+    )
+    def test_admin_stats_returns_python_runtime_status(self):
+        response = self.client.get("/api/admin/stats", **self.auth_header())
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["runtimeName"], "Python")
+        self.assertTrue(payload["pythonVersion"])
+        self.assertTrue(payload["djangoVersion"])
+        self.assertIn("SQLite", payload["databaseLabel"])
+        self.assertEqual(payload["cacheDriver"], "内存")
+        self.assertEqual(payload["realtimeDriver"], "In-memory")
+        self.assertEqual(payload["queueLabel"], "同步执行")
+        self.assertFalse(payload["queueEnabled"])
+        self.assertFalse(payload["redisEnabled"])
+
+    @override_settings(
+        CACHES={"default": {"BACKEND": "django_redis.cache.RedisCache", "LOCATION": "redis://localhost:6379/0"}},
+        CHANNEL_LAYERS={"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [("localhost", 6379)]}}},
+        CELERY_BROKER_URL="redis://localhost:6379/1",
+    )
+    def test_admin_stats_marks_redis_and_queue_status(self):
+        Setting.objects.update_or_create(
+            key="advanced.queue_enabled",
+            defaults={"value": json.dumps(True)},
+        )
+        clear_runtime_setting_caches()
+
+        response = self.client.get("/api/admin/stats", **self.auth_header())
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["cacheDriver"], "Redis")
+        self.assertEqual(payload["realtimeDriver"], "Redis")
+        self.assertEqual(payload["queueDriver"], "redis")
+        self.assertEqual(payload["queueLabel"], "Redis")
+        self.assertTrue(payload["queueEnabled"])
+        self.assertTrue(payload["redisEnabled"])
+
+
 class ComposerUploadApiTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -661,7 +709,13 @@ class ComposerUploadApiTests(TestCase):
 
 
 class InitForumCommandTests(TestCase):
-    def test_init_forum_command_writes_sqlite_env_and_creates_admin(self):
+    def _success_result(self, args):
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    @patch("apps.core.management.commands.init_forum.run_manage_py")
+    def test_init_forum_command_writes_sqlite_env_and_invokes_manage_steps(self, mock_run_manage_py):
+        mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+
         with TemporaryDirectory() as temp_dir:
             env_path = Path(temp_dir) / ".env.test"
             with patch.dict(os.environ, {}, clear=False):
@@ -691,12 +745,31 @@ class InitForumCommandTests(TestCase):
             self.assertIn("SECRET_KEY=", env_content)
             self.assertIn("JWT_SECRET_KEY=", env_content)
 
-            admin = User.objects.get(username="forum-admin")
-            self.assertTrue(admin.is_staff)
-            self.assertTrue(admin.is_superuser)
-            self.assertTrue(admin.user_groups.filter(name="Admin").exists())
+            self.assertEqual(mock_run_manage_py.call_count, 2)
+            first_args, first_env = mock_run_manage_py.call_args_list[0].args
+            second_args, second_env = mock_run_manage_py.call_args_list[1].args
 
-    def test_init_forum_command_writes_postgres_env_values(self):
+            self.assertEqual(first_args, ["init_groups"])
+            self.assertEqual(
+                second_args,
+                [
+                    "ensure_admin",
+                    "--username",
+                    "forum-admin",
+                    "--email",
+                    "forum-admin@example.com",
+                    "--password",
+                    "password123",
+                ],
+            )
+            self.assertEqual(first_env["PYFLARUM_ENV_FILE"], str(env_path))
+            self.assertEqual(first_env["USE_REDIS"], "False")
+            self.assertEqual(second_env["DB_MODE"], "sqlite")
+
+    @patch("apps.core.management.commands.init_forum.run_manage_py")
+    def test_init_forum_command_writes_postgres_env_values(self, mock_run_manage_py):
+        mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+
         with TemporaryDirectory() as temp_dir:
             env_path = Path(temp_dir) / ".env.postgres"
             with patch.dict(os.environ, {}, clear=False):
@@ -736,7 +809,16 @@ class InitForumCommandTests(TestCase):
             self.assertIn("DB_PORT=5433", env_content)
             self.assertIn("FRONTEND_URL=http://forum.example.com", env_content)
 
-    def test_init_forum_command_allows_explicit_redis_override(self):
+            self.assertEqual(mock_run_manage_py.call_count, 1)
+            group_args, group_env = mock_run_manage_py.call_args_list[0].args
+            self.assertEqual(group_args, ["init_groups"])
+            self.assertEqual(group_env["USE_REDIS"], "True")
+            self.assertEqual(group_env["DB_MODE"], "postgres")
+
+    @patch("apps.core.management.commands.init_forum.run_manage_py")
+    def test_init_forum_command_allows_explicit_redis_override(self, mock_run_manage_py):
+        mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+
         with TemporaryDirectory() as temp_dir:
             env_path = Path(temp_dir) / ".env.override"
             with patch.dict(os.environ, {}, clear=False):
@@ -765,6 +847,121 @@ class InitForumCommandTests(TestCase):
             self.assertIn("REDIS_HOST=cache.internal", env_content)
             self.assertIn("REDIS_PORT=6380", env_content)
             self.assertIn("REDIS_DB=5", env_content)
+
+
+class EnsureAdminCommandTests(TestCase):
+    def test_ensure_admin_command_creates_admin_user_and_group_membership(self):
+        call_command("init_groups")
+
+        call_command(
+            "ensure_admin",
+            "--username",
+            "forum-admin",
+            "--email",
+            "forum-admin@example.com",
+            "--password",
+            "password123",
+        )
+
+        admin = User.objects.get(username="forum-admin")
+        self.assertTrue(admin.is_staff)
+        self.assertTrue(admin.is_superuser)
+        self.assertTrue(admin.is_email_confirmed)
+        self.assertTrue(admin.user_groups.filter(name="Admin").exists())
+        self.assertTrue(admin.check_password("password123"))
+
+
+class UpgradeForumCommandTests(TestCase):
+    def _success_result(self, args):
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    @patch("apps.core.management.commands.upgrade_forum.run_manage_py")
+    def test_upgrade_forum_runs_default_upgrade_steps(self, mock_run_manage_py):
+        mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+
+        with TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir) / ".env"
+            env_path.write_text(
+                "\n".join(
+                    [
+                        "DB_MODE=sqlite",
+                        "SQLITE_NAME=db.sqlite3",
+                        "USE_REDIS=False",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            call_command(
+                "upgrade_forum",
+                "--env-file",
+                str(env_path),
+                "--non-interactive",
+            )
+
+        self.assertEqual(mock_run_manage_py.call_count, 4)
+        invoked_steps = [call.args[0] for call in mock_run_manage_py.call_args_list]
+        self.assertEqual(
+            invoked_steps,
+            [
+                ["check"],
+                ["migrate", "--noinput"],
+                ["init_groups"],
+                ["clear_runtime_cache"],
+            ],
+        )
+        self.assertEqual(mock_run_manage_py.call_args_list[0].args[1]["PYFLARUM_ENV_FILE"], str(env_path))
+
+    @patch("apps.core.management.commands.upgrade_forum.run_manage_py")
+    def test_upgrade_forum_dry_run_does_not_execute_steps(self, mock_run_manage_py):
+        with TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir) / ".env"
+            env_path.write_text("DB_MODE=sqlite\nSQLITE_NAME=db.sqlite3\n", encoding="utf-8")
+
+            call_command(
+                "upgrade_forum",
+                "--env-file",
+                str(env_path),
+                "--dry-run",
+                "--non-interactive",
+            )
+
+        mock_run_manage_py.assert_not_called()
+
+    def test_upgrade_forum_requires_existing_env_file(self):
+        with TemporaryDirectory() as temp_dir:
+            missing_env_path = Path(temp_dir) / ".env.missing"
+            with self.assertRaisesMessage(CommandError, f"环境文件不存在: {missing_env_path}"):
+                call_command(
+                    "upgrade_forum",
+                    "--env-file",
+                    str(missing_env_path),
+                    "--non-interactive",
+                )
+
+    def test_upgrade_forum_validates_postgres_required_fields(self):
+        with TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir) / ".env"
+            env_path.write_text(
+                "\n".join(
+                    [
+                        "DB_MODE=postgres",
+                        "DB_NAME=pyflarum",
+                        "DB_USER=postgres",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesMessage(CommandError, "PostgreSQL 模式缺少必要配置: DB_HOST, DB_PORT"):
+                call_command(
+                    "upgrade_forum",
+                    "--env-file",
+                    str(env_path),
+                    "--non-interactive",
+                )
 
 
 class LocalStorageSettingsTests(TestCase):

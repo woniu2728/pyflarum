@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Dict
 
 from django.conf import settings
-from django.core.management import BaseCommand, CommandError, call_command
+from django.core.management import BaseCommand, CommandError
 from django.core.management.base import CommandParser
 from django.core.management.utils import get_random_secret_key
 
-from apps.users.models import Group, User
+from apps.core.management.command_utils import build_manage_env, run_manage_py
 
 
 ENV_DEFAULTS = {
@@ -134,20 +133,19 @@ class Command(BaseCommand):
         else:
             self.stdout.write("[SKIP] 已跳过环境文件写入")
 
-        self._apply_process_env(env_values)
+        command_env = build_manage_env(env_values, env_path)
 
         if not options["skip_migrate"]:
-            self.stdout.write("执行数据库迁移...")
-            call_command("migrate", interactive=not non_interactive)
+            self._run_manage_step("数据库迁移", ["migrate", "--noinput"], command_env)
         else:
             self.stdout.write("[SKIP] 已跳过 migrate")
 
-        self.stdout.write("初始化默认用户组与权限...")
-        call_command("init_groups")
+        self._run_manage_step("默认用户组与权限初始化", ["init_groups"], command_env)
 
         if not options["skip_admin"]:
-            admin_user = self._ensure_admin(options, non_interactive)
-            self.stdout.write(self.style.SUCCESS(f"[OK] 管理员账号已就绪: {admin_user.username}"))
+            admin_args = self._build_admin_command_args(options, non_interactive)
+            self._run_manage_step("管理员创建", ["ensure_admin", *admin_args], command_env)
+            self.stdout.write(self.style.SUCCESS(f"[OK] 管理员账号已就绪: {admin_args[1]}"))
         else:
             self.stdout.write("[SKIP] 已跳过管理员创建")
 
@@ -218,11 +216,7 @@ class Command(BaseCommand):
             lines.append(f"{key}={values.get(key, '')}")
         env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    def _apply_process_env(self, values: Dict[str, str]) -> None:
-        for key, value in values.items():
-            os.environ[key] = value
-
-    def _ensure_admin(self, options: Dict[str, str], non_interactive: bool) -> User:
+    def _build_admin_command_args(self, options: Dict[str, str], non_interactive: bool) -> list[str]:
         username = options.get("admin_username")
         email = options.get("admin_email")
         password = options.get("admin_password")
@@ -236,28 +230,29 @@ class Command(BaseCommand):
         if not username or not email or not password:
             raise CommandError("非交互模式下必须同时提供 --admin-username、--admin-email 和 --admin-password")
 
-        user, created = User.objects.get_or_create(
-            username=username,
-            defaults={
-                "email": email,
-                "is_staff": True,
-                "is_superuser": True,
-                "is_email_confirmed": True,
-            },
-        )
-        user.email = email
-        user.is_staff = True
-        user.is_superuser = True
-        user.is_email_confirmed = True
-        user.set_password(password)
-        user.save()
+        return [
+            "--username",
+            username,
+            "--email",
+            email,
+            "--password",
+            password,
+        ]
 
-        admin_group = Group.objects.filter(name="Admin").first()
-        if admin_group is not None:
-            user.user_groups.add(admin_group)
+    def _run_manage_step(self, label: str, args: list[str], env: Dict[str, str]) -> None:
+        self.stdout.write(f"执行{label}...")
+        try:
+            result = run_manage_py(args, env)
+        except Exception as exc:
+            stdout = getattr(exc, "stdout", "")
+            stderr = getattr(exc, "stderr", "")
+            if stdout:
+                self.stdout.write(stdout.rstrip())
+            if stderr:
+                self.stderr.write(stderr.rstrip())
+            raise CommandError(f"{label}失败，请检查数据库配置、依赖安装和环境文件后重试") from exc
 
-        if created:
-            self.stdout.write(self.style.SUCCESS("[OK] 已创建管理员账号"))
-        else:
-            self.stdout.write("[OK] 已更新现有管理员账号")
-        return user
+        if result.stdout:
+            self.stdout.write(result.stdout.rstrip())
+        if result.stderr:
+            self.stderr.write(result.stderr.rstrip())

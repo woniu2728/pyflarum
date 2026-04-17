@@ -6,8 +6,11 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables. Explicit env files are primarily used by
+# installation/upgrade commands that need to re-run Django in a subprocess.
+load_dotenv(os.getenv('PYFLARUM_ENV_FILE') or BASE_DIR / '.env')
 
 
 def env_flag(name: str, default: bool) -> bool:
@@ -17,7 +20,6 @@ def env_flag(name: str, default: bool) -> bool:
     return value.strip().lower() in {'1', 'true', 'yes', 'on'}
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')

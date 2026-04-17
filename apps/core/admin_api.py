@@ -3,11 +3,14 @@
 """
 import sys
 import functools
+from pathlib import Path
 
+import django
 from ninja import Router, Body
 from ninja.security import HttpBearer
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from typing import List, Dict, Any
@@ -178,6 +181,56 @@ def require_staff(func):
     return wrapper
 
 
+def detect_database_label() -> str:
+    config = settings.DATABASES.get("default", {})
+    engine = (config.get("ENGINE") or "").lower()
+    if "sqlite" in engine:
+        filename = Path(str(config.get("NAME") or "db.sqlite3")).name
+        return f"SQLite ({filename})"
+    if "postgresql" in engine:
+        return f"PostgreSQL ({config.get('NAME') or '-'} @ {config.get('HOST') or 'localhost'})"
+    if "mysql" in engine:
+        return f"MySQL ({config.get('NAME') or '-'})"
+    return engine or "未知"
+
+
+def detect_cache_driver() -> str:
+    backend = (settings.CACHES.get("default", {}).get("BACKEND") or "").lower()
+    if "django_redis" in backend or "redis" in backend:
+        return "Redis"
+    if "locmem" in backend:
+        return "内存"
+    if "filebased" in backend:
+        return "文件"
+    if "database" in backend:
+        return "数据库"
+    return backend or "未知"
+
+
+def detect_realtime_driver() -> str:
+    backend = (settings.CHANNEL_LAYERS.get("default", {}).get("BACKEND") or "").lower()
+    if "channels_redis" in backend or "redis" in backend:
+        return "Redis"
+    if "inmemory" in backend:
+        return "In-memory"
+    return backend or "未知"
+
+
+def detect_queue_driver_label(queue_enabled: bool, queue_driver: str) -> str:
+    if not queue_enabled:
+        return "同步执行"
+    if queue_driver == "redis":
+        return "Redis"
+    return queue_driver or "未知"
+
+
+def is_redis_enabled() -> bool:
+    cache_backend = (settings.CACHES.get("default", {}).get("BACKEND") or "").lower()
+    channel_backend = (settings.CHANNEL_LAYERS.get("default", {}).get("BACKEND") or "").lower()
+    broker = getattr(settings, "CELERY_BROKER_URL", "").lower()
+    return any("redis" in value for value in (cache_backend, channel_backend, broker))
+
+
 # ==================== 统计数据 ====================
 
 @router.get("/stats", auth=AuthBearer(), tags=["Admin"])
@@ -186,14 +239,21 @@ def get_stats(request):
     """获取系统统计数据"""
     advanced_settings = get_runtime_advanced_settings()
     queue_driver = advanced_settings.get("queue_driver", "sync")
-    if not advanced_settings.get("queue_enabled", False):
-        queue_driver = "sync"
+    queue_enabled = bool(advanced_settings.get("queue_enabled", False))
 
     return {
-        "phpVersion": f"Python {sys.version.split()[0]}",
-        "dbDriver": "SQLite/PostgreSQL/MySQL",
+        "runtimeName": "Python",
+        "pythonVersion": sys.version.split()[0],
+        "djangoVersion": django.get_version(),
+        "databaseLabel": detect_database_label(),
+        "cacheDriver": detect_cache_driver(),
         "queueDriver": queue_driver,
-        "sessionDriver": "database",
+        "queueEnabled": queue_enabled,
+        "queueLabel": detect_queue_driver_label(queue_enabled, queue_driver),
+        "realtimeDriver": detect_realtime_driver(),
+        "redisEnabled": is_redis_enabled(),
+        "debugMode": settings.DEBUG,
+        "maintenanceMode": bool(advanced_settings.get("maintenance_mode", False)),
         "totalUsers": User.objects.count(),
         "totalDiscussions": Discussion.objects.count(),
         "totalPosts": Post.objects.count(),

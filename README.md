@@ -9,7 +9,7 @@ PyFlarum 是一个使用 Django + Vue 3 构建的论坛项目，目标是对齐 
 - 重写文档
 - 优化后台管理体验
 
-截至 2026-04-17，本地后端测试套件 `python manage.py test apps` 共 `87` 项通过。
+截至 2026-04-18，本地后端测试套件 `python manage.py test apps` 共 `94` 项通过。
 
 ## 当前能力
 
@@ -193,16 +193,38 @@ python manage.py runserver
 
 ## 升级当前版本
 
-统一升级命令仍在开发中。现阶段建议按下面的手工流程升级：
+当前已经提供统一升级命令：
+
+```bash
+python manage.py upgrade_forum --non-interactive
+```
+
+默认会执行：
+
+1. Django 系统检查
+2. 数据库迁移
+3. 默认用户组与权限同步
+4. 运行时缓存清理
+
+常用参数：
+
+- `--collectstatic`：升级后执行 `collectstatic --noinput`
+- `--skip-check`：跳过系统检查
+- `--skip-migrate`：跳过迁移
+- `--skip-init-groups`：跳过默认组同步
+- `--skip-clear-cache`：跳过缓存清理
+- `--dry-run`：只输出升级计划，不实际执行
+
+推荐升级顺序：
 
 1. 备份数据库、`media/` 和当前 `.env`
 2. 拉取新代码
 3. 更新 Python 依赖：`pip install -r requirements.txt`
-4. 执行迁移：`python manage.py migrate`
-5. 如前端有变更，重新构建或重启前端开发服务
+4. 执行 `python manage.py upgrade_forum --non-interactive`
+5. 如前端资源有变更，执行 `npm install`、`npm run build` 或重启前端开发服务
 6. 重启 Django、Celery、反向代理等相关进程
 
-SQLite 路径建议直接备份数据库文件；PostgreSQL 路径建议使用标准数据库备份方式。若生产环境启用了 Redis，升级时通常不需要备份 Redis 作为主数据源，但要确认队列消费状态。
+SQLite 路径建议直接备份数据库文件；PostgreSQL 路径建议使用标准数据库备份方式。若升级失败，优先按你自己的备份方案恢复数据库、`media/` 和 `.env`，确认问题后再重新执行升级命令。
 
 ## 测试
 
@@ -224,6 +246,6 @@ python manage.py test apps
 ## 当前已知限制
 
 - 还没有网页安装向导
-- 统一升级命令还未落地
+- 升级命令目前不会自动做备份或自动回滚，生产环境仍应由部署方先完成备份
 - 后台体验仍在继续优化，尤其是 Dashboard、Basics、Permissions、Appearance、Users
 - 前端自动化测试与端到端测试体系尚未建立

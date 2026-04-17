@@ -12,22 +12,50 @@
           <h3>系统状态</h3>
         </div>
         <div class="Widget-content">
+          <div class="StatusWidget-summary">
+            <div class="StatusWidget-runtime">
+              <div class="StatusWidget-runtimeLabel">运行时</div>
+              <div class="StatusWidget-runtimeValue">
+                {{ stats.runtimeName || 'Python' }}
+                <span class="StatusWidget-runtimeMeta">Python {{ stats.pythonVersion || '-' }}</span>
+              </div>
+            </div>
+            <div class="StatusWidget-flags">
+              <span class="StatusBadge" :class="stats.debugMode ? 'StatusBadge--warning' : 'StatusBadge--success'">
+                {{ stats.debugMode ? 'DEBUG' : 'PRODUCTION' }}
+              </span>
+              <span class="StatusBadge" :class="stats.maintenanceMode ? 'StatusBadge--warning' : 'StatusBadge--neutral'">
+                {{ stats.maintenanceMode ? '维护模式开启' : '维护模式关闭' }}
+              </span>
+              <span class="StatusBadge" :class="stats.redisEnabled ? 'StatusBadge--success' : 'StatusBadge--neutral'">
+                {{ stats.redisEnabled ? 'Redis 已启用' : 'Redis 未启用' }}
+              </span>
+            </div>
+          </div>
           <div class="StatusWidget-items">
             <div class="StatusWidget-item">
-              <div class="StatusWidget-label">PHP版本</div>
-              <div class="StatusWidget-value">{{ stats.phpVersion || '-' }}</div>
+              <div class="StatusWidget-label">Python 版本</div>
+              <div class="StatusWidget-value">{{ stats.pythonVersion || '-' }}</div>
+            </div>
+            <div class="StatusWidget-item">
+              <div class="StatusWidget-label">Django 版本</div>
+              <div class="StatusWidget-value">{{ stats.djangoVersion || '-' }}</div>
             </div>
             <div class="StatusWidget-item">
               <div class="StatusWidget-label">数据库</div>
-              <div class="StatusWidget-value">{{ stats.dbDriver || '-' }}</div>
+              <div class="StatusWidget-value">{{ stats.databaseLabel || '-' }}</div>
             </div>
             <div class="StatusWidget-item">
-              <div class="StatusWidget-label">队列驱动</div>
-              <div class="StatusWidget-value">{{ stats.queueDriver || '-' }}</div>
+              <div class="StatusWidget-label">缓存驱动</div>
+              <div class="StatusWidget-value">{{ stats.cacheDriver || '-' }}</div>
             </div>
             <div class="StatusWidget-item">
-              <div class="StatusWidget-label">会话驱动</div>
-              <div class="StatusWidget-value">{{ stats.sessionDriver || '-' }}</div>
+              <div class="StatusWidget-label">实时层</div>
+              <div class="StatusWidget-value">{{ stats.realtimeDriver || '-' }}</div>
+            </div>
+            <div class="StatusWidget-item">
+              <div class="StatusWidget-label">队列执行</div>
+              <div class="StatusWidget-value">{{ stats.queueLabel || '-' }}</div>
             </div>
           </div>
         </div>
@@ -133,10 +161,18 @@ import AdminPage from '../components/AdminPage.vue'
 import api from '../../api'
 
 const stats = ref({
-  phpVersion: null,
-  dbDriver: null,
+  runtimeName: 'Python',
+  pythonVersion: null,
+  djangoVersion: null,
+  databaseLabel: null,
+  cacheDriver: null,
   queueDriver: null,
-  sessionDriver: null,
+  queueEnabled: false,
+  queueLabel: null,
+  realtimeDriver: null,
+  redisEnabled: false,
+  debugMode: false,
+  maintenanceMode: false,
   totalUsers: 0,
   totalDiscussions: 0,
   totalPosts: 0,
@@ -184,6 +220,78 @@ onMounted(async () => {
 }
 
 /* 状态小部件 */
+.StatusWidget-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  margin: -20px -20px 20px;
+  background: linear-gradient(135deg, #f5f8fa 0%, #edf4fb 100%);
+  border-bottom: 1px solid #e3e8ed;
+}
+
+.StatusWidget-runtime {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.StatusWidget-runtimeLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7c8795;
+}
+
+.StatusWidget-runtimeValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #223245;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.StatusWidget-runtimeMeta {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4d698e;
+}
+
+.StatusWidget-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.StatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.StatusBadge--success {
+  background: #e8f6ee;
+  color: #24724c;
+}
+
+.StatusBadge--warning {
+  background: #fff4df;
+  color: #a95d00;
+}
+
+.StatusBadge--neutral {
+  background: #eef2f6;
+  color: #5b6776;
+}
+
 .StatusWidget-items {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -292,5 +400,16 @@ onMounted(async () => {
   font-size: 18px;
   width: 24px;
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .StatusWidget-summary {
+    padding: 16px;
+    margin: -20px -20px 16px;
+  }
+
+  .StatusWidget-runtimeValue {
+    font-size: 20px;
+  }
 }
 </style>
