@@ -48,9 +48,9 @@ docker compose exec web python manage.py ensure_admin \
 
 ### 4. 访问入口
 
-- Forum 前台：`http://localhost`
-- 管理后台 SPA：`http://localhost/admin.html`
-- API 文档：`http://localhost/api/docs`
+- Forum 前台：`http://localhost:8080`
+- 管理后台 SPA：`http://localhost:8080/admin.html`
+- API 文档：`http://localhost:8080/api/docs`
 
 ### 5. 常用 Docker 命令
 
@@ -198,7 +198,6 @@ python manage.py runserver
 - Forum 前台：`http://localhost:5173`
 - 管理后台 SPA：`http://localhost:5173/admin.html`
 - API 文档：`http://127.0.0.1:8000/api/docs`
-- Django Admin：`http://127.0.0.1:8000/admin/`
 
 ## 环境变量
 
