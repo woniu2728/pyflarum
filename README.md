@@ -66,6 +66,25 @@ docker compose down
 docker compose down -v
 ```
 
+### 6. Docker 标准升级流程
+
+推荐按下面顺序升级：
+
+```bash
+git pull
+docker compose build web celery
+docker compose up -d db redis
+docker compose up -d web celery frontend nginx
+docker compose exec web python manage.py upgrade_forum --non-interactive
+```
+
+说明：
+
+- `web` 容器启动时会执行迁移、默认用户组初始化和 `collectstatic`
+- `upgrade_forum` 会额外执行系统检查、默认组同步和运行时缓存清理
+- 升级前仍建议先备份数据库、`media/` 和当前配置
+- 若前端依赖有变化，`frontend` 容器会重新执行 `npm install` 与 `npm run build`
+
 ## 原生安装
 
 ### 1. 准备环境
@@ -245,23 +264,3 @@ python manage.py upgrade_forum --non-interactive
 6. 重启 Django、Celery、反向代理等相关进程
 
 SQLite 路径建议直接备份数据库文件；PostgreSQL 路径建议使用标准数据库备份方式。若升级失败，优先按你自己的备份方案恢复数据库、`media/` 和 `.env`，确认问题后再重新执行升级命令。
-
-## 测试
-
-运行完整后端测试：
-
-```bash
-python manage.py test apps
-```
-
-## 项目文档
-
-- 前端说明：[frontend/README.md](frontend/README.md)
-- 日常协作与迭代建议通过 GitHub Issues / PR 管理
-
-## 当前已知限制
-
-- 还没有网页安装向导
-- 升级命令目前不会自动做备份或自动回滚，生产环境仍应由部署方先完成备份
-- 后台体验仍在继续优化，尤其是 Dashboard、Basics、Permissions、Appearance、Users
-- 前端自动化测试与端到端测试体系尚未建立
