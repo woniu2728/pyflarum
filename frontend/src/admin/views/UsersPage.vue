@@ -19,64 +19,66 @@
 
       <!-- 用户列表 -->
       <div class="UsersPage-list">
-        <table class="UserTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>用户名</th>
-              <th>邮箱</th>
-              <th>显示名称</th>
-              <th>讨论</th>
-              <th>回复</th>
-              <th>加入时间</th>
-              <th>状态</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="9" class="UserTable-loading">加载中...</td>
-            </tr>
-            <tr v-else-if="users.length === 0">
-              <td colspan="9" class="UserTable-empty">暂无用户</td>
-            </tr>
-            <tr v-else v-for="user in users" :key="user.id">
-              <td>{{ user.id }}</td>
-              <td>
-                <strong>{{ user.username }}</strong>
-                <span v-if="user.is_staff" class="UserBadge UserBadge--admin">管理员</span>
-                <div v-if="user.groups?.length" class="UserGroups">
+        <div class="UserTable-wrap">
+          <table class="UserTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>邮箱</th>
+                <th>显示名称</th>
+                <th>讨论</th>
+                <th>回复</th>
+                <th>加入时间</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="loading">
+                <td colspan="9" class="UserTable-loading">加载中...</td>
+              </tr>
+              <tr v-else-if="users.length === 0">
+                <td colspan="9" class="UserTable-empty">暂无用户</td>
+              </tr>
+              <tr v-else v-for="user in users" :key="user.id">
+                <td>{{ user.id }}</td>
+                <td>
+                  <strong>{{ user.username }}</strong>
+                  <span v-if="user.is_staff" class="UserBadge UserBadge--admin">管理员</span>
+                  <div v-if="user.groups?.length" class="UserGroups">
+                    <span
+                      v-for="group in user.groups"
+                      :key="group.id"
+                      class="UserBadge UserBadge--group"
+                      :style="{ backgroundColor: group.color || '#7f8c8d' }"
+                    >
+                      {{ group.name }}
+                    </span>
+                  </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.display_name }}</td>
+                <td>{{ user.discussion_count }}</td>
+                <td>{{ user.comment_count }}</td>
+                <td>{{ formatDate(user.joined_at) }}</td>
+                <td>
                   <span
-                    v-for="group in user.groups"
-                    :key="group.id"
-                    class="UserBadge UserBadge--group"
-                    :style="{ backgroundColor: group.color || '#7f8c8d' }"
+                    class="UserStatus"
+                    :class="statusClass(user)"
                   >
-                    {{ group.name }}
+                    {{ statusLabel(user) }}
                   </span>
-                </div>
-              </td>
-              <td>{{ user.email }}</td>
-              <td>{{ user.display_name }}</td>
-              <td>{{ user.discussion_count }}</td>
-              <td>{{ user.comment_count }}</td>
-              <td>{{ formatDate(user.joined_at) }}</td>
-              <td>
-                <span
-                  class="UserStatus"
-                  :class="statusClass(user)"
-                >
-                  {{ statusLabel(user) }}
-                </span>
-              </td>
-              <td>
-                <button @click="editUser(user)" class="Button Button--small" :disabled="savingDetails">
-                  编辑
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td>
+                  <button @click="editUser(user)" class="Button Button--small" :disabled="savingDetails">
+                    编辑
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- 分页 -->
@@ -102,7 +104,7 @@
     </div>
 
     <div v-if="showEditModal" class="Modal" @click.self="closeModal">
-      <div class="Modal-content">
+      <div class="Modal-content Modal-content--user">
         <div class="Modal-header">
           <h3>编辑用户</h3>
           <button @click="closeModal" class="Modal-close">
@@ -391,18 +393,44 @@ function formatDateTimeLocal(dateString) {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
 }
 
 .UsersPage-search {
   max-width: 400px;
 }
 
+.UsersPage-list {
+  min-width: 0;
+}
+
+.UserTable-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #e3e8ed;
+  border-radius: 12px;
+  background: white;
+}
+
+.UserTable-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.UserTable-wrap::-webkit-scrollbar-thumb {
+  background: #c8d2dc;
+  border-radius: 999px;
+}
+
 .FormControl {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 3px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 .FormControl:focus {
@@ -412,10 +440,9 @@ function formatDateTimeLocal(dateString) {
 
 .UserTable {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
   background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
 }
 
 .UserTable thead th {
@@ -432,6 +459,7 @@ function formatDateTimeLocal(dateString) {
   padding: 12px;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
+  vertical-align: top;
 }
 
 .UserTable tbody tr:hover {
@@ -553,11 +581,18 @@ function formatDateTimeLocal(dateString) {
 }
 
 .Modal-content {
-  width: min(720px, calc(100vw - 32px));
-  max-height: 90vh;
-  overflow: auto;
+  width: min(860px, calc(100vw - 24px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
   background: white;
-  border-radius: 3px;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(19, 32, 51, 0.18);
+  overflow: hidden;
+}
+
+.Modal-content--user {
+  min-width: min(860px, calc(100vw - 24px));
 }
 
 .Modal-header,
@@ -600,6 +635,12 @@ function formatDateTimeLocal(dateString) {
   padding: 20px;
 }
 
+.Modal-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
 .Modal-loading {
   text-align: center;
   color: #999;
@@ -607,6 +648,7 @@ function formatDateTimeLocal(dateString) {
 
 .Form-group {
   margin-bottom: 20px;
+  min-width: 0;
 }
 
 .Form-group:last-child {
@@ -626,6 +668,10 @@ function formatDateTimeLocal(dateString) {
   gap: 16px;
 }
 
+.FormRow > * {
+  min-width: 0;
+}
+
 .CheckboxField {
   display: inline-flex;
   align-items: center;
@@ -635,15 +681,16 @@ function formatDateTimeLocal(dateString) {
 }
 
 .CheckboxField--card {
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid #dbe2ea;
-  border-radius: 3px;
+  border-radius: 8px;
   background: #fafbfc;
 }
 
 .GroupChecklist {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
@@ -655,8 +702,23 @@ function formatDateTimeLocal(dateString) {
 }
 
 @media (max-width: 768px) {
+  .UsersPage-search {
+    max-width: none;
+  }
+
   .FormRow {
     grid-template-columns: 1fr;
+  }
+
+  .Modal-content--user {
+    min-width: 0;
+  }
+
+  .Modal-header,
+  .Modal-footer,
+  .Modal-body,
+  .Modal-loading {
+    padding: 16px;
   }
 }
 </style>

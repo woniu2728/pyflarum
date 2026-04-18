@@ -17,6 +17,8 @@ class FileUploadService:
     """文件上传服务"""
 
     ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+    ALLOWED_LOGO_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+    ALLOWED_FAVICON_EXTENSIONS = ['.ico', '.png', '.svg', '.webp']
 
     ALLOWED_ATTACHMENT_EXTENSIONS = [
         '.jpg', '.jpeg', '.png', '.gif', '.webp',
@@ -27,6 +29,7 @@ class FileUploadService:
 
     MAX_AVATAR_SIZE = 2 * 1024 * 1024
     MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
+    MAX_SITE_ASSET_SIZE = 2 * 1024 * 1024
 
     AVATAR_SIZES = {
         'small': (50, 50),
@@ -87,6 +90,38 @@ class FileUploadService:
         return file_url, file_info
 
     @staticmethod
+    def upload_site_asset(file: UploadedFile, asset_type: str) -> Tuple[str, dict]:
+        normalized_type = str(asset_type or "").strip().lower()
+        ext = os.path.splitext(file.name)[1].lower()
+
+        if normalized_type == "logo":
+            allowed_extensions = FileUploadService.ALLOWED_LOGO_EXTENSIONS
+        elif normalized_type == "favicon":
+            allowed_extensions = FileUploadService.ALLOWED_FAVICON_EXTENSIONS
+        else:
+            raise ValueError("不支持的站点资源类型")
+
+        FileUploadService._validate_site_asset(file, allowed_extensions, FileUploadService.MAX_SITE_ASSET_SIZE)
+
+        filename = f"{uuid.uuid4().hex}{ext}"
+        backend = get_storage_backend()
+        content = FileUploadService._read_uploaded_file(file)
+        object_key = backend.join_key("appearance", normalized_type, filename)
+        file_url = backend.save_bytes(
+            object_key,
+            content,
+            content_type=backend.guess_content_type(filename, file.content_type),
+        )
+
+        file_info = {
+            'original_name': file.name,
+            'size': file.size,
+            'mime_type': file.content_type,
+            'hash': FileUploadService._calculate_file_hash(content),
+        }
+        return file_url, file_info
+
+    @staticmethod
     def _validate_image(file: UploadedFile, max_size: int):
         ext = os.path.splitext(file.name)[1].lower()
         if ext not in FileUploadService.ALLOWED_IMAGE_EXTENSIONS:
@@ -110,6 +145,16 @@ class FileUploadService:
         ext = os.path.splitext(file.name)[1].lower()
         if ext not in FileUploadService.ALLOWED_ATTACHMENT_EXTENSIONS:
             raise ValueError("不支持的文件格式")
+
+        if file.size > max_size:
+            max_size_mb = max_size / (1024 * 1024)
+            raise ValueError(f"文件大小超过限制（最大{max_size_mb}MB）")
+
+    @staticmethod
+    def _validate_site_asset(file: UploadedFile, allowed_extensions, max_size: int):
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext not in allowed_extensions:
+            raise ValueError(f"不支持的文件格式，仅支持: {', '.join(allowed_extensions)}")
 
         if file.size > max_size:
             max_size_mb = max_size / (1024 * 1024)

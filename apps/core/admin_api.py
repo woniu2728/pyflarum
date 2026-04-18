@@ -18,6 +18,7 @@ from django.db.models import Count, Max, Q
 from django.core.cache import cache
 
 from apps.core.email_service import EmailService
+from apps.core.file_service import FileUploadService
 from apps.core.settings_service import (
     ADVANCED_SETTINGS_DEFAULTS,
     APPEARANCE_SETTINGS_DEFAULTS,
@@ -299,6 +300,31 @@ def save_appearance_settings(request, payload: Dict[str, Any] = Body(...)):
     """保存外观设置"""
     settings_data = save_setting_group("appearance", APPEARANCE_SETTINGS_DEFAULTS, payload)
     return {"message": "外观设置保存成功", "settings": settings_data}
+
+
+@router.post("/appearance/upload", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def upload_appearance_asset(request, target: str):
+    """上传站点 Logo 或 Favicon"""
+    if target not in {"logo", "favicon"}:
+        return admin_error("仅支持上传 logo 或 favicon", status=400)
+
+    file = request.FILES.get("file")
+    if not file:
+        return admin_error("请选择要上传的文件", status=400)
+
+    try:
+        file_url, file_info = FileUploadService.upload_site_asset(file, target)
+    except ValueError as e:
+        return admin_error(str(e), status=400)
+
+    return {
+        "target": target,
+        "url": file_url,
+        "original_name": file_info.get("original_name") or file.name,
+        "size": file_info.get("size") or file.size,
+        "mime_type": file_info.get("mime_type") or file.content_type,
+    }
 
 
 @router.get("/mail", auth=AuthBearer(), tags=["Admin"])

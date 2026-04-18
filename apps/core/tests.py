@@ -376,6 +376,42 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(payload["primary_color"], "#123456")
         self.assertEqual(payload["logo_url"], "/media/runtime-logo.png")
 
+    @patch("apps.core.admin_api.FileUploadService.upload_site_asset")
+    def test_admin_can_upload_appearance_logo(self, upload_site_asset):
+        upload_site_asset.return_value = (
+            "/media/appearance/logo/site-logo.png",
+            {
+                "original_name": "site-logo.png",
+                "size": 1234,
+                "mime_type": "image/png",
+            },
+        )
+        file = SimpleUploadedFile("site-logo.png", b"png-data", content_type="image/png")
+
+        response = self.client.post(
+            "/api/admin/appearance/upload?target=logo",
+            {"file": file},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["target"], "logo")
+        self.assertEqual(payload["url"], "/media/appearance/logo/site-logo.png")
+        upload_site_asset.assert_called_once()
+
+    def test_admin_appearance_upload_rejects_invalid_target(self):
+        file = SimpleUploadedFile("site-logo.png", b"png-data", content_type="image/png")
+
+        response = self.client.post(
+            "/api/admin/appearance/upload?target=avatar",
+            {"file": file},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(response.json()["error"], "仅支持上传 logo 或 favicon")
+
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
     def test_cache_lifetime_controls_public_forum_settings_cache(self):
         Setting.objects.update_or_create(

@@ -33,50 +33,52 @@
 
       <!-- 权限网格 -->
       <div class="PermissionsPage-grid">
-        <table class="PermissionGrid">
-          <thead>
-            <tr>
-              <th class="PermissionGrid-permission">权限</th>
-              <th
-                v-for="group in groups"
-                :key="group.id"
-                class="PermissionGrid-group"
-                :style="{ color: getGroupColor(group) }"
-              >
-                {{ group.name }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="section in permissionSections" :key="section.name">
+        <div class="PermissionGrid-wrap">
+          <table class="PermissionGrid">
+            <thead>
               <tr>
-                <td colspan="100%" class="PermissionGrid-section">
-                  {{ section.label }}
-                </td>
-              </tr>
-              <tr
-                v-for="permission in section.permissions"
-                :key="permission.name"
-              >
-                <td class="PermissionGrid-permission">
-                  <i :class="permission.icon"></i>
-                  {{ permission.label }}
-                </td>
-                <td
+                <th class="PermissionGrid-permission">权限</th>
+                <th
                   v-for="group in groups"
                   :key="group.id"
-                  class="PermissionGrid-cell"
+                  class="PermissionGrid-group"
+                  :style="{ color: getGroupColor(group) }"
                 >
-                  <input
-                    type="checkbox"
-                    :checked="hasPermission(group.id, permission.name)"
-                    @change="togglePermission(group.id, permission.name, $event)"
-                  />
-                </td>
+                  {{ group.name }}
+                </th>
               </tr>
-            </template>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <template v-for="section in permissionSections" :key="section.name">
+                <tr>
+                  <td colspan="100%" class="PermissionGrid-section">
+                    {{ section.label }}
+                  </td>
+                </tr>
+                <tr
+                  v-for="permission in section.permissions"
+                  :key="permission.name"
+                >
+                  <td class="PermissionGrid-permission">
+                    <i :class="permission.icon"></i>
+                    {{ permission.label }}
+                  </td>
+                  <td
+                    v-for="group in groups"
+                    :key="group.id"
+                    class="PermissionGrid-cell"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="hasPermission(group.id, permission.name)"
+                      @change="togglePermission(group.id, permission.name, $event)"
+                    />
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="PermissionsPage-actions">
@@ -91,7 +93,7 @@
       </div>
 
       <div v-if="showGroupModal" class="Modal" @click.self="closeGroupModal">
-        <div class="Modal-content">
+        <div class="Modal-content Modal-content--group">
           <div class="Modal-header">
             <h3>{{ editingGroup ? '编辑用户组' : '创建用户组' }}</h3>
             <button @click="closeGroupModal" class="Modal-close">
@@ -346,6 +348,7 @@ function getEmptyGroupForm() {
   display: flex;
   flex-direction: column;
   gap: 30px;
+  min-width: 0;
 }
 
 /* 用户组栏 */
@@ -408,12 +411,33 @@ function getEmptyGroupForm() {
 }
 
 /* 权限网格 */
+.PermissionsPage-grid {
+  min-width: 0;
+}
+
+.PermissionGrid-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #e3e8ed;
+  border-radius: 12px;
+  background: white;
+}
+
+.PermissionGrid-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.PermissionGrid-wrap::-webkit-scrollbar-thumb {
+  background: #c8d2dc;
+  border-radius: 999px;
+}
+
 .PermissionGrid {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
 }
 
 .PermissionGrid thead th {
@@ -426,7 +450,8 @@ function getEmptyGroupForm() {
 }
 
 .PermissionGrid-permission {
-  width: 250px;
+  width: 260px;
+  min-width: 260px;
 }
 
 .PermissionGrid-group {
@@ -534,11 +559,18 @@ function getEmptyGroupForm() {
 }
 
 .Modal-content {
-  width: min(560px, calc(100vw - 32px));
-  max-height: 90vh;
-  overflow: auto;
+  width: min(680px, calc(100vw - 24px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
   background: white;
-  border-radius: 3px;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(19, 32, 51, 0.18);
+  overflow: hidden;
+}
+
+.Modal-content--group {
+  min-width: min(680px, calc(100vw - 24px));
 }
 
 .Modal-header,
@@ -574,10 +606,14 @@ function getEmptyGroupForm() {
 
 .Modal-body {
   padding: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 .Form-group {
   margin-bottom: 20px;
+  min-width: 0;
 }
 
 .Form-group:last-child {
@@ -593,10 +629,13 @@ function getEmptyGroupForm() {
 
 .FormControl {
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 3px;
   font-size: 14px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .FormControl:focus {
@@ -610,19 +649,30 @@ function getEmptyGroupForm() {
   gap: 16px;
 }
 
+.FormRow > * {
+  min-width: 0;
+}
+
 .ColorField {
   display: flex;
   gap: 10px;
   align-items: center;
+  min-width: 0;
 }
 
 .ColorField-picker {
+  flex: 0 0 52px;
   width: 52px;
   height: 40px;
   padding: 0;
   border: 1px solid #ddd;
   border-radius: 3px;
   cursor: pointer;
+}
+
+.ColorField .FormControl {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .CheckboxField {
@@ -634,8 +684,22 @@ function getEmptyGroupForm() {
 }
 
 @media (max-width: 768px) {
+  .GroupBar {
+    padding: 14px;
+  }
+
   .FormRow {
     grid-template-columns: 1fr;
+  }
+
+  .Modal-content--group {
+    min-width: 0;
+  }
+
+  .Modal-header,
+  .Modal-footer,
+  .Modal-body {
+    padding: 16px;
   }
 }
 </style>
