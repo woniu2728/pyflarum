@@ -24,6 +24,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
 import AppModalHost from './components/AppModalHost.vue'
@@ -33,11 +34,13 @@ import { useAuthStore } from './stores/auth'
 import { useComposerStore } from './stores/composer'
 import { useForumStore } from './stores/forum'
 import { useNotificationStore } from './stores/notification'
+import { openLoginModal } from './utils/authModal'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const forumStore = useForumStore()
 const notificationStore = useNotificationStore()
+const route = useRoute()
 const showMaintenance = computed(() => forumStore.settings.maintenance_mode && !authStore.user?.is_staff)
 
 function handleBeforeUnload(event) {
@@ -54,6 +57,13 @@ async function syncNotificationState() {
   }
 
   notificationStore.connect()
+}
+
+function handleAuthRequired(event) {
+  authStore.logout()
+
+  const redirect = event?.detail?.redirect || route.fullPath
+  openLoginModal({ redirectPath: redirect })
 }
 
 onMounted(async () => {
@@ -73,6 +83,7 @@ onMounted(async () => {
   }
 
   window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('pyflarum:auth-required', handleAuthRequired)
 })
 
 watch(
@@ -96,6 +107,7 @@ watch(
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('pyflarum:auth-required', handleAuthRequired)
 })
 </script>
 

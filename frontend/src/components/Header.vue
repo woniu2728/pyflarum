@@ -181,12 +181,12 @@
         </template>
 
         <template v-else>
-          <router-link to="/login" class="btn-login">
+          <button type="button" class="btn-login" @click="openLogin">
             登录
-          </router-link>
-          <router-link to="/register" class="btn-signup">
+          </button>
+          <button type="button" class="btn-signup" @click="openRegister">
             注册
-          </router-link>
+          </button>
         </template>
       </div>
     </div>
@@ -201,6 +201,7 @@ import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
 import { useNotificationStore } from '@/stores/notification'
 import { renderTwemojiText } from '@/utils/twemoji'
+import { openLoginModal, openRegisterModal } from '@/utils/authModal'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api'
 import GlobalSearchModal from '@/components/modals/GlobalSearchModal.vue'
@@ -452,6 +453,14 @@ function openSearchModal() {
       className: 'Modal--search'
     }
   )
+}
+
+function openLogin() {
+  openLoginModal({ redirectPath: route.fullPath })
+}
+
+function openRegister() {
+  openRegisterModal({ redirectPath: route.fullPath })
 }
 
 function handleWindowClick(e) {

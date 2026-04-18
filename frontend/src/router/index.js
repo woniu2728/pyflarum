@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { openForgotPasswordModal, openLoginModal, openRegisterModal } from '@/utils/authModal'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,17 +13,17 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/LoginView.vue')
+      component: () => import('@/views/AuthRouteView.vue')
     },
     {
       path: '/register',
       name: 'register',
-      component: () => import('@/views/RegisterView.vue')
+      component: () => import('@/views/AuthRouteView.vue')
     },
     {
       path: '/forgot-password',
       name: 'forgot-password',
-      component: () => import('@/views/ForgotPasswordView.vue')
+      component: () => import('@/views/AuthRouteView.vue')
     },
     {
       path: '/verify-email',
@@ -97,12 +98,35 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
+  const hasActivePageContext = from.matched.length > 0
+
+  if (['login', 'register', 'forgot-password'].includes(String(to.name || '')) && hasActivePageContext) {
+    const redirectPath = typeof to.query.redirect === 'string' ? to.query.redirect : from.fullPath
+
+    if (to.name === 'register') {
+      openRegisterModal({ redirectPath })
+    } else if (to.name === 'forgot-password') {
+      openForgotPasswordModal({ redirectPath })
+    } else {
+      openLoginModal({ redirectPath })
+    }
+
+    next(false)
+    return
+  }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    if (hasActivePageContext) {
+      openLoginModal({ redirectPath: to.fullPath })
+      next(false)
+      return
+    }
+
     next({ name: 'login', query: { redirect: to.fullPath } })
-  } else {
-    next()
+    return
   }
+
+  next()
 })
 
 export default router

@@ -32,7 +32,21 @@ api.interceptors.response.use(
       // Token过期，清除本地存储
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
-      window.location.href = '/login'
+      if (typeof window !== 'undefined') {
+        const isAdminRuntime =
+          window.location.pathname.startsWith('/admin')
+          || window.location.pathname.endsWith('/admin.html')
+
+        if (isAdminRuntime) {
+          window.location.href = '/login'
+        } else {
+          window.dispatchEvent(new CustomEvent('pyflarum:auth-required', {
+            detail: {
+              redirect: `${window.location.pathname}${window.location.search}${window.location.hash}`
+            }
+          }))
+        }
+      }
     }
     return Promise.reject(error)
   }
