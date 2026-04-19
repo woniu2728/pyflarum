@@ -30,6 +30,93 @@ def _first_env(*keys: str) -> str:
     return ""
 
 
+def _build_db_connection_mismatch_message(
+    config: SiteBootstrapConfig,
+    *,
+    missing_role: bool = False,
+    auth_failed: bool = False,
+    missing_database: bool = False,
+) -> str:
+    details = (
+        f" 当前尝试连接的配置是 db_name={config.db_name}, db_user={config.db_user},"
+        f" db_host={config.db_host}, db_port={config.db_port}。"
+    )
+
+    if _running_in_docker():
+        if missing_role:
+            return (
+                "数据库连接预检查失败。PostgreSQL 中不存在当前配置的用户。"
+                f"{details}"
+                " 如果你是首次安装但遇到这个错误，通常说明 Docker 复用了旧的 postgres_data 卷，"
+                " 数据库并不是按当前 .env 初始化的。"
+                " 无需保留数据时请执行 `docker compose down -v` 后重新 `docker compose up -d --build`；"
+                " 如需保留数据，请让 .env 中的 DB_NAME/DB_USER/DB_PASSWORD 与现有 PostgreSQL 实例保持一致。"
+            )
+        if auth_failed or missing_database:
+            return (
+                "数据库连接预检查失败。当前 PostgreSQL 凭据与容器内实际数据库状态不一致。"
+                f"{details}"
+                " 如果你是首次安装但这台机器或这个目录之前跑过 Bias，很可能是旧的 postgres_data 卷仍在使用旧账号、旧密码或旧数据库名。"
+                " 无需保留数据时请执行 `docker compose down -v` 后重新 `docker compose up -d --build`；"
+                " 如需保留数据，请让 .env 中的 DB_NAME/DB_USER/DB_PASSWORD 与现有 PostgreSQL 实例保持一致。"
+            )
+    else:
+        if missing_role:
+            return (
+                "数据库连接预检查失败。PostgreSQL 中不存在当前配置的用户。"
+                f"{details}"
+                " 请先在 PostgreSQL 中创建对应用户，或改用实际存在的 --db-user/--db-password。"
+            )
+        if auth_failed:
+            return (
+                "数据库连接预检查失败。PostgreSQL 用户名或密码不正确。"
+                f"{details}"
+                " 请确认 --db-user/--db-password 与目标 PostgreSQL 实例一致。"
+            )
+        if missing_database:
+            return (
+                "数据库连接预检查失败。PostgreSQL 中不存在当前配置的数据库。"
+                f"{details}"
+                " 请先创建对应数据库，或改用实际存在的 --db-name。"
+            )
+
+    return f"数据库连接预检查失败。{details}"
+
+
+def assert_database_connection(config: SiteBootstrapConfig) -> None:
+    db_mode = (config.database_mode or "sqlite").strip().lower()
+    if db_mode.startswith("sqlite"):
+        return
+
+    import psycopg2
+
+    try:
+        connection = psycopg2.connect(
+            dbname=config.db_name,
+            user=config.db_user,
+            password=config.db_password,
+            host=config.db_host,
+            port=config.db_port,
+            connect_timeout=5,
+        )
+    except psycopg2.OperationalError as exc:
+        raw_message = str(exc).strip()
+        lowered = raw_message.lower()
+
+        if "role" in lowered and "does not exist" in lowered:
+            raise CommandError(_build_db_connection_mismatch_message(config, missing_role=True)) from exc
+
+        if "password authentication failed" in lowered:
+            raise CommandError(_build_db_connection_mismatch_message(config, auth_failed=True)) from exc
+
+        if "database" in lowered and "does not exist" in lowered:
+            raise CommandError(_build_db_connection_mismatch_message(config, missing_database=True)) from exc
+
+        raise CommandError(f"数据库连接预检查失败: {raw_message}") from exc
+    else:
+        connection.close()
+
+
 class Command(BaseCommand):
     help = "初始化论坛：写入站点配置、执行迁移、初始化默认用户组并创建管理员。"
 
@@ -85,6 +172,7 @@ class Command(BaseCommand):
         )
         config = self._build_site_config(database, options, existing_config)
         self._validate_config(config)
+        assert_database_connection(config)
 
         self.stdout.write(self.style.MIGRATE_HEADING("开始初始化 Bias"))
         self.stdout.write(f"站点配置: {config_path}")

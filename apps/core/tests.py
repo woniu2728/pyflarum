@@ -838,9 +838,11 @@ class InstallForumCommandTests(TestCase):
     def _success_result(self, args):
         return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
+    @patch("apps.core.management.commands.install_forum.assert_database_connection")
     @patch("apps.core.management.commands.install_forum.run_manage_py")
-    def test_install_forum_command_writes_site_config_and_invokes_manage_steps(self, mock_run_manage_py):
+    def test_install_forum_command_writes_site_config_and_invokes_manage_steps(self, mock_run_manage_py, mock_assert_database_connection):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+        mock_assert_database_connection.return_value = None
 
         temp_dir = make_workspace_temp_dir()
         try:
@@ -901,9 +903,11 @@ class InstallForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    @patch("apps.core.management.commands.install_forum.assert_database_connection")
     @patch("apps.core.management.commands.install_forum.run_manage_py")
-    def test_install_forum_command_writes_postgres_site_config_values(self, mock_run_manage_py):
+    def test_install_forum_command_writes_postgres_site_config_values(self, mock_run_manage_py, mock_assert_database_connection):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+        mock_assert_database_connection.return_value = None
 
         temp_dir = make_workspace_temp_dir()
         try:
@@ -952,9 +956,11 @@ class InstallForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    @patch("apps.core.management.commands.install_forum.assert_database_connection")
     @patch("apps.core.management.commands.install_forum.run_manage_py")
-    def test_install_forum_command_allows_explicit_redis_override(self, mock_run_manage_py):
+    def test_install_forum_command_allows_explicit_redis_override(self, mock_run_manage_py, mock_assert_database_connection):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+        mock_assert_database_connection.return_value = None
 
         temp_dir = make_workspace_temp_dir()
         try:
@@ -988,9 +994,11 @@ class InstallForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    @patch("apps.core.management.commands.install_forum.assert_database_connection")
     @patch("apps.core.management.commands.install_forum.run_manage_py")
-    def test_install_forum_overwrite_preserves_existing_secrets(self, mock_run_manage_py):
+    def test_install_forum_overwrite_preserves_existing_secrets(self, mock_run_manage_py, mock_assert_database_connection):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+        mock_assert_database_connection.return_value = None
 
         temp_dir = make_workspace_temp_dir()
         try:
@@ -1066,6 +1074,134 @@ class InstallForumCommandTests(TestCase):
                         "--skip-admin",
                         "--non-interactive",
                     )
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("psycopg2.connect")
+    @patch("apps.core.management.commands.install_forum._running_in_docker", return_value=True)
+    def test_install_forum_surfaces_old_volume_hint_when_role_missing(self, mock_running_in_docker, mock_connect):
+        import psycopg2
+
+        mock_connect.side_effect = psycopg2.OperationalError('FATAL:  role "woniu" does not exist')
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            config_path = Path(temp_dir) / "instance" / "site.json"
+            with patch.dict(
+                os.environ,
+                {
+                    "DB_NAME": "bias",
+                    "DB_USER": "woniu",
+                    "DB_PASSWORD": "woniu@woniu",
+                },
+                clear=False,
+            ):
+                with self.assertRaisesMessage(CommandError, "Docker 复用了旧的 postgres_data 卷"):
+                    with override_settings(BASE_DIR=Path(temp_dir)):
+                        call_command(
+                            "install_forum",
+                            "--database",
+                            "postgres",
+                            "--config",
+                            str(config_path),
+                            "--db-host",
+                            "db",
+                            "--db-port",
+                            "5432",
+                            "--skip-migrate",
+                            "--skip-admin",
+                            "--non-interactive",
+                        )
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("psycopg2.connect")
+    @patch("apps.core.management.commands.install_forum._running_in_docker", return_value=False)
+    def test_install_forum_surfaces_native_postgres_hint_when_role_missing(
+        self,
+        mock_running_in_docker,
+        mock_connect,
+    ):
+        import psycopg2
+
+        mock_connect.side_effect = psycopg2.OperationalError('FATAL:  role "bias_user" does not exist')
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            config_path = Path(temp_dir) / "instance" / "site.json"
+            with self.assertRaises(CommandError) as captured:
+                with override_settings(BASE_DIR=Path(temp_dir)):
+                    call_command(
+                        "install_forum",
+                        "--database",
+                        "postgres",
+                        "--config",
+                        str(config_path),
+                        "--db-name",
+                        "bias",
+                        "--db-user",
+                        "bias_user",
+                        "--db-password",
+                        "secret",
+                        "--db-host",
+                        "127.0.0.1",
+                        "--db-port",
+                        "5432",
+                        "--skip-migrate",
+                        "--skip-admin",
+                        "--non-interactive",
+                    )
+
+            message = str(captured.exception)
+            self.assertIn("请先在 PostgreSQL 中创建对应用户", message)
+            self.assertNotIn("postgres_data", message)
+            self.assertNotIn(".env", message)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("psycopg2.connect")
+    @patch("apps.core.management.commands.install_forum._running_in_docker", return_value=True)
+    def test_install_forum_surfaces_old_volume_hint_when_database_missing(
+        self,
+        mock_running_in_docker,
+        mock_connect,
+    ):
+        import psycopg2
+
+        mock_connect.side_effect = psycopg2.OperationalError('FATAL:  database "bias" does not exist')
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            config_path = Path(temp_dir) / "instance" / "site.json"
+            with patch.dict(
+                os.environ,
+                {
+                    "DB_NAME": "bias",
+                    "DB_USER": "woniu",
+                    "DB_PASSWORD": "woniu@woniu",
+                },
+                clear=False,
+            ):
+                with self.assertRaises(CommandError) as captured:
+                    with override_settings(BASE_DIR=Path(temp_dir)):
+                        call_command(
+                            "install_forum",
+                            "--database",
+                            "postgres",
+                            "--config",
+                            str(config_path),
+                            "--db-host",
+                            "db",
+                            "--db-port",
+                            "5432",
+                            "--skip-migrate",
+                            "--skip-admin",
+                            "--non-interactive",
+                        )
+
+            message = str(captured.exception)
+            self.assertIn("postgres_data 卷", message)
+            self.assertIn("旧数据库名", message)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 

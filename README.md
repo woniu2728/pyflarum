@@ -41,6 +41,12 @@ DB_PASSWORD=your_strong_password
 
 `DB_PORT` 可选，默认 `5432`。
 
+如果这台机器之前跑过同名 Bias 容器，首次安装前建议先清掉旧卷，避免 PostgreSQL 复用历史账号体系：
+
+```bash
+docker compose down -v
+```
+
 再启动容器：
 
 ```bash
@@ -84,6 +90,21 @@ docker compose exec web python manage.py install_forum \
 ```bash
 docker compose restart web celery
 ```
+
+如果安装时报错：
+
+```text
+role "<your user>" does not exist
+```
+
+通常说明 PostgreSQL 复用了旧的 `postgres_data` 卷，而不是按当前 `.env` 重新初始化。无数据需要保留时，执行：
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+然后重新执行 `install_forum`。
 
 ### 3. 域名配置
 
