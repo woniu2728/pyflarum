@@ -4,6 +4,7 @@ Django settings for bias project.
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,6 +20,80 @@ def env_flag(name: str, default: bool) -> bool:
         return default
     return value.strip().lower() in {'1', 'true', 'yes', 'on'}
 
+
+def env_csv(name: str, default: str = "") -> list[str]:
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def append_unique(items: list[str], value: str | None) -> list[str]:
+    if value and value not in items:
+        items.append(value)
+    return items
+
+
+def default_url_scheme(host: str) -> str:
+    normalized = (host or "").strip().lower()
+    if normalized in {"localhost", "127.0.0.1"}:
+        return "http"
+    return os.getenv("SITE_SCHEME", "https").strip().lower() or "https"
+
+
+def get_url_origin(url: str) -> str | None:
+    if not url:
+        return None
+
+    parsed = urlparse(url.strip())
+    if not parsed.scheme or not parsed.netloc:
+        return None
+
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def get_url_host(url: str) -> str | None:
+    if not url:
+        return None
+
+    parsed = urlparse(url.strip())
+    return parsed.hostname
+
+
+def normalize_origin_from_host(value: str) -> str | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+
+    if "://" in raw:
+        return get_url_origin(raw)
+
+    host = raw.split("/", 1)[0].strip()
+    if not host:
+        return None
+
+    return f"{default_url_scheme(host)}://{host}"
+
+
+def normalize_host(value: str) -> str | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+
+    if "://" in raw:
+        return get_url_host(raw)
+
+    return raw.split("/", 1)[0].split(":", 1)[0].strip() or None
+
+
+def resolve_site_domains() -> tuple[list[str], list[str]]:
+    hosts: list[str] = []
+    origins: list[str] = []
+
+    for value in env_csv("SITE_DOMAINS"):
+        append_unique(hosts, normalize_host(value))
+        append_unique(origins, normalize_origin_from_host(value))
+
+    return hosts, origins
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -27,7 +102,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+site_hosts, site_origins = resolve_site_domains()
+default_frontend_url = 'http://localhost:5173' if DEBUG else 'http://localhost:8080'
+FRONTEND_URL = (os.getenv('FRONTEND_URL') or (site_origins[0] if site_origins else default_frontend_url)).strip()
+
+ALLOWED_HOSTS = env_csv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+for host in site_hosts:
+    append_unique(ALLOWED_HOSTS, host)
+ALLOWED_HOSTS = append_unique(ALLOWED_HOSTS, get_url_host(FRONTEND_URL))
 
 # Application definition
 INSTALLED_APPS = [
@@ -156,11 +238,19 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = os.getenv(
+CORS_ALLOWED_ORIGINS = env_csv(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:3000,http://localhost:5173'
-).split(',')
+)
+for origin in site_origins:
+    append_unique(CORS_ALLOWED_ORIGINS, origin)
+CORS_ALLOWED_ORIGINS = append_unique(CORS_ALLOWED_ORIGINS, get_url_origin(FRONTEND_URL))
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = env_csv('CSRF_TRUSTED_ORIGINS')
+for origin in site_origins:
+    append_unique(CSRF_TRUSTED_ORIGINS, origin)
+CSRF_TRUSTED_ORIGINS = append_unique(CSRF_TRUSTED_ORIGINS, get_url_origin(FRONTEND_URL))
 
 # Redis Configuration
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
@@ -228,9 +318,6 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@bias.local')
-
-# Frontend URL
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 # JWT Settings
 NINJA_JWT = {

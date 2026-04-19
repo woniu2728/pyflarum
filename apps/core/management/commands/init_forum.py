@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError
@@ -14,6 +15,8 @@ from apps.core.management.command_utils import build_manage_env, run_manage_py
 ENV_DEFAULTS = {
     "DEBUG": "True",
     "SECRET_KEY": "",
+    "SITE_DOMAINS": "",
+    "SITE_SCHEME": "https",
     "ALLOWED_HOSTS": "localhost,127.0.0.1",
     "DB_MODE": "sqlite",
     "SQLITE_NAME": "db.sqlite3",
@@ -49,6 +52,8 @@ ENV_DEFAULTS = {
 ENV_ORDER = [
     "DEBUG",
     "SECRET_KEY",
+    "SITE_DOMAINS",
+    "SITE_SCHEME",
     "ALLOWED_HOSTS",
     "DB_MODE",
     "SQLITE_NAME",
@@ -98,6 +103,8 @@ class Command(BaseCommand):
         parser.add_argument("--admin-username", help="管理员用户名")
         parser.add_argument("--admin-email", help="管理员邮箱")
         parser.add_argument("--admin-password", help="管理员密码")
+        parser.add_argument("--site-domains", help="站点访问域名，多个域名用逗号分隔，例如 bias.chat,www.bias.chat")
+        parser.add_argument("--site-scheme", choices=["http", "https"], help="站点默认协议，默认 https")
         parser.add_argument("--frontend-url", help="前端访问地址，默认 http://localhost:5173")
         parser.add_argument("--sqlite-name", default="db.sqlite3", help="SQLite 数据库文件名或路径")
         parser.add_argument("--db-name", help="PostgreSQL 数据库名")
@@ -179,7 +186,13 @@ class Command(BaseCommand):
         values = dict(ENV_DEFAULTS)
         values["SECRET_KEY"] = get_random_secret_key()
         values["JWT_SECRET_KEY"] = get_random_secret_key()
-        values["FRONTEND_URL"] = options.get("frontend_url") or ENV_DEFAULTS["FRONTEND_URL"]
+        values["SITE_DOMAINS"] = (options.get("site_domains") or "").strip()
+        values["SITE_SCHEME"] = options.get("site_scheme") or ENV_DEFAULTS["SITE_SCHEME"]
+        values["FRONTEND_URL"] = (
+            options.get("frontend_url")
+            or self._derive_frontend_url(values["SITE_DOMAINS"], values["SITE_SCHEME"])
+            or ENV_DEFAULTS["FRONTEND_URL"]
+        )
         values["DB_MODE"] = database
         values["REDIS_HOST"] = options.get("redis_host") or ENV_DEFAULTS["REDIS_HOST"]
         values["REDIS_PORT"] = options.get("redis_port") or ENV_DEFAULTS["REDIS_PORT"]
@@ -197,6 +210,19 @@ class Command(BaseCommand):
             values["DB_PORT"] = options.get("db_port") or ENV_DEFAULTS["DB_PORT"]
 
         return values
+
+    def _derive_frontend_url(self, site_domains: str, site_scheme: str) -> str:
+        first = next((item.strip() for item in site_domains.split(",") if item.strip()), "")
+        if not first:
+            return ""
+
+        if "://" in first:
+            parsed = urlparse(first)
+            if parsed.scheme and parsed.netloc:
+                return f"{parsed.scheme}://{parsed.netloc}"
+            return ""
+
+        return f"{site_scheme}://{first}"
 
     def _resolve_redis_enabled(self, database: str, redis_mode: str | None) -> bool:
         if redis_mode == "on":
