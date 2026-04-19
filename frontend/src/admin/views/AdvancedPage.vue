@@ -770,5 +770,26 @@ async function clearCache() {
   .Form-grid {
     grid-template-columns: 1fr;
   }
+
+  .AdvancedPage-content {
+    max-width: none;
+  }
+
+  .RuntimeNotice,
+  .Form-section {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .Form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .Form-actions .Button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

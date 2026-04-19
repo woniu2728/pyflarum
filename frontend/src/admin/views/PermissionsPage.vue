@@ -80,6 +80,47 @@
             </tbody>
           </table>
         </div>
+
+        <div class="PermissionMobileList">
+          <section v-for="section in permissionSections" :key="`${section.name}-mobile`" class="PermissionMobileSection">
+            <header class="PermissionMobileSection-header">
+              <h4>{{ section.label }}</h4>
+              <span>{{ section.permissions.length }} 项权限</span>
+            </header>
+
+            <article
+              v-for="permission in section.permissions"
+              :key="`${section.name}-${permission.name}-mobile`"
+              class="PermissionMobileCard"
+            >
+              <div class="PermissionMobileCard-header">
+                <div class="PermissionMobileCard-title">
+                  <i :class="permission.icon"></i>
+                  <strong>{{ permission.label }}</strong>
+                </div>
+              </div>
+
+              <div class="PermissionMobileMatrix">
+                <label
+                  v-for="group in groups"
+                  :key="`${permission.name}-${group.id}`"
+                  class="PermissionMobileToggle"
+                  :style="{ '--group-color': getGroupColor(group) }"
+                >
+                  <span class="PermissionMobileToggle-name">
+                    <i v-if="group.icon" :class="group.icon"></i>
+                    <span>{{ group.name }}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    :checked="hasPermission(group.id, permission.name)"
+                    @change="togglePermission(group.id, permission.name, $event)"
+                  />
+                </label>
+              </div>
+            </article>
+          </section>
+        </div>
       </div>
 
       <div class="PermissionsPage-actions">
@@ -460,6 +501,10 @@ function getEmptyGroupForm() {
   min-width: 0;
 }
 
+.PermissionMobileList {
+  display: none;
+}
+
 .PermissionGrid-wrap {
   width: 100%;
   overflow-x: auto;
@@ -767,6 +812,15 @@ function getEmptyGroupForm() {
 @media (max-width: 768px) {
   .GroupBar {
     padding: 14px;
+    border-radius: 16px;
+  }
+
+  .GroupBar-item,
+  .GroupBar-add {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 44px;
+    border-radius: 12px;
   }
 
   .FormRow {
@@ -779,6 +833,14 @@ function getEmptyGroupForm() {
 
   .Modal-content--group {
     min-width: 0;
+    width: 100%;
+    max-height: calc(100vh - 56px);
+    border-radius: 18px 18px 0 0;
+  }
+
+  .Modal {
+    align-items: flex-end;
+    padding: 0;
   }
 
   .Modal-header,
@@ -795,6 +857,122 @@ function getEmptyGroupForm() {
   .Modal-footerActions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .Modal-footerActions .Button,
+  .Modal-footer > .Button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .PermissionGrid-wrap {
+    display: none;
+  }
+
+  .PermissionMobileList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .PermissionMobileSection {
+    padding: 14px;
+    border: 1px solid #e3e8ed;
+    border-radius: 16px;
+    background: white;
+  }
+
+  .PermissionMobileSection-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .PermissionMobileSection-header h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #253547;
+  }
+
+  .PermissionMobileSection-header span {
+    color: #7b8996;
+    font-size: 12px;
+  }
+
+  .PermissionMobileCard {
+    padding: 12px;
+    border-radius: 14px;
+    background: #f7fafc;
+  }
+
+  .PermissionMobileCard + .PermissionMobileCard {
+    margin-top: 10px;
+  }
+
+  .PermissionMobileCard-header {
+    margin-bottom: 10px;
+  }
+
+  .PermissionMobileCard-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #304558;
+  }
+
+  .PermissionMobileCard-title i {
+    width: 16px;
+    color: #7c8a97;
+    text-align: center;
+  }
+
+  .PermissionMobileMatrix {
+    display: grid;
+    gap: 8px;
+  }
+
+  .PermissionMobileToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--group-color) 18%, #d8e1ea);
+    border-radius: 12px;
+    background: white;
+  }
+
+  .PermissionMobileToggle-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: #425567;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .PermissionMobileToggle-name i {
+    color: var(--group-color);
+  }
+
+  .PermissionMobileToggle input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+  }
+
+  .PermissionsPage-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .PermissionsPage-actions .Button--primary {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

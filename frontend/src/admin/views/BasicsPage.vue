@@ -326,4 +326,30 @@ async function handleSubmit() {
   font-size: 14px;
   font-weight: 500;
 }
+
+@media (max-width: 768px) {
+  .Form {
+    max-width: none;
+  }
+
+  .Form-section {
+    padding: 16px 16px 2px;
+    border-radius: 14px;
+  }
+
+  .Form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .Form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .Form-actions .Button--primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
 </style>

@@ -279,4 +279,26 @@ async function sendTestEmail() {
   font-size: 14px;
   font-weight: 500;
 }
+
+@media (max-width: 768px) {
+  .Form {
+    max-width: none;
+  }
+
+  .Form-section {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .Form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .Form-actions .Button {
+    width: 100%;
+    justify-content: center;
+  }
+}
 </style>

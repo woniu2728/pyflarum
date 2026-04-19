@@ -805,6 +805,16 @@ const canDeleteCurrentUser = computed(() => {
   }
 
   .UsersPage-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .UsersPage-pagination .Button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .UsersPage-pagination {
     flex-wrap: wrap;
     gap: 10px;
   }
@@ -815,6 +825,14 @@ const canDeleteCurrentUser = computed(() => {
 
   .Modal-content--user {
     min-width: 0;
+    width: 100%;
+    max-height: calc(100vh - 56px);
+    border-radius: 18px 18px 0 0;
+  }
+
+  .Modal {
+    align-items: flex-end;
+    padding: 0;
   }
 
   .Modal-header,
@@ -832,6 +850,12 @@ const canDeleteCurrentUser = computed(() => {
   .Modal-footerActions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .Modal-footerActions .Button,
+  .Modal-footer > .Button {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 

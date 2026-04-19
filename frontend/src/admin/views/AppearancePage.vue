@@ -550,12 +550,23 @@ async function uploadAsset(event, target) {
 }
 
 @media (max-width: 768px) {
+  .AppearancePage-content {
+    max-width: none;
+  }
+
+  .AppearancePage-section,
+  .PresetPanel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
   .PresetPanel-header {
     flex-direction: column;
   }
 
   .AssetCard {
     grid-template-columns: 1fr;
+    padding: 14px;
   }
 
   .Form-group--assetUrl {
@@ -565,6 +576,26 @@ async function uploadAsset(event, target) {
 
   .AssetCard-preview {
     min-height: 96px;
+  }
+
+  .ColorPicker {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ColorPicker-text {
+    max-width: none;
+  }
+
+  .Form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .Form-actions .Button {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

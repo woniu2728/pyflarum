@@ -1351,7 +1351,15 @@ function getNextPosition(sourceTags, parentId) {
   }
 
   .Modal-content {
-    width: calc(100vw - 24px);
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 56px);
+    border-radius: 18px 18px 0 0;
+  }
+
+  .Modal {
+    align-items: flex-end;
+    padding: 0;
   }
 
   .TagSummaryGrid,
@@ -1370,6 +1378,21 @@ function getNextPosition(sourceTags, parentId) {
 
   .IconPicker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .Modal-header,
+  .Modal-body,
+  .Modal-footer {
+    padding: 16px;
+  }
+
+  .Modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .Modal-footer .Button {
+    width: 100%;
+    justify-content: center;
   }
 }
 

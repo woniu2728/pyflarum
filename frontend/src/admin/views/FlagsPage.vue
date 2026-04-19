@@ -401,6 +401,29 @@ async function resolveFlag() {
 }
 
 @media (max-width: 768px) {
+  .FlagsPage-toolbar {
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .FlagsPage-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .FilterButton {
+    flex: 0 0 auto;
+    min-height: 38px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .FlagCard {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
   .FlagCard-header,
   .FlagCard-actions,
   .FlagCard-footer {
@@ -410,6 +433,40 @@ async function resolveFlag() {
 
   .FlagCard-body {
     grid-template-columns: 1fr;
+  }
+
+  .FlagCard-title {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    font-size: 16px;
+  }
+
+  .FlagCard-link,
+  .FlagCard-actions .Button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .Modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .Modal-content {
+    width: 100%;
+    max-width: none;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .Modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .Modal-footer .Button {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

@@ -372,10 +372,67 @@ function formatDate(value) {
 }
 
 @media (max-width: 768px) {
+  .ApprovalQueue-toolbar {
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .ApprovalQueue-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .FilterButton {
+    flex: 0 0 auto;
+    min-height: 38px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .ApprovalCard {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
   .ApprovalCard-header,
   .ApprovalCard-actions {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .ApprovalCard-title {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    font-size: 16px;
+  }
+
+  .ApprovalCard-link,
+  .ApprovalCard-actions .Button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .Modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .Modal-content {
+    width: 100%;
+    max-width: none;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .Modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .Modal-footer .Button {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

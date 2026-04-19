@@ -403,13 +403,35 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
+  .Widget {
+    border-radius: 16px;
+  }
+
+  .Widget-header,
+  .Widget-content {
+    padding: 16px;
+  }
+
   .StatusWidget-summary {
     padding: 16px;
-    margin: -20px -20px 16px;
+    margin: -16px -16px 16px;
+    border-radius: 16px 16px 0 0;
   }
 
   .StatusWidget-runtimeValue {
     font-size: 20px;
+  }
+
+  .StatusWidget-items,
+  .StatsWidget-items,
+  .ActionsWidget-items {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .StatsWidget-item,
+  .ActionsWidget-item {
+    border-radius: 14px;
   }
 }
 </style>
