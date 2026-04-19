@@ -834,12 +834,12 @@ class ComposerUploadApiTests(TestCase):
         self.assertEqual(response.json()["error"], "不支持的文件格式")
 
 
-class InitForumCommandTests(TestCase):
+class InstallForumCommandTests(TestCase):
     def _success_result(self, args):
         return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
-    @patch("apps.core.management.commands.init_forum.run_manage_py")
-    def test_init_forum_command_writes_site_config_and_invokes_manage_steps(self, mock_run_manage_py):
+    @patch("apps.core.management.commands.install_forum.run_manage_py")
+    def test_install_forum_command_writes_site_config_and_invokes_manage_steps(self, mock_run_manage_py):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
 
         temp_dir = make_workspace_temp_dir()
@@ -848,7 +848,7 @@ class InitForumCommandTests(TestCase):
             with patch.dict(os.environ, {}, clear=False):
                 with override_settings(BASE_DIR=Path(temp_dir)):
                     call_command(
-                        "init_forum",
+                        "install_forum",
                         "--database",
                         "sqlite",
                         "--config",
@@ -901,8 +901,8 @@ class InitForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    @patch("apps.core.management.commands.init_forum.run_manage_py")
-    def test_init_forum_command_writes_postgres_site_config_values(self, mock_run_manage_py):
+    @patch("apps.core.management.commands.install_forum.run_manage_py")
+    def test_install_forum_command_writes_postgres_site_config_values(self, mock_run_manage_py):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
 
         temp_dir = make_workspace_temp_dir()
@@ -911,7 +911,7 @@ class InitForumCommandTests(TestCase):
             with patch.dict(os.environ, {}, clear=False):
                 with override_settings(BASE_DIR=Path(temp_dir)):
                     call_command(
-                        "init_forum",
+                        "install_forum",
                         "--database",
                         "postgres",
                         "--config",
@@ -952,8 +952,8 @@ class InitForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    @patch("apps.core.management.commands.init_forum.run_manage_py")
-    def test_init_forum_command_allows_explicit_redis_override(self, mock_run_manage_py):
+    @patch("apps.core.management.commands.install_forum.run_manage_py")
+    def test_install_forum_command_allows_explicit_redis_override(self, mock_run_manage_py):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
 
         temp_dir = make_workspace_temp_dir()
@@ -962,7 +962,7 @@ class InitForumCommandTests(TestCase):
             with patch.dict(os.environ, {}, clear=False):
                 with override_settings(BASE_DIR=Path(temp_dir)):
                     call_command(
-                        "init_forum",
+                        "install_forum",
                         "--database",
                         "sqlite",
                         "--redis",
@@ -988,8 +988,8 @@ class InitForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    @patch("apps.core.management.commands.init_forum.run_manage_py")
-    def test_init_forum_overwrite_preserves_existing_secrets(self, mock_run_manage_py):
+    @patch("apps.core.management.commands.install_forum.run_manage_py")
+    def test_install_forum_overwrite_preserves_existing_secrets(self, mock_run_manage_py):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
 
         temp_dir = make_workspace_temp_dir()
@@ -1023,7 +1023,7 @@ class InitForumCommandTests(TestCase):
 
             with override_settings(BASE_DIR=Path(temp_dir)):
                 call_command(
-                    "init_forum",
+                    "install_forum",
                     "--config",
                     str(config_path),
                     "--site-domains",
@@ -1040,6 +1040,32 @@ class InitForumCommandTests(TestCase):
             self.assertEqual(config.site_domains, ["bias.chat", "www.bias.chat"])
             self.assertEqual(config.db_host, "db")
             self.assertEqual(config.resolved_frontend_url(), "https://bias.chat")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_install_forum_validates_postgres_required_fields(self):
+        temp_dir = make_workspace_temp_dir()
+        try:
+            config_path = Path(temp_dir) / "instance" / "site.json"
+            with self.assertRaisesMessage(
+                CommandError,
+                "PostgreSQL 模式缺少必要配置: db_name, db_user, db_password",
+            ):
+                with override_settings(BASE_DIR=Path(temp_dir)):
+                    call_command(
+                        "install_forum",
+                        "--database",
+                        "postgres",
+                        "--config",
+                        str(config_path),
+                        "--db-host",
+                        "db.internal",
+                        "--db-port",
+                        "5432",
+                        "--skip-migrate",
+                        "--skip-admin",
+                        "--non-interactive",
+                    )
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 

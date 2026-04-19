@@ -4,9 +4,9 @@ services:
     container_name: bias_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-bias}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -14,7 +14,7 @@ services:
     networks:
       - bias_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-bias}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:?DB_USER is required} -d ${DB_NAME:?DB_NAME is required}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,9 +51,9 @@ services:
       - "8000"
     environment:
       - BIAS_SITE_CONFIG=/app/instance/site.json
-      - DB_NAME=${DB_NAME:-bias}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:?DB_NAME is required}
+      - DB_USER=${DB_USER:?DB_USER is required}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_HOST=db
       - DB_PORT=${DB_PORT:-5432}
       - REDIS_HOST=redis
@@ -98,9 +98,9 @@ services:
       - .:/app
     environment:
       - BIAS_SITE_CONFIG=/app/instance/site.json
-      - DB_NAME=${DB_NAME:-bias}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:?DB_NAME is required}
+      - DB_USER=${DB_USER:?DB_USER is required}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_HOST=db
       - DB_PORT=${DB_PORT:-5432}
       - REDIS_HOST=redis

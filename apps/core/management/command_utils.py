@@ -13,15 +13,12 @@ def build_manage_env(
     extra_env: Mapping[str, str] | None = None,
     *,
     config_path: Path | None = None,
-    env_path: Path | None = None,
 ) -> dict[str, str]:
     env = os.environ.copy()
     if extra_env:
         env.update({key: str(value) for key, value in extra_env.items() if value is not None})
     if config_path is not None:
         env["BIAS_SITE_CONFIG"] = str(config_path)
-    if env_path is not None:
-        env["BIAS_ENV_FILE"] = str(env_path)
     return env
 
 

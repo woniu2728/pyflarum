@@ -8,24 +8,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from dotenv import dotenv_values
-
 
 DEFAULT_SITE_CONFIG_PATH = Path("instance") / "site.json"
-LEGACY_ENV_FILE = ".env"
-LEGACY_ENV_MARKERS = {
-    "DB_MODE",
-    "SQLITE_NAME",
-    "DB_ENGINE",
-    "DB_NAME",
-    "DB_USER",
-    "DB_PASSWORD",
-    "DB_HOST",
-    "DB_PORT",
-    "SECRET_KEY",
-    "JWT_SECRET_KEY",
-    "FRONTEND_URL",
-}
 
 
 def _env_flag(value: str | None, default: bool = False) -> bool:
@@ -38,14 +22,6 @@ def _env_csv(value: str | None) -> list[str]:
     if not value:
         return []
     return [item.strip() for item in value.split(",") if item.strip()]
-
-
-def _read_env_file(path: Path) -> dict[str, str]:
-    return {key: str(value) for key, value in dotenv_values(path).items() if value is not None}
-
-
-def _looks_like_legacy_site_env(values: dict[str, str]) -> bool:
-    return any(key in values for key in LEGACY_ENV_MARKERS)
 
 
 def _normalize_frontend_url(value: str, scheme: str, domains: list[str]) -> str:
@@ -177,12 +153,6 @@ def load_site_bootstrap(base_dir: str | Path) -> SiteBootstrapConfig:
         config.installed = True
         return config
 
-    legacy = _load_legacy_env_bootstrap(base_path)
-    if legacy is not None:
-        legacy.source = "env"
-        legacy.installed = True
-        return legacy
-
     if _is_test_process():
         return SiteBootstrapConfig(
             installed=True,
@@ -195,64 +165,6 @@ def load_site_bootstrap(base_dir: str | Path) -> SiteBootstrapConfig:
         )
 
     return SiteBootstrapConfig(installed=False, source="none", debug=False, database_mode="sqlite")
-
-
-def _load_legacy_env_bootstrap(base_path: Path) -> SiteBootstrapConfig | None:
-    env_values: dict[str, str] = {}
-    env_path = os.getenv("BIAS_ENV_FILE")
-    if env_path:
-        path = Path(env_path)
-        if not path.is_absolute():
-            path = base_path / path
-        if path.exists():
-            env_values.update(_read_env_file(path))
-
-    default_env_path = base_path / LEGACY_ENV_FILE
-    if not env_values and default_env_path.exists():
-        default_values = _read_env_file(default_env_path)
-        if _looks_like_legacy_site_env(default_values):
-            env_values.update(default_values)
-
-    if not env_values:
-        return None
-
-    config = SiteBootstrapConfig(
-        installed=True,
-        debug=_env_flag(env_values.get("DEBUG"), default=True),
-        secret_key=env_values.get("SECRET_KEY") or SiteBootstrapConfig.secret_key,
-        jwt_secret_key=env_values.get("JWT_SECRET_KEY") or SiteBootstrapConfig.jwt_secret_key,
-        jwt_algorithm=env_values.get("JWT_ALGORITHM") or SiteBootstrapConfig.jwt_algorithm,
-        jwt_access_token_lifetime=int(env_values.get("JWT_ACCESS_TOKEN_LIFETIME") or 3600),
-        jwt_refresh_token_lifetime=int(env_values.get("JWT_REFRESH_TOKEN_LIFETIME") or 86400),
-        site_domains=_env_csv(env_values.get("SITE_DOMAINS")),
-        site_scheme=(env_values.get("SITE_SCHEME") or "https").strip() or "https",
-        frontend_url=env_values.get("FRONTEND_URL") or "",
-        database_mode=(env_values.get("DB_MODE") or "sqlite").strip().lower(),
-        sqlite_name=env_values.get("SQLITE_NAME") or "db.sqlite3",
-        db_engine=env_values.get("DB_ENGINE") or "django.db.backends.postgresql",
-        db_name=env_values.get("DB_NAME") or "bias",
-        db_user=env_values.get("DB_USER") or "postgres",
-        db_password=env_values.get("DB_PASSWORD") or "postgres",
-        db_host=env_values.get("DB_HOST") or "localhost",
-        db_port=env_values.get("DB_PORT") or "5432",
-        use_redis=_env_flag(env_values.get("USE_REDIS"), default=False),
-        redis_host=env_values.get("REDIS_HOST") or "localhost",
-        redis_port=env_values.get("REDIS_PORT") or "6379",
-        redis_db=env_values.get("REDIS_DB") or "0",
-        celery_broker_url=env_values.get("CELERY_BROKER_URL") or "",
-        celery_result_backend=env_values.get("CELERY_RESULT_BACKEND") or "",
-        email_backend=env_values.get("EMAIL_BACKEND") or "django.core.mail.backends.console.EmailBackend",
-        email_host=env_values.get("EMAIL_HOST") or "smtp.gmail.com",
-        email_port=int(env_values.get("EMAIL_PORT") or 587),
-        email_use_tls=_env_flag(env_values.get("EMAIL_USE_TLS"), default=True),
-        email_host_user=env_values.get("EMAIL_HOST_USER") or "",
-        email_host_password=env_values.get("EMAIL_HOST_PASSWORD") or "",
-        default_from_email=env_values.get("DEFAULT_FROM_EMAIL") or "noreply@bias.local",
-        media_url=env_values.get("MEDIA_URL") or "/media/",
-        static_url=env_values.get("STATIC_URL") or "/static/",
-    )
-    config.frontend_url = config.resolved_frontend_url()
-    return config
 
 
 def _is_test_process() -> bool:

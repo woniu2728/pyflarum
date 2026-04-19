@@ -9,9 +9,7 @@ from django.core.management.base import CommandParser
 from apps.core.bootstrap_config import (
     DEFAULT_SITE_CONFIG_PATH,
     SiteBootstrapConfig,
-    load_site_bootstrap,
     read_site_config,
-    write_site_config,
 )
 from apps.core.management.command_utils import build_manage_env, run_manage_py
 
@@ -89,14 +87,7 @@ class Command(BaseCommand):
     def _ensure_site_config(self, config_path: Path) -> SiteBootstrapConfig:
         if config_path.exists():
             return read_site_config(config_path)
-
-        bootstrap = load_site_bootstrap(settings.BASE_DIR)
-        if bootstrap.source != "env":
-            raise CommandError(f"站点配置不存在: {config_path}。请先执行 python manage.py install_forum")
-
-        write_site_config(config_path, bootstrap)
-        self.stdout.write(self.style.WARNING(f"[MIGRATE] 已将旧版环境配置迁移到: {config_path}"))
-        return read_site_config(config_path)
+        raise CommandError(f"站点配置不存在: {config_path}。请先执行 python manage.py install_forum")
 
     def _validate_config(self, config: SiteBootstrapConfig) -> None:
         db_mode = (config.database_mode or "sqlite").strip().lower()
