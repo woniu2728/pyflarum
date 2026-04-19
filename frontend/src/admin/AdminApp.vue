@@ -56,11 +56,31 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 30px 20px;
   display: flex;
+  align-items: flex-start;
   gap: 30px;
 }
 
 .Admin-main {
   flex: 1;
   min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .Admin-content .container {
+    flex-direction: column;
+    gap: 18px;
+    padding: 18px 14px 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .Admin-content {
+    padding-top: 72px;
+  }
+
+  .Admin-content .container {
+    padding: 14px 12px 24px;
+    gap: 14px;
+  }
 }
 </style>

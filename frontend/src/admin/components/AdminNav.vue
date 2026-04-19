@@ -122,4 +122,66 @@ function isActive(path) {
 .AdminNav-item.active:hover {
   background: #3d5875;
 }
+
+@media (max-width: 960px) {
+  .AdminNav {
+    width: 100%;
+  }
+
+  .AdminNav-section {
+    margin-bottom: 16px;
+  }
+
+  .AdminNav-title {
+    padding: 0 4px;
+  }
+
+  .AdminNav-list {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+  }
+
+  .AdminNav-list li {
+    flex: 0 0 auto;
+  }
+
+  .AdminNav-item {
+    min-width: max-content;
+    padding: 11px 14px;
+    border: 1px solid #d9e3ed;
+    background: #fff;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .AdminNav-item.active {
+    border-color: #4d698e;
+    box-shadow: 0 8px 18px rgba(77, 105, 142, 0.16);
+  }
+}
+
+@media (max-width: 640px) {
+  .AdminNav-section {
+    margin-bottom: 12px;
+  }
+
+  .AdminNav-title {
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+
+  .AdminNav-item {
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .AdminNav-item i {
+    width: 16px;
+    font-size: 13px;
+  }
+}
 </style>

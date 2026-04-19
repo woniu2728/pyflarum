@@ -104,4 +104,57 @@ function handleLogout() {
   color: #3d5875;
   text-decoration: none;
 }
+
+@media (max-width: 768px) {
+  .AdminHeader {
+    height: auto;
+    min-height: 72px;
+  }
+
+  .AdminHeader .container {
+    padding: 10px 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .AdminHeader-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .AdminHeader-user {
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .AdminHeader-logo a {
+    font-size: 15px;
+  }
+
+  .AdminHeader-actions {
+    align-items: center;
+  }
+
+  .AdminHeader-user {
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .AdminHeader-user span {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .Button--link {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
 </style>

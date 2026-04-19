@@ -89,4 +89,47 @@ defineProps({
 .AdminPage-content {
   padding: 30px;
 }
+
+@media (max-width: 768px) {
+  .AdminPage-header {
+    gap: 14px;
+    padding: 18px 16px;
+  }
+
+  .AdminPage-headerIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .AdminPage-headerIcon i {
+    font-size: 18px;
+  }
+
+  .AdminPage-title {
+    font-size: 20px;
+  }
+
+  .AdminPage-description {
+    font-size: 13px;
+  }
+
+  .AdminPage-content {
+    padding: 18px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .AdminPage-header {
+    align-items: flex-start;
+    padding: 16px 14px;
+  }
+
+  .AdminPage-title {
+    font-size: 18px;
+  }
+
+  .AdminPage-content {
+    padding: 16px 14px;
+  }
+}
 </style>
