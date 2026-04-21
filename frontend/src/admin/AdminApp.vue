@@ -84,8 +84,13 @@ watch(
 @media (max-width: 960px) {
   .Admin-content .container {
     flex-direction: column;
+    align-items: stretch;
     gap: 18px;
     padding: 18px 14px 28px;
+  }
+
+  .Admin-main {
+    width: 100%;
   }
 }
 

@@ -80,6 +80,68 @@
             </tbody>
           </table>
         </div>
+
+        <div class="UserMobileList">
+          <div v-if="loading" class="UserMobileState">加载中...</div>
+          <div v-else-if="users.length === 0" class="UserMobileState">暂无用户</div>
+          <article v-else v-for="user in users" :key="`mobile-${user.id}`" class="UserMobileCard">
+            <div class="UserMobileCard-header">
+              <div class="UserMobileCard-identity">
+                <div class="UserMobileCard-nameRow">
+                  <strong>{{ user.username }}</strong>
+                  <span
+                    class="UserStatus"
+                    :class="statusClass(user)"
+                  >
+                    {{ statusLabel(user) }}
+                  </span>
+                </div>
+                <div v-if="user.display_name && user.display_name !== user.username" class="UserMobileCard-display">
+                  {{ user.display_name }}
+                </div>
+                <div v-if="getUserGroupBadges(user).length" class="UserGroups">
+                  <span
+                    v-for="group in getUserGroupBadges(user)"
+                    :key="`${user.id}-${group.id}-${group.name}-mobile`"
+                    class="UserGroupIcon"
+                    :style="{ backgroundColor: group.color || '#7f8c8d' }"
+                    :title="group.name"
+                  >
+                    <i v-if="group.icon" :class="group.icon"></i>
+                    <span v-else>{{ getGroupFallbackLabel(group) }}</span>
+                  </span>
+                </div>
+              </div>
+
+              <button @click="editUser(user)" class="Button Button--small UserMobileCard-edit" :disabled="savingDetails">
+                编辑
+              </button>
+            </div>
+
+            <dl class="UserMobileCard-meta">
+              <div class="UserMobileCard-metaItem">
+                <dt>邮箱</dt>
+                <dd>{{ user.email || '-' }}</dd>
+              </div>
+              <div class="UserMobileCard-metaItem">
+                <dt>ID</dt>
+                <dd>#{{ user.id }}</dd>
+              </div>
+              <div class="UserMobileCard-metaItem">
+                <dt>讨论</dt>
+                <dd>{{ user.discussion_count }}</dd>
+              </div>
+              <div class="UserMobileCard-metaItem">
+                <dt>回复</dt>
+                <dd>{{ user.comment_count }}</dd>
+              </div>
+              <div class="UserMobileCard-metaItem UserMobileCard-metaItem--full">
+                <dt>加入时间</dt>
+                <dd>{{ formatDate(user.joined_at) || '-' }}</dd>
+              </div>
+            </dl>
+          </article>
+        </div>
       </div>
 
       <!-- 分页 -->
@@ -141,12 +203,12 @@
             ></textarea>
           </div>
 
-          <div class="FormRow">
-            <label class="CheckboxField">
+          <div class="FormRow FormRow--toggles">
+            <label class="CheckboxField CheckboxField--toggle">
               <input v-model="formData.is_staff" type="checkbox" />
               <span>管理员</span>
             </label>
-            <label class="CheckboxField">
+            <label class="CheckboxField CheckboxField--toggle">
               <input v-model="formData.is_email_confirmed" type="checkbox" />
               <span>邮箱已验证</span>
             </label>
@@ -477,6 +539,10 @@ const canDeleteCurrentUser = computed(() => {
   min-width: 0;
 }
 
+.UserMobileList {
+  display: none;
+}
+
 .UserTable-wrap {
   width: 100%;
   overflow-x: auto;
@@ -599,6 +665,9 @@ const canDeleteCurrentUser = computed(() => {
   padding: 6px 12px;
   border-radius: 3px;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -778,6 +847,14 @@ const canDeleteCurrentUser = computed(() => {
   color: #44515e;
 }
 
+.CheckboxField--toggle {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
 .CheckboxField--card {
   min-width: 0;
   padding: 10px 12px;
@@ -823,16 +900,37 @@ const canDeleteCurrentUser = computed(() => {
     grid-template-columns: 1fr;
   }
 
+  .FormRow--toggles {
+    gap: 10px;
+  }
+
   .Modal-content--user {
     min-width: 0;
     width: 100%;
-    max-height: calc(100vh - 56px);
+    max-height: calc(100vh - 8px);
     border-radius: 18px 18px 0 0;
   }
 
   .Modal {
     align-items: flex-end;
     padding: 0;
+  }
+
+  .Modal-header,
+  .Modal-footer {
+    background: #fff;
+  }
+
+  .Modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .Modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
   }
 
   .Modal-header,
@@ -849,7 +947,8 @@ const canDeleteCurrentUser = computed(() => {
 
   .Modal-footerActions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: stretch;
+    gap: 10px;
   }
 
   .Modal-footerActions .Button,
@@ -857,49 +956,106 @@ const canDeleteCurrentUser = computed(() => {
     flex: 1 1 auto;
     justify-content: center;
   }
+
+  .Modal-footerNote {
+    text-align: center;
+  }
+
+  .GroupChecklist {
+    grid-template-columns: 1fr;
+  }
+
+  .CheckboxField--card {
+    justify-content: space-between;
+    width: 100%;
+    min-height: 46px;
+  }
 }
 
 @media (max-width: 680px) {
-  .UserTable {
-    min-width: 0;
-    border: 0;
-    background: transparent;
-  }
-
-  .UserTable thead {
+  .UserTable-wrap {
     display: none;
   }
 
-  .UserTable tbody,
-  .UserTable tr,
-  .UserTable td {
-    display: block;
-    width: 100%;
+  .UserMobileList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  .UserTable tbody tr {
-    margin-bottom: 12px;
+  .UserMobileState {
+    padding: 28px 16px;
+    border: 1px solid #e3e8ed;
+    border-radius: 16px;
+    background: #fff;
+    text-align: center;
+    color: #7f8c8d;
+  }
+
+  .UserMobileCard {
     padding: 14px;
-    border-bottom: 0;
-    border-radius: 14px;
+    border: 1px solid #e3e8ed;
+    border-radius: 16px;
     background: #fff;
     box-shadow: 0 10px 26px rgba(28, 46, 67, 0.06);
   }
 
-  .UserTable tbody td {
-    padding: 8px 0;
-    border-bottom: 1px solid #eef2f6;
+  .UserMobileCard-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    justify-content: space-between;
   }
 
-  .UserTable tbody td:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
+  .UserMobileCard-identity {
+    min-width: 0;
+    flex: 1;
   }
 
-  .UserTable tbody td::before {
-    content: attr(data-label);
-    display: block;
-    margin-bottom: 6px;
+  .UserMobileCard-nameRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .UserMobileCard-nameRow strong {
+    font-size: 16px;
+    color: #243447;
+  }
+
+  .UserMobileCard-display {
+    margin-top: 4px;
+    color: #6f7d8b;
+    font-size: 13px;
+  }
+
+  .UserMobileCard-edit {
+    flex: 0 0 auto;
+    min-width: 64px;
+    min-height: 34px;
+  }
+
+  .UserMobileCard-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0 0;
+  }
+
+  .UserMobileCard-metaItem {
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f7fafc;
+  }
+
+  .UserMobileCard-metaItem--full {
+    grid-column: 1 / -1;
+  }
+
+  .UserMobileCard-metaItem dt {
+    margin: 0 0 4px;
     color: #7b8996;
     font-size: 11px;
     font-weight: 700;
@@ -907,15 +1063,31 @@ const canDeleteCurrentUser = computed(() => {
     text-transform: uppercase;
   }
 
-  .UserTable-loading,
-  .UserTable-empty {
-    display: block;
-    padding: 28px 16px;
+  .UserMobileCard-metaItem dd {
+    margin: 0;
+    color: #31465d;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
   }
 
-  .UserTable tbody td[data-label='操作'] .Button {
+  .UserGroups {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .UserMobileCard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .UserMobileCard-edit {
     width: 100%;
-    justify-content: center;
+  }
+
+  .UserMobileCard-meta {
+    grid-template-columns: 1fr;
   }
 }
 </style>
