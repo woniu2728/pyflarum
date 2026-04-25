@@ -33,13 +33,17 @@ api.interceptors.response.use(
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
       if (typeof window !== 'undefined') {
+        const requestUrl = String(error.config?.url || '')
+        const isSessionProbe = requestUrl.includes('/users/me')
         const isAdminRuntime =
           window.location.pathname.startsWith('/admin')
           || window.location.pathname.endsWith('/admin.html')
 
+        window.dispatchEvent(new CustomEvent('bias:auth-invalidated'))
+
         if (isAdminRuntime) {
           window.location.href = '/login'
-        } else {
+        } else if (!isSessionProbe) {
           window.dispatchEvent(new CustomEvent('bias:auth-required', {
             detail: {
               redirect: `${window.location.pathname}${window.location.search}${window.location.hash}`

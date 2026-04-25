@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AdminHeader from './components/AdminHeader.vue'
 import AdminNav from './components/AdminNav.vue'
 import { useAuthStore } from '../stores/auth'
@@ -32,7 +32,16 @@ function closeMobileNav() {
   showMobileNav.value = false
 }
 
+function handleAuthInvalidated() {
+  authStore.logout()
+  closeMobileNav()
+}
+
 onMounted(async () => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('bias:auth-invalidated', handleAuthInvalidated)
+  }
+
   // 检查认证状态
   await authStore.checkAuth()
 
@@ -55,6 +64,12 @@ watch(
     closeMobileNav()
   }
 )
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('bias:auth-invalidated', handleAuthInvalidated)
+  }
+})
 </script>
 
 <style>

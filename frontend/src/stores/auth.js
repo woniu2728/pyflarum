@@ -71,7 +71,11 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = data
       return data
     } catch (error) {
-      user.value = null
+      if (error.response?.status === 401) {
+        logout()
+      } else {
+        user.value = null
+      }
       if (error.response?.status !== 503) {
         console.error('获取用户信息失败:', error)
       }

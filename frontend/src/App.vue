@@ -66,14 +66,21 @@ function handleAuthRequired(event) {
   openLoginModal({ redirectPath: redirect })
 }
 
+function handleAuthInvalidated() {
+  authStore.logout()
+}
+
 onMounted(async () => {
   await forumStore.initialize()
+
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('bias:auth-required', handleAuthRequired)
+  window.addEventListener('bias:auth-invalidated', handleAuthInvalidated)
 
   // 初始化认证状态
   await authStore.checkAuth()
 
   if (showMaintenance.value) {
-    window.addEventListener('beforeunload', handleBeforeUnload)
     return
   }
 
@@ -81,9 +88,6 @@ onMounted(async () => {
   if (authStore.isAuthenticated) {
     await syncNotificationState()
   }
-
-  window.addEventListener('beforeunload', handleBeforeUnload)
-  window.addEventListener('bias:auth-required', handleAuthRequired)
 })
 
 watch(
@@ -108,6 +112,7 @@ watch(
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('bias:auth-required', handleAuthRequired)
+  window.removeEventListener('bias:auth-invalidated', handleAuthInvalidated)
 })
 </script>
 
