@@ -103,8 +103,11 @@ function handleLogout() {
 }
 
 .AdminHeader-mobileTitle,
-.AdminHeader-mobileActions,
-.AdminHeader-mobileBack {
+.AdminHeader-mobileActions {
+  display: none;
+}
+
+.AdminHeader-mobileBack.Button--icon {
   display: none;
 }
 
@@ -193,7 +196,7 @@ function handleLogout() {
     text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
   }
 
-  .AdminHeader-mobileBack {
+  .AdminHeader-mobileBack.Button--icon {
     position: absolute;
     left: 10px;
     top: 8px;

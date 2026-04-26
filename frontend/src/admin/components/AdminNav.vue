@@ -91,7 +91,8 @@ function handleLogout() {
 }
 
 .AdminNav-mobileHeader,
-.AdminNav-backdrop {
+.AdminNav-backdrop,
+.AdminNav-mobileFooter {
   display: none;
 }
 
