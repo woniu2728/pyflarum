@@ -43,7 +43,7 @@ DEFAULT_VERIFICATION_HTML = dedent(
                 <h2>您好 {{ username }}，</h2>
                 <p>感谢您注册 {{ site_name }}！</p>
                 <p>请点击下方按钮验证您的邮箱：</p>
-                <a href="{{ verification_url }}" class="button">验证邮箱</a>
+                <a href="{{ verification_url }}" class="button" style="display: inline-block; padding: 12px 24px; background: #3498db; color: #ffffff; text-decoration: none; border-radius: 4px; margin: 20px 0;">验证邮箱</a>
                 <p>或复制以下链接到浏览器：</p>
                 <p style="word-break: break-all; color: #666;">{{ verification_url }}</p>
                 <p>如果您没有注册 {{ site_name }} 账号，请忽略此邮件。</p>
@@ -101,7 +101,7 @@ DEFAULT_PASSWORD_RESET_HTML = dedent(
                 <h2>您好 {{ username }}，</h2>
                 <p>我们收到了重置您密码的请求。</p>
                 <p>请点击下方按钮重置密码：</p>
-                <a href="{{ reset_url }}" class="button">重置密码</a>
+                <a href="{{ reset_url }}" class="button" style="display: inline-block; padding: 12px 24px; background: #e74c3c; color: #ffffff; text-decoration: none; border-radius: 4px; margin: 20px 0;">重置密码</a>
                 <p>或复制以下链接到浏览器：</p>
                 <p style="word-break: break-all; color: #666;">{{ reset_url }}</p>
                 <div class="warning">
