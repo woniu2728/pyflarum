@@ -442,9 +442,7 @@
                     top: `${unreadTopPercent}%`,
                     height: `${unreadHeightPercent}%`
                   }"
-                >
-                  <span>{{ unreadCount }} 未读</span>
-                </div>
+                ></div>
                 <div
                   class="scrubber-handle"
                   :style="{
@@ -2750,24 +2748,31 @@ function formatAbsoluteDate(value) {
 }
 
 .scrubber-info {
-  margin-top: -1.5em;
   position: absolute;
   top: 50%;
   left: 15px;
-  width: calc(100% - 15px);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: max-content;
+  max-width: calc(100% - 15px);
+  pointer-events: none;
 }
 
 .scrubber-info strong {
-  display: block;
   color: #35424f;
   font-size: 13px;
-  line-height: 1.3;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .scrubber-description {
-  display: block;
   color: #7b8794;
   font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .scrubber-handle.is-dragging .scrubber-bar,
