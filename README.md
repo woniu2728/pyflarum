@@ -19,6 +19,23 @@ Bias 是一个使用 Django + Vue 3 构建的论坛项目，目标是对齐 Flar
 - 运行时会区分 `uninstalled`、`upgrade_required`、`ready`
 - API 可通过 `/api/system/status` 查看状态
 
+## 持续集成
+
+仓库已提供最小 GitHub Actions 工作流 `.github/workflows/ci.yml`，默认会执行：
+
+- 后端关键 `flake8` 检查
+- `pytest`
+- `python manage.py test`
+- 前端 `npm run build`
+
+本地提交前建议至少执行：
+
+```bash
+pytest
+python manage.py test
+cd frontend && npm run build
+```
+
 ## Docker 安装
 
 ### 1. 启动容器栈

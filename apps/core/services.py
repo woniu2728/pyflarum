@@ -70,6 +70,18 @@ class SearchService:
         )
 
     @staticmethod
+    def get_search_totals(query: str, user=None) -> Dict[str, int]:
+        discussion_total = SearchService._discussion_queryset(query, user=user).count()
+        post_total = SearchService._post_queryset(query, user=user).count()
+        user_total = SearchService._user_queryset(query).count()
+        return {
+            "discussion_total": discussion_total,
+            "post_total": post_total,
+            "user_total": user_total,
+            "total": discussion_total + post_total + user_total,
+        }
+
+    @staticmethod
     def search_all(
         query: str,
         page: int = 1,
@@ -89,10 +101,10 @@ class SearchService:
         """
         discussion_queryset = SearchService._discussion_queryset(query, user=user)
         post_queryset = SearchService._post_queryset(query, user=user)
-        user_queryset = SearchService._user_queryset(query)
-        discussion_total = discussion_queryset.count()
-        post_total = post_queryset.count()
-        user_total = user_queryset.count()
+        totals = SearchService.get_search_totals(query, user=user)
+        discussion_total = totals["discussion_total"]
+        post_total = totals["post_total"]
+        user_total = totals["user_total"]
 
         # 搜索讨论
         discussions = SearchService._search_discussions_queryset(
@@ -113,10 +125,8 @@ class SearchService:
         # 搜索用户
         users = SearchService._search_users(query, limit=min(limit, 5))
 
-        total = discussion_total + post_total + user_total
-
         return {
-            'total': total,
+            'total': totals["total"],
             'page': page,
             'limit': limit,
             'type': 'all',

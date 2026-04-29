@@ -143,6 +143,26 @@ class ChineseSearchTests(TestCase):
         self.assertGreaterEqual(payload["post_total"], 2)
         self.assertEqual(len(payload["posts"]), 1)
 
+    def test_search_api_users_type_returns_user_totals(self):
+        unique_keyword = "独有用户搜索键12345"
+        User.objects.create_user(
+            username="isolated-user",
+            email="search-user-only@example.com",
+            password="password123",
+            bio=f"这是一个{unique_keyword}",
+            is_email_confirmed=True,
+        )
+
+        response = self.client.get("/api/search", {"q": unique_keyword, "type": "users"})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["type"], "users")
+        self.assertEqual(payload["user_total"], 1)
+        self.assertEqual(payload["total"], 1)
+        self.assertEqual(len(payload["users"]), 1)
+        self.assertEqual(payload["users"][0]["username"], "isolated-user")
+
     def test_search_api_hides_discussions_in_staff_only_tags(self):
         admin = User.objects.create_superuser(
             username="search-admin",
