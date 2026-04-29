@@ -311,8 +311,8 @@ def toggle_hide_discussion(request, discussion_id: int):
 
     try:
         discussion = Discussion.objects.get(id=discussion_id)
-        discussion.is_hidden = not discussion.is_hidden
-        discussion.save(update_fields=['is_hidden'])
+        DiscussionService.set_hidden_state(discussion, request.auth, not discussion.is_hidden)
+        discussion.refresh_from_db()
         return {"message": "操作成功", "is_hidden": discussion.is_hidden}
     except Discussion.DoesNotExist:
         return JsonResponse({"error": "讨论不存在"}, status=404)

@@ -209,6 +209,13 @@ def list_users(request, page: int = 1, limit: int = 20, q: str = None):
     return _attach_primary_groups(list(queryset[start:end]))
 
 
+@router.get("/by-username/{username}", response=UserDetailSchema, tags=["Users"])
+def get_user_by_username(request, username: str):
+    """按用户名获取用户详情，兼容旧版 @提及 链接"""
+    user = get_object_or_404(User.objects.prefetch_related("user_groups"), username=username)
+    return _attach_primary_group(user)
+
+
 @router.get("/{user_id}", response=UserDetailSchema, tags=["Users"])
 def get_user(request, user_id: int):
     """获取用户详情"""

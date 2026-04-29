@@ -466,6 +466,73 @@ class DiscussionApiTests(TestCase):
         self.assertEqual(response.status_code, 403, response.content)
         self.assertIn("没有权限", response.json()["error"])
 
+    def test_admin_can_hide_and_restore_discussion(self):
+        admin = User.objects.create_superuser(
+            username="hide-discussion-admin",
+            email="hide-discussion-admin@example.com",
+            password="password123",
+        )
+        discussion = DiscussionService.create_discussion(
+            title="隐藏测试讨论",
+            content="用于验证隐藏接口",
+            user=self.author,
+        )
+
+        hide_response = self.client.post(
+            f"/api/discussions/{discussion.id}/hide",
+            **self.auth_header(admin),
+        )
+        self.assertEqual(hide_response.status_code, 200, hide_response.content)
+
+        discussion.refresh_from_db()
+        self.assertTrue(discussion.is_hidden)
+        self.assertEqual(discussion.hidden_user_id, admin.id)
+
+        guest_detail = self.client.get(f"/api/discussions/{discussion.id}")
+        self.assertEqual(guest_detail.status_code, 404, guest_detail.content)
+
+        restore_response = self.client.post(
+            f"/api/discussions/{discussion.id}/hide",
+            **self.auth_header(admin),
+        )
+        self.assertEqual(restore_response.status_code, 200, restore_response.content)
+
+        discussion.refresh_from_db()
+        self.assertFalse(discussion.is_hidden)
+        self.assertIsNone(discussion.hidden_user_id)
+
+        guest_detail = self.client.get(f"/api/discussions/{discussion.id}")
+        self.assertEqual(guest_detail.status_code, 200, guest_detail.content)
+
+    def test_delete_pending_discussion_does_not_decrement_author_discussion_count(self):
+        admin = User.objects.create_superuser(
+            username="delete-pending-discussion-admin",
+            email="delete-pending-discussion-admin@example.com",
+            password="password123",
+        )
+        trusted_group = Group.objects.create(name="DeletePendingDiscussionTrusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="startDiscussionWithoutApproval")
+        pending_author = User.objects.create_user(
+            username="pending-delete-author",
+            email="pending-delete-author@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+
+        discussion = DiscussionService.create_discussion(
+            title="待删除讨论",
+            content="待审核讨论不会计入作者讨论数",
+            user=pending_author,
+        )
+
+        pending_author.refresh_from_db()
+        self.assertEqual(pending_author.discussion_count, 0)
+
+        DiscussionService.delete_discussion(discussion.id, admin)
+
+        pending_author.refresh_from_db()
+        self.assertEqual(pending_author.discussion_count, 0)
+
     def test_cannot_create_discussion_with_secondary_tag_only(self):
         parent_tag = Tag.objects.create(name="开发", slug="dev")
         child_tag = Tag.objects.create(name="后端", slug="backend", parent=parent_tag)

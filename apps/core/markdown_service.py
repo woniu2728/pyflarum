@@ -7,6 +7,7 @@ from markdown.treeprocessors import Treeprocessor
 import bleach
 from typing import Optional
 import re
+from apps.users.models import User
 
 
 class MarkdownService:
@@ -114,15 +115,18 @@ class MarkdownService:
         Returns:
             str: 处理后的HTML
         """
-        # 简化的匹配模式，匹配@username格式
-        # 使用更简单的方法避免可变长度look-behind
         pattern = r'@(\w+)'
+        mention_names = {name.strip() for name in re.findall(pattern, html) if name.strip()}
+        mention_map = {
+            item["username"]: item["id"]
+            for item in User.objects.filter(username__in=mention_names).values("id", "username")
+        }
 
         def replace_mention(match):
             username = match.group(1)
-            # 检查是否已经在HTML标签内
-            full_match = match.group(0)
-            return f'<a href="/u/{username}" class="mention">@{username}</a>'
+            user_id = mention_map.get(username)
+            target = user_id if user_id else username
+            return f'<a href="/u/{target}" class="mention">@{username}</a>'
 
         # 先处理，然后避免重复处理已经是链接的部分
         result = html

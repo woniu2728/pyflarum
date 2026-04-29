@@ -234,6 +234,13 @@ def _cache_delete(key):
 
 def get_advanced_settings() -> dict:
     advanced_settings = get_setting_group("advanced", ADVANCED_SETTINGS_DEFAULTS)
+    advanced_settings["cache_driver"] = (
+        "redis" if "redis" in settings.CACHES.get("default", {}).get("BACKEND", "").lower() else "file"
+    )
+    advanced_settings["queue_driver"] = (
+        "redis" if "redis" in getattr(settings, "CELERY_BROKER_URL", "").lower() else "sync"
+    )
+    advanced_settings["storage_local_path"] = str(getattr(settings, "MEDIA_ROOT", ""))
     advanced_settings["debug_mode"] = settings.DEBUG
     return advanced_settings
 

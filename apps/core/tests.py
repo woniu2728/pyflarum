@@ -173,6 +173,125 @@ class ChineseSearchTests(TestCase):
         self.assertEqual(admin_response.status_code, 200, admin_response.content)
         self.assertGreaterEqual(admin_response.json()["discussion_total"], 1)
 
+    def test_search_api_respects_discussion_approval_visibility(self):
+        admin = User.objects.create_superuser(
+            username="search-approval-admin",
+            email="search-approval-admin@example.com",
+            password="password123",
+        )
+        approved = DiscussionService.create_discussion(
+            title="统一搜索可见性",
+            content="公开讨论内容",
+            user=self.user,
+        )
+        trusted_group = Group.objects.create(name="SearchApprovalTrusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="startDiscussionWithoutApproval")
+        pending_author = User.objects.create_user(
+            username="search-pending-author",
+            email="search-pending-author@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        pending = DiscussionService.create_discussion(
+            title="统一搜索可见性",
+            content="待审核讨论内容",
+            user=pending_author,
+        )
+        rejected = DiscussionService.create_discussion(
+            title="统一搜索可见性",
+            content="被拒绝讨论内容",
+            user=pending_author,
+        )
+        DiscussionService.reject_discussion(rejected, admin, note="测试拒绝")
+
+        guest_response = self.client.get("/api/search", {"q": "统一搜索可见性", "type": "discussions"})
+        self.assertEqual(guest_response.status_code, 200, guest_response.content)
+        self.assertEqual({item["id"] for item in guest_response.json()["discussions"]}, {approved.id})
+
+        author_response = self.client.get(
+            "/api/search",
+            {"q": "统一搜索可见性", "type": "discussions"},
+            **self.auth_header(pending_author),
+        )
+        self.assertEqual(author_response.status_code, 200, author_response.content)
+        self.assertEqual(
+            {item["id"] for item in author_response.json()["discussions"]},
+            {approved.id, pending.id, rejected.id},
+        )
+
+        admin_response = self.client.get(
+            "/api/search",
+            {"q": "统一搜索可见性", "type": "discussions"},
+            **self.auth_header(admin),
+        )
+        self.assertEqual(admin_response.status_code, 200, admin_response.content)
+        self.assertEqual(
+            {item["id"] for item in admin_response.json()["discussions"]},
+            {approved.id, pending.id, rejected.id},
+        )
+
+    def test_search_api_respects_post_approval_visibility(self):
+        admin = User.objects.create_superuser(
+            username="search-post-admin",
+            email="search-post-admin@example.com",
+            password="password123",
+        )
+        discussion = DiscussionService.create_discussion(
+            title="搜索回复可见性",
+            content="首帖公开",
+            user=self.user,
+        )
+        approved_reply = PostService.create_post(
+            discussion_id=discussion.id,
+            content="统一回复搜索公开内容",
+            user=self.user,
+        )
+        trusted_group = Group.objects.create(name="SearchPostTrusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")
+        pending_author = User.objects.create_user(
+            username="search-post-pending",
+            email="search-post-pending@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        pending_reply = PostService.create_post(
+            discussion_id=discussion.id,
+            content="统一回复搜索待审核内容",
+            user=pending_author,
+        )
+        rejected_reply = PostService.create_post(
+            discussion_id=discussion.id,
+            content="统一回复搜索被拒绝内容",
+            user=pending_author,
+        )
+        PostService.reject_post(rejected_reply, admin, note="测试拒绝回复")
+
+        guest_response = self.client.get("/api/search", {"q": "统一回复搜索", "type": "posts"})
+        self.assertEqual(guest_response.status_code, 200, guest_response.content)
+        self.assertEqual({item["id"] for item in guest_response.json()["posts"]}, {approved_reply.id})
+
+        author_response = self.client.get(
+            "/api/search",
+            {"q": "统一回复搜索", "type": "posts"},
+            **self.auth_header(pending_author),
+        )
+        self.assertEqual(author_response.status_code, 200, author_response.content)
+        self.assertEqual(
+            {item["id"] for item in author_response.json()["posts"]},
+            {approved_reply.id, pending_reply.id, rejected_reply.id},
+        )
+
+        admin_response = self.client.get(
+            "/api/search",
+            {"q": "统一回复搜索", "type": "posts"},
+            **self.auth_header(admin),
+        )
+        self.assertEqual(admin_response.status_code, 200, admin_response.content)
+        self.assertEqual(
+            {item["id"] for item in admin_response.json()["posts"]},
+            {approved_reply.id, pending_reply.id, rejected_reply.id},
+        )
+
 
 class WebSocketJwtAuthTests(TestCase):
     def setUp(self):
@@ -718,6 +837,13 @@ class AdminSettingsApiTests(TestCase):
         self.assertIn("SELECT", joined_output.upper())
 
     def test_markdown_preview_endpoint_returns_rendered_html(self):
+        alice = User.objects.create_user(
+            username="alice",
+            email="alice@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+
         response = self.client.post(
             "/api/preview",
             data=json.dumps({
@@ -729,8 +855,21 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         html = response.json()["html"]
         self.assertIn("<h1", html)
-        self.assertIn('href="/u/alice"', html)
+        self.assertIn(f'href="/u/{alice.id}"', html)
+        self.assertIn(">官网</a>", html)
         self.assertIn('target="_blank"', html)
+
+    def test_markdown_preview_keeps_username_route_for_unknown_mentions(self):
+        response = self.client.post(
+            "/api/preview",
+            data=json.dumps({
+                "content": "你好 @ghost"
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIn('href="/u/ghost"', response.json()["html"])
 
 
 class AdminUserManagementApiTests(TestCase):

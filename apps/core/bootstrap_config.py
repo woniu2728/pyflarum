@@ -154,13 +154,6 @@ def read_site_config(path: str | Path) -> SiteBootstrapConfig:
 
 def load_site_bootstrap(base_dir: str | Path) -> SiteBootstrapConfig:
     base_path = Path(base_dir)
-    config_path = get_site_config_path(base_path)
-    if config_path.exists():
-        config = read_site_config(config_path)
-        config.source = "file"
-        config.installed = True
-        return config
-
     if _is_test_process():
         return SiteBootstrapConfig(
             installed=True,
@@ -172,6 +165,13 @@ def load_site_bootstrap(base_dir: str | Path) -> SiteBootstrapConfig:
             use_redis=False,
         )
 
+    config_path = get_site_config_path(base_path)
+    if config_path.exists():
+        config = read_site_config(config_path)
+        config.source = "file"
+        config.installed = True
+        return config
+
     env_config = _load_env_bootstrap()
     if env_config is not None:
         return env_config
@@ -180,8 +180,19 @@ def load_site_bootstrap(base_dir: str | Path) -> SiteBootstrapConfig:
 
 
 def _is_test_process() -> bool:
-    argv = set(sys.argv)
-    return "test" in argv or bool(os.getenv("PYTEST_CURRENT_TEST"))
+    argv = {arg.lower() for arg in sys.argv}
+    if "test" in argv or bool(os.getenv("PYTEST_CURRENT_TEST")):
+        return True
+
+    if "pytest" in sys.modules:
+        return True
+
+    for arg in sys.argv:
+        normalized = Path(arg).name.lower()
+        if "pytest" in normalized or normalized == "py.test":
+            return True
+
+    return False
 
 
 def _load_env_bootstrap() -> SiteBootstrapConfig | None:

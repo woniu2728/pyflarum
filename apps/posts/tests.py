@@ -263,6 +263,64 @@ class PostFlagApiTests(TestCase):
         self.assertEqual(response.status_code, 403, response.content)
         self.assertEqual(response.json()["error"], "请先完成邮箱验证后再回复讨论")
 
+    def test_delete_last_approved_reply_rebuilds_discussion_last_post_stats(self):
+        trailing_reply = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="最后一条已发布回复",
+            user=self.reporter,
+        )
+
+        discussion = self.discussion
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.last_post_id, trailing_reply.id)
+        self.assertEqual(discussion.last_post_number, trailing_reply.number)
+
+        PostService.delete_post(trailing_reply.id, self.reporter)
+
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.comment_count, 2)
+        self.assertEqual(discussion.last_post_id, self.post.id)
+        self.assertEqual(discussion.last_post_number, self.post.number)
+        self.assertEqual(discussion.last_posted_user_id, self.post.user_id)
+
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.comment_count, 0)
+
+    def test_delete_pending_reply_does_not_decrement_comment_stats(self):
+        trusted_group = Group.objects.create(name="DeletePendingReplyTrusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")
+        pending_reply = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="不会计入统计的待审核回复",
+            user=self.reporter,
+        )
+
+        discussion = self.discussion
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.comment_count, 2)
+
+        PostService.delete_post(pending_reply.id, self.reporter)
+
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.comment_count, 2)
+        self.assertEqual(discussion.last_post_id, self.post.id)
+        self.assertEqual(discussion.last_post_number, self.post.number)
+
+    def test_delete_discussion_updates_reply_author_comment_counts(self):
+        extra_reply = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="这条回复会随讨论一起删除",
+            user=self.reporter,
+        )
+
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.comment_count, 1)
+
+        DiscussionService.delete_discussion(self.discussion.id, self.admin)
+
+        self.reporter.refresh_from_db()
+        self.assertEqual(self.reporter.comment_count, 0)
+
     def test_post_can_enter_approval_queue(self):
         trusted_group = Group.objects.create(name="Trusted", color="#4d698e")
         Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")

@@ -10,6 +10,7 @@ from apps.discussions.models import Discussion
 from apps.posts.models import Post
 from apps.tags.services import TagService
 from apps.users.models import User
+from apps.core.visibility import build_discussion_visibility_q, build_post_visibility_q
 
 try:
     import jieba
@@ -323,13 +324,14 @@ class SearchService:
 
     @staticmethod
     def _discussion_queryset(query: str, user=None):
-        queryset = Discussion.objects.filter(
-            SearchService.build_discussion_search_query(query),
-            hidden_at__isnull=True,
-        ).filter(
-            Q(posts__isnull=True) |
-            Q(posts__type='comment', posts__hidden_at__isnull=True)
-        ).distinct()
+        title_match_q = SearchService.build_text_query(['title', 'slug'], query)
+        visible_post_match_q = (
+            SearchService.build_text_query(['posts__content'], query)
+            & Q(posts__type='comment')
+            & build_post_visibility_q(user, prefix="posts__")
+        )
+        queryset = Discussion.objects.filter(title_match_q | visible_post_match_q).distinct()
+        queryset = queryset.filter(build_discussion_visibility_q(user))
         return TagService.filter_discussions_for_user(queryset, user)
 
     @staticmethod
@@ -337,8 +339,10 @@ class SearchService:
         queryset = Post.objects.filter(
             SearchService.build_text_query(['content'], query),
             type='comment',
-            hidden_at__isnull=True,
-            discussion__hidden_at__isnull=True,
+        )
+        queryset = queryset.filter(
+            build_post_visibility_q(user),
+            build_discussion_visibility_q(user, prefix="discussion__"),
         )
         return TagService.filter_posts_for_user(queryset, user)
 

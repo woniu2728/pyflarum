@@ -15,6 +15,7 @@ from apps.discussions.models import DiscussionUser
 from apps.tags.services import TagService
 from apps.users.models import User
 from apps.users.services import UserService
+from apps.core.visibility import build_discussion_visibility_q, build_post_visibility_q
 import re
 
 
@@ -53,6 +54,27 @@ class PostService:
 
     @staticmethod
     def _can_view_post(post: Post, user: Optional[User]) -> bool:
+        discussion = getattr(post, "discussion", None)
+        if discussion:
+            if discussion.hidden_at and not (user and user.is_staff):
+                can_view_rejected_own_discussion = bool(
+                    user
+                    and user.is_authenticated
+                    and discussion.approval_status == Discussion.APPROVAL_REJECTED
+                    and discussion.user_id == user.id
+                )
+                if not can_view_rejected_own_discussion:
+                    return False
+            if discussion.approval_status != Discussion.APPROVAL_APPROVED and not (user and user.is_staff):
+                can_view_unapproved_own_discussion = bool(
+                    user
+                    and user.is_authenticated
+                    and discussion.approval_status in {Discussion.APPROVAL_PENDING, Discussion.APPROVAL_REJECTED}
+                    and discussion.user_id == user.id
+                )
+                if not can_view_unapproved_own_discussion:
+                    return False
+
         if post.hidden_at and not (user and user.is_staff):
             can_view_rejected_own_post = bool(
                 user
@@ -73,6 +95,13 @@ class PostService:
             and user.is_authenticated
             and post.approval_status in {Post.APPROVAL_PENDING, Post.APPROVAL_REJECTED}
             and post.user_id == user.id
+        )
+
+    @staticmethod
+    def apply_visibility_filters(queryset, user: Optional[User] = None):
+        return queryset.filter(
+            build_post_visibility_q(user),
+            build_discussion_visibility_q(user, prefix="discussion__"),
         )
 
     @staticmethod
@@ -214,25 +243,7 @@ class PostService:
         )
         queryset = PostService.annotate_flag_state(queryset, user)
 
-        # 过滤隐藏的帖子
-        if not user or not user.is_staff:
-            if user and user.is_authenticated:
-                queryset = queryset.filter(
-                    Q(hidden_at__isnull=True)
-                    | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
-                )
-            else:
-                queryset = queryset.filter(hidden_at__isnull=True)
-
-        if user and user.is_authenticated and not user.is_staff:
-            queryset = queryset.filter(
-                Q(approval_status=Post.APPROVAL_APPROVED)
-                | Q(approval_status=Post.APPROVAL_PENDING, user=user)
-                | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
-            )
-        elif not user or not user.is_authenticated:
-            queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
-
+        queryset = PostService.apply_visibility_filters(queryset, user)
         queryset = TagService.filter_posts_for_user(queryset, user)
 
         # 排序
@@ -272,24 +283,7 @@ class PostService:
             number__lte=near,
         )
 
-        if not user or not user.is_staff:
-            if user and user.is_authenticated:
-                queryset = queryset.filter(
-                    Q(hidden_at__isnull=True)
-                    | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
-                )
-            else:
-                queryset = queryset.filter(hidden_at__isnull=True)
-
-        if user and user.is_authenticated and not user.is_staff:
-            queryset = queryset.filter(
-                Q(approval_status=Post.APPROVAL_APPROVED)
-                | Q(approval_status=Post.APPROVAL_PENDING, user=user)
-                | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
-            )
-        elif not user or not user.is_authenticated:
-            queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
-
+        queryset = PostService.apply_visibility_filters(queryset, user)
         queryset = TagService.filter_posts_for_user(queryset, user)
 
         position = queryset.count()
@@ -420,20 +414,52 @@ class PostService:
 
         with transaction.atomic():
             discussion = post.discussion
+            counted_post = post.approval_status == Post.APPROVAL_APPROVED
 
             # 删除帖子
             post.delete()
 
-            # 更新讨论统计
-            discussion.comment_count = F('comment_count') - 1
-            discussion.save()
+            if counted_post:
+                PostService._refresh_discussion_approved_stats(discussion)
 
-            # 更新用户统计
-            if post.user:
-                post.user.comment_count = F('comment_count') - 1
-                post.user.save(update_fields=['comment_count'])
+                if post.user:
+                    post.user.comment_count = F('comment_count') - 1
+                    post.user.save(update_fields=['comment_count'])
 
         return True
+
+    @staticmethod
+    def _refresh_discussion_approved_stats(discussion: Discussion) -> Discussion:
+        approved_posts = Post.objects.filter(
+            discussion=discussion,
+            type="comment",
+            approval_status=Post.APPROVAL_APPROVED,
+            hidden_at__isnull=True,
+        ).order_by("number")
+
+        approved_count = approved_posts.count()
+        last_post = approved_posts.order_by("-number").select_related("user").first()
+
+        discussion.comment_count = approved_count
+        if last_post:
+            discussion.last_post_id = last_post.id
+            discussion.last_post_number = last_post.number
+            discussion.last_posted_at = last_post.created_at
+            discussion.last_posted_user = last_post.user
+        else:
+            discussion.last_post_id = None
+            discussion.last_post_number = None
+            discussion.last_posted_at = None
+            discussion.last_posted_user = None
+
+        discussion.save(update_fields=[
+            "comment_count",
+            "last_post_id",
+            "last_post_number",
+            "last_posted_at",
+            "last_posted_user",
+        ])
+        return discussion
 
     @staticmethod
     def like_post(post_id: int, user: User) -> bool:

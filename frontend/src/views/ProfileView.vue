@@ -492,9 +492,15 @@ async function refreshProfile() {
 async function loadUser() {
   loading.value = true
   try {
-    const data = route.params.id
-      ? await api.get(`/users/${route.params.id}`)
-      : await api.get('/users/me')
+    let data
+    if (route.params.id) {
+      const identifier = String(route.params.id)
+      data = /^\d+$/.test(identifier)
+        ? await api.get(`/users/${identifier}`)
+        : await api.get(`/users/by-username/${encodeURIComponent(identifier)}`)
+    } else {
+      data = await api.get('/users/me')
+    }
 
     user.value = data
 

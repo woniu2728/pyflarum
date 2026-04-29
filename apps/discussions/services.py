@@ -14,6 +14,7 @@ from apps.users.services import UserService
 from apps.tags.models import Tag, DiscussionTag
 from apps.tags.services import TagService
 from apps.core.services import SearchService
+from apps.core.visibility import build_discussion_visibility_q
 
 
 class DiscussionService:
@@ -42,6 +43,10 @@ class DiscussionService:
             and discussion.approval_status in {Discussion.APPROVAL_PENDING, Discussion.APPROVAL_REJECTED}
             and discussion.user_id == user.id
         )
+
+    @staticmethod
+    def apply_visibility_filters(queryset, user: Optional[User] = None):
+        return queryset.filter(build_discussion_visibility_q(user))
 
     @staticmethod
     @sqlite_write_retry()
@@ -155,25 +160,7 @@ class DiscussionService:
             'user', 'last_posted_user'
         ).prefetch_related('discussion_tags__tag', 'user__user_groups', 'last_posted_user__user_groups')
 
-        # 过滤隐藏的讨论
-        if not user or not user.is_staff:
-            if user and user.is_authenticated:
-                queryset = queryset.filter(
-                    Q(hidden_at__isnull=True)
-                    | Q(approval_status=Discussion.APPROVAL_REJECTED, user=user)
-                )
-            else:
-                queryset = queryset.filter(hidden_at__isnull=True)
-
-        if user and user.is_authenticated and not user.is_staff:
-            queryset = queryset.filter(
-                Q(approval_status=Discussion.APPROVAL_APPROVED)
-                | Q(approval_status=Discussion.APPROVAL_PENDING, user=user)
-                | Q(approval_status=Discussion.APPROVAL_REJECTED, user=user)
-            )
-        elif not user or not user.is_authenticated:
-            queryset = queryset.filter(approval_status=Discussion.APPROVAL_APPROVED)
-
+        queryset = DiscussionService.apply_visibility_filters(queryset, user)
         queryset = TagService.filter_discussions_for_user(queryset, user)
 
         # 搜索
@@ -467,14 +454,7 @@ class DiscussionService:
                 discussion.is_sticky = is_sticky
 
             if is_hidden is not None:
-                if not user.is_staff:
-                    raise PermissionDenied("没有权限隐藏/显示讨论")
-                if is_hidden:
-                    discussion.hidden_at = timezone.now()
-                    discussion.hidden_user = user
-                else:
-                    discussion.hidden_at = None
-                    discussion.hidden_user = None
+                DiscussionService.set_hidden_state(discussion, user, is_hidden)
 
             if (
                 discussion.approval_status == Discussion.APPROVAL_REJECTED
@@ -506,6 +486,16 @@ class DiscussionService:
                 if refreshed_tag_ids:
                     TagService.refresh_tag_stats(list(refreshed_tag_ids))
             return discussion
+
+    @staticmethod
+    def set_hidden_state(discussion: Discussion, user: User, is_hidden: bool) -> Discussion:
+        if not user.is_staff:
+            raise PermissionDenied("没有权限隐藏/显示讨论")
+
+        discussion.hidden_at = timezone.now() if is_hidden else None
+        discussion.hidden_user = user if is_hidden else None
+        discussion.save(update_fields=["hidden_at", "hidden_user"])
+        return discussion
 
     @staticmethod
     def approve_discussion(discussion: Discussion, admin_user: User, note: str = "") -> Discussion:
@@ -591,6 +581,22 @@ class DiscussionService:
             raise PermissionDenied("没有权限删除此讨论")
 
         with transaction.atomic():
+            approved_discussion = discussion.approval_status == Discussion.APPROVAL_APPROVED
+            approved_reply_counts = {}
+            approved_replies = (
+                Post.objects.filter(
+                    discussion=discussion,
+                    type="comment",
+                    approval_status=Post.APPROVAL_APPROVED,
+                    number__gt=1,
+                )
+                .exclude(user_id__isnull=True)
+                .values("user_id")
+                .annotate(total=Count("id"))
+            )
+            for row in approved_replies:
+                approved_reply_counts[row["user_id"]] = row["total"]
+
             # 删除相关帖子
             Post.objects.filter(discussion=discussion).delete()
             tag_ids = list(discussion.discussion_tags.values_list('tag_id', flat=True))
@@ -602,10 +608,14 @@ class DiscussionService:
                 from apps.tags.services import TagService
                 TagService.refresh_tag_stats(tag_ids)
 
-            # 更新用户统计
-            if discussion.user:
+            # 更新作者讨论数
+            if approved_discussion and discussion.user:
                 discussion.user.discussion_count = F('discussion_count') - 1
                 discussion.user.save(update_fields=['discussion_count'])
+
+            # 更新回复作者评论数
+            for user_id, total in approved_reply_counts.items():
+                User.objects.filter(id=user_id).update(comment_count=F("comment_count") - total)
 
         return True
 
