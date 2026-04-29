@@ -274,19 +274,20 @@ async function uploadAsset(event, target) {
 }
 
 .AppearancePage-section {
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 10px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: 14px;
   padding: 20px;
   margin-bottom: 20px;
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .PresetPanel {
   margin-bottom: 20px;
   padding: 16px;
-  border: 1px solid #e6ebf0;
-  border-radius: 10px;
-  background: #fbfcfe;
+  border: 1px solid var(--forum-border-soft);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated-strong);
 }
 
 .PresetPanel-header {
@@ -300,13 +301,13 @@ async function uploadAsset(event, target) {
 .PresetPanel-header h4 {
   margin: 0 0 6px;
   font-size: 15px;
-  color: #223245;
+  color: var(--forum-text-color);
 }
 
 .PresetPanel-header p {
   margin: 0;
-  color: #6c7b88;
-  font-size: 13px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-sm);
   line-height: 1.6;
 }
 
@@ -322,26 +323,26 @@ async function uploadAsset(event, target) {
   align-items: flex-start;
   gap: 6px;
   padding: 14px;
-  border: 1px solid #d7e0e9;
-  border-radius: 10px;
-  background: white;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated);
   text-align: left;
 }
 
 .PresetCard:hover {
-  border-color: #4d698e;
+  border-color: var(--forum-primary-color);
   background: #f8fbff;
 }
 
 .PresetCard-name {
   font-size: 14px;
   font-weight: 600;
-  color: #223245;
+  color: var(--forum-text-color);
 }
 
 .PresetCard-desc {
-  color: #6d7a87;
-  font-size: 12px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-xs);
   line-height: 1.5;
 }
 
@@ -351,9 +352,9 @@ async function uploadAsset(event, target) {
   gap: 18px;
   margin-bottom: 20px;
   padding: 16px;
-  border: 1px solid #e6ebf0;
-  border-radius: 10px;
-  background: #fbfcfe;
+  border: 1px solid var(--forum-border-soft);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated-strong);
 }
 
 .AssetCard-preview {
@@ -361,8 +362,8 @@ async function uploadAsset(event, target) {
   place-items: center;
   min-height: 110px;
   padding: 18px;
-  border: 1px dashed #cfd9e3;
-  border-radius: 10px;
+  border: 1px dashed var(--forum-border-strong);
+  border-radius: var(--forum-radius-md);
   background:
     linear-gradient(45deg, #f3f6f9 25%, transparent 25%, transparent 75%, #f3f6f9 75%, #f3f6f9),
     linear-gradient(45deg, #f3f6f9 25%, transparent 25%, transparent 75%, #f3f6f9 75%, #f3f6f9);
@@ -390,8 +391,8 @@ async function uploadAsset(event, target) {
 }
 
 .AssetCard-placeholder {
-  color: #7b8794;
-  font-size: 13px;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
 }
 
 .AssetCard-meta {
@@ -402,7 +403,7 @@ async function uploadAsset(event, target) {
   margin-bottom: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: #223245;
+  color: var(--forum-text-color);
 }
 
 .AssetCard-actions {
@@ -414,51 +415,13 @@ async function uploadAsset(event, target) {
 
 .Section-title {
   margin: 0 0 20px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.Form-group {
-  margin-bottom: 20px;
-  min-width: 0;
+  border-bottom: 1px solid var(--forum-border-soft);
 }
 
 .Form-group--assetUrl {
   margin-left: 198px;
   max-width: calc(100% - 198px);
-}
-
-.Form-group:last-child {
-  margin-bottom: 0;
-}
-
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.FormControl {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  font-family: inherit;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
 }
 
 .ColorPicker {
@@ -470,8 +433,8 @@ async function uploadAsset(event, target) {
 .ColorPicker-input {
   width: 60px;
   height: 40px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
+  border: 1px solid var(--forum-border-strong);
+  border-radius: var(--forum-radius-sm);
   cursor: pointer;
 }
 
@@ -480,42 +443,8 @@ async function uploadAsset(event, target) {
   max-width: 200px;
 }
 
-.Form-help {
-  margin: 6px 0 0 0;
-  font-size: 13px;
-  color: #999;
-}
-
-.Form-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding-top: 10px;
-}
-
 .Button {
-  border-radius: 6px;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 3px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
-.Button--primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  border-radius: var(--forum-radius-md);
 }
 
 .Button--secondary {
@@ -523,9 +452,9 @@ async function uploadAsset(event, target) {
   align-items: center;
   justify-content: center;
   padding: 10px 16px;
-  border: 1px solid #d4dde6;
-  background: #fff;
-  color: #435466;
+  border: 1px solid var(--forum-border-color);
+  background: var(--forum-bg-elevated);
+  color: var(--forum-text-muted);
 }
 
 .Button--upload {
@@ -535,18 +464,6 @@ async function uploadAsset(event, target) {
 .Button--upload.is-disabled {
   opacity: 0.6;
   pointer-events: none;
-}
-
-.Form-success {
-  color: #27ae60;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.Form-error {
-  color: #e74c3c;
-  font-size: 14px;
-  font-weight: 500;
 }
 
 @media (max-width: 768px) {

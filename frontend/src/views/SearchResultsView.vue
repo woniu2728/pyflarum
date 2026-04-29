@@ -375,7 +375,7 @@ function getUserSubtitleHtml(user) {
 
 <style scoped>
 .search-page {
-  background: #f5f8fa;
+  background: var(--forum-bg-canvas);
   min-height: calc(100vh - 56px);
 }
 
@@ -388,8 +388,8 @@ function getUserSubtitleHtml(user) {
 
 .search-sidebar {
   padding: 20px 15px;
-  background: white;
-  border-right: 1px solid #e3e8ed;
+  background: var(--forum-bg-elevated);
+  border-right: 1px solid var(--forum-border-color);
   min-height: calc(100vh - 56px);
 }
 
@@ -400,12 +400,13 @@ function getUserSubtitleHtml(user) {
   justify-content: center;
   gap: 8px;
   background: var(--forum-accent-color);
-  color: white;
+  color: var(--forum-text-inverse);
   margin-bottom: 16px;
+  border-radius: var(--forum-radius-pill);
 }
 
 .btn-start-discussion:hover {
-  filter: brightness(0.92);
+  background: var(--forum-accent-strong);
 }
 
 .search-filters {
@@ -420,18 +421,18 @@ function getUserSubtitleHtml(user) {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-radius: 3px;
+  border-radius: var(--forum-radius-sm);
   background: transparent;
-  color: #556270;
+  color: var(--forum-text-muted);
 }
 
 .filter-item:hover {
-  background: #f5f8fa;
+  background: var(--forum-bg-subtle);
 }
 
 .filter-item.active {
   background: var(--forum-primary-color);
-  color: white;
+  color: var(--forum-text-inverse);
 }
 
 .filter-item strong {
@@ -445,9 +446,10 @@ function getUserSubtitleHtml(user) {
 .search-hero {
   margin-bottom: 24px;
   padding: 28px 32px;
-  border-radius: 14px;
+  border-radius: var(--forum-radius-lg);
   background: linear-gradient(135deg, color-mix(in srgb, var(--forum-primary-color) 14%, white) 0%, #eef4f8 100%);
-  border: 1px solid #d9e4ec;
+  border: 1px solid var(--forum-border-color);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .search-hero-pill {
@@ -463,14 +465,14 @@ function getUserSubtitleHtml(user) {
 }
 
 .search-hero h1 {
-  font-size: 32px;
+  font-size: var(--forum-font-size-3xl);
   font-weight: 300;
   margin-bottom: 8px;
-  color: #2f3c4d;
+  color: var(--forum-text-color);
 }
 
 .search-hero p {
-  color: #607080;
+  color: var(--forum-text-muted);
   max-width: 720px;
 }
 
@@ -487,7 +489,7 @@ function getUserSubtitleHtml(user) {
   gap: 8px;
   min-height: 34px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--forum-radius-pill);
   background: rgba(255, 255, 255, 0.88);
   color: #4a5d70;
 }
@@ -499,10 +501,11 @@ function getUserSubtitleHtml(user) {
 
 .search-state {
   padding: 60px 24px;
-  background: white;
-  border-radius: 8px;
+  background: var(--forum-bg-elevated);
+  border-radius: var(--forum-radius-md);
+  border: 1px solid var(--forum-border-color);
   text-align: center;
-  color: #8897a5;
+  color: var(--forum-text-soft);
 }
 
 .result-section + .result-section {
@@ -518,7 +521,7 @@ function getUserSubtitleHtml(user) {
 
 .section-header h2 {
   font-size: 20px;
-  color: #24313f;
+  color: var(--forum-text-color);
 }
 
 .section-link {
@@ -539,16 +542,17 @@ function getUserSubtitleHtml(user) {
   display: flex;
   gap: 14px;
   padding: 18px 20px;
-  background: white;
-  border: 1px solid #e1e8ef;
-  border-radius: 12px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .result-card:hover {
   border-color: color-mix(in srgb, var(--forum-primary-color) 28%, white);
-  box-shadow: 0 8px 24px rgba(47, 60, 77, 0.08);
+  box-shadow: var(--forum-shadow-md);
   transform: translateY(-1px);
 }
 
@@ -582,13 +586,13 @@ function getUserSubtitleHtml(user) {
 
 .result-card-main h3 {
   font-size: 17px;
-  color: #24313f;
+  color: var(--forum-text-color);
   margin-bottom: 6px;
   line-height: 1.45;
 }
 
 .result-card-main p {
-  color: #667684;
+  color: var(--forum-text-muted);
   line-height: 1.7;
   margin-bottom: 8px;
 }
@@ -604,7 +608,7 @@ function getUserSubtitleHtml(user) {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  color: #90a0ad;
+  color: var(--forum-text-soft);
   font-size: 12px;
 }
 
@@ -621,8 +625,8 @@ function getUserSubtitleHtml(user) {
 }
 
 .page-btn {
-  background: white;
-  border: 1px solid #d6e0e8;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
   color: #44515e;
 }
 

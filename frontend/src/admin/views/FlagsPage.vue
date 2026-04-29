@@ -186,32 +186,30 @@ async function resolveFlag() {
   margin-bottom: 20px;
 }
 
-.FilterButton,
-.Button {
-  border-radius: 3px;
+.FilterButton {
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-sm);
+  background: var(--forum-bg-elevated);
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--forum-text-muted);
   transition: all 0.2s;
 }
 
-.FilterButton {
-  border: 1px solid #dbe2ea;
-  background: white;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-
 .FilterButton.active {
-  background: #4d698e;
-  border-color: #4d698e;
-  color: white;
+  background: var(--forum-primary-color);
+  border-color: var(--forum-primary-color);
+  color: var(--forum-text-inverse);
 }
 
 .FlagsPage-empty {
   padding: 40px;
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-sm);
   text-align: center;
-  color: #999;
+  color: var(--forum-text-soft);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .FlagList {
@@ -221,10 +219,11 @@ async function resolveFlag() {
 }
 
 .FlagCard {
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
   padding: 18px 20px;
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .FlagCard-header {
@@ -240,41 +239,41 @@ async function resolveFlag() {
   gap: 10px;
   font-size: 18px;
   font-weight: 600;
-  color: #2f3c4d;
+  color: var(--forum-text-color);
 }
 
 .FlagCard-meta {
   margin-top: 6px;
-  color: #7f8c8d;
-  font-size: 13px;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
 }
 
 .FlagStatus {
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: var(--forum-radius-pill);
+  font-size: var(--forum-font-size-xs);
   font-weight: 600;
 }
 
 .FlagStatus--open {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--forum-warning-bg-strong);
+  color: var(--forum-warning-color);
 }
 
 .FlagStatus--resolved {
-  background: #d4edda;
+  background: color-mix(in srgb, var(--forum-success-color) 18%, white);
   color: #155724;
 }
 
 .FlagStatus--ignored {
-  background: #e9ecef;
-  color: #495057;
+  background: var(--forum-bg-subtle);
+  color: var(--forum-text-muted);
 }
 
 .FlagCard-link {
-  color: #4d698e;
+  color: var(--forum-primary-color);
   white-space: nowrap;
 }
 
@@ -285,20 +284,20 @@ async function resolveFlag() {
 }
 
 .FlagBlock {
-  background: #f8fafc;
-  border-radius: 3px;
+  background: var(--forum-bg-elevated-strong);
+  border-radius: var(--forum-radius-sm);
   padding: 14px;
 }
 
 .FlagBlock strong {
   display: block;
   margin-bottom: 8px;
-  color: #44515e;
+  color: var(--forum-text-muted);
 }
 
 .FlagBlock p {
   margin: 0;
-  color: #556270;
+  color: var(--forum-text-muted);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -312,92 +311,12 @@ async function resolveFlag() {
 }
 
 .FlagCard-footer {
-  color: #7f8c8d;
-  font-size: 13px;
-}
-
-.Button {
-  border: 1px solid transparent;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-}
-
-.Button--secondary {
-  background: #f5f8fa;
-  border-color: #dbe2ea;
-}
-
-.Modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
 }
 
 .Modal-content {
   width: min(520px, calc(100vw - 32px));
-  background: white;
-  border-radius: 3px;
-}
-
-.Modal-header,
-.Modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px;
-}
-
-.Modal-header {
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.Modal-footer {
-  justify-content: flex-end;
-  border-top: 1px solid #e3e8ed;
-}
-
-.Modal-header h3 {
-  margin: 0;
-}
-
-.Modal-close {
-  border: 0;
-  background: transparent;
-  color: #999;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.Modal-body {
-  padding: 20px;
-}
-
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.FormControl {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  resize: vertical;
 }
 
 @media (max-width: 768px) {
@@ -415,7 +334,7 @@ async function resolveFlag() {
   .FilterButton {
     flex: 0 0 auto;
     min-height: 38px;
-    border-radius: 999px;
+    border-radius: var(--forum-radius-pill);
     white-space: nowrap;
   }
 
@@ -448,15 +367,9 @@ async function resolveFlag() {
     text-align: center;
   }
 
-  .Modal {
-    align-items: flex-end;
-    padding: 0;
-  }
-
   .Modal-content {
     width: 100%;
     max-width: none;
-    border-radius: 18px 18px 0 0;
   }
 
   .Modal-footer {

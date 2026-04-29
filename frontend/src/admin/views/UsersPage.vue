@@ -547,9 +547,10 @@ const canDeleteCurrentUser = computed(() => {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  border: 1px solid #e3e8ed;
+  border: 1px solid var(--forum-border-color);
   border-radius: 12px;
-  background: white;
+  background: var(--forum-bg-elevated);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .UserTable-wrap::-webkit-scrollbar {
@@ -557,59 +558,43 @@ const canDeleteCurrentUser = computed(() => {
 }
 
 .UserTable-wrap::-webkit-scrollbar-thumb {
-  background: #c8d2dc;
-  border-radius: 999px;
-}
-
-.FormControl {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
+  background: var(--forum-border-strong);
+  border-radius: var(--forum-radius-pill);
 }
 
 .UserTable {
   width: 100%;
   min-width: 980px;
   border-collapse: collapse;
-  background: white;
+  background: var(--forum-bg-elevated);
 }
 
 .UserTable thead th {
   padding: 12px;
-  background: #f5f8fa;
-  border-bottom: 2px solid #e3e8ed;
-  font-size: 13px;
+  background: var(--forum-bg-subtle);
+  border-bottom: 2px solid var(--forum-border-color);
+  font-size: var(--forum-font-size-sm);
   font-weight: 600;
   text-align: left;
-  color: #666;
+  color: var(--forum-text-muted);
 }
 
 .UserTable tbody td {
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
+  border-bottom: 1px solid var(--forum-border-soft);
+  font-size: var(--forum-font-size-md);
   vertical-align: top;
 }
 
 .UserTable tbody tr:hover {
-  background: #fafbfc;
+  background: var(--forum-bg-elevated-strong);
 }
 
 .UserTable-loading,
 .UserTable-empty {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: var(--forum-text-soft);
 }
 
 .UserGroups {
@@ -622,13 +607,13 @@ const canDeleteCurrentUser = computed(() => {
 .UserGroupIcon {
   width: 24px;
   height: 24px;
-  border-radius: 999px;
-  color: white;
+  border-radius: var(--forum-radius-pill);
+  color: var(--forum-text-inverse);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-  font-size: 11px;
+  font-size: var(--forum-font-size-xs);
 }
 
 .UserGroupIcon i,
@@ -639,74 +624,29 @@ const canDeleteCurrentUser = computed(() => {
 .UserStatus {
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: var(--forum-radius-sm);
+  font-size: var(--forum-font-size-xs);
+  font-weight: 600;
 }
 
 .UserStatus--active {
-  background: #d4edda;
+  background: color-mix(in srgb, var(--forum-success-color) 18%, white);
   color: #155724;
 }
 
 .UserStatus--pending {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--forum-warning-bg-strong);
+  color: var(--forum-warning-color);
 }
 
 .UserStatus--suspended {
-  background: #f8d7da;
+  background: color-mix(in srgb, var(--forum-danger-color) 16%, white);
   color: #842029;
-}
-
-.Button {
-  background: #f5f8fa;
-  border: 1px solid #ddd;
-  padding: 6px 12px;
-  border-radius: 3px;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.Button:hover:not(:disabled) {
-  background: #e8eef5;
-  border-color: #4d698e;
-}
-
-.Button--primary {
-  background: #4d698e;
-  border-color: #4d698e;
-  color: white;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-  border-color: #3d5875;
-}
-
-.Button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .Button--small {
   padding: 4px 10px;
-  font-size: 12px;
-}
-
-.Button--danger {
-  background: #fff1f0;
-  border-color: #f0c5c0;
-  color: #c0392b;
-}
-
-.Button--danger:hover:not(:disabled) {
-  background: #fde2de;
-  border-color: #e39a91;
+  font-size: var(--forum-font-size-xs);
 }
 
 .UsersPage-pagination {
@@ -718,162 +658,18 @@ const canDeleteCurrentUser = computed(() => {
 }
 
 .Pagination-info {
-  font-size: 14px;
-  color: #666;
-}
-
-.Modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.Modal-content {
-  width: min(860px, calc(100vw - 24px));
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(19, 32, 51, 0.18);
-  overflow: hidden;
+  font-size: var(--forum-font-size-md);
+  color: var(--forum-text-muted);
 }
 
 .Modal-content--user {
   min-width: min(860px, calc(100vw - 24px));
 }
 
-.Modal-header,
-.Modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px;
-}
-
-.Modal-header {
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.Modal-footer {
-  justify-content: flex-end;
-  border-top: 1px solid #e3e8ed;
-}
-
-.Modal-footer--split {
-  justify-content: space-between;
-}
-
-.Modal-footerActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.Modal-footerNote {
-  color: #7f8c8d;
-  font-size: 13px;
-}
-
-.Modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.Modal-close {
-  background: none;
-  border: none;
-  color: #999;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.Modal-close:hover {
-  color: #333;
-}
-
-.Modal-body,
-.Modal-loading {
-  padding: 20px;
-}
-
-.Modal-body {
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-width: 0;
-}
-
-.Modal-loading {
-  text-align: center;
-  color: #999;
-}
-
-.Form-group {
-  margin-bottom: 20px;
-  min-width: 0;
-}
-
-.Form-group:last-child {
-  margin-bottom: 0;
-}
-
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-}
-
-.FormRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.FormRow > * {
-  min-width: 0;
-}
-
-.CheckboxField {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #44515e;
-}
-
-.CheckboxField--toggle {
-  min-height: 46px;
-  padding: 0 14px;
-  border: 1px solid #dbe2ea;
-  border-radius: 10px;
-  background: #fafbfc;
-}
-
-.CheckboxField--card {
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid #dbe2ea;
-  border-radius: 8px;
-  background: #fafbfc;
-}
-
 .GroupChecklist {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
-}
-
-.Form-help {
-  display: block;
-  margin-top: 6px;
-  color: #7f8c8d;
-  font-size: 12px;
 }
 
 @media (max-width: 768px) {
@@ -896,69 +692,12 @@ const canDeleteCurrentUser = computed(() => {
     gap: 10px;
   }
 
-  .FormRow {
-    grid-template-columns: 1fr;
-  }
-
   .FormRow--toggles {
     gap: 10px;
   }
 
   .Modal-content--user {
     min-width: 0;
-    width: 100%;
-    max-height: calc(100vh - 8px);
-    border-radius: 18px 18px 0 0;
-  }
-
-  .Modal {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .Modal-header,
-  .Modal-footer {
-    background: #fff;
-  }
-
-  .Modal-header {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-
-  .Modal-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
-  }
-
-  .Modal-header,
-  .Modal-footer,
-  .Modal-body,
-  .Modal-loading {
-    padding: 16px;
-  }
-
-  .Modal-footer--split {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .Modal-footerActions {
-    width: 100%;
-    justify-content: stretch;
-    gap: 10px;
-  }
-
-  .Modal-footerActions .Button,
-  .Modal-footer > .Button {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-
-  .Modal-footerNote {
-    text-align: center;
   }
 
   .GroupChecklist {
@@ -985,18 +724,18 @@ const canDeleteCurrentUser = computed(() => {
 
   .UserMobileState {
     padding: 28px 16px;
-    border: 1px solid #e3e8ed;
+    border: 1px solid var(--forum-border-color);
     border-radius: 16px;
-    background: #fff;
+    background: var(--forum-bg-elevated);
     text-align: center;
-    color: #7f8c8d;
+    color: var(--forum-text-soft);
   }
 
   .UserMobileCard {
     padding: 14px;
-    border: 1px solid #e3e8ed;
+    border: 1px solid var(--forum-border-color);
     border-radius: 16px;
-    background: #fff;
+    background: var(--forum-bg-elevated);
     box-shadow: 0 10px 26px rgba(28, 46, 67, 0.06);
   }
 
@@ -1021,13 +760,13 @@ const canDeleteCurrentUser = computed(() => {
 
   .UserMobileCard-nameRow strong {
     font-size: 16px;
-    color: #243447;
+    color: var(--forum-text-color);
   }
 
   .UserMobileCard-display {
     margin-top: 4px;
-    color: #6f7d8b;
-    font-size: 13px;
+    color: var(--forum-text-muted);
+    font-size: var(--forum-font-size-sm);
   }
 
   .UserMobileCard-edit {
@@ -1047,7 +786,7 @@ const canDeleteCurrentUser = computed(() => {
     min-width: 0;
     padding: 10px 12px;
     border-radius: 12px;
-    background: #f7fafc;
+    background: var(--forum-bg-elevated-strong);
   }
 
   .UserMobileCard-metaItem--full {
@@ -1056,7 +795,7 @@ const canDeleteCurrentUser = computed(() => {
 
   .UserMobileCard-metaItem dt {
     margin: 0 0 4px;
-    color: #7b8996;
+    color: var(--forum-text-soft);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -1065,8 +804,8 @@ const canDeleteCurrentUser = computed(() => {
 
   .UserMobileCard-metaItem dd {
     margin: 0;
-    color: #31465d;
-    font-size: 13px;
+    color: var(--forum-text-muted);
+    font-size: var(--forum-font-size-sm);
     line-height: 1.5;
     word-break: break-word;
   }

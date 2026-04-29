@@ -1,8 +1,562 @@
-/* Bias 全局样式 */
+/* Bias design tokens and global foundation */
+
+:root {
+  --forum-primary-color: #4d698e;
+  --forum-primary-strong: #3d5875;
+  --forum-accent-color: #e7672e;
+  --forum-accent-strong: #cf5621;
+  --forum-success-color: #2f855a;
+  --forum-warning-color: #b7791f;
+  --forum-danger-color: #c05645;
+  --forum-info-color: #2b6cb0;
+  --forum-warning-bg: #fff8e7;
+  --forum-warning-bg-strong: #fff3cd;
+  --forum-warning-border: #f0d8bd;
+  --forum-warning-border-strong: #ffe1a8;
+  --forum-danger-bg: #fdf1f1;
+  --forum-danger-border: #f1c3c3;
+  --forum-danger-soft: #fff2f2;
+  --forum-info-bg: #eaf4fb;
+  --forum-info-border: #cfe0f1;
+  --forum-accent-bg: #fff4ea;
+  --forum-accent-surface: #fff9f3;
+  --forum-code-bg: #edf2f7;
+  --forum-code-bg-dark: #24313d;
+
+  --forum-text-color: #243447;
+  --forum-text-muted: #607080;
+  --forum-text-soft: #8a98a6;
+  --forum-text-inverse: #ffffff;
+
+  --forum-bg-canvas: #f4f7fa;
+  --forum-bg-subtle: #eef3f7;
+  --forum-bg-elevated: #ffffff;
+  --forum-bg-elevated-strong: #fbfcfd;
+  --forum-bg-overlay: rgba(23, 30, 38, 0.4);
+
+  --forum-border-color: #dbe3ea;
+  --forum-border-strong: #c8d3dd;
+  --forum-border-soft: #e7edf3;
+
+  --forum-shadow-sm: 0 1px 3px rgba(31, 45, 61, 0.06);
+  --forum-shadow-md: 0 12px 28px rgba(31, 45, 61, 0.1);
+  --forum-shadow-lg: 0 24px 60px rgba(31, 45, 61, 0.14);
+
+  --forum-radius-xs: 3px;
+  --forum-radius-sm: 6px;
+  --forum-radius-md: 10px;
+  --forum-radius-lg: 16px;
+  --forum-radius-pill: 999px;
+
+  --forum-space-1: 4px;
+  --forum-space-2: 8px;
+  --forum-space-3: 12px;
+  --forum-space-4: 16px;
+  --forum-space-5: 20px;
+  --forum-space-6: 24px;
+  --forum-space-7: 30px;
+  --forum-space-8: 40px;
+
+  --forum-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --forum-font-size-xs: 12px;
+  --forum-font-size-sm: 13px;
+  --forum-font-size-md: 14px;
+  --forum-font-size-lg: 16px;
+  --forum-font-size-xl: 20px;
+  --forum-font-size-2xl: 24px;
+  --forum-font-size-3xl: 32px;
+
+  --forum-line-height: 1.6;
+  --forum-composer-offset: 0px;
+  --composer-offset: var(--forum-composer-offset);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app,
+#admin-app {
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--forum-font-sans);
+  background: var(--forum-bg-canvas);
+  color: var(--forum-text-color);
+  font-size: var(--forum-font-size-md);
+  line-height: var(--forum-line-height);
+}
+
+a {
+  color: var(--forum-primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  padding: var(--forum-space-2) var(--forum-space-4);
+  border-radius: var(--forum-radius-xs);
+  font-size: var(--forum-font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--forum-primary-color);
+  color: var(--forum-text-inverse);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--forum-primary-strong);
+}
+
+button.secondary {
+  background: var(--forum-bg-subtle);
+  color: var(--forum-text-color);
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #dde6ee;
+}
+
+button.danger {
+  background: var(--forum-danger-color);
+  color: var(--forum-text-inverse);
+}
+
+button.danger:hover:not(:disabled) {
+  background: #a5483b;
+}
+
+button.full-width {
+  width: 100%;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: var(--forum-space-2) var(--forum-space-3);
+  border: 1px solid var(--forum-border-strong);
+  border-radius: var(--forum-radius-xs);
+  font-size: var(--forum-font-size-sm);
+  background: var(--forum-bg-elevated);
+  color: var(--forum-text-color);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--forum-primary-color);
+  box-shadow: 0 0 0 3px rgba(77, 105, 142, 0.12);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--forum-space-5);
+}
 
 .emoji {
   height: 1.2em;
   width: 1.2em;
   margin: 0 0.08em;
   vertical-align: -0.22em;
+}
+
+#admin-app .Form {
+  width: 100%;
+}
+
+#admin-app .Form-group {
+  margin-bottom: var(--forum-space-6);
+  min-width: 0;
+}
+
+#admin-app .Form-group:last-child {
+  margin-bottom: 0;
+}
+
+#admin-app .Form-group label {
+  display: block;
+  margin-bottom: var(--forum-space-2);
+  font-size: var(--forum-font-size-md);
+  font-weight: 600;
+  color: var(--forum-text-color);
+}
+
+#admin-app .FormControl {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  font-size: var(--forum-font-size-md);
+  background: var(--forum-bg-elevated);
+  color: var(--forum-text-color);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#admin-app .FormControl-checkbox {
+  width: auto;
+  margin-right: var(--forum-space-2);
+}
+
+#admin-app .Form-help,
+#admin-app .Form-hint {
+  margin: var(--forum-space-2) 0 0;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-sm);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+#admin-app .Form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+}
+
+#admin-app .Form-grid > * {
+  min-width: 0;
+}
+
+#admin-app .Form-group--full {
+  grid-column: 1 / -1;
+}
+
+#admin-app .Form-group--checkbox label,
+#admin-app .Form-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+
+#admin-app .Form-section {
+  margin-bottom: var(--forum-space-5);
+  padding: var(--forum-space-5);
+  border: 1px solid var(--forum-border-color);
+  border-radius: 14px;
+  background: var(--forum-bg-elevated);
+  box-shadow: var(--forum-shadow-sm);
+}
+
+#admin-app .Form-sectionHeader {
+  margin-bottom: var(--forum-space-5);
+}
+
+#admin-app .Form-sectionHeader h3,
+#admin-app .Section-title {
+  margin: 0 0 var(--forum-space-2);
+  color: var(--forum-text-color);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+#admin-app .Form-sectionHeader p {
+  margin: 0;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-md);
+  line-height: 1.6;
+}
+
+#admin-app .Form-note {
+  padding: 12px 14px;
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-subtle);
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-sm);
+  line-height: 1.6;
+}
+
+#admin-app .Form-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: var(--forum-space-5);
+}
+
+#admin-app .Button {
+  background: var(--forum-bg-subtle);
+  color: var(--forum-text-color);
+  border: 1px solid var(--forum-border-color);
+  padding: 10px 18px;
+  border-radius: var(--forum-radius-md);
+  font-size: var(--forum-font-size-md);
+  font-weight: 600;
+}
+
+#admin-app .Button:hover:not(:disabled) {
+  background: #e3ebf4;
+  border-color: var(--forum-primary-color);
+}
+
+#admin-app .Button--primary {
+  background: var(--forum-primary-color);
+  color: var(--forum-text-inverse);
+  border-color: var(--forum-primary-color);
+}
+
+#admin-app .Button--primary:hover:not(:disabled) {
+  background: var(--forum-primary-strong);
+}
+
+#admin-app .Button--danger {
+  background: var(--forum-danger-soft);
+  color: var(--forum-danger-color);
+  border-color: var(--forum-danger-border);
+}
+
+#admin-app .Button--danger:hover:not(:disabled) {
+  background: #fde2de;
+  border-color: #e39a91;
+}
+
+#admin-app .Form-success {
+  color: var(--forum-success-color);
+  font-size: var(--forum-font-size-md);
+  font-weight: 600;
+}
+
+#admin-app .Form-error,
+#admin-app .ValidationError {
+  color: var(--forum-danger-color);
+  font-size: var(--forum-font-size-sm);
+  line-height: 1.6;
+}
+
+#admin-app .ValidationError p {
+  margin: 0;
+}
+
+#admin-app .FormRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+#admin-app .FormRow > * {
+  min-width: 0;
+}
+
+#admin-app .CheckboxField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-md);
+}
+
+#admin-app .CheckboxField--toggle {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated-strong);
+}
+
+#admin-app .CheckboxField--card {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--forum-border-color);
+  border-radius: 8px;
+  background: var(--forum-bg-elevated-strong);
+}
+
+#admin-app .Modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(23, 30, 38, 0.5);
+}
+
+#admin-app .Modal-content {
+  width: min(860px, calc(100vw - 24px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--forum-bg-elevated);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(19, 32, 51, 0.18);
+}
+
+#admin-app .Modal-header,
+#admin-app .Modal-footer,
+#admin-app .Modal-body,
+#admin-app .Modal-loading {
+  padding: var(--forum-space-5);
+}
+
+#admin-app .Modal-header,
+#admin-app .Modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#admin-app .Modal-header {
+  border-bottom: 1px solid var(--forum-border-color);
+}
+
+#admin-app .Modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--forum-border-color);
+}
+
+#admin-app .Modal-footer--split {
+  justify-content: space-between;
+}
+
+#admin-app .Modal-footerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#admin-app .Modal-footerNote {
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
+}
+
+#admin-app .Modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--forum-text-color);
+}
+
+#admin-app .Modal-close {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--forum-radius-sm);
+  background: transparent;
+  color: var(--forum-text-soft);
+  font-size: 20px;
+}
+
+#admin-app .Modal-close:hover:not(:disabled) {
+  background: var(--forum-bg-subtle);
+  color: var(--forum-text-color);
+}
+
+#admin-app .Modal-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+#admin-app .Modal-loading {
+  text-align: center;
+  color: var(--forum-text-soft);
+}
+
+@media (max-width: 768px) {
+  #admin-app .Form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #admin-app .FormRow {
+    grid-template-columns: 1fr;
+  }
+
+  #admin-app .Form-group--full {
+    grid-column: auto;
+  }
+
+  #admin-app .Form-section {
+    padding: var(--forum-space-4);
+    border-radius: 14px;
+  }
+
+  #admin-app .Form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #admin-app .Form-actions .Button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #admin-app .Modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  #admin-app .Modal-content {
+    width: 100%;
+    max-height: calc(100vh - 8px);
+    border-radius: 18px 18px 0 0;
+  }
+
+  #admin-app .Modal-header,
+  #admin-app .Modal-footer {
+    background: var(--forum-bg-elevated);
+  }
+
+  #admin-app .Modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  #admin-app .Modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+  }
+
+  #admin-app .Modal-footer--split {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #admin-app .Modal-footerActions {
+    width: 100%;
+    justify-content: stretch;
+    gap: 10px;
+  }
+
+  #admin-app .Modal-footerActions .Button,
+  #admin-app .Modal-footer > .Button {
+    flex: 1 1 auto;
+    width: 100%;
+    justify-content: center;
+  }
+
+  #admin-app .Modal-footerNote {
+    text-align: center;
+  }
 }

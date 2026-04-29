@@ -606,11 +606,12 @@ async function clearCache() {
 }
 
 .RuntimeNotice {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf3f9 100%);
-  border: 1px solid #d6e1ec;
+  background: linear-gradient(135deg, var(--forum-bg-elevated-strong) 0%, var(--forum-bg-subtle) 100%);
+  border: 1px solid var(--forum-border-color);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .RuntimeNotice-grid {
@@ -622,146 +623,34 @@ async function clearCache() {
 .RuntimeNotice h4 {
   margin: 0 0 8px 0;
   font-size: 14px;
-  color: #223041;
+  color: var(--forum-text-color);
 }
 
 .RuntimeNotice p {
   margin: 0;
-  color: #536273;
-  font-size: 13px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-sm);
   line-height: 1.7;
 }
 
-.Form-section {
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
 .Section-title {
-  margin: 0 0 20px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
+  margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e3e8ed;
+  border-bottom: 1px solid var(--forum-border-soft);
 }
 
 .Form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
-}
-
-.Form-grid > * {
-  min-width: 0;
-}
-
-.Form-group {
-  margin-bottom: 20px;
-}
-
-.Form-group:last-child {
-  margin-bottom: 0;
-}
-
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
 }
 
 .Form-group--checkbox label {
   margin-bottom: 6px;
 }
 
-.FormControl {
-  box-sizing: border-box;
-  max-width: 100%;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
-}
-
-.FormControl-checkbox {
-  width: auto;
-  margin-right: 8px;
-}
-
-.Form-help {
-  margin: 6px 0 0 0;
-  font-size: 13px;
-  color: #999;
-  line-height: 1.6;
-}
-
-.Form-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding-top: 10px;
-}
-
-.Button {
-  background: #f5f8fa;
-  border: 1px solid #ddd;
-  padding: 10px 20px;
-  border-radius: 3px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.Button:hover:not(:disabled) {
-  background: #e8eef5;
-  border-color: #4d698e;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-  border-color: #4d698e;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
-.Button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.Form-success {
-  color: #27ae60;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.Form-error {
-  color: #e74c3c;
-  font-size: 14px;
-  font-weight: 500;
-}
-
 .Form-warning {
   margin: 0;
-  color: #b7791f;
-  font-size: 13px;
+  color: var(--forum-warning-color);
+  font-size: var(--forum-font-size-sm);
   line-height: 1.6;
 }
 
@@ -775,21 +664,9 @@ async function clearCache() {
     max-width: none;
   }
 
-  .RuntimeNotice,
-  .Form-section {
+  .RuntimeNotice {
     padding: 16px;
     border-radius: 14px;
-  }
-
-  .Form-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .Form-actions .Button {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>

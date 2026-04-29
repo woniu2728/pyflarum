@@ -46,13 +46,13 @@ function handleStartDiscussion() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f8fa;
+  background: var(--forum-bg-canvas);
 }
 
 .flarum-container {
   text-align: center;
   max-width: 600px;
-  padding: 40px;
+  padding: var(--forum-space-8);
 }
 
 .welcome-banner {
@@ -61,14 +61,14 @@ function handleStartDiscussion() {
 
 .welcome-banner h1 {
   font-size: 48px;
-  color: #333;
+  color: var(--forum-text-color);
   margin-bottom: 10px;
   font-weight: 300;
 }
 
 .welcome-banner p {
   font-size: 18px;
-  color: #666;
+  color: var(--forum-text-muted);
 }
 
 .quick-actions {
@@ -83,30 +83,31 @@ function handleStartDiscussion() {
   align-items: center;
   gap: 10px;
   padding: 15px 30px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  color: #333;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  color: var(--forum-text-color);
   font-size: 16px;
   transition: all 0.2s;
   text-decoration: none;
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .action-btn:hover {
-  border-color: #aaa;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-color: var(--forum-border-strong);
+  box-shadow: var(--forum-shadow-md);
   text-decoration: none;
 }
 
 .action-btn.primary {
   background: #4d698e;
-  color: white;
+  color: var(--forum-text-inverse);
   border-color: #4d698e;
 }
 
 .action-btn.primary:hover {
-  background: #3d5875;
-  border-color: #3d5875;
+  background: var(--forum-primary-strong);
+  border-color: var(--forum-primary-strong);
 }
 
 .icon {

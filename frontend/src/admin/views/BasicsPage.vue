@@ -191,43 +191,17 @@ async function handleSubmit() {
   max-width: 600px;
 }
 
-.Form-group {
-  margin-bottom: 25px;
-}
-
 .Form-section {
-  margin-bottom: 28px;
   padding: 18px 18px 4px;
-  border: 1px solid #e6ebf0;
-  border-radius: 10px;
-  background: #fbfcfe;
-}
-
-.Form-sectionHeader {
-  margin-bottom: 18px;
+  background: var(--forum-bg-elevated-strong);
 }
 
 .Form-sectionHeader h3 {
-  margin: 0 0 6px;
   font-size: 15px;
-  color: #243447;
-}
-
-.Form-sectionHeader p {
-  margin: 0;
-  color: #6b7a89;
-  line-height: 1.6;
-  font-size: 13px;
 }
 
 .Form-note {
   margin-bottom: 25px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: #f5f8fb;
-  color: #617282;
-  line-height: 1.6;
-  font-size: 13px;
 }
 
 .Form-note--compact {
@@ -235,96 +209,21 @@ async function handleSubmit() {
   margin-bottom: 20px;
 }
 
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.FormControl {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
-}
-
-.FormControl-checkbox {
-  width: auto;
-  margin-right: 8px;
-}
-
-.Form-help {
-  margin: 6px 0 0 0;
-  font-size: 13px;
-  color: #999;
-}
-
 .Form-grid {
-  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
   margin-bottom: 22px;
 }
 
 .Form-toggle {
-  display: flex !important;
-  align-items: center;
-  gap: 10px;
   min-height: 48px;
   padding: 12px 14px;
-  border: 1px solid #dde5ec;
-  border-radius: 8px;
-  background: white;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated);
 }
 
 .Form-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
   padding-top: 10px;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 3px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
-.Button--primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.Form-success {
-  color: #27ae60;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.Form-error {
-  color: #e74c3c;
-  font-size: 14px;
-  font-weight: 500;
 }
 
 @media (max-width: 768px) {
@@ -339,17 +238,6 @@ async function handleSubmit() {
 
   .Form-grid {
     grid-template-columns: 1fr;
-  }
-
-  .Form-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .Form-actions .Button--primary {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>

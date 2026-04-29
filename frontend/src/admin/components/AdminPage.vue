@@ -39,23 +39,25 @@ defineProps({
 
 <style scoped>
 .AdminPage {
-  background: white;
-  border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .AdminPage-header {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
-  padding: 30px;
-  border-bottom: 1px solid #e3e8ed;
+  gap: var(--forum-space-5);
+  padding: var(--forum-space-7);
+  border-bottom: 1px solid var(--forum-border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
 }
 
 .AdminPage-headerIcon {
   width: 50px;
   height: 50px;
-  background: #f5f8fa;
+  background: var(--forum-bg-subtle);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -65,7 +67,7 @@ defineProps({
 
 .AdminPage-headerIcon i {
   font-size: 20px;
-  color: #4d698e;
+  color: var(--forum-primary-color);
 }
 
 .AdminPage-headerContent {
@@ -73,33 +75,35 @@ defineProps({
 }
 
 .AdminPage-title {
-  font-size: 24px;
+  font-size: var(--forum-font-size-2xl);
   font-weight: 600;
-  color: #333;
+  color: var(--forum-text-color);
   margin: 0 0 8px 0;
 }
 
 .AdminPage-description {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--forum-font-size-md);
+  color: var(--forum-text-muted);
   margin: 0;
   line-height: 1.6;
 }
 
 .AdminPage-content {
-  padding: 30px;
+  padding: var(--forum-space-7);
 }
 
 @media (max-width: 768px) {
   .AdminPage {
     border-radius: 0;
+    border-left: 0;
+    border-right: 0;
     box-shadow: none;
   }
 
   .AdminPage-header {
     gap: 14px;
     padding: 18px 16px;
-    background: #f4f6f8;
+    background: var(--forum-bg-subtle);
   }
 
   .AdminPage-headerIcon {
@@ -116,7 +120,7 @@ defineProps({
   }
 
   .AdminPage-description {
-    font-size: 13px;
+    font-size: var(--forum-font-size-sm);
   }
 
   .AdminPage-content {

@@ -97,14 +97,14 @@ function handleLogout() {
 }
 
 .AdminNav-section {
-  margin-bottom: 30px;
+  margin-bottom: var(--forum-space-7);
 }
 
 .AdminNav-title {
-  font-size: 12px;
+  font-size: var(--forum-font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
-  color: #999;
+  color: var(--forum-text-soft);
   margin: 0 0 10px 0;
   padding: 0 12px;
   letter-spacing: 0.5px;
@@ -121,10 +121,10 @@ function handleLogout() {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  color: #555;
+  color: var(--forum-text-muted);
   text-decoration: none;
-  border-radius: 3px;
-  font-size: 14px;
+  border-radius: var(--forum-radius-sm);
+  font-size: var(--forum-font-size-md);
   transition: all 0.2s;
 }
 
@@ -135,18 +135,19 @@ function handleLogout() {
 }
 
 .AdminNav-item:hover {
-  background: #f0f4f8;
-  color: #333;
+  background: var(--forum-bg-subtle);
+  color: var(--forum-text-color);
   text-decoration: none;
 }
 
 .AdminNav-item.active {
-  background: #4d698e;
-  color: white;
+  background: var(--forum-primary-color);
+  color: var(--forum-text-inverse);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .AdminNav-item.active:hover {
-  background: #3d5875;
+  background: var(--forum-primary-strong);
 }
 
 .AdminNav-item--danger {
@@ -186,8 +187,8 @@ function handleLogout() {
     bottom: 0;
     width: min(320px, calc(100vw - 44px));
     padding: 14px 14px 20px;
-    background: #fff;
-    box-shadow: 0 18px 40px rgba(31, 45, 61, 0.18);
+    background: var(--forum-bg-elevated);
+    box-shadow: var(--forum-shadow-lg);
     transform: translateX(calc(-100% - 12px));
     transition: transform 0.22s ease;
     z-index: 120;
@@ -210,7 +211,7 @@ function handleLogout() {
     gap: 12px;
     margin-bottom: 14px;
     padding-bottom: 14px;
-    border-bottom: 1px solid #e7edf3;
+    border-bottom: 1px solid var(--forum-border-soft);
     color: #31465d;
     font-size: 15px;
   }
@@ -221,7 +222,7 @@ function handleLogout() {
     padding: 0;
     border: 0;
     border-radius: 999px;
-    background: #f4f7fa;
+    background: var(--forum-bg-subtle);
     color: #607285;
   }
 
@@ -257,7 +258,7 @@ function handleLogout() {
     flex-direction: column;
     gap: 8px;
     padding-top: 14px;
-    border-top: 1px solid #e7edf3;
+    border-top: 1px solid var(--forum-border-soft);
   }
 }
 </style>

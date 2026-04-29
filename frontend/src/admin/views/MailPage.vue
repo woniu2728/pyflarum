@@ -340,49 +340,22 @@ async function sendTestEmail() {
 }
 
 .MailPage-loading {
-  color: #68717d;
-  font-size: 14px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-md);
 }
 
 .StatusAlert {
   margin-bottom: 20px;
   padding: 14px 16px;
-  border: 1px solid #f1d5d2;
+  border: 1px solid var(--forum-danger-border);
   border-radius: 12px;
-  background: #fff3f1;
-  color: #8f3d34;
+  background: var(--forum-danger-bg);
+  color: var(--forum-danger-color);
   line-height: 1.6;
 }
 
 .Form-section {
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 14px;
-  padding: 20px;
   margin-bottom: 20px;
-}
-
-.Form-sectionHeader {
-  margin-bottom: 20px;
-}
-
-.Form-sectionHeader h3 {
-  margin: 0 0 8px;
-  font-size: 17px;
-  color: #243447;
-}
-
-.Form-sectionHeader p {
-  margin: 0;
-  color: #68717d;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.Form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 16px;
 }
 
 .Form-group {
@@ -391,61 +364,6 @@ async function sendTestEmail() {
 
 .Form-group--full {
   grid-column: 1 / -1;
-}
-
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #243447;
-  font-size: 14px;
-}
-
-.FormControl {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 11px 12px;
-  border: 1px solid #d6dee6;
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: inherit;
-  background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
-  box-shadow: 0 0 0 3px rgba(77, 105, 142, 0.14);
-}
-
-.Form-hint {
-  margin: 8px 0 0;
-  color: #68717d;
-  font-size: 13px;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.ValidationError {
-  margin-top: 8px;
-  color: #b0423d;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.ValidationError p {
-  margin: 0;
-}
-
-.Form-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-top: 20px;
 }
 
 .TestMailPanel {
@@ -467,8 +385,8 @@ async function sendTestEmail() {
 }
 
 .TestMailPanel-target {
-  color: #4b5663;
-  font-size: 14px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-md);
   word-break: break-word;
 }
 
@@ -476,73 +394,9 @@ async function sendTestEmail() {
   margin-top: 0;
 }
 
-.Button {
-  background: #f5f8fa;
-  border: 1px solid #d6dee6;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.Button:hover:not(:disabled) {
-  background: #e8eef5;
-  border-color: #4d698e;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-  border-color: #4d698e;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
-.Button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.Form-success {
-  color: #1f8a52;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.Form-error {
-  color: #b0423d;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 @media (max-width: 768px) {
   .Form {
     max-width: none;
-  }
-
-  .Form-section {
-    padding: 16px;
-  }
-
-  .Form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .Form-group--full {
-    grid-column: auto;
-  }
-
-  .Form-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .Form-actions .Button {
-    width: 100%;
   }
 
   .TestMailPanel-meta {

@@ -76,8 +76,9 @@ function handleLogout() {
   top: 0;
   left: 0;
   right: 0;
-  background: white;
-  border-bottom: 1px solid #e3e8ed;
+  background: var(--forum-bg-elevated);
+  border-bottom: 1px solid var(--forum-border-color);
+  box-shadow: var(--forum-shadow-sm);
   z-index: 1000;
   height: 56px;
 }
@@ -96,9 +97,9 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: var(--forum-font-size-lg);
   font-weight: 600;
-  color: #4d698e;
+  color: var(--forum-primary-color);
   text-decoration: none;
 }
 
@@ -118,23 +119,23 @@ function handleLogout() {
 .AdminHeader-actions {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--forum-space-5);
 }
 
 .AdminHeader-user {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #666;
-  font-size: 14px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-md);
 }
 
 .Button--link {
   background: none;
   border: none;
-  color: #4d698e;
+  color: var(--forum-primary-color);
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--forum-font-size-sm);
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
@@ -143,7 +144,7 @@ function handleLogout() {
 }
 
 .Button--link:hover {
-  color: #3d5875;
+  color: var(--forum-primary-strong);
   text-decoration: none;
 }
 
@@ -164,9 +165,9 @@ function handleLogout() {
   .AdminHeader {
     height: 56px;
     min-height: 56px;
-    background: var(--forum-primary-color, #4d698e);
+    background: var(--forum-primary-color);
     border-bottom: 1px solid rgba(15, 23, 42, 0.14);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    box-shadow: var(--forum-shadow-md);
     color: #fff;
   }
 

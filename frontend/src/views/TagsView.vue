@@ -157,7 +157,7 @@ function handleStartDiscussion() {
 
 <style scoped>
 .tags-page {
-  background: #f5f8fa;
+  background: var(--forum-bg-canvas);
   min-height: calc(100vh - 56px);
 }
 
@@ -170,8 +170,8 @@ function handleStartDiscussion() {
 
 .tags-sidebar {
   padding: 20px 15px;
-  background: white;
-  border-right: 1px solid #e3e8ed;
+  background: var(--forum-bg-elevated);
+  border-right: 1px solid var(--forum-border-color);
   min-height: calc(100vh - 56px);
 }
 
@@ -181,13 +181,14 @@ function handleStartDiscussion() {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #e7672e;
-  color: white;
+  background: var(--forum-accent-color);
+  color: var(--forum-text-inverse);
   margin-bottom: 16px;
+  border-radius: var(--forum-radius-pill);
 }
 
 .btn-start-discussion:hover {
-  background: #d85b1e;
+  background: var(--forum-accent-strong);
 }
 
 .side-nav {
@@ -201,14 +202,14 @@ function handleStartDiscussion() {
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 3px;
-  color: #555;
+  border-radius: var(--forum-radius-sm);
+  color: var(--forum-text-muted);
 }
 
 .nav-item:hover,
 .nav-item.active {
-  background: #4d698e;
-  color: white;
+  background: var(--forum-primary-color);
+  color: var(--forum-text-inverse);
   text-decoration: none;
 }
 
@@ -219,16 +220,17 @@ function handleStartDiscussion() {
 .tags-hero {
   margin-bottom: 24px;
   padding: 28px 32px;
-  border-radius: 14px;
+  border-radius: var(--forum-radius-lg);
   background: linear-gradient(135deg, #f9fbfc 0%, #e8eef4 100%);
-  border: 1px solid #d9e4ec;
+  border: 1px solid var(--forum-border-color);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .tags-hero h1 {
-  font-size: 32px;
+  font-size: var(--forum-font-size-3xl);
   font-weight: 300;
   margin-bottom: 8px;
-  color: #2f3c4d;
+  color: var(--forum-text-color);
 }
 
 .tags-hero p {
@@ -238,10 +240,11 @@ function handleStartDiscussion() {
 
 .state-block {
   padding: 60px 24px;
-  background: white;
-  border-radius: 8px;
+  background: var(--forum-bg-elevated);
+  border-radius: var(--forum-radius-md);
+  border: 1px solid var(--forum-border-color);
   text-align: center;
-  color: #8897a5;
+  color: var(--forum-text-soft);
 }
 
 .tag-grid {
@@ -253,10 +256,11 @@ function handleStartDiscussion() {
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 20px;
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 10px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
   overflow: hidden;
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .tag-main {
@@ -285,11 +289,11 @@ function handleStartDiscussion() {
 .tag-header h2 {
   font-size: 20px;
   font-weight: 500;
-  color: #24313f;
+  color: var(--forum-text-color);
 }
 
 .tag-description {
-  color: #6a7988;
+  color: var(--forum-text-muted);
   line-height: 1.6;
 }
 
@@ -322,18 +326,18 @@ function handleStartDiscussion() {
   flex-direction: column;
   justify-content: center;
   padding: 22px 24px;
-  background: #fbfcfd;
-  border-left: 1px solid #edf2f6;
+  background: var(--forum-bg-elevated-strong);
+  border-left: 1px solid var(--forum-border-soft);
 }
 
 .tag-last-title {
-  color: #24313f;
+  color: var(--forum-text-color);
   line-height: 1.5;
 }
 
 .tag-last-time,
 .tag-last-discussion-empty {
-  color: #8a98a6;
+  color: var(--forum-text-soft);
   font-size: 13px;
   margin-top: 8px;
 }

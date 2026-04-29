@@ -117,26 +117,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #f5f8fa;
-  color: #333;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-:root {
-  --forum-primary-color: #4d698e;
-  --forum-accent-color: #e74c3c;
-  --composer-offset: 0px;
-}
-
 #app {
   min-height: 100vh;
   display: flex;
@@ -157,14 +137,14 @@ body {
   width: min(560px, 100%);
   padding: 36px 32px;
   border: 1px solid rgba(77, 105, 142, 0.16);
-  border-radius: 16px;
+  border-radius: var(--forum-radius-lg);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 24px 60px rgba(45, 62, 80, 0.12);
+  box-shadow: var(--forum-shadow-lg);
 }
 
 .maintenance-card h1 {
   margin-bottom: 14px;
-  font-size: 32px;
+  font-size: var(--forum-font-size-3xl);
   color: #223041;
 }
 
@@ -186,81 +166,5 @@ body {
   flex: 1;
   padding-bottom: var(--composer-offset);
   transition: padding-bottom 0.15s ease;
-}
-
-a {
-  color: var(--forum-primary-color);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 3px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-button.primary {
-  background: var(--forum-primary-color);
-  color: white;
-}
-
-button.primary:hover:not(:disabled) {
-  filter: brightness(0.92);
-}
-
-button.secondary {
-  background: #e3e8ed;
-  color: #555;
-}
-
-button.secondary:hover:not(:disabled) {
-  background: #d3d8dd;
-}
-
-button.danger {
-  background: #e74c3c;
-  color: white;
-}
-
-button.danger:hover:not(:disabled) {
-  background: #c0392b;
-}
-
-button.full-width {
-  width: 100%;
-}
-
-input, textarea, select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 13px;
-  font-family: inherit;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--forum-primary-color);
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
 }
 </style>

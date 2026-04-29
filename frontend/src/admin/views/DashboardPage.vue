@@ -194,29 +194,31 @@ onMounted(async () => {
 .DashboardPage-widgets {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--forum-space-5);
 }
 
 .Widget {
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-sm);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .Widget-header {
   padding: 15px 20px;
-  border-bottom: 1px solid #e3e8ed;
+  border-bottom: 1px solid var(--forum-border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.92) 100%);
 }
 
 .Widget-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--forum-font-size-lg);
   font-weight: 600;
-  color: #333;
+  color: var(--forum-text-color);
 }
 
 .Widget-content {
-  padding: 20px;
+  padding: var(--forum-space-5);
 }
 
 /* 状态小部件 */

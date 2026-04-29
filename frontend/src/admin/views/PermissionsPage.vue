@@ -432,14 +432,13 @@ function getEmptyGroupForm() {
   min-width: 0;
 }
 
-/* 用户组栏 */
 .GroupBar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   padding: 20px;
-  background: #f5f8fa;
-  border-radius: 3px;
+  background: var(--forum-bg-subtle);
+  border-radius: var(--forum-radius-md);
 }
 
 .GroupBar-item {
@@ -447,10 +446,10 @@ function getEmptyGroupForm() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 3px;
-  color: white;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: var(--forum-radius-sm);
+  color: var(--forum-text-inverse);
+  font-size: var(--forum-font-size-sm);
+  font-weight: 600;
 }
 
 .GroupBar-name {
@@ -465,11 +464,11 @@ function getEmptyGroupForm() {
 .GroupBar-edit {
   background: rgba(255, 255, 255, 0.2);
   border: none;
-  color: white;
+  color: var(--forum-text-inverse);
   padding: 4px 8px;
   border-radius: 2px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--forum-font-size-xs);
   transition: background 0.2s;
 }
 
@@ -482,21 +481,20 @@ function getEmptyGroupForm() {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: white;
-  border: 1px dashed #ccc;
-  border-radius: 3px;
-  color: #666;
-  font-size: 13px;
+  background: var(--forum-bg-elevated);
+  border: 1px dashed var(--forum-border-strong);
+  border-radius: var(--forum-radius-sm);
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-sm);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .GroupBar-add:hover {
-  border-color: #4d698e;
-  color: #4d698e;
+  border-color: var(--forum-primary-color);
+  color: var(--forum-primary-color);
 }
 
-/* 权限网格 */
 .PermissionsPage-grid {
   min-width: 0;
 }
@@ -509,9 +507,10 @@ function getEmptyGroupForm() {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  border: 1px solid #e3e8ed;
+  border: 1px solid var(--forum-border-color);
   border-radius: 12px;
-  background: white;
+  background: var(--forum-bg-elevated);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .PermissionGrid-wrap::-webkit-scrollbar {
@@ -519,24 +518,25 @@ function getEmptyGroupForm() {
 }
 
 .PermissionGrid-wrap::-webkit-scrollbar-thumb {
-  background: #c8d2dc;
-  border-radius: 999px;
+  background: var(--forum-border-strong);
+  border-radius: var(--forum-radius-pill);
 }
 
 .PermissionGrid {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
-  background: white;
+  background: var(--forum-bg-elevated);
 }
 
 .PermissionGrid thead th {
   padding: 12px;
-  background: #f5f8fa;
-  border-bottom: 2px solid #e3e8ed;
-  font-size: 13px;
+  background: var(--forum-bg-subtle);
+  border-bottom: 2px solid var(--forum-border-color);
+  font-size: var(--forum-font-size-sm);
   font-weight: 600;
   text-align: left;
+  color: var(--forum-text-muted);
 }
 
 .PermissionGrid-permission {
@@ -551,21 +551,21 @@ function getEmptyGroupForm() {
 
 .PermissionGrid-section {
   padding: 12px;
-  background: #f9fafb;
+  background: var(--forum-bg-elevated-strong);
   font-weight: 600;
-  font-size: 13px;
-  color: #666;
+  font-size: var(--forum-font-size-sm);
+  color: var(--forum-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-top: 1px solid #e3e8ed;
+  border-top: 1px solid var(--forum-border-color);
 }
 
 .PermissionGrid tbody tr:not(:has(.PermissionGrid-section)) {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--forum-border-soft);
 }
 
 .PermissionGrid tbody tr:not(:has(.PermissionGrid-section)):hover {
-  background: #fafbfc;
+  background: var(--forum-bg-elevated-strong);
 }
 
 .PermissionGrid tbody td {
@@ -574,7 +574,7 @@ function getEmptyGroupForm() {
 
 .PermissionGrid-permission i {
   margin-right: 8px;
-  color: #999;
+  color: var(--forum-text-soft);
   width: 16px;
   text-align: center;
 }
@@ -595,188 +595,17 @@ function getEmptyGroupForm() {
   gap: 15px;
 }
 
-.Button {
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 3px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
-.Button--primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.Form-success {
-  color: #27ae60;
-  font-size: 14px;
-  font-weight: 500;
-}
-
 .Form-error {
-  color: #c0392b;
-  font-size: 14px;
-}
-
-.Button--secondary {
-  background: #f5f8fa;
-  border: 1px solid #ddd;
-  padding: 10px 20px;
-}
-
-.Button--secondary:hover {
-  background: #e8eef5;
-}
-
-.Button--danger {
-  background: #fff1f0;
-  border: 1px solid #f0c5c0;
-  color: #c0392b;
-  padding: 10px 16px;
-}
-
-.Button--danger:hover:not(:disabled) {
-  background: #fde2de;
-  border-color: #e39a91;
-}
-
-.Modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.Modal-content {
-  width: min(680px, calc(100vw - 24px));
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(19, 32, 51, 0.18);
-  overflow: hidden;
+  min-height: 22px;
 }
 
 .Modal-content--group {
+  width: min(680px, calc(100vw - 24px));
   min-width: min(680px, calc(100vw - 24px));
-}
-
-.Modal-header,
-.Modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px;
-}
-
-.Modal-header {
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.Modal-footer {
-  justify-content: flex-end;
-  border-top: 1px solid #e3e8ed;
-}
-
-.Modal-footer--split {
-  justify-content: space-between;
-}
-
-.Modal-footerActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.Modal-footerNote {
-  color: #7f8c8d;
-  font-size: 13px;
-}
-
-.Modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.Modal-close {
-  background: none;
-  border: none;
-  color: #999;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.Modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-width: 0;
-}
-
-.Form-group {
-  margin-bottom: 20px;
-  min-width: 0;
 }
 
 .Form-group--groupName {
   max-width: 360px;
-}
-
-.Form-group:last-child {
-  margin-bottom: 0;
-}
-
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-}
-
-.FormControl {
-  width: 100%;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
-}
-
-.FormRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.FormRow > * {
-  min-width: 0;
 }
 
 .ColorField {
@@ -791,22 +620,14 @@ function getEmptyGroupForm() {
   width: 52px;
   height: 40px;
   padding: 0;
-  border: 1px solid #ddd;
-  border-radius: 3px;
+  border: 1px solid var(--forum-border-strong);
+  border-radius: var(--forum-radius-sm);
   cursor: pointer;
 }
 
 .ColorField .FormControl {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.CheckboxField {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #44515e;
-  font-size: 14px;
 }
 
 @media (max-width: 768px) {
@@ -823,46 +644,12 @@ function getEmptyGroupForm() {
     border-radius: 12px;
   }
 
-  .FormRow {
-    grid-template-columns: 1fr;
-  }
-
   .Form-group--groupName {
     max-width: none;
   }
 
   .Modal-content--group {
     min-width: 0;
-    width: 100%;
-    max-height: calc(100vh - 56px);
-    border-radius: 18px 18px 0 0;
-  }
-
-  .Modal {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .Modal-header,
-  .Modal-footer,
-  .Modal-body {
-    padding: 16px;
-  }
-
-  .Modal-footer--split {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .Modal-footerActions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .Modal-footerActions .Button,
-  .Modal-footer > .Button {
-    flex: 1 1 auto;
-    justify-content: center;
   }
 
   .PermissionGrid-wrap {
@@ -877,9 +664,10 @@ function getEmptyGroupForm() {
 
   .PermissionMobileSection {
     padding: 14px;
-    border: 1px solid #e3e8ed;
+    border: 1px solid var(--forum-border-color);
     border-radius: 16px;
-    background: white;
+    background: var(--forum-bg-elevated);
+    box-shadow: var(--forum-shadow-sm);
   }
 
   .PermissionMobileSection-header {
@@ -893,18 +681,18 @@ function getEmptyGroupForm() {
   .PermissionMobileSection-header h4 {
     margin: 0;
     font-size: 15px;
-    color: #253547;
+    color: var(--forum-text-color);
   }
 
   .PermissionMobileSection-header span {
-    color: #7b8996;
-    font-size: 12px;
+    color: var(--forum-text-soft);
+    font-size: var(--forum-font-size-xs);
   }
 
   .PermissionMobileCard {
     padding: 12px;
     border-radius: 14px;
-    background: #f7fafc;
+    background: var(--forum-bg-elevated-strong);
   }
 
   .PermissionMobileCard + .PermissionMobileCard {
@@ -919,12 +707,12 @@ function getEmptyGroupForm() {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #304558;
+    color: var(--forum-text-muted);
   }
 
   .PermissionMobileCard-title i {
     width: 16px;
-    color: #7c8a97;
+    color: var(--forum-text-soft);
     text-align: center;
   }
 
@@ -942,7 +730,7 @@ function getEmptyGroupForm() {
     padding: 0 12px;
     border: 1px solid color-mix(in srgb, var(--group-color) 18%, #d8e1ea);
     border-radius: 12px;
-    background: white;
+    background: var(--forum-bg-elevated);
   }
 
   .PermissionMobileToggle-name {
@@ -950,8 +738,8 @@ function getEmptyGroupForm() {
     align-items: center;
     gap: 8px;
     min-width: 0;
-    color: #425567;
-    font-size: 13px;
+    color: var(--forum-text-muted);
+    font-size: var(--forum-font-size-sm);
     font-weight: 600;
   }
 

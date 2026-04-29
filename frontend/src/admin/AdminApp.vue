@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
 <style>
 #admin-app {
   min-height: 100vh;
-  background: #f5f8fa;
+  background: var(--forum-bg-canvas);
 }
 
 .Admin-content {
@@ -85,10 +85,10 @@ onBeforeUnmount(() => {
 .Admin-content .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 30px 20px;
+  padding: var(--forum-space-7) var(--forum-space-5);
   display: flex;
   align-items: flex-start;
-  gap: 30px;
+  gap: var(--forum-space-7);
 }
 
 .Admin-main {

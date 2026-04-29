@@ -810,106 +810,66 @@ function getNextPosition(sourceTags, parentId) {
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px;
-  border: 1px solid #e3e8ed;
+  border: 1px solid var(--forum-border-color);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #f6f9fc);
+  background: linear-gradient(180deg, var(--forum-bg-elevated), #f6f9fc);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .TagSummaryCard small,
 .TagConfigCard small {
-  color: #738395;
-  font-size: 12px;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-xs);
   font-weight: 600;
 }
 
 .TagSummaryCard strong,
 .TagConfigCard strong {
-  color: #304558;
+  color: var(--forum-text-muted);
   font-size: 16px;
   line-height: 1.5;
 }
 
-.Button {
-  background: #f5f8fa;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 3px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.Button:hover:not(:disabled) {
-  background: #e8eef5;
-  border-color: #4d698e;
-}
-
-.Button--primary {
-  background: #4d698e;
-  color: white;
-  border-color: #4d698e;
-}
-
-.Button--primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
 .Button--small {
   padding: 4px 10px;
-  font-size: 12px;
-}
-
-.Button--danger {
-  color: #e74c3c;
-}
-
-.Button--danger:hover:not(:disabled) {
-  background: #fee;
-  border-color: #e74c3c;
-}
-
-.Button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  font-size: var(--forum-font-size-xs);
 }
 
 .TagTable {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border: 1px solid #e3e8ed;
-  border-radius: 3px;
+  background: var(--forum-bg-elevated);
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-sm);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .TagTable thead th {
   padding: 12px;
-  background: #f5f8fa;
-  border-bottom: 2px solid #e3e8ed;
-  font-size: 13px;
+  background: var(--forum-bg-subtle);
+  border-bottom: 2px solid var(--forum-border-color);
+  font-size: var(--forum-font-size-sm);
   font-weight: 600;
   text-align: left;
-  color: #666;
+  color: var(--forum-text-muted);
 }
 
 .TagTable tbody td {
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
+  border-bottom: 1px solid var(--forum-border-soft);
+  font-size: var(--forum-font-size-md);
   vertical-align: middle;
 }
 
 .TagTable tbody tr:hover {
-  background: #fafbfc;
+  background: var(--forum-bg-elevated-strong);
 }
 
 .TagTable-loading,
 .TagTable-empty {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: var(--forum-text-soft);
 }
 
 .TagBadgePreview {
@@ -920,10 +880,10 @@ function getNextPosition(sourceTags, parentId) {
   min-height: 30px;
   max-width: 100%;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--forum-radius-pill);
   background: var(--tag-bg);
-  color: #fff;
-  font-size: 13px;
+  color: var(--forum-text-inverse);
+  font-size: var(--forum-font-size-sm);
   font-weight: 600;
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
@@ -972,7 +932,7 @@ function getNextPosition(sourceTags, parentId) {
 
 .TagNameCell-main small,
 .TagHierarchy small {
-  color: #8694a1;
+  color: var(--forum-text-soft);
 }
 
 .TagSlug {
@@ -980,10 +940,10 @@ function getNextPosition(sourceTags, parentId) {
   align-items: center;
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--forum-radius-pill);
   background: #f5f8fb;
-  color: #4b5d6e;
-  font-size: 12px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-xs);
 }
 
 .TagHierarchy {
@@ -1003,10 +963,10 @@ function getNextPosition(sourceTags, parentId) {
   align-items: center;
   min-height: 26px;
   padding: 0 10px;
-  border-radius: 999px;
-  background: #eef3f7;
+  border-radius: var(--forum-radius-pill);
+  background: var(--forum-bg-subtle);
   color: #506274;
-  font-size: 12px;
+  font-size: var(--forum-font-size-xs);
   font-weight: 600;
 }
 
@@ -1020,77 +980,16 @@ function getNextPosition(sourceTags, parentId) {
   color: #b56a18;
 }
 
-.Modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
 .Modal-content {
-  background: white;
-  border-radius: 10px;
   width: 90%;
   max-width: 760px;
-  max-height: 90vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.Modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e3e8ed;
-}
-
-.Modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  max-height: calc(100vh - 32px);
 }
 
 .Modal-subtitle {
   margin: 6px 0 0;
-  color: #7a8794;
-  font-size: 13px;
-}
-
-.Modal-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #999;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-}
-
-.Modal-close:hover {
-  background: #f5f8fa;
-  color: #333;
-}
-
-.Modal-body {
-  padding: 24px;
-}
-
-.Modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 20px 24px;
-  border-top: 1px solid #e3e8ed;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
 }
 
 .TagPreviewPanel {
@@ -1100,8 +999,8 @@ function getNextPosition(sourceTags, parentId) {
 .TagPreviewPanel-label {
   display: block;
   margin-bottom: 8px;
-  color: #617282;
-  font-size: 13px;
+  color: var(--forum-text-muted);
+  font-size: var(--forum-font-size-sm);
   font-weight: 600;
 }
 
@@ -1111,9 +1010,10 @@ function getNextPosition(sourceTags, parentId) {
   align-items: flex-start;
   gap: 10px;
   padding: 16px 18px;
-  border: 1px solid #e3e8ed;
+  border: 1px solid var(--forum-border-color);
   border-radius: 12px;
   background: linear-gradient(180deg, #fbfdff, #f4f7fa);
+  box-shadow: var(--forum-shadow-sm);
 }
 
 .TagPreviewPanel-badge {
@@ -1127,20 +1027,12 @@ function getNextPosition(sourceTags, parentId) {
 }
 
 .TagPreviewPanel-card small {
-  color: #768594;
+  color: var(--forum-text-soft);
   line-height: 1.6;
-}
-
-.Form-group {
-  margin-bottom: 20px;
 }
 
 .TagConfigSummary {
   margin-bottom: 20px;
-}
-
-.Form-group:last-child {
-  margin-bottom: 0;
 }
 
 .Form-group-header {
@@ -1151,30 +1043,6 @@ function getNextPosition(sourceTags, parentId) {
   margin-bottom: 8px;
 }
 
-.Form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.FormControl {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.FormControl:focus {
-  outline: none;
-  border-color: #4d698e;
-}
-
 .FormControl--subtle {
   margin-top: 10px;
   background: #f8fafc;
@@ -1182,18 +1050,6 @@ function getNextPosition(sourceTags, parentId) {
 
 .Form-help {
   margin-top: 10px;
-  color: #7a8794;
-  font-size: 13px;
-}
-
-.FormRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.FormRow > * {
-  min-width: 0;
 }
 
 .ColorPicker {
@@ -1205,8 +1061,8 @@ function getNextPosition(sourceTags, parentId) {
 .ColorPicker-input {
   width: 60px;
   height: 40px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
+  border: 1px solid var(--forum-border-strong);
+  border-radius: var(--forum-radius-sm);
   cursor: pointer;
 }
 
@@ -1227,7 +1083,7 @@ function getNextPosition(sourceTags, parentId) {
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--forum-radius-pill);
   background: var(--preset-color);
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
 }
@@ -1252,19 +1108,19 @@ function getNextPosition(sourceTags, parentId) {
   gap: 8px;
   min-height: 84px;
   padding: 12px 10px;
-  border: 1px solid #dce4ec;
-  border-radius: 10px;
-  background: #fff;
-  color: #4a5d70;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated);
+  color: var(--forum-text-muted);
 }
 
 .IconPicker-option:hover {
-  border-color: #4d698e;
+  border-color: var(--forum-primary-color);
   background: #f7fafe;
 }
 
 .IconPicker-option.active {
-  border-color: #4d698e;
+  border-color: var(--forum-primary-color);
   background: #edf3f9;
   color: #35506f;
 }
@@ -1281,21 +1137,21 @@ function getNextPosition(sourceTags, parentId) {
 
 .IconPicker-empty {
   margin-top: 12px;
-  color: #8a97a3;
-  font-size: 13px;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
 }
 
 .LinkButton {
   border: 0;
   background: transparent;
-  color: #4d698e;
+  color: var(--forum-primary-color);
   padding: 0;
-  font-size: 13px;
+  font-size: var(--forum-font-size-sm);
   font-weight: 600;
 }
 
 .LinkButton:hover {
-  color: #3d5875;
+  color: var(--forum-primary-strong);
   text-decoration: underline;
 }
 
@@ -1313,10 +1169,10 @@ function getNextPosition(sourceTags, parentId) {
   gap: 8px;
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid #dce4ec;
-  border-radius: 999px;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-pill);
   background: #fbfdff;
-  color: #44515e;
+  color: var(--forum-text-muted);
   line-height: 1;
   margin-bottom: 0;
   font-weight: 500;
@@ -1354,21 +1210,11 @@ function getNextPosition(sourceTags, parentId) {
     width: 100%;
     max-width: none;
     max-height: calc(100vh - 56px);
-    border-radius: 18px 18px 0 0;
-  }
-
-  .Modal {
-    align-items: flex-end;
-    padding: 0;
   }
 
   .TagSummaryGrid,
   .TagConfigSummary {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .FormRow {
-    grid-template-columns: 1fr;
   }
 
   .ColorPicker {
@@ -1378,12 +1224,6 @@ function getNextPosition(sourceTags, parentId) {
 
   .IconPicker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .Modal-header,
-  .Modal-body,
-  .Modal-footer {
-    padding: 16px;
   }
 
   .Modal-footer {
@@ -1416,9 +1256,9 @@ function getNextPosition(sourceTags, parentId) {
   .TagTable tbody tr {
     margin-bottom: 12px;
     padding: 14px;
-    border: 1px solid #e3e8ed;
+    border: 1px solid var(--forum-border-color);
     border-radius: 14px;
-    background: #fff;
+    background: var(--forum-bg-elevated);
     box-shadow: 0 10px 26px rgba(28, 46, 67, 0.06);
   }
 
@@ -1436,7 +1276,7 @@ function getNextPosition(sourceTags, parentId) {
     content: attr(data-label);
     display: block;
     margin-bottom: 6px;
-    color: #7b8996;
+    color: var(--forum-text-soft);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
