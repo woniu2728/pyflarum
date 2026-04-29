@@ -210,6 +210,7 @@ class PostService:
                         post_id=post.id,
                         from_user=user,
                     )
+                TagService.refresh_discussion_tag_stats(discussion.id)
 
             return post
 
@@ -459,6 +460,7 @@ class PostService:
             "last_posted_at",
             "last_posted_user",
         ])
+        TagService.refresh_discussion_tag_stats(discussion.id)
         return discussion
 
     @staticmethod
@@ -633,6 +635,7 @@ class PostService:
                 from_user=post.user
             )
             NotificationService.notify_post_approved(post, admin_user, note=note)
+            TagService.refresh_discussion_tag_stats(discussion.id)
 
         post.refresh_from_db()
         return post

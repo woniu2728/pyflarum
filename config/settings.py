@@ -80,6 +80,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
+TEST_RUNNER = 'apps.core.test_runner.BiasDiscoverRunner'
 
 # Database
 DB_MODE = BOOTSTRAP.database_mode.strip().lower()

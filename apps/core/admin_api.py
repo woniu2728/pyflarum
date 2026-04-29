@@ -956,8 +956,6 @@ def resolve_post_flag(request, flag_id: int, payload: Dict[str, Any] = Body(...)
 @require_staff
 def list_admin_tags(request):
     """获取标签列表（管理后台）"""
-    TagService.refresh_tag_stats()
-
     tags = Tag.objects.select_related("parent").all().order_by("position", "name")
     return [serialize_admin_tag(tag) for tag in tags]
 

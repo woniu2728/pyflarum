@@ -93,9 +93,6 @@ def create_tag(request, payload: TagCreateSchema):
             user=request.auth,
         )
 
-        # 加载子标签
-        tag.children = []
-
         return _serialize_tag(tag, user=request.auth, include_children=True)
     except PermissionDenied as e:
         return router.create_response(
@@ -133,8 +130,6 @@ def list_tags(
     if purpose not in {"view", "start_discussion", "reply"}:
         purpose = "view"
 
-    TagService.refresh_tag_stats()
-
     queryset = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').all()
 
     if parent_id is None:
@@ -159,17 +154,12 @@ def get_popular_tags(request, limit: int = 10):
     参数:
     - limit: 返回数量（默认10）
     """
-    TagService.refresh_tag_stats()
     user = get_optional_user(request)
     tags = TagService.filter_tags_for_user(
         Tag.objects.filter(is_hidden=False),
         user,
         action="view",
     ).order_by('-discussion_count', '-last_posted_at')[:limit]
-
-    # 添加空的children字段
-    for tag in tags:
-        tag.children = []
 
     return {"data": [_serialize_tag(tag, user=user) for tag in tags]}
 

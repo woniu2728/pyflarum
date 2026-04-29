@@ -1,8 +1,11 @@
 from django.test import TestCase
 from ninja_jwt.tokens import RefreshToken
+from unittest.mock import patch
 
+from apps.discussions.models import DiscussionUser
 from apps.discussions.services import DiscussionService
 from apps.notifications.models import Notification
+from apps.notifications.services import NotificationService
 from apps.posts.services import PostService
 from apps.users.models import User
 
@@ -117,6 +120,41 @@ class NotificationServiceTests(TestCase):
             [item.data["post_number"] for item in notifications],
             [2, 3, 4],
         )
+
+    def test_discussion_reply_notifications_use_bulk_create_for_author_and_subscribers(self):
+        subscriber = User.objects.create_user(
+            username="subscriber",
+            email="subscriber@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        muted = User.objects.create_user(
+            username="muted",
+            email="muted@example.com",
+            password="password123",
+            is_email_confirmed=True,
+            preferences={"notify_new_post": False},
+        )
+        DiscussionUser.objects.create(discussion=self.discussion, user=subscriber, is_subscribed=True)
+        DiscussionUser.objects.create(discussion=self.discussion, user=muted, is_subscribed=True)
+        new_post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="Bulk reply",
+            user=self.replier,
+        )
+
+        with patch("apps.notifications.services.Notification.objects.bulk_create", side_effect=lambda items: items) as bulk_create:
+            with patch("apps.notifications.services.NotificationService._send_websocket_notification") as websocket_send:
+                NotificationService.notify_discussion_reply(
+                    discussion_id=self.discussion.id,
+                    post_id=new_post.id,
+                    from_user=self.replier,
+                )
+
+        self.assertEqual(bulk_create.call_count, 1)
+        created_notifications = bulk_create.call_args.args[0]
+        self.assertEqual({item.user_id for item in created_notifications}, {self.author.id, subscriber.id})
+        self.assertEqual(websocket_send.call_count, 2)
 
     def auth_header(self, user):
         token = RefreshToken.for_user(user).access_token

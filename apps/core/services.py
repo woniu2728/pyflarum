@@ -87,15 +87,28 @@ class SearchService:
         Returns:
             Dict: 搜索结果
         """
-        discussion_total = SearchService._discussion_queryset(query, user=user).count()
-        post_total = SearchService._post_queryset(query, user=user).count()
-        user_total = SearchService._user_queryset(query).count()
+        discussion_queryset = SearchService._discussion_queryset(query, user=user)
+        post_queryset = SearchService._post_queryset(query, user=user)
+        user_queryset = SearchService._user_queryset(query)
+        discussion_total = discussion_queryset.count()
+        post_total = post_queryset.count()
+        user_total = user_queryset.count()
 
         # 搜索讨论
-        discussions = SearchService._search_discussions(query, limit=min(limit, 5), user=user)
+        discussions = SearchService._search_discussions_queryset(
+            discussion_queryset,
+            query,
+            page=1,
+            limit=min(limit, 5),
+        )
 
         # 搜索帖子
-        posts = SearchService._search_posts(query, limit=min(limit, 5), user=user)
+        posts = SearchService._search_posts_queryset(
+            post_queryset,
+            query,
+            page=1,
+            limit=min(limit, 5),
+        )
 
         # 搜索用户
         users = SearchService._search_users(query, limit=min(limit, 5))
@@ -133,8 +146,9 @@ class SearchService:
         Returns:
             Tuple[List[Discussion], int]: (讨论列表, 总数)
         """
-        discussions = SearchService._search_discussions(query, page, limit, user=user)
-        total = SearchService._discussion_queryset(query, user=user).count()
+        queryset = SearchService._discussion_queryset(query, user=user)
+        discussions = SearchService._search_discussions_queryset(queryset, query, page, limit)
+        total = queryset.count()
 
         return discussions, total
 
@@ -156,28 +170,8 @@ class SearchService:
         Returns:
             List[Discussion]: 讨论列表
         """
-        queryset = SearchService._discussion_queryset(query, user=user).select_related('user', 'last_posted_user')
-
-        # 排序：置顶优先，然后按相关度（评论数、浏览数）
-        queryset = queryset.order_by('-is_sticky', '-comment_count', '-view_count')
-
-        # 分页
-        offset = (page - 1) * limit
-        discussions = list(queryset[offset:offset + limit])
-
-        # 添加摘要
-        for discussion in discussions:
-            # 获取第一条帖子作为摘要
-            if discussion.first_post_id:
-                try:
-                    first_post = Post.objects.get(id=discussion.first_post_id)
-                    discussion.excerpt = SearchService.make_excerpt(first_post.content, query)
-                except Post.DoesNotExist:
-                    discussion.excerpt = ''
-            else:
-                discussion.excerpt = ''
-
-        return discussions
+        queryset = SearchService._discussion_queryset(query, user=user)
+        return SearchService._search_discussions_queryset(queryset, query, page, limit)
 
     @staticmethod
     def search_posts(
@@ -197,8 +191,9 @@ class SearchService:
         Returns:
             Tuple[List[Post], int]: (帖子列表, 总数)
         """
-        posts = SearchService._search_posts(query, page, limit, user=user)
-        total = SearchService._post_queryset(query, user=user).count()
+        queryset = SearchService._post_queryset(query, user=user)
+        posts = SearchService._search_posts_queryset(queryset, query, page, limit)
+        total = queryset.count()
 
         return posts, total
 
@@ -220,21 +215,8 @@ class SearchService:
         Returns:
             List[Post]: 帖子列表
         """
-        queryset = SearchService._post_queryset(query, user=user).select_related('user', 'discussion')
-
-        # 排序：按创建时间倒序
-        queryset = queryset.order_by('-created_at')
-
-        # 分页
-        offset = (page - 1) * limit
-        posts = list(queryset[offset:offset + limit])
-
-        # 添加摘要和讨论标题
-        for post in posts:
-            post.discussion_title = post.discussion.title
-            post.excerpt = SearchService.make_excerpt(post.content, query)
-
-        return posts
+        queryset = SearchService._post_queryset(query, user=user)
+        return SearchService._search_posts_queryset(queryset, query, page, limit)
 
     @staticmethod
     def search_users(
@@ -351,6 +333,36 @@ class SearchService:
         return User.objects.filter(
             SearchService.build_text_query(['username', 'display_name', 'bio'], query)
         )
+
+    @staticmethod
+    def _search_discussions_queryset(queryset, query: str, page: int, limit: int) -> List[Discussion]:
+        queryset = queryset.select_related('user', 'last_posted_user')
+        queryset = queryset.order_by('-is_sticky', '-comment_count', '-view_count')
+
+        offset = (page - 1) * limit
+        discussions = list(queryset[offset:offset + limit])
+        first_post_ids = [discussion.first_post_id for discussion in discussions if discussion.first_post_id]
+        first_posts = Post.objects.in_bulk(first_post_ids)
+
+        for discussion in discussions:
+            first_post = first_posts.get(discussion.first_post_id)
+            discussion.excerpt = SearchService.make_excerpt(first_post.content, query) if first_post else ''
+
+        return discussions
+
+    @staticmethod
+    def _search_posts_queryset(queryset, query: str, page: int, limit: int) -> List[Post]:
+        queryset = queryset.select_related('user', 'discussion')
+        queryset = queryset.order_by('-created_at')
+
+        offset = (page - 1) * limit
+        posts = list(queryset[offset:offset + limit])
+
+        for post in posts:
+            post.discussion_title = post.discussion.title
+            post.excerpt = SearchService.make_excerpt(post.content, query)
+
+        return posts
 
     @staticmethod
     def _append_token(tokens: List[str], token: str):

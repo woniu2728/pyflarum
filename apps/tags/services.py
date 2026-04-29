@@ -8,6 +8,7 @@ from django.db.models import Q, F, Count, QuerySet
 from django.core.exceptions import PermissionDenied
 from apps.tags.models import Tag, DiscussionTag
 from apps.users.models import User
+from apps.discussions.models import Discussion
 
 
 class TagService:
@@ -601,6 +602,15 @@ class TagService:
         return list(tags)
 
     @staticmethod
+    def refresh_discussion_tag_stats(discussion) -> None:
+        discussion_id = getattr(discussion, "id", discussion)
+        tag_ids = list(
+            DiscussionTag.objects.filter(discussion_id=discussion_id).values_list("tag_id", flat=True)
+        )
+        if tag_ids:
+            TagService.refresh_tag_stats(tag_ids)
+
+    @staticmethod
     def refresh_tag_stats(tag_ids: Optional[List[int]] = None) -> None:
         """
         重新计算标签讨论数和最后发帖讨论。
@@ -615,6 +625,7 @@ class TagService:
             discussion_links = DiscussionTag.objects.filter(
                 tag=tag,
                 discussion__hidden_at__isnull=True,
+                discussion__approval_status=Discussion.APPROVAL_APPROVED,
             ).select_related('discussion').order_by('-discussion__last_posted_at', '-discussion__id')
 
             latest_link = discussion_links.first()

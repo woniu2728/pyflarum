@@ -148,9 +148,6 @@ def search(
 
     query = q.strip()
     user = get_optional_user(request)
-    discussion_total = SearchService._discussion_queryset(query, user=user).count()
-    post_total = SearchService._post_queryset(query, user=user).count()
-    user_total = SearchService._user_queryset(query).count()
 
     if type == 'all':
         result = SearchService.search_all(query, page, limit, user=user)
@@ -162,6 +159,8 @@ def search(
 
     elif type == 'discussions':
         discussions, total = SearchService.search_discussions(query, page, limit, user=user)
+        post_total = SearchService._post_queryset(query, user=user).count()
+        user_total = SearchService._user_queryset(query).count()
 
         discussion_data = [serialize_discussion_search_result(discussion) for discussion in discussions]
 
@@ -170,7 +169,7 @@ def search(
             'page': page,
             'limit': limit,
             'type': type,
-            'discussion_total': discussion_total,
+            'discussion_total': total,
             'post_total': post_total,
             'user_total': user_total,
             'discussions': discussion_data,
@@ -180,6 +179,8 @@ def search(
 
     elif type == 'posts':
         posts, total = SearchService.search_posts(query, page, limit, user=user)
+        discussion_total = SearchService._discussion_queryset(query, user=user).count()
+        user_total = SearchService._user_queryset(query).count()
 
         post_data = [serialize_post_search_result(post) for post in posts]
 
@@ -189,7 +190,7 @@ def search(
             'limit': limit,
             'type': type,
             'discussion_total': discussion_total,
-            'post_total': post_total,
+            'post_total': total,
             'user_total': user_total,
             'discussions': [],
             'posts': post_data,
@@ -198,6 +199,8 @@ def search(
 
     elif type == 'users':
         users, total = SearchService.search_users(query, page, limit)
+        discussion_total = SearchService._discussion_queryset(query, user=user).count()
+        post_total = SearchService._post_queryset(query, user=user).count()
 
         return {
             'total': total,

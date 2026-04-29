@@ -495,6 +495,7 @@ class DiscussionService:
         discussion.hidden_at = timezone.now() if is_hidden else None
         discussion.hidden_user = user if is_hidden else None
         discussion.save(update_fields=["hidden_at", "hidden_user"])
+        TagService.refresh_discussion_tag_stats(discussion.id)
         return discussion
 
     @staticmethod
@@ -525,6 +526,7 @@ class DiscussionService:
 
             from apps.notifications.services import NotificationService
             NotificationService.notify_discussion_approved(discussion, admin_user, note=note)
+            TagService.refresh_discussion_tag_stats(discussion.id)
 
         discussion.refresh_from_db()
         return discussion
@@ -554,6 +556,7 @@ class DiscussionService:
 
             from apps.notifications.services import NotificationService
             NotificationService.notify_discussion_rejected(discussion, admin_user, note=note)
+            TagService.refresh_discussion_tag_stats(discussion.id)
 
         discussion.refresh_from_db()
         return discussion

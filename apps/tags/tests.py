@@ -1,10 +1,12 @@
 from django.test import TestCase
 from ninja_jwt.tokens import RefreshToken
+from unittest.mock import patch
 
 from apps.discussions.services import DiscussionService
 from apps.tags.models import DiscussionTag, Tag
 from apps.tags.services import TagService
 from apps.users.models import User
+from apps.users.models import Group, Permission
 
 
 class TagStatsTests(TestCase):
@@ -53,6 +55,52 @@ class TagStatsTests(TestCase):
         self.tag.refresh_from_db()
 
         self.assertEqual(self.tag.discussion_count, 1)
+
+    def test_pending_discussion_is_not_counted_until_approved(self):
+        trusted_group = Group.objects.create(name="TagTrusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="startDiscussionWithoutApproval")
+        admin = User.objects.create_superuser(
+            username="tag-admin",
+            email="tag-admin@example.com",
+            password="password123",
+        )
+
+        discussion = DiscussionService.create_discussion(
+            title="待审核标签讨论",
+            content="等待审核",
+            user=self.user,
+            tag_ids=[self.tag.id],
+        )
+        self.tag.refresh_from_db()
+        self.assertEqual(self.tag.discussion_count, 0)
+        self.assertIsNone(self.tag.last_posted_discussion)
+
+        DiscussionService.approve_discussion(discussion, admin)
+        self.tag.refresh_from_db()
+        self.assertEqual(self.tag.discussion_count, 1)
+        self.assertEqual(self.tag.last_posted_discussion_id, discussion.id)
+
+    def test_reply_refreshes_tag_last_posted_at(self):
+        discussion = DiscussionService.create_discussion(
+            title="标签回复刷新",
+            content="首帖",
+            user=self.user,
+            tag_ids=[self.tag.id],
+        )
+        self.tag.refresh_from_db()
+        initial_last_posted_at = self.tag.last_posted_at
+
+        from apps.posts.services import PostService
+        PostService.create_post(
+            discussion_id=discussion.id,
+            content="新的回复",
+            user=self.user,
+        )
+
+        self.tag.refresh_from_db()
+        self.assertIsNotNone(initial_last_posted_at)
+        self.assertGreater(self.tag.last_posted_at, initial_last_posted_at)
+        self.assertEqual(self.tag.last_posted_discussion_id, discussion.id)
 
 
 class TagAccessApiTests(TestCase):
@@ -111,3 +159,12 @@ class TagAccessApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403, response.content)
         self.assertIn("没有权限", response.json()["error"])
+
+    def test_tag_read_endpoints_do_not_refresh_stats(self):
+        with patch("apps.tags.api.TagService.refresh_tag_stats") as refresh_stats:
+            list_response = self.client.get("/api/tags")
+            popular_response = self.client.get("/api/tags/popular")
+
+        self.assertEqual(list_response.status_code, 200, list_response.content)
+        self.assertEqual(popular_response.status_code, 200, popular_response.content)
+        refresh_stats.assert_not_called()

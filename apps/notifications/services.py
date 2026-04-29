@@ -87,6 +87,16 @@ class NotificationService:
         return notification
 
     @staticmethod
+    def create_notifications_bulk(notifications: List[Notification]) -> List[Notification]:
+        if not notifications:
+            return []
+
+        created = Notification.objects.bulk_create(notifications)
+        for notification in created:
+            NotificationService._send_websocket_notification(notification)
+        return created
+
+    @staticmethod
     def get_notification_list(
         user: User,
         is_read: Optional[bool] = None,
@@ -278,22 +288,24 @@ class NotificationService:
         try:
             discussion = Discussion.objects.select_related('user').get(id=discussion_id)
             post = Post.objects.only('id', 'number').get(id=post_id)
+            payload = {
+                'discussion_id': discussion_id,
+                'discussion_title': discussion.title,
+                'post_id': post_id,
+                'post_number': post.number,
+            }
+            notifications = []
 
-            # 通知讨论作者
             if discussion.user and discussion.user.id != from_user.id:
-                NotificationService.create_notification(
-                    user=discussion.user,
-                    type=NotificationService.TYPE_DISCUSSION_REPLY,
-                    from_user=from_user,
-                    subject_type='discussion',
-                    subject_id=discussion_id,
-                    allow_merge=False,
-                    data={
-                        'discussion_id': discussion_id,
-                        'discussion_title': discussion.title,
-                        'post_id': post_id,
-                        'post_number': post.number,
-                    }
+                notifications.append(
+                    Notification(
+                        user=discussion.user,
+                        from_user=from_user,
+                        type=NotificationService.TYPE_DISCUSSION_REPLY,
+                        subject_type='discussion',
+                        subject_id=discussion_id,
+                        data=payload,
+                    )
                 )
 
             subscribed_user_ids = list(
@@ -311,20 +323,17 @@ class NotificationService:
                 subscribed_users = User.objects.filter(id__in=subscribed_user_ids)
                 for subscriber in subscribed_users:
                     if subscriber.preferences.get('notify_new_post', True):
-                        NotificationService.create_notification(
-                            user=subscriber,
-                            type=NotificationService.TYPE_DISCUSSION_REPLY,
-                            from_user=from_user,
-                            subject_type='discussion',
-                            subject_id=discussion_id,
-                            allow_merge=False,
-                            data={
-                                'discussion_id': discussion_id,
-                                'discussion_title': discussion.title,
-                                'post_id': post_id,
-                                'post_number': post.number,
-                            }
+                        notifications.append(
+                            Notification(
+                                user=subscriber,
+                                from_user=from_user,
+                                type=NotificationService.TYPE_DISCUSSION_REPLY,
+                                subject_type='discussion',
+                                subject_id=discussion_id,
+                                data=payload,
+                            )
                         )
+            NotificationService.create_notifications_bulk(notifications)
         except (Discussion.DoesNotExist, Post.DoesNotExist):
             pass
 

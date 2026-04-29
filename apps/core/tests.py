@@ -22,6 +22,7 @@ from apps.core.models import Setting
 from apps.core.file_service import FileUploadService
 from apps.core.settings_service import clear_runtime_setting_caches, get_setting_group
 from apps.core.services import SearchService
+from apps.core.test_runner import BiasDiscoverRunner
 from apps.core.websocket_auth import get_user_from_token
 from apps.discussions.services import DiscussionService
 from apps.notifications.models import Notification
@@ -291,6 +292,50 @@ class ChineseSearchTests(TestCase):
             {item["id"] for item in admin_response.json()["posts"]},
             {approved_reply.id, pending_reply.id, rejected_reply.id},
         )
+
+    def test_search_discussions_does_not_fetch_first_post_per_result(self):
+        DiscussionService.create_discussion(
+            title="搜索摘要优化一",
+            content="第一条摘要内容",
+            user=self.user,
+        )
+        DiscussionService.create_discussion(
+            title="搜索摘要优化二",
+            content="第二条摘要内容",
+            user=self.user,
+        )
+
+        with patch("apps.core.services.Post.objects.get", side_effect=AssertionError("不应逐条 get 首帖")):
+            discussions, total = SearchService.search_discussions("搜索摘要优化", user=self.user)
+
+        self.assertEqual(total, 2)
+        self.assertEqual(len(discussions), 2)
+        self.assertTrue(all(discussion.excerpt for discussion in discussions))
+
+
+class TestRunnerTests(TestCase):
+    def test_default_runner_uses_app_test_modules_without_explicit_labels(self):
+        runner = BiasDiscoverRunner()
+        labels = [
+            f"{app}.tests"
+            for app in settings.INSTALLED_APPS
+            if app.startswith("apps.")
+        ]
+
+        suite = runner.build_suite([])
+
+        discovered = set()
+        stack = [suite]
+        while stack:
+            item = stack.pop()
+            if hasattr(item, "__iter__") and not hasattr(item, "_testMethodName"):
+                stack.extend(list(item))
+                continue
+            module_name = item.__class__.__module__.split(".")[0:3]
+            discovered.add(".".join(module_name[:2]) + ".tests")
+
+        for label in labels:
+            self.assertIn(label, discovered)
 
 
 class WebSocketJwtAuthTests(TestCase):
