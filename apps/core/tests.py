@@ -22,6 +22,7 @@ from apps.core.bootstrap_config import load_site_bootstrap, read_site_config
 from apps.core.models import Setting
 from apps.core.file_service import FileUploadService
 from apps.core.online_service import OnlineUserService
+from apps.core.release import ensure_release_versions_aligned
 from apps.core.settings_service import clear_runtime_setting_caches, get_setting_group
 from apps.core.services import SearchService
 from apps.core.test_runner import BiasDiscoverRunner
@@ -1786,9 +1787,11 @@ class UpgradeForumCommandTests(TestCase):
     def _success_result(self, args):
         return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
+    @patch("apps.core.management.commands.upgrade_forum.ensure_release_versions_aligned")
     @patch("apps.core.management.commands.upgrade_forum.run_manage_py")
-    def test_upgrade_forum_runs_default_upgrade_steps(self, mock_run_manage_py):
+    def test_upgrade_forum_runs_default_upgrade_steps(self, mock_run_manage_py, mock_ensure_versions):
         mock_run_manage_py.side_effect = lambda args, env: self._success_result(args)
+        mock_ensure_versions.return_value = None
 
         temp_dir = make_workspace_temp_dir()
         try:
@@ -1831,6 +1834,42 @@ class UpgradeForumCommandTests(TestCase):
             ],
         )
         self.assertEqual(mock_run_manage_py.call_args_list[0].args[1]["BIAS_SITE_CONFIG"], str(config_path))
+
+    @patch(
+        "apps.core.management.commands.upgrade_forum.ensure_release_versions_aligned",
+        side_effect=ValueError("版本不一致：VERSION 与 frontend/package.json 的 version 必须完全一致"),
+    )
+    def test_upgrade_forum_requires_aligned_release_versions(self, mock_ensure_versions):
+        temp_dir = make_workspace_temp_dir()
+        try:
+            config_path = Path(temp_dir) / "instance" / "site.json"
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "installed": True,
+                        "source": "file",
+                        "database_mode": "sqlite",
+                        "sqlite_name": "db.sqlite3",
+                        "use_redis": False,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesMessage(
+                CommandError,
+                "版本校验失败: 版本不一致：VERSION 与 frontend/package.json 的 version 必须完全一致",
+            ):
+                call_command(
+                    "upgrade_forum",
+                    "--config",
+                    str(config_path),
+                    "--non-interactive",
+                )
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     @patch("apps.core.management.commands.upgrade_forum.run_manage_py")
     def test_upgrade_forum_dry_run_does_not_execute_steps(self, mock_run_manage_py):
@@ -1910,6 +1949,267 @@ class UpgradeForumCommandTests(TestCase):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+
+class ReleaseVersionControlTests(TestCase):
+    def test_ensure_release_versions_aligned_raises_when_version_mismatch(self):
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.0.1\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.0.0"}) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesMessage(
+                ValueError,
+                "版本不一致：VERSION 与 frontend/package.json 的 version 必须完全一致",
+            ):
+                ensure_release_versions_aligned(base_dir)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("apps.core.management.commands.prepare_release.subprocess.run")
+    def test_prepare_release_syncs_version_and_frontend_package_files(self, mock_run):
+        mock_run.return_value = CompletedProcess(args=["git", "status", "--short"], returncode=0, stdout="", stderr="")
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.0.0"}, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            (base_dir / "frontend" / "package-lock.json").write_text(
+                json.dumps(
+                    {
+                        "name": "bias-frontend",
+                        "version": "1.0.0",
+                        "packages": {
+                            "": {
+                                "name": "bias-frontend",
+                                "version": "1.0.0",
+                            }
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with override_settings(BASE_DIR=base_dir):
+                call_command("prepare_release", "--tag", "v1.2.3")
+
+            self.assertEqual((base_dir / "VERSION").read_text(encoding="utf-8").strip(), "1.2.3")
+            package_json = json.loads((base_dir / "frontend" / "package.json").read_text(encoding="utf-8"))
+            package_lock = json.loads((base_dir / "frontend" / "package-lock.json").read_text(encoding="utf-8"))
+            self.assertEqual(package_json["version"], "1.2.3")
+            self.assertEqual(package_lock["version"], "1.2.3")
+            self.assertEqual(package_lock["packages"][""]["version"], "1.2.3")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_prepare_release_rejects_mismatched_version_and_tag(self):
+        with self.assertRaisesMessage(CommandError, "--set-version 与 --tag 不一致"):
+            call_command("prepare_release", "--set-version", "1.0.1", "--tag", "v1.0.2", "--allow-dirty")
+
+    @patch("apps.core.management.commands.prepare_release.subprocess.run")
+    def test_prepare_release_requires_clean_git_state_by_default(self, mock_run):
+        mock_run.return_value = CompletedProcess(
+            args=["git", "status", "--short"],
+            returncode=0,
+            stdout=" M README.md\n",
+            stderr="",
+        )
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.0.0"}) + "\n",
+                encoding="utf-8",
+            )
+            (base_dir / "frontend" / "package-lock.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.0.0", "packages": {"": {"version": "1.0.0"}}}) + "\n",
+                encoding="utf-8",
+            )
+
+            with override_settings(BASE_DIR=base_dir):
+                with self.assertRaisesMessage(
+                    CommandError,
+                    "Git 工作区不干净，请先提交或 stash 改动；如需跳过请传 --allow-dirty",
+                ):
+                    call_command("prepare_release", "--set-version", "1.0.1")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("apps.core.management.commands.finalize_release.subprocess.run")
+    def test_finalize_release_creates_git_tag_when_versions_match(self, mock_run):
+        mock_run.side_effect = [
+            CompletedProcess(args=["git", "status", "--short"], returncode=0, stdout="", stderr=""),
+            CompletedProcess(args=["git", "tag", "--list", "v1.2.3"], returncode=0, stdout="", stderr=""),
+            CompletedProcess(args=["git", "tag", "-a", "v1.2.3", "-m", "Release v1.2.3"], returncode=0, stdout="", stderr=""),
+        ]
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3"}) + "\n",
+                encoding="utf-8",
+            )
+            (base_dir / "frontend" / "package-lock.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3", "packages": {"": {"version": "1.2.3"}}}) + "\n",
+                encoding="utf-8",
+            )
+
+            with override_settings(BASE_DIR=base_dir):
+                call_command("finalize_release", "--tag", "v1.2.3")
+
+            self.assertEqual(mock_run.call_args_list[2].args[0], ["git", "tag", "-a", "v1.2.3", "-m", "Release v1.2.3"])
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("apps.core.management.commands.finalize_release.subprocess.run")
+    def test_finalize_release_rejects_mismatched_tag_and_version(self, mock_run):
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3"}) + "\n",
+                encoding="utf-8",
+            )
+            (base_dir / "frontend" / "package-lock.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3", "packages": {"": {"version": "1.2.3"}}}) + "\n",
+                encoding="utf-8",
+            )
+
+            with override_settings(BASE_DIR=base_dir):
+                with self.assertRaisesMessage(
+                    CommandError,
+                    "Git tag 与代码版本不一致：tag=v1.2.4，VERSION=1.2.3",
+                ):
+                    call_command("finalize_release", "--tag", "v1.2.4", "--allow-dirty")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        mock_run.assert_not_called()
+
+    @patch("apps.core.management.commands.finalize_release.subprocess.run")
+    def test_finalize_release_requires_clean_git_state_by_default(self, mock_run):
+        mock_run.return_value = CompletedProcess(
+            args=["git", "status", "--short"],
+            returncode=0,
+            stdout=" M VERSION\n",
+            stderr="",
+        )
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3"}) + "\n",
+                encoding="utf-8",
+            )
+            (base_dir / "frontend" / "package-lock.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3", "packages": {"": {"version": "1.2.3"}}}) + "\n",
+                encoding="utf-8",
+            )
+
+            with override_settings(BASE_DIR=base_dir):
+                with self.assertRaisesMessage(
+                    CommandError,
+                    "Git 工作区不干净，请先提交或 stash 改动；如需跳过请传 --allow-dirty",
+                ):
+                    call_command("finalize_release", "--tag", "v1.2.3")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("apps.core.management.commands.finalize_release.subprocess.run")
+    def test_finalize_release_rejects_existing_git_tag(self, mock_run):
+        mock_run.side_effect = [
+            CompletedProcess(args=["git", "status", "--short"], returncode=0, stdout="", stderr=""),
+            CompletedProcess(args=["git", "tag", "--list", "v1.2.3"], returncode=0, stdout="v1.2.3\n", stderr=""),
+        ]
+
+        temp_dir = make_workspace_temp_dir()
+        try:
+            base_dir = Path(temp_dir)
+            (base_dir / "frontend").mkdir(parents=True, exist_ok=True)
+            (base_dir / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+            (base_dir / "frontend" / "package.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3"}) + "\n",
+                encoding="utf-8",
+            )
+            (base_dir / "frontend" / "package-lock.json").write_text(
+                json.dumps({"name": "bias-frontend", "version": "1.2.3", "packages": {"": {"version": "1.2.3"}}}) + "\n",
+                encoding="utf-8",
+            )
+
+            with override_settings(BASE_DIR=base_dir):
+                with self.assertRaisesMessage(CommandError, "Git tag 已存在: v1.2.3"):
+                    call_command("finalize_release", "--tag", "v1.2.3")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @patch("apps.core.management.commands.publish_release.subprocess.run")
+    @patch("apps.core.management.commands.publish_release.call_command")
+    def test_publish_release_runs_prepare_then_finalize_in_dry_run(self, mock_call_command, mock_subprocess_run):
+        call_command(
+            "publish_release",
+            "--set-version",
+            "1.2.3",
+            "--dry-run",
+            "--allow-dirty",
+        )
+
+        self.assertEqual(
+            [call.args for call in mock_call_command.call_args_list],
+            [
+                ("prepare_release", "--set-version", "1.2.3", "--tag", "v1.2.3", "--allow-dirty", "--dry-run"),
+                ("finalize_release", "--tag", "v1.2.3", "--dry-run"),
+            ],
+        )
+        mock_subprocess_run.assert_not_called()
+
+    @patch("apps.core.management.commands.publish_release.subprocess.run")
+    @patch("apps.core.management.commands.publish_release.call_command")
+    def test_publish_release_commits_then_tags_and_pushes(self, mock_call_command, mock_subprocess_run):
+        call_command(
+            "publish_release",
+            "--set-version",
+            "1.2.3",
+            "--push",
+        )
+
+        self.assertEqual(
+            [call.args for call in mock_call_command.call_args_list],
+            [
+                ("prepare_release", "--set-version", "1.2.3", "--tag", "v1.2.3"),
+                ("finalize_release", "--tag", "v1.2.3"),
+            ],
+        )
+        self.assertEqual(
+            [call.args[0] for call in mock_subprocess_run.call_args_list],
+            [
+                ["git", "add", "VERSION", "frontend/package.json", "frontend/package-lock.json"],
+                ["git", "commit", "-m", "发布 1.2.3"],
+                ["git", "push", "origin", "main", "--tags"],
+            ],
+        )
 
 class SystemStatusApiTests(TestCase):
     def test_system_status_endpoint_returns_ready_state(self):

@@ -19,14 +19,106 @@ Bias 是一个使用 Django + Vue 3 构建的论坛项目，目标是对齐 Flar
 - 运行时会区分 `uninstalled`、`upgrade_required`、`ready`
 - API 可通过 `/api/system/status` 查看状态
 
+## 版本发布规范
+
+后续版本只认这 3 个概念：
+
+- `VERSION`：代码版本源
+- Git tag：发布标签，固定格式 `vX.Y.Z`
+- `system.version`：站点已安装版本
+
+强制规则：
+
+- `VERSION` 必须和 `frontend/package.json` 的 `version` 完全一致
+- Git tag 必须和 `VERSION` 一致，例如 `VERSION=1.2.3` 对应 `v1.2.3`
+- 安装和升级完成后，必须写入 `system.version`
+- 以后不要手工分别修改多个版本文件，统一走命令
+
+发布前先执行：
+
+```bash
+python manage.py prepare_release --set-version 1.0.1
+```
+
+或者直接按 tag 校验：
+
+```bash
+python manage.py prepare_release --tag v1.0.1
+```
+
+这个命令会：
+
+- 校验版本号是否符合语义化版本
+- 同步 `VERSION` 与 `frontend/package.json`
+- 校验 Git tag 格式
+- 默认要求 Git 工作区干净
+
+如果只是预检查，不写文件：
+
+```bash
+python manage.py prepare_release --tag v1.0.1 --dry-run
+```
+
+准备好版本后，再创建发布 tag：
+
+```bash
+python manage.py finalize_release --tag v1.0.1
+git push origin main --tags
+```
+
+如果只想校验，不实际创建 tag：
+
+```bash
+python manage.py finalize_release --tag v1.0.1 --dry-run
+```
+
+`finalize_release` 会强制检查：
+
+- `VERSION`
+- `frontend/package.json`
+- Git tag 与代码版本是否一致
+- Git 工作区是否干净
+- Git tag 是否已经存在
+
+如果你希望本地一条命令串起来做“版本准备 + tag 校验/创建”，可以直接用：
+
+```bash
+python manage.py publish_release --set-version 1.0.1
+```
+
+它会顺序执行：
+
+- `prepare_release --set-version 1.0.1 --tag v1.0.1`
+- `git add VERSION frontend/package.json frontend/package-lock.json`
+- `git commit -m "发布 1.0.1"`
+- `finalize_release --tag v1.0.1`
+
+然后你再执行：
+
+```bash
+git push origin main --tags
+```
+
+如果希望连 push 一起自动做掉：
+
+```bash
+python manage.py publish_release --set-version 1.0.1 --push
+```
+
 ## 持续集成
 
 仓库已提供最小 GitHub Actions 工作流 `.github/workflows/ci.yml`，默认会执行：
 
+- 版本一致性检查（`VERSION == frontend/package.json`）
 - 后端关键 `flake8` 检查
 - `pytest`
 - `python manage.py test`
 - 前端 `npm run build`
+
+仓库还提供了 `.github/workflows/release.yml`：
+
+- 当 push `vX.Y.Z` tag 时自动创建 GitHub Release
+- Release 前会再次校验 `VERSION` 和 tag 是否一致
 
 本地提交前建议至少执行：
 
@@ -182,6 +274,16 @@ docker compose exec web python manage.py upgrade_forum --non-interactive
 docker compose restart web celery nginx
 ```
 
+推荐发布顺序固定为：
+
+```bash
+python manage.py prepare_release --set-version 1.0.1
+git add VERSION frontend/package.json frontend/package-lock.json
+git commit -m "发布 1.0.1"
+python manage.py finalize_release --tag v1.0.1
+git push origin main --tags
+```
+
 `upgrade_forum` 默认会执行：
 
 1. Django 系统检查
@@ -316,6 +418,13 @@ python manage.py runserver
 ```bash
 python manage.py upgrade_forum --non-interactive
 ```
+
+`upgrade_forum` 现在会先强制校验：
+
+- `VERSION`
+- `frontend/package.json`
+
+如果两者不一致，会直接中止升级，避免出现“代码版本”和“站点版本”错位。
 
 常用参数：
 

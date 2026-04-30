@@ -12,6 +12,7 @@ from apps.core.bootstrap_config import (
     read_site_config,
 )
 from apps.core.management.command_utils import build_manage_env, run_manage_py
+from apps.core.release import ensure_release_versions_aligned
 
 
 def _env_flag(value: str | None, default: bool = False) -> bool:
@@ -42,6 +43,7 @@ class Command(BaseCommand):
         config_path = self._resolve_config_path(options["config"])
         config = self._ensure_site_config(config_path)
         self._validate_config(config)
+        self._validate_release_versions()
 
         self.stdout.write(self.style.MIGRATE_HEADING("开始升级 Bias"))
         self.stdout.write(f"站点配置: {config_path}")
@@ -88,6 +90,14 @@ class Command(BaseCommand):
         if config_path.exists():
             return read_site_config(config_path)
         raise CommandError(f"站点配置不存在: {config_path}。请先执行 python manage.py install_forum")
+
+    def _validate_release_versions(self) -> None:
+        try:
+            ensure_release_versions_aligned(settings.BASE_DIR)
+        except ValueError as exc:
+            raise CommandError(
+                f"版本校验失败: {exc}。请先执行 python manage.py prepare_release --set-version <X.Y.Z>"
+            ) from exc
 
     def _validate_config(self, config: SiteBootstrapConfig) -> None:
         db_mode = (config.database_mode or "sqlite").strip().lower()

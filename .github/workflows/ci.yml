@@ -23,6 +23,9 @@ jobs:
       - name: Install backend dependencies
         run: pip install -r requirements.txt
 
+      - name: Check release version alignment
+        run: python scripts/check_release_versions.py
+
       - name: Run critical backend lint
         run: flake8 apps config --jobs 1 --count --select=E9,F63,F7,F82 --show-source --statistics
 
