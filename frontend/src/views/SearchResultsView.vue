@@ -156,6 +156,7 @@ import ForumSearchResultSection from '@/components/forum/ForumSearchResultSectio
 import ForumStartDiscussionButton from '@/components/forum/ForumStartDiscussionButton.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import { useSearchResultsPage } from '@/composables/useSearchResultsPage'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import {
   buildDiscussionPath,
   buildUserPath,
@@ -166,6 +167,11 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
+const { startDiscussion } = useStartDiscussionAction({
+  authStore,
+  composerStore,
+  router
+})
 const {
   changePage,
   changeType,
@@ -198,13 +204,7 @@ const {
 })
 
 function handleStartDiscussion() {
-  if (!authStore.isAuthenticated) {
-    router.push('/login')
-    return
-  }
-  if (!authStore.canStartDiscussion) return
-
-  composerStore.openDiscussionComposer({
+  startDiscussion({
     source: 'search'
   })
 }

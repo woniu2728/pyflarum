@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import {
   flattenTags,
   normalizeDiscussion,
@@ -24,6 +25,11 @@ export function useDiscussionListPage({
   const total = ref(0)
   const markingAllRead = ref(false)
   const pageSize = 20
+  const { startDiscussion } = useStartDiscussionAction({
+    authStore,
+    composerStore,
+    router
+  })
 
   const currentTagSlug = computed(() => route.params.slug || null)
   const searchQuery = computed(() => route.query.search?.toString().trim() || '')
@@ -205,13 +211,7 @@ export function useDiscussionListPage({
   }
 
   function handleStartDiscussion() {
-    if (!authStore.isAuthenticated) {
-      router.push('/login')
-      return
-    }
-    if (!authStore.canStartDiscussion) return
-
-    composerStore.openDiscussionComposer({
+    startDiscussion({
       tagId: currentTag.value?.id,
       source: route.name?.toString() || 'index'
     })

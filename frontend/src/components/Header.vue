@@ -114,6 +114,7 @@ import HeaderMobileDrawer from '@/components/header/HeaderMobileDrawer.vue'
 import HeaderNotificationsMenu from '@/components/header/HeaderNotificationsMenu.vue'
 import HeaderSearchBox from '@/components/header/HeaderSearchBox.vue'
 import HeaderUserMenu from '@/components/header/HeaderUserMenu.vue'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useForumStore } from '@/stores/forum'
@@ -139,6 +140,11 @@ const modalStore = useModalStore()
 const notificationStore = useNotificationStore()
 const route = useRoute()
 const router = useRouter()
+const { startDiscussion } = useStartDiscussionAction({
+  authStore,
+  composerStore,
+  router
+})
 
 const showUserMenu = ref(false)
 const showNotifications = ref(false)
@@ -384,8 +390,7 @@ function openNotificationsPage() {
 }
 
 function startDiscussionFromHeader() {
-  if (!authStore.canStartDiscussion) return
-  composerStore.openDiscussionComposer({
+  startDiscussion({
     source: `header:${String(route.name || 'unknown')}`
   })
 }

@@ -13,25 +13,24 @@ import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
+const { startDiscussion } = useStartDiscussionAction({
+  authStore,
+  composerStore,
+  router
+})
 
 onMounted(() => {
-  if (!authStore.isAuthenticated) {
-    router.replace('/login')
-    return
-  }
-
-  if (authStore.canStartDiscussion) {
-    composerStore.openDiscussionComposer({
-      tagId: typeof route.query.tag === 'string' ? route.query.tag : '',
-      source: 'route'
-    })
-  }
-
+  startDiscussion({
+    redirectToLogin: true,
+    source: 'route',
+    tagId: typeof route.query.tag === 'string' ? route.query.tag : ''
+  })
   router.replace(typeof route.query.returnTo === 'string' ? route.query.returnTo : '/')
 })
 </script>

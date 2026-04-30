@@ -1,12 +1,11 @@
 <template>
   <div class="home">
-    <!-- Flarum风格：直接重定向到讨论列表 -->
     <div class="flarum-container">
-      <div class="welcome-banner">
-        <h1>Bias</h1>
-        <p>基于Django和Vue 3的现代化论坛</p>
-      </div>
-
+      <ForumHeroPanel
+        title="Bias"
+        description="基于 Django 和 Vue 3 的现代化论坛"
+        variant="default"
+      />
       <div class="quick-actions">
         <router-link to="/discussions" class="action-btn primary">
           <span class="icon">💬</span>
@@ -26,15 +25,23 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
+const router = useRouter()
+const { startDiscussion } = useStartDiscussionAction({
+  authStore,
+  composerStore,
+  router
+})
 
 function handleStartDiscussion() {
-  if (!authStore.canStartDiscussion) return
-  composerStore.openDiscussionComposer({
+  startDiscussion({
     source: 'home'
   })
 }
@@ -55,27 +62,12 @@ function handleStartDiscussion() {
   padding: var(--forum-space-8);
 }
 
-.welcome-banner {
-  margin-bottom: 40px;
-}
-
-.welcome-banner h1 {
-  font-size: 48px;
-  color: var(--forum-text-color);
-  margin-bottom: 10px;
-  font-weight: 300;
-}
-
-.welcome-banner p {
-  font-size: 18px;
-  color: var(--forum-text-muted);
-}
-
 .quick-actions {
   display: flex;
   gap: 15px;
   justify-content: center;
   flex-wrap: wrap;
+  margin-top: 32px;
 }
 
 .action-btn {

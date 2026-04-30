@@ -59,22 +59,22 @@ import ForumStartDiscussionButton from '@/components/forum/ForumStartDiscussionB
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumTagCloud from '@/components/forum/ForumTagCloud.vue'
 import ForumTagTile from '@/components/forum/ForumTagTile.vue'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useTagsPage } from '@/composables/useTagsPage'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const router = useRouter()
+const { startDiscussion } = useStartDiscussionAction({
+  authStore,
+  composerStore,
+  router
+})
 
 const { cloudTags, loading, tags } = useTagsPage()
 
 function handleStartDiscussion() {
-  if (!authStore.isAuthenticated) {
-    router.push('/login')
-    return
-  }
-  if (!authStore.canStartDiscussion) return
-
-  composerStore.openDiscussionComposer({
+  startDiscussion({
     source: 'tags'
   })
 }
