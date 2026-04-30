@@ -2,6 +2,7 @@
 搜索功能业务逻辑层
 """
 import re
+from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from django.db.models import Q
@@ -20,6 +21,20 @@ except ImportError:  # pragma: no cover - 部署安装依赖后走 jieba，开�
 
 CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+")
 TOKEN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+|[A-Za-z0-9_]+")
+
+
+@dataclass
+class SearchContext:
+    discussion_queryset: object
+    post_queryset: object
+    user_queryset: object | None
+    discussion_total: int
+    post_total: int
+    user_total: int
+
+    @property
+    def total(self) -> int:
+        return self.discussion_total + self.post_total + self.user_total
 
 
 class SearchService:
@@ -70,15 +85,28 @@ class SearchService:
         )
 
     @staticmethod
+    def build_search_context(query: str, user=None, include_users: bool = True) -> SearchContext:
+        discussion_queryset = SearchService._discussion_queryset(query, user=user)
+        post_queryset = SearchService._post_queryset(query, user=user)
+        user_queryset = SearchService._user_queryset(query) if include_users else None
+
+        return SearchContext(
+            discussion_queryset=discussion_queryset,
+            post_queryset=post_queryset,
+            user_queryset=user_queryset,
+            discussion_total=discussion_queryset.count(),
+            post_total=post_queryset.count(),
+            user_total=user_queryset.count() if user_queryset is not None else 0,
+        )
+
+    @staticmethod
     def get_search_totals(query: str, user=None, include_users: bool = True) -> Dict[str, int]:
-        discussion_total = SearchService._discussion_queryset(query, user=user).count()
-        post_total = SearchService._post_queryset(query, user=user).count()
-        user_total = SearchService._user_queryset(query).count() if include_users else 0
+        context = SearchService.build_search_context(query, user=user, include_users=include_users)
         return {
-            "discussion_total": discussion_total,
-            "post_total": post_total,
-            "user_total": user_total,
-            "total": discussion_total + post_total + user_total,
+            "discussion_total": context.discussion_total,
+            "post_total": context.post_total,
+            "user_total": context.user_total,
+            "total": context.total,
         }
 
     @staticmethod
@@ -88,6 +116,7 @@ class SearchService:
         limit: int = 20,
         user=None,
         include_users: bool = True,
+        context: SearchContext | None = None,
     ) -> Dict:
         """
         全局搜索
@@ -100,16 +129,15 @@ class SearchService:
         Returns:
             Dict: 搜索结果
         """
-        discussion_queryset = SearchService._discussion_queryset(query, user=user)
-        post_queryset = SearchService._post_queryset(query, user=user)
-        totals = SearchService.get_search_totals(query, user=user, include_users=include_users)
-        discussion_total = totals["discussion_total"]
-        post_total = totals["post_total"]
-        user_total = totals["user_total"]
+        context = context or SearchService.build_search_context(
+            query,
+            user=user,
+            include_users=include_users,
+        )
 
         # 搜索讨论
         discussions = SearchService._search_discussions_queryset(
-            discussion_queryset,
+            context.discussion_queryset,
             query,
             page=1,
             limit=min(limit, 5),
@@ -117,23 +145,27 @@ class SearchService:
 
         # 搜索帖子
         posts = SearchService._search_posts_queryset(
-            post_queryset,
+            context.post_queryset,
             query,
             page=1,
             limit=min(limit, 5),
         )
 
         # 搜索用户
-        users = SearchService._search_users(query, limit=min(limit, 5)) if include_users else []
+        users = (
+            SearchService._search_users_queryset(context.user_queryset, limit=min(limit, 5))
+            if include_users and context.user_queryset is not None
+            else []
+        )
 
         return {
-            'total': totals["total"],
+            'total': context.total,
             'page': page,
             'limit': limit,
             'type': 'all',
-            'discussion_total': discussion_total,
-            'post_total': post_total,
-            'user_total': user_total,
+            'discussion_total': context.discussion_total,
+            'post_total': context.post_total,
+            'user_total': context.user_total,
             'discussions': discussions,
             'posts': posts,
             'users': users,
@@ -145,6 +177,7 @@ class SearchService:
         page: int = 1,
         limit: int = 20,
         user=None,
+        context: SearchContext | None = None,
     ) -> Tuple[List[Discussion], int]:
         """
         搜索讨论
@@ -157,11 +190,10 @@ class SearchService:
         Returns:
             Tuple[List[Discussion], int]: (讨论列表, 总数)
         """
-        queryset = SearchService._discussion_queryset(query, user=user)
+        context = context or SearchService.build_search_context(query, user=user, include_users=False)
+        queryset = context.discussion_queryset
         discussions = SearchService._search_discussions_queryset(queryset, query, page, limit)
-        total = queryset.count()
-
-        return discussions, total
+        return discussions, context.discussion_total
 
     @staticmethod
     def _search_discussions(
@@ -190,6 +222,7 @@ class SearchService:
         page: int = 1,
         limit: int = 20,
         user=None,
+        context: SearchContext | None = None,
     ) -> Tuple[List[Post], int]:
         """
         搜索帖子
@@ -202,11 +235,10 @@ class SearchService:
         Returns:
             Tuple[List[Post], int]: (帖子列表, 总数)
         """
-        queryset = SearchService._post_queryset(query, user=user)
+        context = context or SearchService.build_search_context(query, user=user, include_users=False)
+        queryset = context.post_queryset
         posts = SearchService._search_posts_queryset(queryset, query, page, limit)
-        total = queryset.count()
-
-        return posts, total
+        return posts, context.post_total
 
     @staticmethod
     def _search_posts(
@@ -234,6 +266,7 @@ class SearchService:
         query: str,
         page: int = 1,
         limit: int = 20,
+        context: SearchContext | None = None,
     ) -> Tuple[List[User], int]:
         """
         搜索用户
@@ -246,10 +279,9 @@ class SearchService:
         Returns:
             Tuple[List[User], int]: (用户列表, 总数)
         """
-        users = SearchService._search_users(query, page, limit)
-        total = SearchService._user_queryset(query).count()
-
-        return users, total
+        context = context or SearchService.build_search_context(query, include_users=True)
+        users = SearchService._search_users_queryset(context.user_queryset, page, limit)
+        return users, context.user_total
 
     @staticmethod
     def _search_users(
@@ -269,7 +301,10 @@ class SearchService:
             List[User]: 用户列表
         """
         queryset = SearchService._user_queryset(query)
+        return SearchService._search_users_queryset(queryset, page, limit)
 
+    @staticmethod
+    def _search_users_queryset(queryset, page: int = 1, limit: int = 20) -> List[User]:
         # 排序：按讨论数和评论数
         queryset = queryset.order_by('-discussion_count', '-comment_count')
 

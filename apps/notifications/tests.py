@@ -143,17 +143,46 @@ class NotificationServiceTests(TestCase):
             user=self.replier,
         )
 
-        with patch("apps.notifications.services.Notification.objects.bulk_create", side_effect=lambda items: items) as bulk_create:
-            with patch("apps.notifications.services.NotificationService._send_websocket_notification") as websocket_send:
+        with patch("apps.notifications.tasks.dispatch_notification_batch.delay") as delay:
+            with self.captureOnCommitCallbacks(execute=True):
                 NotificationService.notify_discussion_reply(
                     discussion_id=self.discussion.id,
                     post_id=new_post.id,
                     from_user=self.replier,
                 )
 
-        self.assertEqual(bulk_create.call_count, 1)
-        created_notifications = bulk_create.call_args.args[0]
+        created_notifications = Notification.objects.filter(
+            type="discussionReply",
+            subject_id=self.discussion.id,
+            data__post_id=new_post.id,
+        )
         self.assertEqual({item.user_id for item in created_notifications}, {self.author.id, subscriber.id})
+        delay.assert_called_once()
+
+    def test_bulk_notifications_fallback_to_local_dispatch_when_task_enqueue_fails(self):
+        first = Notification(
+            user=self.author,
+            from_user=self.replier,
+            type="discussionReply",
+            subject_type="discussion",
+            subject_id=self.discussion.id,
+            data={"discussion_id": self.discussion.id},
+        )
+        second = Notification(
+            user=self.participant,
+            from_user=self.replier,
+            type="discussionReply",
+            subject_type="discussion",
+            subject_id=self.discussion.id,
+            data={"discussion_id": self.discussion.id},
+        )
+
+        with patch("apps.notifications.tasks.dispatch_notification_batch.delay", side_effect=RuntimeError("queue down")):
+            with patch("apps.notifications.services.NotificationService._send_websocket_notification") as websocket_send:
+                with self.captureOnCommitCallbacks(execute=True):
+                    created = NotificationService.create_notifications_bulk([first, second])
+
+        self.assertEqual(len(created), 2)
         self.assertEqual(websocket_send.call_count, 2)
 
     def auth_header(self, user):

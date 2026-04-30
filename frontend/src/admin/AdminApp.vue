@@ -9,17 +9,21 @@
         </div>
       </div>
     </div>
+    <AppModalHost />
   </div>
 </template>
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import AppModalHost from '../components/AppModalHost.vue'
 import AdminHeader from './components/AdminHeader.vue'
 import AdminNav from './components/AdminNav.vue'
 import { useAuthStore } from '../stores/auth'
+import { useModalStore } from '../stores/modal'
 import { useRouter, useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
+const modalStore = useModalStore()
 const router = useRouter()
 const route = useRoute()
 const showMobileNav = ref(false)
@@ -47,8 +51,12 @@ onMounted(async () => {
 
   // 检查是否是管理员
   if (!authStore.user?.is_staff) {
-    alert('需要管理员权限')
-    window.location.href = '/'
+    await modalStore.alert({
+      title: '无法访问后台',
+      message: '需要管理员权限',
+      tone: 'danger'
+    })
+    router.replace('/')
     return
   }
 

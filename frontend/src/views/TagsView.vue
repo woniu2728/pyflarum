@@ -7,24 +7,7 @@
           @click="handleStartDiscussion"
         />
 
-        <nav class="side-nav">
-          <router-link to="/" class="nav-item">
-            <i class="far fa-comments"></i>
-            全部讨论
-          </router-link>
-          <router-link v-if="authStore.user" to="/following" class="nav-item">
-            <i class="fas fa-bell"></i>
-            关注中
-          </router-link>
-          <router-link to="/tags" class="nav-item active">
-            <i class="fas fa-tags"></i>
-            全部标签
-          </router-link>
-          <router-link v-if="authStore.user" :to="`/u/${authStore.user.id}`" class="nav-item">
-            <i class="fas fa-user"></i>
-            我的主页
-          </router-link>
-        </nav>
+        <ForumPrimaryNav :auth-store="authStore" active-key="tags" />
       </template>
 
       <main class="tags-content">
@@ -55,6 +38,7 @@ import { useComposerStore } from '@/stores/composer'
 import { useRouter } from 'vue-router'
 import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
 import ForumPageWithSidebar from '@/components/forum/ForumPageWithSidebar.vue'
+import ForumPrimaryNav from '@/components/forum/ForumPrimaryNav.vue'
 import ForumStartDiscussionButton from '@/components/forum/ForumStartDiscussionButton.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumTagCloud from '@/components/forum/ForumTagCloud.vue'
@@ -84,28 +68,6 @@ function handleStartDiscussion() {
 .tags-page {
   background: var(--forum-bg-canvas);
   min-height: calc(100vh - 56px);
-}
-
-.side-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: var(--forum-radius-sm);
-  color: var(--forum-text-muted);
-}
-
-.nav-item:hover,
-.nav-item.active {
-  background: var(--forum-primary-color);
-  color: var(--forum-text-inverse);
-  text-decoration: none;
 }
 
 .tags-content {

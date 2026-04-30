@@ -1,16 +1,17 @@
 <template>
   <div class="discussion-create-redirect">
-    <div class="redirect-card">
+    <ForumStateBlock class="redirect-card">
       <div class="redirect-spinner"></div>
       <h1>正在打开讨论编辑器...</h1>
-      <p>Bias 已切换为 Flarum 风格的浮层 composer。</p>
-    </div>
+      <p>系统会自动切换到浮层编辑器。</p>
+    </ForumStateBlock>
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
@@ -42,29 +43,24 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  background: #f5f8fa;
+  background: var(--forum-bg-canvas);
 }
 
 .redirect-card {
   width: min(420px, 100%);
-  padding: 32px 28px;
-  border-radius: 12px;
-  background: white;
-  border: 1px solid #dbe2ea;
   text-align: center;
-  box-shadow: 0 18px 38px rgba(31, 45, 61, 0.08);
 }
 
 .redirect-card h1 {
   margin: 0 0 10px;
   font-size: 24px;
   font-weight: 400;
-  color: #2f3c4d;
+  color: var(--forum-text-color);
 }
 
 .redirect-card p {
   margin: 0;
-  color: #6a7988;
+  color: var(--forum-text-muted);
 }
 
 .redirect-spinner {
@@ -72,7 +68,7 @@ onMounted(() => {
   height: 28px;
   margin: 0 auto 16px;
   border-radius: 50%;
-  border: 3px solid #dbe2ea;
+  border: 3px solid var(--forum-border-color);
   border-top-color: var(--forum-primary-color);
   animation: spin 0.9s linear infinite;
 }

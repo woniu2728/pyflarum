@@ -131,9 +131,9 @@
         >
           {{ saving ? '保存中...' : '保存权限' }}
         </button>
-        <span v-if="saveSuccess" class="Form-success">✓ 保存成功</span>
-        <span v-if="errorMessage" class="Form-error">{{ errorMessage }}</span>
       </div>
+      <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
+      <AdminInlineMessage v-if="errorMessage" tone="danger">{{ errorMessage }}</AdminInlineMessage>
 
       <div v-if="showGroupModal" class="Modal" @click.self="closeGroupModal">
         <div class="Modal-content Modal-content--group">
@@ -198,19 +198,23 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminPage from '../components/AdminPage.vue'
+import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const groups = ref([])
 const permissions = ref({})
 const saving = ref(false)
-const saveSuccess = ref(false)
 const errorMessage = ref('')
 const showGroupModal = ref(false)
 const groupSaving = ref(false)
 const deletingGroup = ref(false)
 const editingGroup = ref(null)
 const groupForm = ref(getEmptyGroupForm())
+const modalStore = useModalStore()
+const { saveSuccess, resetSaveFeedback, showSaveSuccess } = useAdminSaveFeedback()
 
 const permissionSections = [
   {
@@ -315,15 +319,12 @@ function togglePermission(groupId, permissionName, event) {
 
 async function savePermissions() {
   saving.value = true
-  saveSuccess.value = false
+  resetSaveFeedback()
   errorMessage.value = ''
 
   try {
     await api.post('/admin/permissions', permissions.value)
-    saveSuccess.value = true
-    setTimeout(() => {
-      saveSuccess.value = false
-    }, 3000)
+    showSaveSuccess()
   } catch (error) {
     console.error('保存权限失败:', error)
     errorMessage.value = error.response?.data?.error || '保存权限失败'
@@ -351,7 +352,11 @@ function editGroup(group) {
 
 async function saveGroup() {
   if (!groupForm.value.name.trim()) {
-    alert('请输入用户组名称')
+    await modalStore.alert({
+      title: '信息不完整',
+      message: '请输入用户组名称',
+      tone: 'warning'
+    })
     return
   }
 
@@ -373,7 +378,11 @@ async function saveGroup() {
     await loadPermissions()
   } catch (error) {
     console.error('保存用户组失败:', error)
-    alert('保存失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '保存失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     groupSaving.value = false
   }
@@ -388,7 +397,14 @@ async function deleteGroup() {
     return
   }
 
-  if (!window.confirm(`确定删除用户组“${editingGroup.value.name}”吗？现有成员会失去该用户组权限。`)) {
+  const confirmed = await modalStore.confirm({
+    title: '删除用户组',
+    message: `确定删除用户组“${editingGroup.value.name}”吗？现有成员会失去该用户组权限。`,
+    confirmText: '删除',
+    cancelText: '取消',
+    tone: 'danger'
+  })
+  if (!confirmed) {
     return
   }
 
@@ -400,7 +416,11 @@ async function deleteGroup() {
     await loadPermissions()
   } catch (error) {
     console.error('删除用户组失败:', error)
-    alert('删除失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '删除失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     deletingGroup.value = false
   }
@@ -593,10 +613,6 @@ function getEmptyGroupForm() {
   display: flex;
   align-items: center;
   gap: 15px;
-}
-
-.Form-error {
-  min-height: 22px;
 }
 
 .Modal-content--group {

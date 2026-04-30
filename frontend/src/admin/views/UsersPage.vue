@@ -36,10 +36,14 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="9" class="UserTable-loading">加载中...</td>
+                <td colspan="9" class="UserTable-loading">
+                  <AdminStateBlock tone="subtle">加载中...</AdminStateBlock>
+                </td>
               </tr>
               <tr v-else-if="users.length === 0">
-                <td colspan="9" class="UserTable-empty">暂无用户</td>
+                <td colspan="9" class="UserTable-empty">
+                  <AdminStateBlock>暂无用户</AdminStateBlock>
+                </td>
               </tr>
               <tr v-else v-for="user in users" :key="user.id">
                 <td data-label="ID">{{ user.id }}</td>
@@ -82,8 +86,8 @@
         </div>
 
         <div class="UserMobileList">
-          <div v-if="loading" class="UserMobileState">加载中...</div>
-          <div v-else-if="users.length === 0" class="UserMobileState">暂无用户</div>
+          <AdminStateBlock v-if="loading" class="UserMobileState" tone="subtle">加载中...</AdminStateBlock>
+          <AdminStateBlock v-else-if="users.length === 0" class="UserMobileState">暂无用户</AdminStateBlock>
           <article v-else v-for="user in users" :key="`mobile-${user.id}`" class="UserMobileCard">
             <div class="UserMobileCard-header">
               <div class="UserMobileCard-identity">
@@ -175,7 +179,7 @@
           </button>
         </div>
 
-        <div v-if="loadingDetails" class="Modal-loading">加载中...</div>
+        <AdminStateBlock v-if="loadingDetails" class="Modal-loading" tone="subtle">加载中...</AdminStateBlock>
         <div v-else class="Modal-body">
           <div class="Form-group">
             <label>用户名</label>
@@ -285,11 +289,14 @@
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
 import AdminPage from '../components/AdminPage.vue'
 import api from '../../api'
 import { useAuthStore } from '../../stores/auth'
+import { useModalStore } from '../../stores/modal'
 
 const authStore = useAuthStore()
+const modalStore = useModalStore()
 const users = ref([])
 const loading = ref(true)
 const searchQuery = ref('')
@@ -376,7 +383,11 @@ async function editUser(user) {
     }
   } catch (error) {
     console.error('加载用户详情失败:', error)
-    alert('加载用户详情失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '加载用户详情失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
     closeModal()
   } finally {
     loadingDetails.value = false
@@ -407,7 +418,11 @@ async function saveUser() {
     await loadUsers()
   } catch (error) {
     console.error('保存用户失败:', error)
-    alert('保存失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '保存失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     saving.value = false
     savingDetails.value = false
@@ -417,7 +432,14 @@ async function saveUser() {
 async function deleteUser() {
   if (!editingUserId.value || !canDeleteCurrentUser.value) return
 
-  if (!window.confirm(`确定删除用户“${formData.value.username || editingUserId.value}”吗？该操作不可撤销。`)) {
+  const confirmed = await modalStore.confirm({
+    title: '删除用户',
+    message: `确定删除用户“${formData.value.username || editingUserId.value}”吗？该操作不可撤销。`,
+    confirmText: '删除',
+    cancelText: '取消',
+    tone: 'danger'
+  })
+  if (!confirmed) {
     return
   }
 
@@ -429,7 +451,11 @@ async function deleteUser() {
     await loadUsers()
   } catch (error) {
     console.error('删除用户失败:', error)
-    alert('删除失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '删除失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     deleting.value = false
     savingDetails.value = false
@@ -592,9 +618,7 @@ const canDeleteCurrentUser = computed(() => {
 
 .UserTable-loading,
 .UserTable-empty {
-  text-align: center;
-  padding: 40px;
-  color: var(--forum-text-soft);
+  padding: 18px;
 }
 
 .UserGroups {
@@ -723,12 +747,7 @@ const canDeleteCurrentUser = computed(() => {
   }
 
   .UserMobileState {
-    padding: 28px 16px;
-    border: 1px solid var(--forum-border-color);
-    border-radius: 16px;
-    background: var(--forum-bg-elevated);
-    text-align: center;
-    color: var(--forum-text-soft);
+    padding: 0;
   }
 
   .UserMobileCard {

@@ -7,6 +7,8 @@ import { unwrapList } from '@/utils/forum'
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref([])
   const unreadCount = ref(0)
+  const readCount = ref(0)
+  const totalCount = ref(0)
   const loading = ref(false)
   const initialized = ref(false)
   const ws = ref(null)
@@ -146,7 +148,9 @@ export const useNotificationStore = defineStore('notification', () => {
         }
       })
       notifications.value = unwrapList(data)
+      totalCount.value = Number(data.total || notifications.value.length || 0)
       unreadCount.value = Number(data.unread_count || 0)
+      readCount.value = Math.max(0, totalCount.value - unreadCount.value)
       initialized.value = true
       return data
     } finally {
@@ -156,7 +160,9 @@ export const useNotificationStore = defineStore('notification', () => {
 
   async function fetchStats() {
     const data = await api.get('/notifications/stats')
+    totalCount.value = Number(data.total || 0)
     unreadCount.value = Number(data.unread_count || 0)
+    readCount.value = Number(data.read_count || Math.max(0, totalCount.value - unreadCount.value))
     return data
   }
 
@@ -187,34 +193,46 @@ export const useNotificationStore = defineStore('notification', () => {
     if (notification && !notification.is_read) {
       notification.is_read = true
       unreadCount.value = Math.max(0, unreadCount.value - 1)
+      readCount.value += 1
     }
   }
 
   async function markAllAsRead() {
-    await api.post('/notifications/read-all')
+    const data = await api.post('/notifications/read-all')
     notifications.value.forEach(notification => {
       notification.is_read = true
     })
+    readCount.value += unreadCount.value
     unreadCount.value = 0
+    return data
   }
 
   async function deleteNotification(notificationId) {
     const notification = notifications.value.find(n => n.id === notificationId)
     await api.delete(`/notifications/${notificationId}`)
     notifications.value = notifications.value.filter(n => n.id !== notificationId)
+    totalCount.value = Math.max(0, totalCount.value - 1)
     if (notification && !notification.is_read) {
       unreadCount.value = Math.max(0, unreadCount.value - 1)
+      return
     }
+    readCount.value = Math.max(0, readCount.value - 1)
   }
 
   async function clearReadNotifications() {
-    await api.delete('/notifications/read/clear')
+    const data = await api.delete('/notifications/read/clear')
     notifications.value = notifications.value.filter(notification => !notification.is_read)
+    const removedCount = Number(data.count || 0)
+    totalCount.value = Math.max(0, totalCount.value - removedCount)
+    readCount.value = Math.max(0, readCount.value - removedCount)
+    return data
   }
 
   function resetState() {
     notifications.value = []
     unreadCount.value = 0
+    readCount.value = 0
+    totalCount.value = 0
     loading.value = false
     initialized.value = false
     websocketDisabled.value = false
@@ -259,6 +277,8 @@ export const useNotificationStore = defineStore('notification', () => {
   return {
     notifications,
     unreadCount,
+    readCount,
+    totalCount,
     loading,
     initialized,
     connect,

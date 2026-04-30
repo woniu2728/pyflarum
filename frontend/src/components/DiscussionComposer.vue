@@ -12,38 +12,20 @@
       :style="composerInlineStyle"
     >
       <div class="composer-handle" aria-hidden="true" @mousedown.prevent="startResize"></div>
-      <div class="composer-header">
-        <div
-          class="composer-title"
-          :class="{ 'composer-title--clickable': composerStore.isMinimized }"
-          @click="handleHeaderSummaryClick"
-        >
-          <span>{{ composerHeading }}</span>
-          <small>{{ composerStatusText }}</small>
-        </div>
-        <div class="composer-controls">
-          <button type="button" title="保存草稿" :disabled="submitting" @click="saveDraft()">
-            <i class="far fa-save"></i>
-          </button>
-          <button
-            type="button"
-            :title="composerStore.isMinimized ? '展开' : '最小化'"
-            @click="toggleMinimized"
-          >
-            <i :class="composerStore.isMinimized ? 'far fa-window-restore' : 'fas fa-minus'"></i>
-          </button>
-          <button
-            type="button"
-            :title="composerStore.isExpanded ? '退出全屏' : '全屏'"
-            @click="toggleExpanded"
-          >
-            <i :class="composerStore.isExpanded ? 'fas fa-compress' : 'fas fa-expand'"></i>
-          </button>
-          <button type="button" title="关闭" @click="closeComposer">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
+      <ComposerHeaderBar
+        :title="composerHeading"
+        :subtitle="composerStatusText"
+        :summary-clickable="composerStore.isMinimized"
+        :show-save="true"
+        :submitting="submitting"
+        :minimized="composerStore.isMinimized"
+        :expanded="composerStore.isExpanded"
+        @title-click="handleHeaderSummaryClick"
+        @save="saveDraft()"
+        @toggle-minimized="toggleMinimized"
+        @toggle-expanded="toggleExpanded"
+        @close="closeComposer"
+      />
 
       <div v-show="!composerStore.isMinimized" class="composer-body">
         <div v-if="isSuspended" class="composer-notice composer-notice-warning">
@@ -122,18 +104,12 @@
           @scroll="handleEditorInteraction"
           @keydown="handleEditorKeydown"
         ></textarea>
-        <div v-if="showPreview" class="composer-preview">
-          <div class="composer-preview-header">
-            <span>预览</span>
-            <small>{{ previewStatusText }}</small>
-          </div>
-          <div v-if="previewLoading" class="composer-preview-loading">正在生成预览...</div>
-          <div
-            v-else
-            class="composer-preview-body post-body"
-            v-html="previewHtml || '<p class=&quot;composer-preview-empty&quot;>输入内容后即可查看预览</p>'"
-          ></div>
-        </div>
+        <ComposerPreviewPanel
+          v-if="showPreview"
+          :loading="previewLoading"
+          :status-text="previewStatusText"
+          :html="previewHtml"
+        />
         <ComposerMentionPicker
           v-if="showMentionPicker"
           :items="mentionUsers"
@@ -152,18 +128,12 @@
           @select="handleEmojiAutocompleteSelect"
         />
 
-        <div class="composer-toolbar">
-          <button
-            type="button"
-            class="composer-submit"
-            :disabled="!canSubmit"
-            @click="submitDiscussion"
-          >
-            <i class="fas fa-paper-plane"></i>
-            {{ submitting ? composerSubmittingText : (uploading ? '上传中...' : composerSubmitText) }}
-          </button>
-
-          <div class="composer-formatting" aria-label="格式化工具栏">
+        <ComposerActionBar
+          :submit-disabled="!canSubmit"
+          :submit-text="submitting ? composerSubmittingText : (uploading ? '上传中...' : composerSubmitText)"
+          @submit="submitDiscussion"
+        >
+          <template #formatting>
             <button
               type="button"
               title="预览"
@@ -203,12 +173,14 @@
                 <span v-else>{{ tool.label }}</span>
               </button>
             </template>
-          </div>
+          </template>
 
-          <button type="button" class="composer-secondary" :disabled="submitting" @click="clearDraft">
-            清除草稿
-          </button>
-        </div>
+          <template #secondary>
+            <button type="button" class="composer-secondary" :disabled="submitting" @click="clearDraft">
+              清除草稿
+            </button>
+          </template>
+        </ComposerActionBar>
 
         <input
           ref="attachmentInput"
@@ -235,6 +207,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ComposerEmojiAutocomplete from '@/components/ComposerEmojiAutocomplete.vue'
 import ComposerEmojiPicker from '@/components/ComposerEmojiPicker.vue'
+import ComposerActionBar from '@/components/composer/ComposerActionBar.vue'
+import ComposerHeaderBar from '@/components/composer/ComposerHeaderBar.vue'
+import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue'
 import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
@@ -1428,72 +1403,6 @@ function clearComposerViewportEffects() {
   margin: 6px auto 0;
 }
 
-.composer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 20px 10px;
-  color: #4a5665;
-}
-
-.composer-title {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.composer-title--clickable {
-  cursor: pointer;
-}
-
-.composer-title span,
-.composer-title small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.composer-title span {
-  font-size: 14px;
-  color: #445161;
-}
-
-.composer-title small {
-  color: #7b8794;
-  font-size: 12px;
-}
-
-.composer-controls {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.composer-controls button {
-  border: 0;
-  background: transparent;
-  color: #6c7a89;
-  border-radius: 4px;
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.composer-controls button:hover {
-  background: #e8edf3;
-  color: #3f4b59;
-}
-
-.composer-controls button:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
 .composer-body {
   padding: 0 20px 0;
   flex: 1;
@@ -1587,35 +1496,6 @@ function clearComposerViewportEffects() {
   flex: 1;
 }
 
-.composer-preview {
-  display: flex;
-  flex: 1;
-  min-height: 140px;
-  flex-direction: column;
-  padding: 14px 0 12px;
-}
-
-.composer-preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  color: #5c6d7d;
-  font-size: 13px;
-}
-
-.composer-preview-loading,
-.composer-preview-empty {
-  color: #7a8794;
-  font-size: 14px;
-}
-
-.composer-preview-body {
-  flex: 1;
-  overflow-y: auto;
-  line-height: 1.7;
-}
-
 .composer-editor:focus {
   outline: none;
   border: 0;
@@ -1625,100 +1505,6 @@ function clearComposerViewportEffects() {
 .floating-composer.is-expanded .composer-editor {
   min-height: calc(100vh - 230px);
   max-height: none;
-}
-
-.composer-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 -20px;
-  padding: 10px 20px;
-  border-top: 1px solid #dbe2ea;
-  flex-wrap: nowrap;
-}
-
-.composer-submit,
-.composer-secondary {
-  border: 0;
-  border-radius: 4px;
-  padding: 8px 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.composer-submit {
-  background: var(--forum-primary-color);
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.composer-submit:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.composer-formatting {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.composer-tool {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.composer-formatting button {
-  border: 0;
-  background: transparent;
-  color: #5b6776;
-  border-radius: 4px;
-  min-width: 28px;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.composer-formatting button:hover {
-  background: #e8edf3;
-  color: #354152;
-}
-
-.composer-formatting button.is-active {
-  background: #e3ecf5;
-  color: #325b88;
-}
-
-.composer-formatting button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.composer-formatting button span {
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.composer-secondary {
-  background: transparent;
-  color: #6b7786;
-}
-
-.composer-secondary:hover {
-  background: #e8edf3;
-  color: #425062;
 }
 
 .composer-file-input {
@@ -1756,20 +1542,5 @@ function clearComposerViewportEffects() {
     text-align: right;
   }
 
-  .composer-toolbar {
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-
-  .composer-submit,
-  .composer-secondary {
-    justify-content: center;
-  }
-
-  .composer-formatting {
-    order: 3;
-    flex: 0 0 100%;
-    padding-bottom: 2px;
-  }
 }
 </style>

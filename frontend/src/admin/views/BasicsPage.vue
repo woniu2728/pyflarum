@@ -119,16 +119,18 @@
         >
           {{ saving ? '保存中...' : '保存设置' }}
         </button>
-        <span v-if="saveSuccess" class="Form-success">✓ 保存成功</span>
-        <span v-if="saveError" class="Form-error">保存失败，请重试</span>
       </div>
+      <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
+      <AdminInlineMessage v-if="saveError" tone="danger">保存失败，请重试</AdminInlineMessage>
     </form>
   </AdminPage>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminPage from '../components/AdminPage.vue'
+import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
 import api from '../../api'
 
 const settings = ref({
@@ -144,8 +146,7 @@ const settings = ref({
 })
 
 const saving = ref(false)
-const saveSuccess = ref(false)
-const saveError = ref(false)
+const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
 
 onMounted(async () => {
   try {
@@ -168,18 +169,14 @@ onMounted(async () => {
 
 async function handleSubmit() {
   saving.value = true
-  saveSuccess.value = false
-  saveError.value = false
+  resetSaveFeedback()
 
   try {
     await api.post('/admin/settings', settings.value)
-    saveSuccess.value = true
-    setTimeout(() => {
-      saveSuccess.value = false
-    }, 3000)
+    showSaveSuccess()
   } catch (error) {
     console.error('保存设置失败:', error)
-    saveError.value = true
+    showSaveError()
   } finally {
     saving.value = false
   }

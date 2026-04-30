@@ -150,10 +150,17 @@ def search(
     query = q.strip()
     user = get_optional_user(request)
     can_search_users = bool(user and UserService.has_forum_permission(user, "searchUsers"))
-    totals = SearchService.get_search_totals(query, user=user, include_users=can_search_users)
+    context = SearchService.build_search_context(query, user=user, include_users=can_search_users)
 
     if type == 'all':
-        result = SearchService.search_all(query, page, limit, user=user, include_users=can_search_users)
+        result = SearchService.search_all(
+            query,
+            page,
+            limit,
+            user=user,
+            include_users=can_search_users,
+            context=context,
+        )
         return {
             **result,
             'discussions': [serialize_discussion_search_result(item) for item in result['discussions']],
@@ -161,7 +168,7 @@ def search(
         }
 
     elif type == 'discussions':
-        discussions, total = SearchService.search_discussions(query, page, limit, user=user)
+        discussions, total = SearchService.search_discussions(query, page, limit, user=user, context=context)
         discussion_data = [serialize_discussion_search_result(discussion) for discussion in discussions]
 
         return {
@@ -170,15 +177,15 @@ def search(
             'limit': limit,
             'type': type,
             'discussion_total': total,
-            'post_total': totals["post_total"],
-            'user_total': totals["user_total"],
+            'post_total': context.post_total,
+            'user_total': context.user_total,
             'discussions': discussion_data,
             'posts': [],
             'users': [],
         }
 
     elif type == 'posts':
-        posts, total = SearchService.search_posts(query, page, limit, user=user)
+        posts, total = SearchService.search_posts(query, page, limit, user=user, context=context)
         post_data = [serialize_post_search_result(post) for post in posts]
 
         return {
@@ -186,9 +193,9 @@ def search(
             'page': page,
             'limit': limit,
             'type': type,
-            'discussion_total': totals["discussion_total"],
+            'discussion_total': context.discussion_total,
             'post_total': total,
-            'user_total': totals["user_total"],
+            'user_total': context.user_total,
             'discussions': [],
             'posts': post_data,
             'users': [],
@@ -198,15 +205,15 @@ def search(
         if not can_search_users:
             return JsonResponse({"error": "没有权限搜索用户"}, status=403)
 
-        users, total = SearchService.search_users(query, page, limit)
+        users, total = SearchService.search_users(query, page, limit, context=context)
 
         return {
             'total': total,
             'page': page,
             'limit': limit,
             'type': type,
-            'discussion_total': totals["discussion_total"],
-            'post_total': totals["post_total"],
+            'discussion_total': context.discussion_total,
+            'post_total': context.post_total,
             'user_total': total,
             'discussions': [],
             'posts': [],

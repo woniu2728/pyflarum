@@ -99,9 +99,13 @@ defineEmits(['toggle', 'logout'])
 }
 
 .username {
+  max-width: 88px;
   font-size: 14px;
   color: #555;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-dropdown i.fa-caret-down {

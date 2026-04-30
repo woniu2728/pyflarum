@@ -18,8 +18,8 @@
     </div>
 
     <div class="FlagsPage-list">
-      <div v-if="loading" class="FlagsPage-empty">加载中...</div>
-      <div v-else-if="flags.length === 0" class="FlagsPage-empty">暂无举报记录</div>
+      <AdminStateBlock v-if="loading" class="FlagsPage-empty" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-else-if="flags.length === 0" class="FlagsPage-empty">暂无举报记录</AdminStateBlock>
       <div v-else class="FlagList">
         <article v-for="flag in flags" :key="flag.id" class="FlagCard">
           <div class="FlagCard-header">
@@ -97,7 +97,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -107,6 +109,7 @@ const showResolveModal = ref(false)
 const pendingStatus = ref('resolved')
 const selectedFlag = ref(null)
 const resolutionNote = ref('')
+const modalStore = useModalStore()
 
 const filters = [
   { value: 'open', label: '待处理' },
@@ -172,7 +175,11 @@ async function resolveFlag() {
     await loadFlags()
   } catch (error) {
     console.error('处理举报失败:', error)
-    alert('处理失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '处理失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     saving.value = false
   }
@@ -203,12 +210,6 @@ async function resolveFlag() {
 }
 
 .FlagsPage-empty {
-  padding: 40px;
-  background: var(--forum-bg-elevated);
-  border: 1px solid var(--forum-border-color);
-  border-radius: var(--forum-radius-sm);
-  text-align: center;
-  color: var(--forum-text-soft);
   box-shadow: var(--forum-shadow-sm);
 }
 

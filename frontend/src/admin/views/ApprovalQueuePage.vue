@@ -18,8 +18,8 @@
     </div>
 
     <div class="ApprovalQueue-list">
-      <div v-if="loading" class="ApprovalQueue-empty">加载中...</div>
-      <div v-else-if="items.length === 0" class="ApprovalQueue-empty">当前没有待审核内容</div>
+      <AdminStateBlock v-if="loading" class="ApprovalQueue-empty" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-else-if="items.length === 0" class="ApprovalQueue-empty">当前没有待审核内容</AdminStateBlock>
       <div v-else class="ApprovalList">
         <article v-for="item in items" :key="`${item.type}-${item.id}`" class="ApprovalCard">
           <div class="ApprovalCard-header">
@@ -84,7 +84,9 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -94,6 +96,7 @@ const showModal = ref(false)
 const selectedItem = ref(null)
 const pendingAction = ref('approve')
 const actionNote = ref('')
+const modalStore = useModalStore()
 
 const filters = [
   { value: 'all', label: '全部' },
@@ -160,7 +163,11 @@ async function submitAction() {
     await loadItems()
   } catch (error) {
     console.error('审核提交失败:', error)
-    alert('提交失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    await modalStore.alert({
+      title: '提交失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     saving.value = false
   }
@@ -197,12 +204,6 @@ function formatDate(value) {
 }
 
 .ApprovalQueue-empty {
-  padding: 40px;
-  background: var(--forum-bg-elevated);
-  border: 1px solid var(--forum-border-color);
-  border-radius: var(--forum-radius-sm);
-  text-align: center;
-  color: var(--forum-text-soft);
   box-shadow: var(--forum-shadow-sm);
 }
 

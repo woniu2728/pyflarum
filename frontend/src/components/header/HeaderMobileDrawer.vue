@@ -60,7 +60,7 @@
         <span>全部讨论</span>
       </router-link>
       <router-link
-        v-if="authStore.isAuthenticated"
+        v-if="authStore.isAuthenticated && authStore.user"
         to="/following"
         class="mobile-drawer-link"
         :class="{ active: isMobileNavActive('following') }"
@@ -79,7 +79,7 @@
         <span>标签</span>
       </router-link>
       <router-link
-        v-if="authStore.isAuthenticated"
+        v-if="authStore.isAuthenticated && authStore.user"
         :to="profilePath()"
         class="mobile-drawer-link"
         :class="{ active: isMobileNavActive('profile') }"
@@ -89,7 +89,7 @@
         <span>我的主页</span>
       </router-link>
       <router-link
-        v-if="authStore.isAuthenticated"
+        v-if="authStore.isAuthenticated && authStore.user"
         to="/notifications"
         class="mobile-drawer-link"
         :class="{ active: isMobileNavActive('notifications') }"
@@ -103,7 +103,7 @@
       </router-link>
     </nav>
 
-    <div v-if="authStore.isAuthenticated" class="mobile-drawer-user">
+    <div v-if="authStore.isAuthenticated && authStore.user" class="mobile-drawer-user">
       <div class="mobile-drawer-userCard">
         <img
           v-if="authStore.user?.avatar_url"

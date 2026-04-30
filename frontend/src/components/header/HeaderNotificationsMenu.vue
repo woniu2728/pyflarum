@@ -21,28 +21,36 @@
             type="button"
             class="notifications-menu-action"
             title="全部标记为已读"
-            :disabled="notificationStore.unreadCount === 0 || notificationStore.loading"
+            :disabled="notificationStore.unreadCount === 0 || notificationStore.loading || markingAllRead || clearingRead"
             @click.stop="$emit('mark-all-read')"
           >
-            <i class="fas fa-check"></i>
+            <i :class="markingAllRead ? 'fas fa-spinner fa-spin' : 'fas fa-check'"></i>
           </button>
           <button
             type="button"
             class="notifications-menu-action"
             title="清除已读通知"
-            :disabled="!hasReadNotifications || notificationStore.loading"
+            :disabled="!hasReadNotifications || notificationStore.loading || markingAllRead || clearingRead"
             @click.stop="$emit('clear-read')"
           >
-            <i class="fas fa-trash-alt"></i>
+            <i :class="clearingRead ? 'fas fa-spinner fa-spin' : 'fas fa-trash-alt'"></i>
           </button>
         </div>
+      </div>
+
+      <div
+        v-if="actionMessage"
+        class="notifications-menu-feedback"
+        :class="`notifications-menu-feedback--${actionTone}`"
+      >
+        {{ actionMessage }}
       </div>
 
       <div v-if="notificationStore.loading" class="notifications-menu-state">
         加载中...
       </div>
       <div v-else-if="!notificationItems.length" class="notifications-menu-state notifications-menu-state--empty">
-        No Notifications
+        暂无通知
       </div>
       <div v-else class="notifications-menu-list">
         <section
@@ -111,6 +119,22 @@ defineProps({
     default: () => []
   },
   hasReadNotifications: {
+    type: Boolean,
+    default: false
+  },
+  actionMessage: {
+    type: String,
+    default: ''
+  },
+  actionTone: {
+    type: String,
+    default: 'info'
+  },
+  markingAllRead: {
+    type: Boolean,
+    default: false
+  },
+  clearingRead: {
     type: Boolean,
     default: false
   },
@@ -228,6 +252,33 @@ defineEmits([
 .notifications-menu-action:hover:not(:disabled) {
   background: #f3f6f9;
   color: #44576d;
+}
+
+.notifications-menu-action:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.notifications-menu-feedback {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e6ebf1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.notifications-menu-feedback--info {
+  background: #f6f9fc;
+  color: #5c7188;
+}
+
+.notifications-menu-feedback--success {
+  background: #eef8f1;
+  color: #2f6b43;
+}
+
+.notifications-menu-feedback--danger {
+  background: #fdf1f0;
+  color: #b24b47;
 }
 
 .notifications-menu-state {

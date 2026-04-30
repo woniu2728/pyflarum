@@ -488,17 +488,20 @@
         >
           {{ saving ? '保存中...' : '保存设置' }}
         </button>
-        <span v-if="saveSuccess" class="Form-success">✓ 保存成功</span>
-        <span v-if="saveError" class="Form-error">保存失败，请重试</span>
       </div>
+      <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
+      <AdminInlineMessage v-if="saveError" tone="danger">保存失败，请重试</AdminInlineMessage>
     </div>
   </AdminPage>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminPage from '../components/AdminPage.vue'
+import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const settings = ref({
   cache_driver: 'file',
@@ -549,8 +552,8 @@ const settings = ref({
 
 const saving = ref(false)
 const clearing = ref(false)
-const saveSuccess = ref(false)
-const saveError = ref(false)
+const modalStore = useModalStore()
+const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
 const turnstileMisconfigured = computed(() => (
   settings.value.auth_human_verification_provider === 'turnstile'
   && (!settings.value.auth_turnstile_site_key || !settings.value.auth_turnstile_secret_key)
@@ -567,21 +570,17 @@ onMounted(async () => {
 
 async function saveSettings() {
   saving.value = true
-  saveSuccess.value = false
-  saveError.value = false
+  resetSaveFeedback()
 
   try {
     const response = await api.post('/admin/advanced', settings.value)
     if (response?.settings) {
       settings.value = { ...settings.value, ...response.settings }
     }
-    saveSuccess.value = true
-    setTimeout(() => {
-      saveSuccess.value = false
-    }, 3000)
+    showSaveSuccess()
   } catch (error) {
     console.error('保存高级设置失败:', error)
-    saveError.value = true
+    showSaveError()
   } finally {
     saving.value = false
   }
@@ -591,9 +590,17 @@ async function clearCache() {
   clearing.value = true
   try {
     await api.post('/admin/cache/clear')
-    alert('缓存已清除')
+    await modalStore.alert({
+      title: '缓存已清除',
+      message: '运行时缓存已成功清理。',
+      tone: 'success'
+    })
   } catch (error) {
-    alert('清除缓存失败: ' + (error.response?.data?.error || '未知错误'))
+    await modalStore.alert({
+      title: '清除缓存失败',
+      message: error.response?.data?.error || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     clearing.value = false
   }

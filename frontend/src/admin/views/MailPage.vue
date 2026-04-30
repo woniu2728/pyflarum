@@ -5,14 +5,14 @@
     title="邮件设置"
     description="配置 Gmail 或其他 SMTP 服务的发信参数。"
   >
-    <div v-if="!loaded" class="MailPage-loading">加载中...</div>
+    <AdminStateBlock v-if="!loaded" class="MailPage-loading" tone="subtle">加载中...</AdminStateBlock>
 
     <template v-else>
       <div class="MailContent">
         <form class="Form" @submit.prevent="handleSubmit">
-          <div v-if="!configIsSendable" class="StatusAlert">
+          <AdminInlineMessage v-if="!configIsSendable" tone="warning">
             当前邮件配置尚不可发送。请先补全发件地址和 SMTP 信息。
-          </div>
+          </AdminInlineMessage>
 
           <section class="Form-section">
             <div class="Form-sectionHeader">
@@ -117,9 +117,9 @@
               >
                 {{ saving ? '保存中...' : '保存设置' }}
               </button>
-              <span v-if="saveSuccess" class="Form-success">✓ 保存成功</span>
-              <span v-if="saveError" class="Form-error">保存失败，请检查当前配置</span>
             </div>
+            <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
+            <AdminInlineMessage v-if="saveError" tone="danger">保存失败，请检查当前配置</AdminInlineMessage>
           </section>
         </form>
 
@@ -169,8 +169,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
+import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const defaultSettings = () => ({
   mail_from: '',
@@ -189,9 +193,9 @@ const loaded = ref(false)
 const fallbackTestToEmail = ref('')
 const saving = ref(false)
 const testing = ref(false)
-const saveSuccess = ref(false)
-const saveError = ref(false)
 const initialSnapshot = ref('')
+const modalStore = useModalStore()
+const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
 
 const hasUnsavedChanges = computed(() => JSON.stringify(buildConfigPayload()) !== initialSnapshot.value)
 const effectiveTestToEmail = computed(() => settings.value.mail_test_recipient || fallbackTestToEmail.value)
@@ -293,19 +297,15 @@ onMounted(async () => {
 
 async function handleSubmit() {
   saving.value = true
-  saveSuccess.value = false
-  saveError.value = false
+  resetSaveFeedback()
 
   try {
     const data = await api.post('/admin/mail', buildSavePayload())
     applyResponse(data, { preferLocalValues: true })
-    saveSuccess.value = true
-    setTimeout(() => {
-      saveSuccess.value = false
-    }, 3000)
+    showSaveSuccess()
   } catch (error) {
     console.error('保存邮件设置失败:', error)
-    saveError.value = true
+    showSaveError()
     if (error.response?.data) {
       applyResponse(error.response.data)
     }
@@ -320,9 +320,17 @@ async function sendTestEmail() {
     await api.post('/admin/mail/test', {
       to_email: effectiveTestToEmail.value,
     })
-    alert(`测试邮件已发送到 ${effectiveTestToEmail.value}，请检查收件箱`)
+    await modalStore.alert({
+      title: '测试邮件已发送',
+      message: `测试邮件已发送到 ${effectiveTestToEmail.value}，请检查收件箱`,
+      tone: 'success'
+    })
   } catch (error) {
-    alert('发送测试邮件失败: ' + (error.response?.data?.error || '未知错误'))
+    await modalStore.alert({
+      title: '发送测试邮件失败',
+      message: error.response?.data?.error || '未知错误',
+      tone: 'danger'
+    })
   } finally {
     testing.value = false
   }
@@ -337,21 +345,6 @@ async function sendTestEmail() {
 .MailContent {
   max-width: 820px;
   width: 100%;
-}
-
-.MailPage-loading {
-  color: var(--forum-text-muted);
-  font-size: var(--forum-font-size-md);
-}
-
-.StatusAlert {
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--forum-danger-border);
-  border-radius: 12px;
-  background: var(--forum-danger-bg);
-  color: var(--forum-danger-color);
-  line-height: 1.6;
 }
 
 .Form-section {

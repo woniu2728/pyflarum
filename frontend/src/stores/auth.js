@@ -6,6 +6,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const accessToken = ref(localStorage.getItem('access_token'))
   const refreshToken = ref(localStorage.getItem('refresh_token'))
+  const isRestoringSession = ref(Boolean(accessToken.value))
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const forumPermissions = computed(() => Array.isArray(user.value?.forum_permissions) ? user.value.forum_permissions : [])
@@ -14,6 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
   // 登录
   async function login(identification, password, humanVerificationToken = '') {
     try {
+      isRestoringSession.value = true
       const data = await api.post('/users/login', {
         identification,
         password,
@@ -30,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       return { success: true }
     } catch (error) {
+      isRestoringSession.value = false
       return {
         success: false,
         error: error.response?.data?.error || '登录失败'
@@ -61,6 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     accessToken.value = null
     refreshToken.value = null
+    isRestoringSession.value = false
 
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
@@ -71,12 +75,14 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const data = await api.get('/users/me')
       user.value = data
+      isRestoringSession.value = false
       return data
     } catch (error) {
       if (error.response?.status === 401) {
         logout()
       } else {
         user.value = null
+        isRestoringSession.value = false
       }
       if (error.response?.status !== 503) {
         console.error('获取用户信息失败:', error)
@@ -88,8 +94,10 @@ export const useAuthStore = defineStore('auth', () => {
   // 检查认证状态
   async function checkAuth() {
     if (accessToken.value) {
+      isRestoringSession.value = true
       return fetchUser()
     }
+    isRestoringSession.value = false
     return null
   }
 
@@ -102,6 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     isAuthenticated,
+    isRestoringSession,
     forumPermissions,
     canStartDiscussion,
     hasPermission,

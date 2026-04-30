@@ -1,8 +1,8 @@
 <template>
   <div class="discussion-detail-page">
     <div class="container">
-      <div v-if="loading" class="loading">加载中...</div>
-      <div v-else-if="!discussion" class="error">讨论不存在</div>
+      <ForumStateBlock v-if="loading" class="discussion-state-block">加载中...</ForumStateBlock>
+      <ForumStateBlock v-else-if="!discussion" class="discussion-state-block">讨论不存在</ForumStateBlock>
       <div v-else class="layout">
         <!-- 主内容区 -->
         <main class="main-content">
@@ -31,9 +31,13 @@
           />
 
           <div v-if="hasPrevious" ref="previousTrigger" class="load-more load-previous">
-            <button @click="loadPreviousPosts" class="secondary" :disabled="loadingPrevious">
-              {{ loadingPrevious ? '加载中...' : '加载前面的回复' }}
-            </button>
+            <ForumLoadMoreButton
+              compact
+              :loading="loadingPrevious"
+              text="加载前面的回复"
+              loading-text="正在加载回复..."
+              @click="loadPreviousPosts"
+            />
           </div>
 
           <!-- 帖子列表 -->
@@ -87,9 +91,13 @@
 
           <!-- 加载更多 -->
           <div v-if="hasMore" ref="nextTrigger" class="load-more">
-            <button @click="loadMorePosts" class="secondary" :disabled="loadingMore">
-              {{ loadingMore ? '加载中...' : '加载更多' }}
-            </button>
+            <ForumLoadMoreButton
+              compact
+              :loading="loadingMore"
+              text="加载更多回复"
+              loading-text="正在加载回复..."
+              @click="loadMorePosts"
+            />
           </div>
 
           <DiscussionReplyState
@@ -142,8 +150,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ForumLoadMoreButton from '@/components/forum/ForumLoadMoreButton.vue'
+import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
@@ -153,7 +162,9 @@ import DiscussionPostItem from '@/components/discussion/DiscussionPostItem.vue'
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
+import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
 import { useDiscussionDetailPage } from '@/composables/useDiscussionDetailPage'
+import { useDiscussionDetailPresentation } from '@/composables/useDiscussionDetailPresentation'
 import {
   buildTagPath,
   buildUserPath,
@@ -262,94 +273,32 @@ const {
   totalPosts,
   upsertPost
 })
-const discussionHeroColor = computed(() => {
-  const primaryTag = discussion.value?.tags?.find(tag => tag?.color)
-  return primaryTag?.color || '#f2554b'
+const {
+  discussionHeaderStyle,
+  getUserPrimaryGroupIcon,
+  getUserPrimaryGroupColor,
+  getUserPrimaryGroupLabel
+} = useDiscussionDetailPresentation(discussion)
+const {
+  handleDiscussionMenuSelection,
+  hasPostControls,
+  handleOpenReportModal
+} = useDiscussionDetailMenus({
+  activePostMenuId,
+  canDeletePost,
+  canEditPost,
+  canReportPost,
+  deleteDiscussion,
+  editDiscussion,
+  goToLoginForReply,
+  openComposer,
+  openReportModal,
+  showDiscussionMenu,
+  toggleHide,
+  toggleLock,
+  togglePin,
+  toggleSubscription
 })
-const discussionHeaderStyle = computed(() => {
-  const color = discussionHeroColor.value
-  return {
-    '--discussion-hero-color': color,
-    '--discussion-hero-color-dark': shadeColor(color, -12),
-    '--discussion-hero-contrast': getContrastColor(color)
-  }
-})
-
-function getUserPrimaryGroup(user) {
-  return user?.primary_group || null
-}
-
-function getUserPrimaryGroupIcon(user) {
-  return getUserPrimaryGroup(user)?.icon || ''
-}
-
-function getUserPrimaryGroupColor(user) {
-  return getUserPrimaryGroup(user)?.color || 'var(--forum-primary-color)'
-}
-
-function getUserPrimaryGroupLabel(user) {
-  return getUserPrimaryGroup(user)?.name || ''
-}
-
-function getContrastColor(color) {
-  const hex = String(color || '').trim().replace('#', '')
-  if (!/^[\da-fA-F]{6}$/.test(hex)) return '#ffffff'
-
-  const red = parseInt(hex.slice(0, 2), 16)
-  const green = parseInt(hex.slice(2, 4), 16)
-  const blue = parseInt(hex.slice(4, 6), 16)
-  const brightness = (red * 299 + green * 587 + blue * 114) / 1000
-
-  return brightness >= 150 ? '#223245' : '#ffffff'
-}
-
-function shadeColor(color, percent) {
-  const hex = String(color || '').trim().replace('#', '')
-  if (!/^[\da-fA-F]{6}$/.test(hex)) return color || '#f2554b'
-
-  const amount = Number(percent) / 100
-  const channel = start => {
-    const value = parseInt(hex.slice(start, start + 2), 16)
-    const adjusted = amount >= 0
-      ? value + (255 - value) * amount
-      : value * (1 + amount)
-    return Math.max(0, Math.min(255, Math.round(adjusted)))
-      .toString(16)
-      .padStart(2, '0')
-  }
-
-  return `#${channel(0)}${channel(2)}${channel(4)}`
-}
-
-async function handleDiscussionMenuSelection(action) {
-  const actionMap = {
-    reply: openComposer,
-    login: goToLoginForReply,
-    'toggle-subscription': toggleSubscription,
-    edit: editDiscussion,
-    'toggle-pin': togglePin,
-    'toggle-lock': toggleLock,
-    'toggle-hide': toggleHide,
-    delete: deleteDiscussion
-  }
-  const handler = actionMap[action]
-  if (!handler) return
-  await handleDiscussionMenuAction(handler)
-}
-
-function hasPostControls(post) {
-  return canEditPost(post) || canDeletePost(post) || canReportPost(post)
-}
-
-async function handleDiscussionMenuAction(action) {
-  showDiscussionMenu.value = false
-  await action()
-}
-
-async function handleOpenReportModal(post) {
-  activePostMenuId.value = null
-  await openReportModal(post)
-}
 </script>
 
 <style scoped>
@@ -408,10 +357,8 @@ async function handleOpenReportModal(post) {
   margin-top: -10px;
 }
 
-.loading, .error {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--forum-text-muted);
+.discussion-state-block {
+  margin: 0;
 }
 
 @media (max-width: 768px) {

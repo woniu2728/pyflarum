@@ -1,0 +1,129 @@
+import { computed, ref } from 'vue'
+
+export function useHeaderMobileState({
+  authStore,
+  forumTitle,
+  route
+}) {
+  const showMobileDrawer = ref(false)
+  const mobileHeaderOverride = ref(null)
+
+  const isOwnProfileRoute = computed(() => {
+    if (!authStore.user) return false
+
+    return route.name === 'profile'
+      || (route.name === 'user-profile' && String(route.params.id) === String(authStore.user.id))
+  })
+
+  const mobilePageTitle = computed(() => {
+    if (mobileHeaderOverride.value?.title) {
+      return mobileHeaderOverride.value.title
+    }
+
+    switch (route.name) {
+      case 'home':
+        return '全部讨论'
+      case 'following':
+        return '关注中'
+      case 'tags':
+        return '标签'
+      case 'profile':
+      case 'user-profile':
+        return '个人主页'
+      case 'notifications':
+        return '通知'
+      case 'search':
+        return '搜索结果'
+      case 'discussion-detail':
+        return '讨论详情'
+      case 'login':
+        return '登录'
+      case 'register':
+        return '注册'
+      default:
+        return forumTitle || 'Bias'
+    }
+  })
+
+  const mobileLeftActionIcon = computed(() => mobileHeaderOverride.value?.leftAction === 'back' ? 'fas fa-angle-left' : 'fas fa-bars')
+  const mobileLeftActionLabel = computed(() => mobileHeaderOverride.value?.leftAction === 'back' ? '返回上一页' : '打开导航菜单')
+
+  const mobileRightActionType = computed(() => {
+    if (mobileHeaderOverride.value?.rightAction) {
+      return mobileHeaderOverride.value.rightAction
+    }
+
+    if (!authStore.isAuthenticated) return 'login'
+    return authStore.canStartDiscussion ? 'compose-discussion' : 'none'
+  })
+
+  const showMobileRightAction = computed(() => mobileRightActionType.value !== 'none')
+
+  const mobileRightActionIcon = computed(() => {
+    switch (mobileRightActionType.value) {
+      case 'discussion-menu':
+        return 'fas fa-ellipsis-v'
+      case 'login':
+        return 'fas fa-right-to-bracket'
+      default:
+        return 'fas fa-pen-to-square'
+    }
+  })
+
+  const mobileRightActionLabel = computed(() => {
+    switch (mobileRightActionType.value) {
+      case 'discussion-menu':
+        return '讨论操作菜单'
+      case 'login':
+        return '登录'
+      default:
+        return '发起讨论'
+    }
+  })
+
+  function isMobileNavActive(key) {
+    if (key === 'home') {
+      return route.name === 'home' || route.name === 'tag-detail'
+    }
+
+    if (key === 'profile') {
+      return isOwnProfileRoute.value
+    }
+
+    return route.name === key
+  }
+
+  function closeMobileDrawer() {
+    showMobileDrawer.value = false
+  }
+
+  function flipMobileDrawer() {
+    showMobileDrawer.value = !showMobileDrawer.value
+  }
+
+  function resetMobileHeaderOverride() {
+    mobileHeaderOverride.value = null
+  }
+
+  function updateMobileHeaderOverride(detail) {
+    mobileHeaderOverride.value = detail || null
+  }
+
+  return {
+    showMobileDrawer,
+    mobileHeaderOverride,
+    isOwnProfileRoute,
+    mobilePageTitle,
+    mobileLeftActionIcon,
+    mobileLeftActionLabel,
+    mobileRightActionType,
+    showMobileRightAction,
+    mobileRightActionIcon,
+    mobileRightActionLabel,
+    isMobileNavActive,
+    closeMobileDrawer,
+    flipMobileDrawer,
+    resetMobileHeaderOverride,
+    updateMobileHeaderOverride
+  }
+}

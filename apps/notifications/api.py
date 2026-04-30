@@ -63,21 +63,6 @@ def get_notification_stats(request):
     return stats
 
 
-@router.get("/notifications/{notification_id}", response=NotificationOutSchema, auth=AuthBearer(), tags=["Notifications"])
-def get_notification(request, notification_id: int):
-    """
-    获取通知详情
-
-    需要认证
-    """
-    notification = NotificationService.get_notification_by_id(notification_id, request.auth)
-
-    if not notification:
-        return JsonResponse({"error": "通知不存在"}, status=404)
-
-    return notification
-
-
 @router.delete("/notifications/read/clear", auth=AuthBearer(), tags=["Notifications"])
 def delete_all_read(request):
     """
@@ -115,6 +100,21 @@ def mark_all_as_read(request):
     count = NotificationService.mark_all_as_read(request.auth)
 
     return {"message": f"已标记{count}条通知为已读", "count": count}
+
+
+@router.get("/notifications/{notification_id}", response=NotificationOutSchema, auth=AuthBearer(), tags=["Notifications"])
+def get_notification(request, notification_id: int):
+    """
+    获取通知详情
+
+    需要认证
+    """
+    notification = NotificationService.get_notification_by_id(notification_id, request.auth)
+
+    if not notification:
+        return JsonResponse({"error": "通知不存在"}, status=404)
+
+    return notification
 
 
 @router.delete("/notifications/{notification_id}", auth=AuthBearer(), tags=["Notifications"])

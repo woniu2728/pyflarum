@@ -81,8 +81,7 @@ class NotificationService:
             data=data or {},
         )
 
-        # 发送WebSocket实时通知
-        NotificationService._send_websocket_notification(notification)
+        NotificationService._dispatch_notifications_after_commit([notification.id])
 
         return notification
 
@@ -92,9 +91,22 @@ class NotificationService:
             return []
 
         created = Notification.objects.bulk_create(notifications)
-        for notification in created:
-            NotificationService._send_websocket_notification(notification)
+        NotificationService._dispatch_notifications_after_commit([item.id for item in created if item.id])
         return created
+
+    @staticmethod
+    def _dispatch_notifications_after_commit(notification_ids: List[int]):
+        if not notification_ids:
+            return
+
+        def enqueue():
+            try:
+                from apps.notifications.tasks import dispatch_notification_batch
+                dispatch_notification_batch.delay(notification_ids)
+            except Exception:
+                NotificationService._send_notifications_batch(notification_ids)
+
+        transaction.on_commit(enqueue)
 
     @staticmethod
     def get_notification_list(
@@ -574,3 +586,18 @@ class NotificationService:
         except Exception:
             # WebSocket发送失败不影响主流程
             pass
+
+    @staticmethod
+    def _send_notifications_batch(notification_ids: List[int]):
+        if not notification_ids:
+            return
+
+        notifications = list(
+            Notification.objects.filter(id__in=notification_ids).select_related('from_user')
+        )
+        notification_map = {notification.id: notification for notification in notifications}
+
+        for notification_id in notification_ids:
+            notification = notification_map.get(notification_id)
+            if notification is not None:
+                NotificationService._send_websocket_notification(notification)

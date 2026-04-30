@@ -1,87 +1,53 @@
 <template>
   <aside class="index-nav">
     <div class="index-nav-header">
-      <button
+      <DiscussionListSidebarStartButton
         v-if="!authStore.isAuthenticated || authStore.canStartDiscussion"
-        class="btn-start-discussion"
-        :class="{ 'btn-start-discussion--tag': Boolean(currentTag?.color) }"
-        :style="startDiscussionButtonStyle"
+        :current-tag="currentTag"
+        :start-discussion-button-style="startDiscussionButtonStyle"
         @click="$emit('start-discussion')"
-      >
-        <i class="fas fa-edit"></i>
-        发起讨论
-      </button>
+      />
     </div>
 
     <nav class="index-nav-list">
       <ul>
         <li>
-          <router-link to="/" class="nav-item" :class="{ active: isAllDiscussionsPage }">
-            <i class="far fa-comments"></i>
-            <span>全部讨论</span>
-          </router-link>
+          <DiscussionListSidebarNavLink to="/" icon="far fa-comments" label="全部讨论" :active="isAllDiscussionsPage" />
         </li>
         <li v-if="authStore.user">
-          <router-link to="/following" class="nav-item" :class="{ active: isFollowingPage }">
-            <i class="fas fa-bell"></i>
-            <span>关注中</span>
-          </router-link>
+          <DiscussionListSidebarNavLink to="/following" icon="fas fa-bell" label="关注中" :active="isFollowingPage" />
         </li>
         <li v-if="authStore.user">
-          <router-link
+          <DiscussionListSidebarNavLink
             :to="buildUserPath(authStore.user)"
-            class="nav-item"
-            :class="{ active: isOwnProfilePage }"
-          >
-            <i class="fas fa-user"></i>
-            <span>我的主页</span>
-          </router-link>
+            icon="fas fa-user"
+            label="我的主页"
+            :active="isOwnProfilePage"
+          />
         </li>
         <li v-if="hasSidebarTagNavigation" class="nav-separator" aria-hidden="true"></li>
         <li v-if="hasSidebarTagNavigation">
-          <router-link to="/tags" class="nav-item" :class="{ active: isTagsPage }">
-            <i class="fas fa-th-large"></i>
-            <span>标签</span>
-          </router-link>
+          <DiscussionListSidebarNavLink to="/tags" icon="fas fa-th-large" label="标签" :active="isTagsPage" />
         </li>
         <li v-for="tag in sidebarPrimaryTagItems" :key="`tag-${tag.id}`">
-          <router-link
-            :to="buildTagPath(tag)"
-            class="nav-item tag-link"
-            :class="{
-              active: isSidebarTagActive(tag),
-              'tag-link--child': Boolean(tag.parent_id)
-            }"
-            :style="getSidebarTagStyle(tag)"
-            :title="tag.description || undefined"
-          >
-            <span class="tag-link-icon" :class="{ 'tag-link-icon--placeholder': !tag.icon }" aria-hidden="true">
-              <i v-if="tag.icon" :class="tag.icon"></i>
-              <span v-else class="tag-icon-box"></span>
-            </span>
-            <span class="tag-link-label">{{ tag.name }}</span>
-          </router-link>
+          <DiscussionListSidebarTagLink
+            :tag="tag"
+            :build-tag-path="buildTagPath"
+            :get-sidebar-tag-style="getSidebarTagStyle"
+            :is-active="isSidebarTagActive(tag)"
+            :is-child="Boolean(tag.parent_id)"
+          />
         </li>
         <li v-for="tag in sidebarSecondaryTagItems" :key="`secondary-${tag.id}`">
-          <router-link
-            :to="buildTagPath(tag)"
-            class="nav-item tag-link"
-            :class="{ active: isSidebarTagActive(tag) }"
-            :style="getSidebarTagStyle(tag)"
-            :title="tag.description || undefined"
-          >
-            <span class="tag-link-icon" :class="{ 'tag-link-icon--placeholder': !tag.icon }" aria-hidden="true">
-              <i v-if="tag.icon" :class="tag.icon"></i>
-              <span v-else class="tag-icon-box"></span>
-            </span>
-            <span class="tag-link-label">{{ tag.name }}</span>
-          </router-link>
+          <DiscussionListSidebarTagLink
+            :tag="tag"
+            :build-tag-path="buildTagPath"
+            :get-sidebar-tag-style="getSidebarTagStyle"
+            :is-active="isSidebarTagActive(tag)"
+          />
         </li>
         <li v-if="showMoreTagsLink">
-          <router-link to="/tags" class="nav-item nav-item--muted">
-            <i class="fas fa-ellipsis-h"></i>
-            <span>更多标签</span>
-          </router-link>
+          <DiscussionListSidebarNavLink to="/tags" icon="fas fa-ellipsis-h" label="更多标签" class="nav-item--muted" />
         </li>
       </ul>
     </nav>
@@ -89,6 +55,10 @@
 </template>
 
 <script setup>
+import DiscussionListSidebarNavLink from '@/components/discussion/DiscussionListSidebarNavLink.vue'
+import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
+import DiscussionListSidebarTagLink from '@/components/discussion/DiscussionListSidebarTagLink.vue'
+
 defineProps({
   authStore: {
     type: Object,
@@ -170,39 +140,6 @@ defineEmits(['start-discussion'])
   padding: 18px 18px 12px;
 }
 
-.btn-start-discussion {
-  width: 100%;
-  padding: 10px 14px;
-  background: var(--forum-accent-color);
-  color: white;
-  border: none;
-  border-radius: 3px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter 0.2s, background 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  line-height: 20px;
-  white-space: nowrap;
-  user-select: none;
-}
-
-.btn-start-discussion:hover {
-  filter: brightness(0.92);
-}
-
-.btn-start-discussion--tag {
-  background: var(--tag-button-bg);
-  color: var(--tag-button-text);
-}
-
-.btn-start-discussion i {
-  font-size: 13px;
-}
-
 .index-nav-list {
   padding: 0 18px 24px;
 }
@@ -217,50 +154,6 @@ defineEmits(['start-discussion'])
   margin-bottom: 10px;
 }
 
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0;
-  color: #75808c;
-  text-decoration: none;
-  transition: color 0.15s ease;
-  font-size: 13px;
-  font-weight: normal;
-  cursor: pointer;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  border-radius: 3px;
-  margin-bottom: 0;
-  line-height: 20px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  user-select: none;
-  box-shadow: none;
-  min-height: 18px;
-}
-
-.nav-item:hover {
-  background: none;
-  color: var(--forum-primary-color);
-  text-decoration: none;
-}
-
-.nav-item.active {
-  background: none;
-  color: var(--forum-primary-color);
-  font-weight: 700;
-}
-
-.nav-item i {
-  width: 16px;
-  text-align: center;
-  font-size: 14px;
-}
-
 .nav-separator {
   height: 1px;
   margin: 16px 0 14px;
@@ -273,48 +166,6 @@ defineEmits(['start-discussion'])
 
 .nav-item--muted:hover {
   color: var(--forum-primary-color);
-}
-
-.tag-link {
-  --tag-color: #6c7a89;
-  color: #75808c;
-}
-
-.tag-link:hover,
-.tag-link.active {
-  color: var(--tag-color);
-}
-
-.tag-link-icon {
-  width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--tag-color);
-  font-size: 14px;
-}
-
-.tag-link-icon--placeholder {
-  color: transparent;
-}
-
-.tag-icon-box {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--tag-color);
-}
-
-.tag-link-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tag-link--child {
-  margin-left: 10px;
 }
 
 @media (max-width: 768px) {

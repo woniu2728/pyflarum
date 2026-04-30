@@ -361,6 +361,23 @@ class ChineseSearchTests(TestCase):
         self.assertEqual(len(discussions), 2)
         self.assertTrue(all(discussion.excerpt for discussion in discussions))
 
+    def test_search_api_all_reuses_single_search_context(self):
+        DiscussionService.create_discussion(
+            title="上下文复用搜索",
+            content="上下文复用内容",
+            user=self.user,
+        )
+
+        with patch("apps.core.api.SearchService.build_search_context", wraps=SearchService.build_search_context) as build_context:
+            response = self.client.get(
+                "/api/search",
+                {"q": "上下文复用", "type": "all"},
+                **self.auth_header(),
+            )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(build_context.call_count, 1)
+
 
 class TestRunnerTests(TestCase):
     def test_default_runner_uses_app_test_modules_without_explicit_labels(self):

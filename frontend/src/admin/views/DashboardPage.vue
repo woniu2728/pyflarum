@@ -11,7 +11,9 @@
         <div class="Widget-header">
           <h3>系统状态</h3>
         </div>
-        <div class="Widget-content">
+        <AdminStateBlock v-if="loading" class="Widget-state" tone="subtle">加载中...</AdminStateBlock>
+        <AdminStateBlock v-else-if="loadError" class="Widget-state" tone="danger">{{ loadError }}</AdminStateBlock>
+        <div v-else class="Widget-content">
           <div class="StatusWidget-summary">
             <div class="StatusWidget-runtime">
               <div class="StatusWidget-runtimeLabel">运行时</div>
@@ -66,7 +68,7 @@
         <div class="Widget-header">
           <h3>论坛统计</h3>
         </div>
-        <div class="Widget-content">
+        <div v-if="!loading && !loadError" class="Widget-content">
           <div class="StatsWidget-items">
             <div class="StatsWidget-item">
               <div class="StatsWidget-icon">
@@ -158,6 +160,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 
 const stats = ref({
@@ -179,6 +182,8 @@ const stats = ref({
   pendingApprovals: 0,
   openFlags: 0,
 })
+const loading = ref(true)
+const loadError = ref('')
 
 onMounted(async () => {
   try {
@@ -186,6 +191,9 @@ onMounted(async () => {
     stats.value = data
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    loadError.value = '加载统计数据失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -215,6 +223,10 @@ onMounted(async () => {
   font-size: var(--forum-font-size-lg);
   font-weight: 600;
   color: var(--forum-text-color);
+}
+
+.Widget-state {
+  margin: 16px;
 }
 
 .Widget-content {

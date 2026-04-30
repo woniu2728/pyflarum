@@ -47,10 +47,14 @@
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="7" class="TagTable-loading">加载中...</td>
+              <td colspan="7" class="TagTable-loading">
+                <AdminStateBlock tone="subtle">加载中...</AdminStateBlock>
+              </td>
             </tr>
             <tr v-else-if="!tagRows.length">
-              <td colspan="7" class="TagTable-empty">暂无标签</td>
+              <td colspan="7" class="TagTable-empty">
+                <AdminStateBlock>暂无标签</AdminStateBlock>
+              </td>
             </tr>
             <tr v-for="row in tagRows" v-else :key="row.tag.id">
               <td data-label="预览">
@@ -366,7 +370,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const TAG_COLOR_PRESETS = [
   '#3c78d8',
@@ -436,6 +442,7 @@ const saving = ref(false)
 const movingTagId = ref(null)
 const editingTag = ref(null)
 const iconSearch = ref('')
+const modalStore = useModalStore()
 
 const formData = ref(getEmptyForm())
 
@@ -567,7 +574,11 @@ function editTag(tag) {
 
 async function saveTag() {
   if (!formData.value.name) {
-    alert('请输入标签名称')
+    await modalStore.alert({
+      title: '信息不完整',
+      message: '请输入标签名称',
+      tone: 'warning'
+    })
     return
   }
 
@@ -603,14 +614,25 @@ async function saveTag() {
       || error.response?.data?.detail
       || error.message
       || '未知错误'
-    alert(`保存失败: ${errorMsg}`)
+    await modalStore.alert({
+      title: '保存失败',
+      message: errorMsg,
+      tone: 'danger'
+    })
   } finally {
     saving.value = false
   }
 }
 
 async function deleteTag(tag) {
-  if (!confirm(`确定要删除标签“${tag.name}”吗？`)) {
+  const confirmed = await modalStore.confirm({
+    title: '删除标签',
+    message: `确定要删除标签“${tag.name}”吗？`,
+    confirmText: '删除',
+    cancelText: '取消',
+    tone: 'danger'
+  })
+  if (!confirmed) {
     return
   }
 
@@ -618,7 +640,11 @@ async function deleteTag(tag) {
     await api.delete(`/admin/tags/${tag.id}`)
     await loadTags()
   } catch (error) {
-    alert('删除失败: ' + (error.response?.data?.error || '未知错误'))
+    await modalStore.alert({
+      title: '删除失败',
+      message: error.response?.data?.error || '未知错误',
+      tone: 'danger'
+    })
   }
 }
 
@@ -634,7 +660,11 @@ async function moveTag(tag, direction) {
       || error.response?.data?.detail
       || error.message
       || '未知错误'
-    alert(`调整排序失败: ${errorMsg}`)
+    await modalStore.alert({
+      title: '调整排序失败',
+      message: errorMsg,
+      tone: 'danger'
+    })
   } finally {
     movingTagId.value = null
   }
@@ -867,9 +897,7 @@ function getNextPosition(sourceTags, parentId) {
 
 .TagTable-loading,
 .TagTable-empty {
-  text-align: center;
-  padding: 40px;
-  color: var(--forum-text-soft);
+  padding: 18px;
 }
 
 .TagBadgePreview {
@@ -1286,7 +1314,7 @@ function getNextPosition(sourceTags, parentId) {
   .TagTable-loading,
   .TagTable-empty {
     display: block;
-    padding: 28px 16px;
+    padding: 0;
   }
 
   .TagNameCell {
