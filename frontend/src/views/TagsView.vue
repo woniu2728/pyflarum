@@ -1,15 +1,11 @@
 <template>
   <div class="tags-page">
-    <div class="page-container">
-      <aside class="tags-sidebar">
-        <button
+    <ForumPageWithSidebar>
+      <template #sidebar>
+        <ForumStartDiscussionButton
           v-if="!authStore.isAuthenticated || authStore.canStartDiscussion"
-          class="btn-start-discussion"
           @click="handleStartDiscussion"
-        >
-          <i class="fas fa-edit"></i>
-          发起讨论
-        </button>
+        />
 
         <nav class="side-nav">
           <router-link to="/" class="nav-item">
@@ -29,15 +25,13 @@
             我的主页
           </router-link>
         </nav>
-      </aside>
+      </template>
 
       <main class="tags-content">
-        <section class="tags-hero">
-          <h1>全部标签</h1>
-        </section>
+        <ForumHeroPanel title="全部标签" variant="default" />
 
-        <div v-if="loading" class="state-block">加载中...</div>
-        <div v-else-if="tags.length === 0" class="state-block">暂无标签</div>
+        <ForumStateBlock v-if="loading">加载中...</ForumStateBlock>
+        <ForumStateBlock v-else-if="tags.length === 0">暂无标签</ForumStateBlock>
 
         <template v-else>
           <div class="tag-grid">
@@ -94,53 +88,30 @@
           </div>
         </template>
       </main>
-    </div>
+    </ForumPageWithSidebar>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useRouter } from 'vue-router'
-import api from '@/api'
+import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
+import ForumPageWithSidebar from '@/components/forum/ForumPageWithSidebar.vue'
+import ForumStartDiscussionButton from '@/components/forum/ForumStartDiscussionButton.vue'
+import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
+import { useTagsPage } from '@/composables/useTagsPage'
 import {
   buildDiscussionPath,
   buildTagPath,
-  flattenTags,
-  formatRelativeTime,
-  normalizeTag,
-  unwrapList
+  formatRelativeTime
 } from '@/utils/forum'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const router = useRouter()
 
-const tags = ref([])
-const loading = ref(true)
-
-const cloudTags = computed(() => flattenTags(tags.value.filter(tag => tag.children.length === 0)).slice(0, 12))
-
-onMounted(async () => {
-  await loadTags()
-})
-
-async function loadTags() {
-  loading.value = true
-  try {
-    const response = await api.get('/tags', {
-      params: {
-        include_children: true
-      }
-    })
-    tags.value = unwrapList(response).map(normalizeTag)
-  } catch (error) {
-    console.error('加载标签失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
+const { cloudTags, loading, tags } = useTagsPage()
 
 function handleStartDiscussion() {
   if (!authStore.isAuthenticated) {
@@ -159,36 +130,6 @@ function handleStartDiscussion() {
 .tags-page {
   background: var(--forum-bg-canvas);
   min-height: calc(100vh - 56px);
-}
-
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 240px 1fr;
-}
-
-.tags-sidebar {
-  padding: 20px 15px;
-  background: var(--forum-bg-elevated);
-  border-right: 1px solid var(--forum-border-color);
-  min-height: calc(100vh - 56px);
-}
-
-.btn-start-discussion {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--forum-accent-color);
-  color: var(--forum-text-inverse);
-  margin-bottom: 16px;
-  border-radius: var(--forum-radius-pill);
-}
-
-.btn-start-discussion:hover {
-  background: var(--forum-accent-strong);
 }
 
 .side-nav {
@@ -215,36 +156,6 @@ function handleStartDiscussion() {
 
 .tags-content {
   padding: 24px 28px 40px;
-}
-
-.tags-hero {
-  margin-bottom: 24px;
-  padding: 28px 32px;
-  border-radius: var(--forum-radius-lg);
-  background: linear-gradient(135deg, #f9fbfc 0%, #e8eef4 100%);
-  border: 1px solid var(--forum-border-color);
-  box-shadow: var(--forum-shadow-sm);
-}
-
-.tags-hero h1 {
-  font-size: var(--forum-font-size-3xl);
-  font-weight: 300;
-  margin-bottom: 8px;
-  color: var(--forum-text-color);
-}
-
-.tags-hero p {
-  color: #607080;
-  max-width: 680px;
-}
-
-.state-block {
-  padding: 60px 24px;
-  background: var(--forum-bg-elevated);
-  border-radius: var(--forum-radius-md);
-  border: 1px solid var(--forum-border-color);
-  text-align: center;
-  color: var(--forum-text-soft);
 }
 
 .tag-grid {
@@ -350,16 +261,6 @@ function handleStartDiscussion() {
 }
 
 @media (max-width: 900px) {
-  .page-container {
-    grid-template-columns: 1fr;
-  }
-
-  .tags-sidebar {
-    min-height: auto;
-    border-right: none;
-    border-bottom: 1px solid #e3e8ed;
-  }
-
   .tag-tile {
     grid-template-columns: 1fr;
   }

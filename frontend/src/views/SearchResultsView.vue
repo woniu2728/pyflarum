@@ -1,15 +1,11 @@
 <template>
   <div class="search-page">
-    <div class="search-container">
-      <aside class="search-sidebar">
-        <button
+    <ForumPageWithSidebar>
+      <template #sidebar>
+        <ForumStartDiscussionButton
           v-if="!authStore.isAuthenticated || authStore.canStartDiscussion"
-          class="btn-start-discussion"
           @click="handleStartDiscussion"
-        >
-          <i class="fas fa-edit"></i>
-          发起讨论
-        </button>
+        />
 
         <nav class="search-filters">
           <button
@@ -24,39 +20,42 @@
             <strong>{{ item.count }}</strong>
           </button>
         </nav>
-      </aside>
+      </template>
 
       <main class="search-content">
-        <section class="search-hero">
-          <div class="search-hero-pill">全局搜索</div>
-          <h1>“{{ normalizedQuery || '未输入关键词' }}”</h1>
-          <p>{{ heroText }}</p>
+        <ForumHeroPanel
+          pill="全局搜索"
+          :title="`“${normalizedQuery || '未输入关键词'}”`"
+          :description="heroText"
+          variant="primary"
+        >
+          <template #meta>
+            <div v-if="normalizedQuery" class="search-stats">
+              <span class="search-stat">
+                <strong>{{ discussionTotal }}</strong>
+                <span>讨论</span>
+              </span>
+              <span class="search-stat">
+                <strong>{{ postTotal }}</strong>
+                <span>帖子</span>
+              </span>
+              <span class="search-stat">
+                <strong>{{ userTotal }}</strong>
+                <span>用户</span>
+              </span>
+            </div>
+          </template>
+        </ForumHeroPanel>
 
-          <div v-if="normalizedQuery" class="search-stats">
-            <span class="search-stat">
-              <strong>{{ discussionTotal }}</strong>
-              <span>讨论</span>
-            </span>
-            <span class="search-stat">
-              <strong>{{ postTotal }}</strong>
-              <span>帖子</span>
-            </span>
-            <span class="search-stat">
-              <strong>{{ userTotal }}</strong>
-              <span>用户</span>
-            </span>
-          </div>
-        </section>
-
-        <div v-if="!normalizedQuery" class="search-state">
+        <ForumStateBlock v-if="!normalizedQuery">
           请输入关键词后再搜索。
-        </div>
-        <div v-else-if="loading" class="search-state">
+        </ForumStateBlock>
+        <ForumStateBlock v-else-if="loading">
           搜索中...
-        </div>
-        <div v-else-if="isEmpty" class="search-state">
+        </ForumStateBlock>
+        <ForumStateBlock v-else-if="isEmpty">
           没有找到相关讨论、帖子或用户。
-        </div>
+        </ForumStateBlock>
         <template v-else>
           <section v-if="showDiscussions" class="result-section">
             <div class="section-header">
@@ -192,74 +191,58 @@
           </div>
         </template>
       </main>
-    </div>
+    </ForumPageWithSidebar>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
-import api from '@/api'
+import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
+import ForumPageWithSidebar from '@/components/forum/ForumPageWithSidebar.vue'
+import ForumStartDiscussionButton from '@/components/forum/ForumStartDiscussionButton.vue'
+import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
+import { useSearchResultsPage } from '@/composables/useSearchResultsPage'
 import {
   buildDiscussionPath,
   buildUserPath,
-  formatRelativeTime,
-  unwrapList
+  formatRelativeTime
 } from '@/utils/forum'
-import { highlightSearchText } from '@/utils/search'
-import { renderTwemojiHtml } from '@/utils/twemoji'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
-
-const loading = ref(false)
-const total = ref(0)
-const discussionTotal = ref(0)
-const postTotal = ref(0)
-const userTotal = ref(0)
-const discussions = ref([])
-const posts = ref([])
-const users = ref([])
-
-const normalizedQuery = computed(() => String(route.query.q || '').trim())
-const searchType = computed(() => {
-  const value = String(route.query.type || 'all')
-  return ['all', 'discussions', 'posts', 'users'].includes(value) ? value : 'all'
-})
-const page = computed(() => {
-  const value = Number(route.query.page || 1)
-  return Number.isFinite(value) && value > 0 ? value : 1
-})
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
-const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
-const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
-const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
-const showUsers = computed(() => searchType.value === 'all' || searchType.value === 'users')
-const filterItems = computed(() => [
-  { value: 'all', label: '全部', count: discussionTotal.value + postTotal.value + userTotal.value },
-  { value: 'discussions', label: '讨论', count: discussionTotal.value },
-  { value: 'posts', label: '帖子', count: postTotal.value },
-  { value: 'users', label: '用户', count: userTotal.value },
-])
-const heroText = computed(() => {
-  if (!normalizedQuery.value) {
-    return '支持在讨论、帖子和用户之间进行全局搜索。'
-  }
-
-  if (searchType.value === 'all') {
-    return `共找到 ${discussionTotal.value + postTotal.value + userTotal.value} 条结果，已按讨论、帖子和用户分组展示。`
-  }
-
-  const labelMap = {
-    discussions: '讨论',
-    posts: '帖子',
-    users: '用户',
-  }
-  return `当前显示 ${labelMap[searchType.value]}结果，共 ${total.value} 条。`
+const {
+  changePage,
+  changeType,
+  discussionTotal,
+  discussions,
+  filterItems,
+  getDiscussionExcerptHtml,
+  getDiscussionTitleHtml,
+  getPostExcerptHtml,
+  getPostTitleHtml,
+  getUserSubtitleHtml,
+  getUserTitleHtml,
+  heroText,
+  isEmpty,
+  loading,
+  normalizedQuery,
+  page,
+  postTotal,
+  posts,
+  searchType,
+  showDiscussions,
+  showPosts,
+  showUsers,
+  totalPages,
+  userTotal,
+  users
+} = useSearchResultsPage({
+  route,
+  router
 })
 
 function handleStartDiscussion() {
@@ -274,139 +257,12 @@ function handleStartDiscussion() {
   })
 }
 
-watch(
-  () => [normalizedQuery.value, searchType.value, page.value],
-  async () => {
-    await loadResults()
-  },
-  { immediate: true }
-)
-
-async function loadResults() {
-  if (!normalizedQuery.value) {
-    total.value = 0
-    discussionTotal.value = 0
-    postTotal.value = 0
-    userTotal.value = 0
-    discussions.value = []
-    posts.value = []
-    users.value = []
-    return
-  }
-
-  loading.value = true
-  try {
-    const data = await api.get('/search', {
-      params: {
-        q: normalizedQuery.value,
-        type: searchType.value,
-        page: page.value,
-        limit: 20
-      }
-    })
-
-    total.value = data.total || 0
-    discussionTotal.value = data.discussion_total ?? (data.discussions || []).length
-    postTotal.value = data.post_total ?? (data.posts || []).length
-    userTotal.value = data.user_total ?? (data.users || []).length
-    discussions.value = unwrapList(data.discussions || [])
-    posts.value = unwrapList(data.posts || [])
-    users.value = unwrapList(data.users || [])
-  } catch (error) {
-    console.error('加载搜索结果失败:', error)
-    total.value = 0
-    discussionTotal.value = 0
-    postTotal.value = 0
-    userTotal.value = 0
-    discussions.value = []
-    posts.value = []
-    users.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-function changeType(type) {
-  router.push({
-    path: '/search',
-    query: {
-      q: normalizedQuery.value,
-      type,
-      ...(type === 'all' ? {} : { page: 1 })
-    }
-  })
-}
-
-function changePage(nextPage) {
-  router.push({
-    path: '/search',
-    query: {
-      q: normalizedQuery.value,
-      type: searchType.value,
-      page: nextPage
-    }
-  })
-}
-
-function getDiscussionTitleHtml(discussion) {
-  return renderTwemojiHtml(highlightSearchText(discussion.title || '讨论', normalizedQuery.value, 90))
-}
-
-function getDiscussionExcerptHtml(discussion) {
-  return renderTwemojiHtml(highlightSearchText(discussion.excerpt || '这个讨论没有更多摘要。', normalizedQuery.value, 180))
-}
-
-function getPostTitleHtml(post) {
-  return renderTwemojiHtml(highlightSearchText(post.discussion_title || '帖子结果', normalizedQuery.value, 90))
-}
-
-function getPostExcerptHtml(post) {
-  return renderTwemojiHtml(highlightSearchText(post.excerpt || post.content || '', normalizedQuery.value, 200))
-}
-
-function getUserTitleHtml(user) {
-  return renderTwemojiHtml(highlightSearchText(user.display_name || user.username || '用户', normalizedQuery.value, 80))
-}
-
-function getUserSubtitleHtml(user) {
-  return renderTwemojiHtml(highlightSearchText(user.bio || `@${user.username}`, normalizedQuery.value, 150))
-}
 </script>
 
 <style scoped>
 .search-page {
   background: var(--forum-bg-canvas);
   min-height: calc(100vh - 56px);
-}
-
-.search-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 240px 1fr;
-}
-
-.search-sidebar {
-  padding: 20px 15px;
-  background: var(--forum-bg-elevated);
-  border-right: 1px solid var(--forum-border-color);
-  min-height: calc(100vh - 56px);
-}
-
-.btn-start-discussion {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--forum-accent-color);
-  color: var(--forum-text-inverse);
-  margin-bottom: 16px;
-  border-radius: var(--forum-radius-pill);
-}
-
-.btn-start-discussion:hover {
-  background: var(--forum-accent-strong);
 }
 
 .search-filters {
@@ -443,39 +299,6 @@ function getUserSubtitleHtml(user) {
   padding: 24px 28px 40px;
 }
 
-.search-hero {
-  margin-bottom: 24px;
-  padding: 28px 32px;
-  border-radius: var(--forum-radius-lg);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--forum-primary-color) 14%, white) 0%, #eef4f8 100%);
-  border: 1px solid var(--forum-border-color);
-  box-shadow: var(--forum-shadow-sm);
-}
-
-.search-hero-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--forum-primary-color);
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-.search-hero h1 {
-  font-size: var(--forum-font-size-3xl);
-  font-weight: 300;
-  margin-bottom: 8px;
-  color: var(--forum-text-color);
-}
-
-.search-hero p {
-  color: var(--forum-text-muted);
-  max-width: 720px;
-}
-
 .search-stats {
   display: flex;
   flex-wrap: wrap;
@@ -497,15 +320,6 @@ function getUserSubtitleHtml(user) {
 .search-stat strong {
   color: #263646;
   font-size: 15px;
-}
-
-.search-state {
-  padding: 60px 24px;
-  background: var(--forum-bg-elevated);
-  border-radius: var(--forum-radius-md);
-  border: 1px solid var(--forum-border-color);
-  text-align: center;
-  color: var(--forum-text-soft);
 }
 
 .result-section + .result-section {
@@ -640,15 +454,4 @@ function getUserSubtitleHtml(user) {
   font-size: 13px;
 }
 
-@media (max-width: 900px) {
-  .search-container {
-    grid-template-columns: 1fr;
-  }
-
-  .search-sidebar {
-    min-height: auto;
-    border-right: none;
-    border-bottom: 1px solid #e3e8ed;
-  }
-}
 </style>
