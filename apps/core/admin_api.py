@@ -30,6 +30,7 @@ from apps.core.mail_drivers import (
     validate_mail_settings,
 )
 from apps.core.queue_service import QueueService
+from apps.core.search_index_service import SearchIndexService
 from apps.core.file_service import FileUploadService
 from apps.core.settings_service import (
     ADVANCED_SETTINGS_DEFAULTS,
@@ -630,6 +631,29 @@ def clear_cache(request):
 
     log_admin_action(request, "admin.cache.clear", target_type="cache")
     return {"message": "缓存已清除"}
+
+
+@router.post("/search-indexes/rebuild", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def rebuild_search_indexes(request):
+    """后台手动重建 PostgreSQL 全文搜索索引"""
+    try:
+        result = SearchIndexService.rebuild_postgres_indexes()
+    except RuntimeError as e:
+        return admin_error(str(e), status=400)
+    except Exception as e:
+        return admin_error(f"搜索索引重建失败: {e}", status=503)
+
+    log_admin_action(
+        request,
+        "admin.search_indexes.rebuild",
+        target_type="search_index",
+        data={
+            "indexes": result.get("indexes", []),
+            "duration_ms": result.get("duration_ms", 0),
+        },
+    )
+    return result
 
 
 # ==================== 用户组管理 ====================

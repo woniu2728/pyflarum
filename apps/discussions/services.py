@@ -3,7 +3,7 @@
 """
 from typing import Optional, List, Tuple
 from django.db import transaction
-from django.db.models import Q, F, Count
+from django.db.models import F, Count
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
@@ -193,11 +193,7 @@ class DiscussionService:
 
         # 搜索
         if q:
-            queryset = queryset.filter(SearchService.build_discussion_search_query(q))
-            queryset = queryset.filter(
-                Q(posts__isnull=True) |
-                Q(posts__type='comment', posts__hidden_at__isnull=True)
-            )
+            queryset = SearchService.apply_discussion_search(queryset, q, user=user)
 
         # 按标签过滤
         if tag:

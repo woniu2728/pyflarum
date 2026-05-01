@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+from django.db import connection
 from django.db.models import OuterRef, Q, Subquery
 
 from apps.discussions.models import Discussion
@@ -21,6 +23,8 @@ except ImportError:  # pragma: no cover - 部署安装依赖后走 jieba，开�
 
 CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+")
 TOKEN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+|[A-Za-z0-9_]+")
+ASCII_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+POSTGRES_FULL_TEXT_CONFIG = "simple"
 
 
 @dataclass
@@ -103,6 +107,57 @@ class SearchService:
             SearchService.build_text_query(['title', 'slug'], query) |
             SearchService.build_text_query(['posts__content'], query)
         )
+
+    @staticmethod
+    def should_use_postgres_full_text(query: str, vendor: str | None = None) -> bool:
+        normalized = (query or "").strip()
+        if not normalized:
+            return False
+        if CJK_RE.search(normalized):
+            return False
+        database_vendor = vendor or connection.vendor
+        return database_vendor == "postgresql" and bool(ASCII_TOKEN_RE.search(normalized))
+
+    @staticmethod
+    def apply_discussion_search(queryset, query: str, user=None):
+        if SearchService.should_use_postgres_full_text(query):
+            return SearchService._apply_postgres_discussion_search(queryset, query, user=user)
+
+        title_match_q = SearchService.build_text_query(['title', 'slug'], query)
+        visible_post_match_q = (
+            SearchService.build_text_query(['posts__content'], query)
+            & Q(posts__type='comment')
+            & build_post_visibility_q(user, prefix="posts__")
+        )
+        return queryset.filter(title_match_q | visible_post_match_q)
+
+    @staticmethod
+    def apply_post_search(queryset, query: str):
+        if SearchService.should_use_postgres_full_text(query):
+            search_query = SearchService._postgres_search_query(query)
+            search_vector = SearchVector('content', config=POSTGRES_FULL_TEXT_CONFIG)
+            return queryset.annotate(
+                search_vector=search_vector,
+                search_rank=SearchRank(search_vector, search_query),
+            ).filter(search_vector=search_query)
+
+        return queryset.filter(SearchService.build_text_query(['content'], query))
+
+    @staticmethod
+    def apply_user_search(queryset, query: str):
+        if SearchService.should_use_postgres_full_text(query):
+            search_query = SearchService._postgres_search_query(query)
+            search_vector = (
+                SearchVector('username', weight='A', config=POSTGRES_FULL_TEXT_CONFIG)
+                + SearchVector('display_name', weight='B', config=POSTGRES_FULL_TEXT_CONFIG)
+                + SearchVector('bio', weight='C', config=POSTGRES_FULL_TEXT_CONFIG)
+            )
+            return queryset.annotate(
+                search_vector=search_vector,
+                search_rank=SearchRank(search_vector, search_query),
+            ).filter(search_vector=search_query)
+
+        return queryset.filter(SearchService.build_text_query(['username', 'display_name', 'bio'], query))
 
     @staticmethod
     def build_search_context(query: str, user=None, include_users: bool = True) -> SearchContext:
@@ -326,7 +381,10 @@ class SearchService:
     @staticmethod
     def _search_users_queryset(queryset, page: int = 1, limit: int = 20) -> List[User]:
         # 排序：按讨论数和评论数
-        queryset = queryset.order_by('-discussion_count', '-comment_count')
+        if SearchService._queryset_has_annotation(queryset, "search_rank"):
+            queryset = queryset.order_by('-search_rank', '-discussion_count', '-comment_count')
+        else:
+            queryset = queryset.order_by('-discussion_count', '-comment_count')
 
         # 分页
         page = SearchService.normalize_page(page)
@@ -375,22 +433,13 @@ class SearchService:
 
     @staticmethod
     def _discussion_queryset(query: str, user=None):
-        title_match_q = SearchService.build_text_query(['title', 'slug'], query)
-        visible_post_match_q = (
-            SearchService.build_text_query(['posts__content'], query)
-            & Q(posts__type='comment')
-            & build_post_visibility_q(user, prefix="posts__")
-        )
-        queryset = Discussion.objects.filter(title_match_q | visible_post_match_q).distinct()
+        queryset = SearchService.apply_discussion_search(Discussion.objects.all(), query, user=user).distinct()
         queryset = queryset.filter(build_discussion_visibility_q(user))
         return TagService.filter_discussions_for_user(queryset, user)
 
     @staticmethod
     def _post_queryset(query: str, user=None):
-        queryset = Post.objects.filter(
-            SearchService.build_text_query(['content'], query),
-            type='comment',
-        )
+        queryset = SearchService.apply_post_search(Post.objects.filter(type='comment'), query)
         queryset = queryset.filter(
             build_post_visibility_q(user),
             build_discussion_visibility_q(user, prefix="discussion__"),
@@ -399,9 +448,7 @@ class SearchService:
 
     @staticmethod
     def _user_queryset(query: str):
-        return User.objects.filter(
-            SearchService.build_text_query(['username', 'display_name', 'bio'], query)
-        )
+        return SearchService.apply_user_search(User.objects.all(), query)
 
     @staticmethod
     def _search_discussions_queryset(queryset, query: str, page: int, limit: int) -> List[Discussion]:
@@ -411,7 +458,10 @@ class SearchService:
         queryset = queryset.select_related('user', 'last_posted_user').annotate(
             first_post_content=Subquery(first_post_content)
         )
-        queryset = queryset.order_by('-is_sticky', '-comment_count', '-view_count')
+        if SearchService._queryset_has_annotation(queryset, "search_rank"):
+            queryset = queryset.order_by('-is_sticky', '-search_rank', '-comment_count', '-view_count')
+        else:
+            queryset = queryset.order_by('-is_sticky', '-comment_count', '-view_count')
 
         page = SearchService.normalize_page(page)
         limit = SearchService.normalize_limit(limit)
@@ -429,7 +479,10 @@ class SearchService:
     @staticmethod
     def _search_posts_queryset(queryset, query: str, page: int, limit: int) -> List[Post]:
         queryset = queryset.select_related('user', 'discussion')
-        queryset = queryset.order_by('-created_at')
+        if SearchService._queryset_has_annotation(queryset, "search_rank"):
+            queryset = queryset.order_by('-search_rank', '-created_at')
+        else:
+            queryset = queryset.order_by('-created_at')
 
         page = SearchService.normalize_page(page)
         limit = SearchService.normalize_limit(limit)
@@ -457,3 +510,33 @@ class SearchService:
 
         for piece in pieces:
             SearchService._append_token(tokens, piece)
+
+    @staticmethod
+    def _apply_postgres_discussion_search(queryset, query: str, user=None):
+        search_query = SearchService._postgres_search_query(query)
+        title_vector = (
+            SearchVector('title', weight='A', config=POSTGRES_FULL_TEXT_CONFIG)
+            + SearchVector('slug', weight='B', config=POSTGRES_FULL_TEXT_CONFIG)
+        )
+        visible_post_discussion_ids = SearchService.apply_post_search(
+            Post.objects.filter(type='comment'),
+            query,
+        ).filter(
+            build_post_visibility_q(user),
+            build_discussion_visibility_q(user, prefix="discussion__"),
+        ).values("discussion_id")
+
+        return queryset.annotate(
+            title_search_vector=title_vector,
+            search_rank=SearchRank(title_vector, search_query),
+        ).filter(
+            Q(title_search_vector=search_query) | Q(id__in=Subquery(visible_post_discussion_ids))
+        )
+
+    @staticmethod
+    def _postgres_search_query(query: str) -> SearchQuery:
+        return SearchQuery(query, config=POSTGRES_FULL_TEXT_CONFIG, search_type="plain")
+
+    @staticmethod
+    def _queryset_has_annotation(queryset, name: str) -> bool:
+        return name in getattr(getattr(queryset, "query", None), "annotations", {})

@@ -52,6 +52,21 @@
       </div>
 
       <div class="Form-section">
+        <h3 class="Section-title">搜索索引</h3>
+
+        <div class="Form-group">
+          <label>PostgreSQL 全文索引</label>
+          <p class="Form-help">用于英文、数字关键词的讨论、回复和用户搜索。数据量较大时请在低峰期执行。</p>
+        </div>
+
+        <div class="Form-actions">
+          <button @click="rebuildSearchIndexes" class="Button" :disabled="rebuildingSearchIndexes">
+            {{ rebuildingSearchIndexes ? '重建中...' : '重建搜索索引' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="Form-section">
         <h3 class="Section-title">队列设置</h3>
 
         <div class="Form-group">
@@ -552,6 +567,7 @@ const settings = ref({
 
 const saving = ref(false)
 const clearing = ref(false)
+const rebuildingSearchIndexes = ref(false)
 const loadedSettingsSnapshot = ref(null)
 const modalStore = useModalStore()
 const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
@@ -631,6 +647,37 @@ async function clearCache() {
     })
   } finally {
     clearing.value = false
+  }
+}
+
+async function rebuildSearchIndexes() {
+  const confirmed = await modalStore.confirm({
+    title: '重建搜索索引',
+    message: '确定在后台重建 PostgreSQL 全文搜索索引吗？数据量较大时可能耗时较长，建议在低峰期执行。',
+    confirmText: '重建',
+    cancelText: '取消',
+    tone: 'warning'
+  })
+  if (!confirmed) {
+    return
+  }
+
+  rebuildingSearchIndexes.value = true
+  try {
+    await api.post('/admin/search-indexes/rebuild')
+    await modalStore.alert({
+      title: '搜索索引已重建',
+      message: '已重建讨论、回复和用户搜索索引。',
+      tone: 'success'
+    })
+  } catch (error) {
+    await modalStore.alert({
+      title: '重建搜索索引失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
+  } finally {
+    rebuildingSearchIndexes.value = false
   }
 }
 

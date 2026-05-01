@@ -84,6 +84,42 @@ class ChineseSearchTests(TestCase):
         self.assertIn("中文搜索", tokens)
         self.assertTrue({"中文", "搜索"}.intersection(tokens))
 
+    def test_postgres_full_text_is_only_used_for_latin_queries_on_postgres(self):
+        self.assertTrue(SearchService.should_use_postgres_full_text("postgres search", vendor="postgresql"))
+        self.assertFalse(SearchService.should_use_postgres_full_text("中文搜索", vendor="postgresql"))
+        self.assertFalse(SearchService.should_use_postgres_full_text("postgres search", vendor="sqlite"))
+
+    def test_discussion_list_search_respects_post_approval_visibility(self):
+        discussion = DiscussionService.create_discussion(
+            title="普通讨论标题",
+            content="首帖不包含目标词",
+            user=self.user,
+        )
+        pending_author = User.objects.create_user(
+            username="list-search-pending",
+            email="list-search-pending@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        trusted_group = Group.objects.create(name="ListSearchTrusted", color="#4d698e")
+        Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")
+        PostService.create_post(
+            discussion_id=discussion.id,
+            content="pendingreplyvisibilitykeyword",
+            user=pending_author,
+        )
+
+        guest_discussions, guest_total = DiscussionService.get_discussion_list(q="pendingreplyvisibilitykeyword")
+        author_discussions, author_total = DiscussionService.get_discussion_list(
+            q="pendingreplyvisibilitykeyword",
+            user=pending_author,
+        )
+
+        self.assertEqual(guest_total, 0)
+        self.assertEqual(guest_discussions, [])
+        self.assertEqual(author_total, 1)
+        self.assertEqual(author_discussions[0].id, discussion.id)
+
     def test_search_api_all_returns_section_totals(self):
         DiscussionService.create_discussion(
             title="搜索讨论标题",
@@ -675,6 +711,41 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["settings"]["debug_mode"], settings.DEBUG)
         self.assertFalse(Setting.objects.filter(key="advanced.debug_mode").exists())
+
+    @patch("apps.core.admin_api.SearchIndexService.rebuild_postgres_indexes")
+    def test_admin_can_rebuild_search_indexes(self, rebuild_indexes):
+        rebuild_indexes.return_value = {
+            "message": "搜索全文索引已重建",
+            "indexes": ["discussions_title_slug_fts_idx", "posts_content_fts_idx"],
+            "duration_ms": 42,
+        }
+
+        response = self.client.post(
+            "/api/admin/search-indexes/rebuild",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        rebuild_indexes.assert_called_once_with()
+        payload = response.json()
+        self.assertEqual(payload["message"], "搜索全文索引已重建")
+        self.assertEqual(payload["duration_ms"], 42)
+        audit_log = AuditLog.objects.get(action="admin.search_indexes.rebuild")
+        self.assertEqual(audit_log.target_type, "search_index")
+        self.assertEqual(audit_log.data["indexes"], ["discussions_title_slug_fts_idx", "posts_content_fts_idx"])
+
+    @patch("apps.core.admin_api.SearchIndexService.rebuild_postgres_indexes")
+    def test_search_index_rebuild_reports_unsupported_database(self, rebuild_indexes):
+        rebuild_indexes.side_effect = RuntimeError("当前数据库不是 PostgreSQL，全文索引无需重建")
+
+        response = self.client.post(
+            "/api/admin/search-indexes/rebuild",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(response.json()["error"], "当前数据库不是 PostgreSQL，全文索引无需重建")
+        self.assertFalse(AuditLog.objects.filter(action="admin.search_indexes.rebuild").exists())
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_mail_settings_affect_test_email_sender(self):
