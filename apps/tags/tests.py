@@ -168,3 +168,29 @@ class TagAccessApiTests(TestCase):
         self.assertEqual(list_response.status_code, 200, list_response.content)
         self.assertEqual(popular_response.status_code, 200, popular_response.content)
         refresh_stats.assert_not_called()
+
+    def test_tag_list_reuses_forbidden_tag_context_for_children(self):
+        Tag.objects.create(
+            name="公开子标签",
+            slug="public-child",
+            parent=self.public_tag,
+        )
+        Tag.objects.create(
+            name="内部子标签",
+            slug="staff-child",
+            parent=self.public_tag,
+            view_scope=Tag.ACCESS_STAFF,
+            start_discussion_scope=Tag.ACCESS_STAFF,
+            reply_scope=Tag.ACCESS_STAFF,
+        )
+
+        with patch(
+            "apps.tags.api.TagService.get_forbidden_tag_ids",
+            wraps=TagService.get_forbidden_tag_ids,
+        ) as get_forbidden_tag_ids:
+            response = self.client.get("/api/tags", {"include_children": True})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        public_tag = next(tag for tag in response.json()["data"] if tag["slug"] == "public-tag")
+        self.assertEqual([tag["slug"] for tag in public_tag["children"]], ["public-child"])
+        self.assertEqual(get_forbidden_tag_ids.call_count, 1)

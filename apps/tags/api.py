@@ -5,6 +5,7 @@ from typing import Optional
 from ninja import Router
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
+from django.db.models import Prefetch
 
 from apps.tags.models import Tag
 from apps.tags.schemas import (
@@ -33,13 +34,33 @@ def _serialize_discussion_summary(discussion):
     }
 
 
-def _serialize_tag(tag, user=None, include_children=False, action="view"):
+def _build_tag_serialize_context(user=None, action="view"):
+    return {
+        "forbidden_tag_ids": set(TagService.get_forbidden_tag_ids(user, action=action)),
+    }
+
+
+def _get_prefetched_children(tag):
+    if hasattr(tag, "visible_children"):
+        return tag.visible_children
+    return tag.children.all().order_by("position", "name")
+
+
+def _serialize_tag(tag, user=None, include_children=False, action="view", context=None):
+    context = context or _build_tag_serialize_context(user, action=action)
+    forbidden_tag_ids = context["forbidden_tag_ids"]
     children = []
     if include_children:
         children = [
-            _serialize_tag(child, user=user, include_children=True, action=action)
-            for child in tag.children.all().order_by('position', 'name')
-            if not child.is_hidden and child.id not in TagService.get_forbidden_tag_ids(user, action=action)
+            _serialize_tag(
+                child,
+                user=user,
+                include_children=True,
+                action=action,
+                context=context,
+            )
+            for child in _get_prefetched_children(tag)
+            if not child.is_hidden and child.id not in forbidden_tag_ids
         ]
 
     return {
@@ -130,7 +151,17 @@ def list_tags(
     if purpose not in {"view", "start_discussion", "reply"}:
         purpose = "view"
 
-    queryset = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').all()
+    visible_child_queryset = (
+        Tag.objects.select_related("last_posted_discussion")
+        .order_by("position", "name")
+    )
+    if not include_hidden:
+        visible_child_queryset = visible_child_queryset.filter(is_hidden=False)
+    visible_child_queryset = TagService.filter_tags_for_user(visible_child_queryset, user, action=purpose)
+
+    queryset = Tag.objects.select_related('last_posted_discussion').prefetch_related(
+        Prefetch("children", queryset=visible_child_queryset, to_attr="visible_children")
+    ).all()
 
     if parent_id is None:
         queryset = queryset.filter(parent__isnull=True)
@@ -143,7 +174,19 @@ def list_tags(
     queryset = TagService.filter_tags_for_user(queryset, user, action=purpose)
     tags = queryset.order_by('position', 'name')
 
-    return {"data": [_serialize_tag(tag, user=user, include_children=include_children, action=purpose) for tag in tags]}
+    context = _build_tag_serialize_context(user, action=purpose)
+    return {
+        "data": [
+            _serialize_tag(
+                tag,
+                user=user,
+                include_children=include_children,
+                action=purpose,
+                context=context,
+            )
+            for tag in tags
+        ]
+    }
 
 
 @router.get("/tags/popular", response=TagListSchema, tags=["Tags"])
@@ -161,7 +204,8 @@ def get_popular_tags(request, limit: int = 10):
         action="view",
     ).order_by('-discussion_count', '-last_posted_at')[:limit]
 
-    return {"data": [_serialize_tag(tag, user=user) for tag in tags]}
+    context = _build_tag_serialize_context(user, action="view")
+    return {"data": [_serialize_tag(tag, user=user, context=context) for tag in tags]}
 
 
 @router.get("/tags/{tag_id}", response=TagOutSchema, tags=["Tags"])
