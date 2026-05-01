@@ -318,6 +318,17 @@ function togglePermission(groupId, permissionName, event) {
 }
 
 async function savePermissions() {
+  const confirmed = await modalStore.confirm({
+    title: '保存权限配置',
+    message: '权限变更会立即影响用户操作能力。确定保存当前配置吗？',
+    confirmText: '保存',
+    cancelText: '取消',
+    tone: 'warning'
+  })
+  if (!confirmed) {
+    return
+  }
+
   saving.value = true
   resetSaveFeedback()
   errorMessage.value = ''
@@ -410,10 +421,16 @@ async function deleteGroup() {
 
   deletingGroup.value = true
   try {
+    const deletedGroupName = editingGroup.value.name
     await api.delete(`/admin/groups/${editingGroup.value.id}`)
     closeGroupModal()
     await loadGroups()
     await loadPermissions()
+    await modalStore.alert({
+      title: '用户组已删除',
+      message: `用户组“${deletedGroupName}”已删除。`,
+      tone: 'success'
+    })
   } catch (error) {
     console.error('删除用户组失败:', error)
     await modalStore.alert({

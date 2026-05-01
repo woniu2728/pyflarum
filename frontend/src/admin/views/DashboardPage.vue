@@ -216,6 +216,7 @@ import { computed, ref, onMounted } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
+import { useModalStore } from '../../stores/modal'
 
 const stats = ref({
   runtimeName: 'Python',
@@ -254,6 +255,7 @@ const loadError = ref('')
 const resettingQueueMetrics = ref(false)
 const queueMetricsMessage = ref('')
 const queueMetricsMessageTone = ref('success')
+const modalStore = useModalStore()
 const queueWorkerBadgeClass = computed(() => {
   if (!stats.value.queueEnabled || ['disabled', 'sync'].includes(stats.value.queueWorkerStatus)) {
     return 'StatusBadge--neutral'
@@ -279,6 +281,17 @@ async function resetQueueMetrics() {
     return
   }
 
+  const confirmed = await modalStore.confirm({
+    title: '重置队列指标',
+    message: '确定重置队列运行指标吗？当前累计的入队、同步和回退计数会清零。',
+    confirmText: '重置',
+    cancelText: '取消',
+    tone: 'warning'
+  })
+  if (!confirmed) {
+    return
+  }
+
   resettingQueueMetrics.value = true
   queueMetricsMessage.value = ''
   queueMetricsMessageTone.value = 'success'
@@ -290,6 +303,11 @@ async function resetQueueMetrics() {
       queueMetrics: data.metrics || stats.value.queueMetrics
     }
     queueMetricsMessage.value = data.message || '队列运行指标已重置'
+    await modalStore.alert({
+      title: '指标已重置',
+      message: queueMetricsMessage.value,
+      tone: 'success'
+    })
   } catch (error) {
     console.error('重置队列指标失败:', error)
     queueMetricsMessageTone.value = 'error'

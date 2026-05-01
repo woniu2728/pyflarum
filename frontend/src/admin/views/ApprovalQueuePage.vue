@@ -153,14 +153,20 @@ function closeModal() {
 async function submitAction() {
   if (!selectedItem.value) return
 
+  const action = pendingAction.value
   saving.value = true
   try {
     await api.post(
-      `/admin/approval-queue/${selectedItem.value.type}/${selectedItem.value.id}/${pendingAction.value}`,
+      `/admin/approval-queue/${selectedItem.value.type}/${selectedItem.value.id}/${action}`,
       { note: actionNote.value }
     )
     closeModal()
     await loadItems()
+    await modalStore.alert({
+      title: action === 'approve' ? '审核已通过' : '内容已拒绝',
+      message: action === 'approve' ? '内容已放行，用户现在可以正常查看。' : '内容已拒绝并隐藏。',
+      tone: 'success'
+    })
   } catch (error) {
     console.error('审核提交失败:', error)
     await modalStore.alert({

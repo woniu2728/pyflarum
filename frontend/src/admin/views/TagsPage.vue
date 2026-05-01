@@ -639,6 +639,11 @@ async function deleteTag(tag) {
   try {
     await api.delete(`/admin/tags/${tag.id}`)
     await loadTags()
+    await modalStore.alert({
+      title: '标签已删除',
+      message: `标签“${tag.name}”已删除。`,
+      tone: 'success'
+    })
   } catch (error) {
     await modalStore.alert({
       title: '删除失败',

@@ -310,6 +310,7 @@ const savingDetails = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const editingUserId = ref(null)
+const originalUserRiskSnapshot = ref(null)
 
 let searchTimeout = null
 
@@ -366,6 +367,7 @@ async function editUser(user) {
   loadingDetails.value = true
   editingUserId.value = user.id
   formData.value = getEmptyForm()
+  originalUserRiskSnapshot.value = null
 
   try {
     const detail = await api.get(`/admin/users/${user.id}`)
@@ -381,6 +383,7 @@ async function editUser(user) {
       suspend_reason: detail.suspend_reason || '',
       suspend_message: detail.suspend_message || '',
     }
+    originalUserRiskSnapshot.value = createUserRiskSnapshot(formData.value)
   } catch (error) {
     console.error('加载用户详情失败:', error)
     await modalStore.alert({
@@ -407,6 +410,20 @@ function toggleGroup(groupId, event) {
 async function saveUser() {
   if (!editingUserId.value) return
 
+  const riskChanges = getUserRiskChanges()
+  if (riskChanges.length > 0) {
+    const confirmed = await modalStore.confirm({
+      title: '保存用户变更',
+      message: `以下变更会立即影响用户权限或账号状态：${riskChanges.join('、')}。确定保存吗？`,
+      confirmText: '保存',
+      cancelText: '取消',
+      tone: 'warning'
+    })
+    if (!confirmed) {
+      return
+    }
+  }
+
   saving.value = true
   savingDetails.value = true
   try {
@@ -416,6 +433,11 @@ async function saveUser() {
     })
     closeModal()
     await loadUsers()
+    await modalStore.alert({
+      title: '用户已保存',
+      message: '用户资料和状态已更新。',
+      tone: 'success'
+    })
   } catch (error) {
     console.error('保存用户失败:', error)
     await modalStore.alert({
@@ -446,9 +468,15 @@ async function deleteUser() {
   deleting.value = true
   savingDetails.value = true
   try {
+    const deletedUsername = formData.value.username || editingUserId.value
     await api.delete(`/admin/users/${editingUserId.value}`)
     closeModal()
     await loadUsers()
+    await modalStore.alert({
+      title: '用户已删除',
+      message: `用户“${deletedUsername}”已删除。`,
+      tone: 'success'
+    })
   } catch (error) {
     console.error('删除用户失败:', error)
     await modalStore.alert({
@@ -468,6 +496,7 @@ function closeModal() {
   saving.value = false
   deleting.value = false
   editingUserId.value = null
+  originalUserRiskSnapshot.value = null
   formData.value = getEmptyForm()
 }
 
@@ -484,6 +513,40 @@ function getEmptyForm() {
     suspend_reason: '',
     suspend_message: '',
   }
+}
+
+function createUserRiskSnapshot(value) {
+  return {
+    is_staff: Boolean(value.is_staff),
+    group_ids: [...(value.group_ids || [])].map(Number).sort((a, b) => a - b).join(','),
+    suspended_until: value.suspended_until || '',
+    suspend_reason: value.suspend_reason || '',
+    suspend_message: value.suspend_message || '',
+  }
+}
+
+function getUserRiskChanges() {
+  const previous = originalUserRiskSnapshot.value
+  if (!previous) {
+    return []
+  }
+
+  const current = createUserRiskSnapshot(formData.value)
+  const changes = []
+  if (previous.is_staff !== current.is_staff) {
+    changes.push('管理员权限')
+  }
+  if (previous.group_ids !== current.group_ids) {
+    changes.push('用户组')
+  }
+  if (
+    previous.suspended_until !== current.suspended_until
+    || previous.suspend_reason !== current.suspend_reason
+    || previous.suspend_message !== current.suspend_message
+  ) {
+    changes.push('封禁状态')
+  }
+  return changes
 }
 
 function statusLabel(user) {

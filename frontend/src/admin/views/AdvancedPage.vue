@@ -552,6 +552,7 @@ const settings = ref({
 
 const saving = ref(false)
 const clearing = ref(false)
+const loadedSettingsSnapshot = ref(null)
 const modalStore = useModalStore()
 const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
 const turnstileMisconfigured = computed(() => (
@@ -563,12 +564,27 @@ onMounted(async () => {
   try {
     const data = await api.get('/admin/advanced')
     settings.value = { ...settings.value, ...data }
+    loadedSettingsSnapshot.value = createSettingsSnapshot(settings.value)
   } catch (error) {
     console.error('加载高级设置失败:', error)
   }
 })
 
 async function saveSettings() {
+  const sensitiveChanges = getSensitiveSettingChanges()
+  if (sensitiveChanges.length > 0) {
+    const confirmed = await modalStore.confirm({
+      title: '保存高级设置',
+      message: `以下设置会影响运行时行为：${sensitiveChanges.join('、')}。确定保存当前配置吗？`,
+      confirmText: '保存',
+      cancelText: '取消',
+      tone: 'warning'
+    })
+    if (!confirmed) {
+      return
+    }
+  }
+
   saving.value = true
   resetSaveFeedback()
 
@@ -577,6 +593,7 @@ async function saveSettings() {
     if (response?.settings) {
       settings.value = { ...settings.value, ...response.settings }
     }
+    loadedSettingsSnapshot.value = createSettingsSnapshot(settings.value)
     showSaveSuccess()
   } catch (error) {
     console.error('保存高级设置失败:', error)
@@ -587,6 +604,17 @@ async function saveSettings() {
 }
 
 async function clearCache() {
+  const confirmed = await modalStore.confirm({
+    title: '清除缓存',
+    message: '确定清除运行时缓存吗？短时间内部分页面可能重新读取配置和数据。',
+    confirmText: '清除',
+    cancelText: '取消',
+    tone: 'warning'
+  })
+  if (!confirmed) {
+    return
+  }
+
   clearing.value = true
   try {
     await api.post('/admin/cache/clear')
@@ -604,6 +632,34 @@ async function clearCache() {
   } finally {
     clearing.value = false
   }
+}
+
+function createSettingsSnapshot(value) {
+  return {
+    maintenance_mode: Boolean(value.maintenance_mode),
+    queue_enabled: Boolean(value.queue_enabled),
+    queue_driver: value.queue_driver,
+    log_queries: Boolean(value.log_queries),
+    storage_driver: value.storage_driver,
+  }
+}
+
+function getSensitiveSettingChanges() {
+  const previous = loadedSettingsSnapshot.value
+  if (!previous) {
+    return []
+  }
+
+  const current = createSettingsSnapshot(settings.value)
+  const labels = {
+    maintenance_mode: '维护模式',
+    queue_enabled: '队列启用状态',
+    queue_driver: '队列驱动',
+    log_queries: 'SQL 查询日志',
+    storage_driver: '文件存储驱动',
+  }
+
+  return Object.keys(labels).filter(key => previous[key] !== current[key]).map(key => labels[key])
 }
 </script>
 

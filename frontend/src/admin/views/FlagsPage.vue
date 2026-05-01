@@ -165,14 +165,20 @@ function closeResolveModal() {
 async function resolveFlag() {
   if (!selectedFlag.value) return
 
+  const nextStatus = pendingStatus.value
   saving.value = true
   try {
     await api.post(`/admin/flags/${selectedFlag.value.id}/resolve`, {
-      status: pendingStatus.value,
+      status: nextStatus,
       resolution_note: resolutionNote.value,
     })
     closeResolveModal()
     await loadFlags()
+    await modalStore.alert({
+      title: nextStatus === 'resolved' ? '举报已处理' : '举报已忽略',
+      message: nextStatus === 'resolved' ? '举报状态已更新为已处理。' : '举报状态已更新为已忽略。',
+      tone: 'success'
+    })
   } catch (error) {
     console.error('处理举报失败:', error)
     await modalStore.alert({
