@@ -70,6 +70,28 @@
               </div>
             </div>
           </div>
+
+          <div class="QueueMetrics">
+            <div class="QueueMetrics-item">
+              <span class="QueueMetrics-label">入队</span>
+              <strong>{{ stats.queueMetrics?.enqueued_count || 0 }}</strong>
+            </div>
+            <div class="QueueMetrics-item">
+              <span class="QueueMetrics-label">同步</span>
+              <strong>{{ stats.queueMetrics?.sync_count || 0 }}</strong>
+            </div>
+            <div class="QueueMetrics-item">
+              <span class="QueueMetrics-label">回退</span>
+              <strong>{{ stats.queueMetrics?.fallback_count || 0 }}</strong>
+            </div>
+            <div class="QueueMetrics-last">
+              <span class="QueueMetrics-label">最近任务</span>
+              <strong>{{ stats.queueMetrics?.last_task || '-' }}</strong>
+              <span v-if="stats.queueMetrics?.last_error" class="QueueMetrics-error">
+                {{ stats.queueMetrics.last_error }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -187,6 +209,14 @@ const stats = ref({
   queueWorkerAvailable: false,
   queueWorkerCount: 0,
   queueWorkerMessage: '',
+  queueMetrics: {
+    enqueued_count: 0,
+    sync_count: 0,
+    fallback_count: 0,
+    last_task: '',
+    last_error: '',
+    last_event_at: '',
+  },
   realtimeDriver: null,
   redisEnabled: false,
   debugMode: false,
@@ -359,6 +389,46 @@ onMounted(async () => {
   line-height: 1.5;
 }
 
+.QueueMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 0.5fr)) minmax(220px, 1.5fr);
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid var(--forum-border-soft);
+  border-radius: var(--forum-radius-sm);
+  background: var(--forum-bg-elevated-strong);
+}
+
+.QueueMetrics-item,
+.QueueMetrics-last {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.QueueMetrics-label {
+  color: #7c8795;
+  font-size: 12px;
+}
+
+.QueueMetrics strong {
+  color: #25364a;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.QueueMetrics-error {
+  color: var(--forum-danger-color);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 统计小部件 */
 .StatsWidget-items {
   display: grid;
@@ -467,6 +537,7 @@ onMounted(async () => {
   }
 
   .StatusWidget-items,
+  .QueueMetrics,
   .StatsWidget-items,
   .ActionsWidget-items {
     grid-template-columns: 1fr;

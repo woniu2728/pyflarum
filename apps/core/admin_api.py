@@ -329,6 +329,7 @@ def get_stats(request):
     queue_driver = advanced_settings.get("queue_driver", "sync")
     queue_enabled = bool(advanced_settings.get("queue_enabled", False))
     queue_worker_status = QueueService.get_worker_status()
+    queue_metrics = QueueService.get_metrics()
 
     return {
         "runtimeName": "Python",
@@ -344,6 +345,7 @@ def get_stats(request):
         "queueWorkerAvailable": queue_worker_status["available"],
         "queueWorkerCount": queue_worker_status["worker_count"],
         "queueWorkerMessage": queue_worker_status["message"],
+        "queueMetrics": queue_metrics,
         "realtimeDriver": detect_realtime_driver(),
         "redisEnabled": is_redis_enabled(queue_enabled=queue_enabled, queue_driver=queue_driver),
         "debugMode": settings.DEBUG,

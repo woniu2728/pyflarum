@@ -1210,6 +1210,9 @@ class AdminDashboardStatsApiTests(TestCase):
         self.assertFalse(payload["queueEnabled"])
         self.assertEqual(payload["queueWorkerStatus"], "disabled")
         self.assertFalse(payload["queueWorkerAvailable"])
+        self.assertEqual(payload["queueMetrics"]["enqueued_count"], 0)
+        self.assertEqual(payload["queueMetrics"]["sync_count"], 0)
+        self.assertEqual(payload["queueMetrics"]["fallback_count"], 0)
         self.assertFalse(payload["redisEnabled"])
 
     @override_settings(
@@ -1328,6 +1331,64 @@ class QueueServiceTests(TestCase):
         self.assertEqual(status["status"], "unavailable")
         self.assertFalse(status["available"])
         self.assertEqual(status["worker_count"], 0)
+
+    def test_queue_metrics_record_sync_dispatch(self):
+        from apps.core.queue_service import QueueService
+
+        class DummyTask:
+            name = "tests.sync_task"
+
+            def delay(self):
+                raise AssertionError("queue should be disabled")
+
+        QueueService.reset_metrics()
+        result = QueueService.dispatch_celery_task(DummyTask(), fallback=lambda: "done")
+        metrics = QueueService.get_metrics()
+
+        self.assertEqual(result, "done")
+        self.assertEqual(metrics["sync_count"], 1)
+        self.assertEqual(metrics["enqueued_count"], 0)
+        self.assertEqual(metrics["fallback_count"], 0)
+        self.assertEqual(metrics["last_task"], "tests.sync_task")
+
+    @override_settings(CELERY_BROKER_URL="redis://localhost:6379/1")
+    def test_queue_metrics_record_enqueue_and_fallback(self):
+        from apps.core.queue_service import QueueService
+
+        class SuccessfulTask:
+            name = "tests.successful_task"
+
+            def delay(self):
+                return "queued"
+
+        class FailingTask:
+            name = "tests.failing_task"
+
+            def delay(self):
+                raise RuntimeError("queue down")
+
+        Setting.objects.update_or_create(
+            key="advanced.queue_enabled",
+            defaults={"value": json.dumps(True)},
+        )
+        clear_runtime_setting_caches()
+        QueueService.reset_metrics()
+
+        self.assertEqual(
+            QueueService.dispatch_celery_task(SuccessfulTask(), fallback=lambda: "sync"),
+            "queued",
+        )
+        self.assertEqual(
+            QueueService.dispatch_celery_task(FailingTask(), fallback=lambda: "fallback"),
+            "fallback",
+        )
+        metrics = QueueService.get_metrics()
+
+        self.assertEqual(metrics["enqueued_count"], 1)
+        self.assertEqual(metrics["fallback_count"], 1)
+        self.assertEqual(metrics["sync_count"], 0)
+        self.assertEqual(metrics["last_task"], "tests.failing_task")
+        self.assertEqual(metrics["last_error"], "queue down")
 
 
 class ComposerUploadApiTests(TestCase):

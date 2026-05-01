@@ -2,12 +2,24 @@
 Runtime queue dispatch helpers.
 """
 import logging
+from django.core.cache import cache
+from django.utils import timezone
 from typing import Callable, Optional
 
 from apps.core.settings_service import get_advanced_settings
 
 
 logger = logging.getLogger(__name__)
+QUEUE_METRICS_CACHE_KEY = "queue.runtime.metrics"
+QUEUE_METRICS_TIMEOUT = 60 * 60 * 24 * 30
+DEFAULT_QUEUE_METRICS = {
+    "enqueued_count": 0,
+    "sync_count": 0,
+    "fallback_count": 0,
+    "last_task": "",
+    "last_error": "",
+    "last_event_at": "",
+}
 
 
 class QueueService:
@@ -97,6 +109,48 @@ class QueueService:
         }
 
     @staticmethod
+    def get_metrics() -> dict:
+        try:
+            metrics = cache.get(QUEUE_METRICS_CACHE_KEY) or {}
+        except Exception:
+            metrics = {}
+
+        return {
+            **DEFAULT_QUEUE_METRICS,
+            **{key: metrics.get(key) for key in DEFAULT_QUEUE_METRICS.keys() if key in metrics},
+        }
+
+    @staticmethod
+    def reset_metrics() -> dict:
+        metrics = DEFAULT_QUEUE_METRICS.copy()
+        try:
+            cache.set(QUEUE_METRICS_CACHE_KEY, metrics, QUEUE_METRICS_TIMEOUT)
+        except Exception:
+            return metrics
+        return metrics
+
+    @staticmethod
+    def _record_metric(event: str, task_name: str, error: str = "") -> None:
+        metrics = QueueService.get_metrics()
+        counter_key = {
+            "enqueued": "enqueued_count",
+            "sync": "sync_count",
+            "fallback": "fallback_count",
+        }.get(event)
+
+        if counter_key:
+            metrics[counter_key] = int(metrics.get(counter_key, 0) or 0) + 1
+
+        metrics["last_task"] = task_name
+        metrics["last_error"] = error
+        metrics["last_event_at"] = timezone.now().isoformat()
+
+        try:
+            cache.set(QUEUE_METRICS_CACHE_KEY, metrics, QUEUE_METRICS_TIMEOUT)
+        except Exception:
+            return None
+
+    @staticmethod
     def dispatch_celery_task(task, *args, fallback: Optional[Callable[[], object]] = None, **kwargs):
         """
         Dispatch a Celery task when the runtime queue is enabled.
@@ -105,19 +159,26 @@ class QueueService:
         executed synchronously. This keeps user-facing flows working while still
         allowing deployed worker stacks to take the expensive path off-request.
         """
+        task_name = getattr(task, "name", repr(task))
         if QueueService.should_enqueue():
             try:
-                return task.delay(*args, **kwargs)
-            except Exception:
+                result = task.delay(*args, **kwargs)
+                QueueService._record_metric("enqueued", task_name)
+                return result
+            except Exception as exc:
                 logger.warning(
                     "Queue dispatch failed for task %s; falling back to sync execution.",
-                    getattr(task, "name", repr(task)),
+                    task_name,
                     exc_info=True,
                 )
+                QueueService._record_metric("fallback", task_name, error=str(exc))
                 if fallback is None:
                     raise
 
         if fallback is not None:
-            return fallback()
+            result = fallback()
+            if not QueueService.should_enqueue():
+                QueueService._record_metric("sync", task_name)
+            return result
 
         return None
