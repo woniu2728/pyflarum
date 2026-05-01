@@ -133,6 +133,9 @@ def search(
     - page: 页码
     - limit: 每页数量
     """
+    page = SearchService.normalize_page(page)
+    limit = SearchService.normalize_limit(limit)
+
     if not q or len(q.strip()) == 0:
         return {
             'total': 0,

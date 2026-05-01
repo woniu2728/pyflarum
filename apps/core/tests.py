@@ -362,6 +362,45 @@ class ChineseSearchTests(TestCase):
         self.assertEqual(len(discussions), 2)
         self.assertTrue(all(discussion.excerpt for discussion in discussions))
 
+    def test_search_discussions_uses_subquery_for_first_post_excerpt(self):
+        DiscussionService.create_discussion(
+            title="子查询摘要优化一",
+            content="第一条子查询摘要内容",
+            user=self.user,
+        )
+        DiscussionService.create_discussion(
+            title="子查询摘要优化二",
+            content="第二条子查询摘要内容",
+            user=self.user,
+        )
+
+        with patch("apps.core.services.Post.objects.in_bulk", side_effect=AssertionError("不应额外批量查询首帖")):
+            discussions, total = SearchService.search_discussions("子查询摘要优化", user=self.user)
+
+        self.assertEqual(total, 2)
+        self.assertEqual(len(discussions), 2)
+        self.assertTrue(all(discussion.excerpt for discussion in discussions))
+
+    def test_search_api_normalizes_page_and_limit(self):
+        for index in range(3):
+            DiscussionService.create_discussion(
+                title=f"分页归一化搜索 {index}",
+                content="分页归一化内容",
+                user=self.user,
+            )
+
+        response = self.client.get(
+            "/api/search",
+            {"q": "分页归一化", "type": "discussions", "page": -5, "limit": 500},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["page"], 1)
+        self.assertEqual(payload["limit"], 100)
+        self.assertEqual(len(payload["discussions"]), 3)
+
     def test_search_api_all_reuses_single_search_context(self):
         DiscussionService.create_discussion(
             title="上下文复用搜索",

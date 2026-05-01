@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 
 from apps.discussions.models import Discussion
 from apps.posts.models import Post
@@ -39,6 +39,26 @@ class SearchContext:
 
 class SearchService:
     """搜索服务"""
+
+    MIN_PAGE = 1
+    MIN_LIMIT = 1
+    MAX_LIMIT = 100
+
+    @staticmethod
+    def normalize_page(page: int) -> int:
+        try:
+            normalized = int(page)
+        except (TypeError, ValueError):
+            return SearchService.MIN_PAGE
+        return max(SearchService.MIN_PAGE, normalized)
+
+    @staticmethod
+    def normalize_limit(limit: int) -> int:
+        try:
+            normalized = int(limit)
+        except (TypeError, ValueError):
+            return 20
+        return max(SearchService.MIN_LIMIT, min(normalized, SearchService.MAX_LIMIT))
 
     @staticmethod
     def tokenize_query(query: str) -> List[str]:
@@ -309,6 +329,8 @@ class SearchService:
         queryset = queryset.order_by('-discussion_count', '-comment_count')
 
         # 分页
+        page = SearchService.normalize_page(page)
+        limit = SearchService.normalize_limit(limit)
         offset = (page - 1) * limit
         users = list(queryset[offset:offset + limit])
 
@@ -327,6 +349,7 @@ class SearchService:
             List[str]: 建议列表
         """
         suggestions = []
+        limit = SearchService.normalize_limit(limit)
 
         # 从讨论标题中获取建议
         discussions = SearchService._discussion_queryset(query, user=user).values_list('title', flat=True)[:limit]
@@ -382,17 +405,24 @@ class SearchService:
 
     @staticmethod
     def _search_discussions_queryset(queryset, query: str, page: int, limit: int) -> List[Discussion]:
-        queryset = queryset.select_related('user', 'last_posted_user')
+        first_post_content = Post.objects.filter(
+            id=OuterRef("first_post_id"),
+        ).values("content")[:1]
+        queryset = queryset.select_related('user', 'last_posted_user').annotate(
+            first_post_content=Subquery(first_post_content)
+        )
         queryset = queryset.order_by('-is_sticky', '-comment_count', '-view_count')
 
+        page = SearchService.normalize_page(page)
+        limit = SearchService.normalize_limit(limit)
         offset = (page - 1) * limit
         discussions = list(queryset[offset:offset + limit])
-        first_post_ids = [discussion.first_post_id for discussion in discussions if discussion.first_post_id]
-        first_posts = Post.objects.in_bulk(first_post_ids)
 
         for discussion in discussions:
-            first_post = first_posts.get(discussion.first_post_id)
-            discussion.excerpt = SearchService.make_excerpt(first_post.content, query) if first_post else ''
+            discussion.excerpt = SearchService.make_excerpt(
+                getattr(discussion, "first_post_content", "") or "",
+                query,
+            )
 
         return discussions
 
@@ -401,6 +431,8 @@ class SearchService:
         queryset = queryset.select_related('user', 'discussion')
         queryset = queryset.order_by('-created_at')
 
+        page = SearchService.normalize_page(page)
+        limit = SearchService.normalize_limit(limit)
         offset = (page - 1) * limit
         posts = list(queryset[offset:offset + limit])
 
