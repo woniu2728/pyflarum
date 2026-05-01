@@ -4,10 +4,15 @@
 from typing import Optional, List, Tuple
 from django.db import transaction
 from django.db.models import Q, F, Count
+from django.core.cache import cache
 from django.utils import timezone
 from apps.notifications.models import Notification
 from apps.users.models import User
 from apps.discussions.models import DiscussionUser
+
+
+UNREAD_COUNT_CACHE_KEY = "notifications.unread_count.{user_id}"
+UNREAD_COUNT_CACHE_TIMEOUT = 60 * 5
 
 
 class NotificationService:
@@ -24,6 +29,24 @@ class NotificationService:
     TYPE_POST_REJECTED = 'postRejected'
     TYPE_USER_SUSPENDED = 'userSuspended'
     TYPE_USER_UNSUSPENDED = 'userUnsuspended'
+
+    @staticmethod
+    def _unread_count_cache_key(user_id: int) -> str:
+        return UNREAD_COUNT_CACHE_KEY.format(user_id=user_id)
+
+    @staticmethod
+    def invalidate_unread_count(user_id: int) -> None:
+        if not user_id:
+            return
+        try:
+            cache.delete(NotificationService._unread_count_cache_key(user_id))
+        except Exception:
+            return None
+
+    @staticmethod
+    def invalidate_unread_counts(user_ids: List[int]) -> None:
+        for user_id in set(user_ids or []):
+            NotificationService.invalidate_unread_count(user_id)
 
     @staticmethod
     def create_notification(
@@ -81,6 +104,7 @@ class NotificationService:
             data=data or {},
         )
 
+        NotificationService.invalidate_unread_count(user.id)
         NotificationService._dispatch_notifications_after_commit([notification.id])
 
         return notification
@@ -91,6 +115,7 @@ class NotificationService:
             return []
 
         created = Notification.objects.bulk_create(notifications)
+        NotificationService.invalidate_unread_counts([item.user_id for item in created])
         NotificationService._dispatch_notifications_after_commit([item.id for item in created if item.id])
         return created
 
@@ -149,7 +174,7 @@ class NotificationService:
 
         # 统计
         total = queryset.count()
-        unread_count = Notification.objects.filter(user=user, is_read=False).count()
+        unread_count = NotificationService.get_unread_count(user)
 
         # 分页
         offset = (page - 1) * limit
@@ -192,7 +217,10 @@ class NotificationService:
         """
         try:
             notification = Notification.objects.get(id=notification_id, user=user)
+            was_unread = not notification.is_read
             notification.mark_as_read()
+            if was_unread:
+                NotificationService.invalidate_unread_count(user.id)
             return True
         except Notification.DoesNotExist:
             return False
@@ -215,6 +243,8 @@ class NotificationService:
             is_read=True,
             read_at=timezone.now()
         )
+        if count:
+            NotificationService.invalidate_unread_count(user.id)
         return count
 
     @staticmethod
@@ -231,7 +261,10 @@ class NotificationService:
         """
         try:
             notification = Notification.objects.get(id=notification_id, user=user)
+            was_unread = not notification.is_read
             notification.delete()
+            if was_unread:
+                NotificationService.invalidate_unread_count(user.id)
             return True
         except Notification.DoesNotExist:
             return False
@@ -264,7 +297,21 @@ class NotificationService:
         Returns:
             int: 未读数量
         """
-        return Notification.objects.filter(user=user, is_read=False).count()
+        cache_key = NotificationService._unread_count_cache_key(user.id)
+        try:
+            cached = cache.get(cache_key)
+        except Exception:
+            cached = None
+
+        if cached is not None:
+            return int(cached)
+
+        unread_count = Notification.objects.filter(user=user, is_read=False).count()
+        try:
+            cache.set(cache_key, unread_count, UNREAD_COUNT_CACHE_TIMEOUT)
+        except Exception:
+            pass
+        return unread_count
 
     @staticmethod
     def get_stats(user: User) -> dict:
@@ -278,7 +325,7 @@ class NotificationService:
             dict: 统计数据
         """
         total = Notification.objects.filter(user=user).count()
-        unread_count = Notification.objects.filter(user=user, is_read=False).count()
+        unread_count = NotificationService.get_unread_count(user)
         read_count = total - unread_count
 
         return {

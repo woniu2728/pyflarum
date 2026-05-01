@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from ninja_jwt.tokens import RefreshToken
 from unittest.mock import patch
@@ -278,3 +279,57 @@ class NotificationServiceTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(Notification.objects.filter(user=self.author, is_read=True).count(), 0)
         self.assertEqual(Notification.objects.filter(user=self.author, is_read=False).count(), unread_before + 1)
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "notification-cache-test"}})
+    def test_notification_stats_reuses_cached_unread_count(self):
+        cache.clear()
+        unread_before = Notification.objects.filter(user=self.author, is_read=False).count()
+        Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            data={"post_id": self.initial_reply.id},
+        )
+
+        self.assertEqual(NotificationService.get_unread_count(self.author), unread_before + 1)
+
+        with self.assertNumQueries(1):
+            stats = NotificationService.get_stats(self.author)
+
+        self.assertEqual(stats["total"], Notification.objects.filter(user=self.author).count())
+        self.assertEqual(stats["unread_count"], unread_before + 1)
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "notification-invalidate-test"}})
+    def test_unread_count_cache_is_invalidated_after_writes(self):
+        cache.clear()
+        unread_before = Notification.objects.filter(user=self.author, is_read=False).count()
+        notification = Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            data={"post_id": self.initial_reply.id},
+        )
+
+        self.assertEqual(NotificationService.get_unread_count(self.author), unread_before + 1)
+
+        NotificationService.mark_as_read(notification.id, self.author)
+        self.assertEqual(NotificationService.get_unread_count(self.author), unread_before)
+
+        NotificationService.create_notification(
+            user=self.author,
+            from_user=self.replier,
+            type="postReply",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            allow_merge=False,
+            data={"post_id": self.initial_reply.id},
+        )
+        self.assertEqual(NotificationService.get_unread_count(self.author), unread_before + 1)
+
+        new_notification = Notification.objects.filter(user=self.author, is_read=False).latest("id")
+        NotificationService.delete_notification(new_notification.id, self.author)
+        self.assertEqual(NotificationService.get_unread_count(self.author), unread_before)

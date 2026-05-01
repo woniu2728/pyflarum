@@ -77,15 +77,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def mark_notification_read(self, notification_id: int):
         """标记通知为已读"""
-        from apps.notifications.models import Notification
-        try:
-            notification = Notification.objects.get(
-                id=notification_id,
-                user=self.user
-            )
-            notification.mark_as_read()
-        except Notification.DoesNotExist:
-            pass
+        from apps.notifications.services import NotificationService
+
+        NotificationService.mark_as_read(notification_id, self.user)
 
 
 class OnlineUsersConsumer(AsyncWebsocketConsumer):
