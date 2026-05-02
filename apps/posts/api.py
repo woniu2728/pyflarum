@@ -3,7 +3,7 @@
 """
 from typing import Optional
 from ninja import Router
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 
@@ -148,25 +148,8 @@ def list_all_posts(
         type="comment",
     )
 
-    if not user or not user.is_staff:
-        if user and user.is_authenticated:
-            queryset = queryset.filter(
-                Q(hidden_at__isnull=True)
-                | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
-            )
-        else:
-            queryset = queryset.filter(hidden_at__isnull=True)
+    queryset = PostService.apply_visibility_filters(queryset, user)
     queryset = PostService.annotate_flag_state(queryset, user)
-
-    if user and user.is_authenticated and not user.is_staff:
-        queryset = queryset.filter(
-            Q(approval_status=Post.APPROVAL_APPROVED)
-            | Q(approval_status=Post.APPROVAL_PENDING, user=user)
-            | Q(approval_status=Post.APPROVAL_REJECTED, user=user)
-        )
-    elif not user or not user.is_authenticated:
-        queryset = queryset.filter(approval_status=Post.APPROVAL_APPROVED)
-
     queryset = TagService.filter_posts_for_user(queryset, user)
 
     if author:

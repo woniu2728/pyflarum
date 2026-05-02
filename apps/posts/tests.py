@@ -337,6 +337,25 @@ class PostFlagApiTests(TestCase):
         self.reporter.refresh_from_db()
         self.assertEqual(self.reporter.comment_count, 0)
 
+    def test_all_posts_list_respects_hidden_discussion_visibility(self):
+        DiscussionService.set_hidden_state(self.discussion, self.admin, True)
+
+        response = self.client.get(
+            "/api/posts",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertNotIn(self.post.id, {item["id"] for item in response.json()["data"]})
+
+        admin_response = self.client.get(
+            "/api/posts",
+            **self.admin_auth_header(),
+        )
+
+        self.assertEqual(admin_response.status_code, 200, admin_response.content)
+        self.assertIn(self.post.id, {item["id"] for item in admin_response.json()["data"]})
+
     def test_post_can_enter_approval_queue(self):
         trusted_group = Group.objects.create(name="Trusted", color="#4d698e")
         Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")
