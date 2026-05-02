@@ -113,6 +113,7 @@ const actionLabels = {
   'admin.tag.create': '创建标签',
   'admin.tag.delete': '删除标签',
   'admin.tag.move': '移动标签',
+  'admin.tag.refresh_stats': '刷新标签统计',
   'admin.tag.update': '更新标签',
   'admin.user.delete': '删除用户',
   'admin.user.update': '更新用户',

@@ -608,7 +608,47 @@ class TagService:
             DiscussionTag.objects.filter(discussion_id=discussion_id).values_list("tag_id", flat=True)
         )
         if tag_ids:
-            TagService.refresh_tag_stats(tag_ids)
+            TagService.dispatch_refresh_tag_stats(tag_ids)
+
+    @staticmethod
+    def dispatch_refresh_tag_stats(tag_ids: Optional[List[int]] = None) -> dict:
+        normalized_tag_ids = None
+        if tag_ids is not None:
+            normalized_tag_ids = sorted({int(tag_id) for tag_id in tag_ids if tag_id})
+            if not normalized_tag_ids:
+                return {"mode": "skipped", "tag_ids": [], "message": "没有需要刷新的标签"}
+
+        from apps.core.queue_service import QueueService
+        from apps.tags.tasks import refresh_tag_stats_task
+
+        def fallback():
+            TagService.refresh_tag_stats(normalized_tag_ids)
+            return {
+                "mode": "sync",
+                "tag_ids": normalized_tag_ids,
+                "message": "标签统计已同步刷新",
+            }
+
+        if QueueService.should_enqueue():
+            def enqueue():
+                QueueService.dispatch_celery_task(
+                    refresh_tag_stats_task,
+                    normalized_tag_ids,
+                    fallback=fallback,
+                )
+
+            transaction.on_commit(enqueue)
+            return {
+                "mode": "queued",
+                "tag_ids": normalized_tag_ids,
+                "message": "标签统计刷新任务已入队",
+            }
+
+        return QueueService.dispatch_celery_task(
+            refresh_tag_stats_task,
+            normalized_tag_ids,
+            fallback=fallback,
+        )
 
     @staticmethod
     def refresh_tag_stats(tag_ids: Optional[List[int]] = None) -> None:

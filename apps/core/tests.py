@@ -3097,6 +3097,26 @@ class AdminTagManagementApiTests(TestCase):
         self.assertEqual(self.child_tag.position, 1)
         self.assertEqual(self.parent_tag.position, 0)
 
+    @patch("apps.core.admin_api.TagService.dispatch_refresh_tag_stats")
+    def test_admin_can_refresh_tag_stats(self, dispatch_refresh_tag_stats):
+        dispatch_refresh_tag_stats.return_value = {
+            "mode": "sync",
+            "tag_ids": None,
+            "message": "标签统计已同步刷新",
+        }
+
+        response = self.client.post(
+            "/api/admin/tags/stats/refresh",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        dispatch_refresh_tag_stats.assert_called_once_with()
+        self.assertEqual(response.json()["message"], "标签统计已同步刷新")
+        audit_log = AuditLog.objects.get(action="admin.tag.refresh_stats")
+        self.assertEqual(audit_log.target_type, "tag")
+        self.assertEqual(audit_log.data["mode"], "sync")
+
 
 class AdminApprovalQueueApiTests(TestCase):
     def setUp(self):

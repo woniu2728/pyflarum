@@ -1345,6 +1345,23 @@ def delete_admin_tag(request, tag_id: int):
         return admin_error(str(e), status=400)
 
 
+@router.post("/tags/stats/refresh", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def refresh_admin_tag_stats(request):
+    """手动刷新标签统计"""
+    result = TagService.dispatch_refresh_tag_stats()
+    log_admin_action(
+        request,
+        "admin.tag.refresh_stats",
+        target_type="tag",
+        data={
+            "mode": result.get("mode"),
+            "tag_ids": result.get("tag_ids"),
+        },
+    )
+    return result
+
+
 # ==================== 审计日志 ====================
 
 @router.get("/audit-logs", auth=AuthBearer(), tags=["Admin"])

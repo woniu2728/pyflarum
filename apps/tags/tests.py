@@ -1,8 +1,11 @@
-from django.test import TestCase
+from django.core.management import call_command
+from django.test import TestCase, override_settings
 from ninja_jwt.tokens import RefreshToken
+from io import StringIO
 from unittest.mock import patch
 
 from apps.discussions.services import DiscussionService
+from apps.core.settings_service import clear_runtime_setting_caches
 from apps.tags.models import DiscussionTag, Tag
 from apps.tags.services import TagService
 from apps.users.models import User
@@ -55,6 +58,37 @@ class TagStatsTests(TestCase):
         self.tag.refresh_from_db()
 
         self.assertEqual(self.tag.discussion_count, 1)
+
+    def test_refresh_tag_stats_command_repairs_all_tags(self):
+        discussion = DiscussionService.create_discussion(
+            title="命令刷新统计",
+            content="命令刷新内容",
+            user=self.user,
+        )
+        DiscussionTag.objects.create(discussion=discussion, tag=self.tag)
+        Tag.objects.filter(id=self.tag.id).update(discussion_count=0)
+
+        stdout = StringIO()
+        call_command("refresh_tag_stats", stdout=stdout)
+        self.tag.refresh_from_db()
+
+        self.assertEqual(self.tag.discussion_count, 1)
+        self.assertIn("已刷新全部标签统计", stdout.getvalue())
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
+    def test_dispatch_refresh_tag_stats_queues_when_enabled(self):
+        from apps.tags.tasks import refresh_tag_stats_task
+
+        clear_runtime_setting_caches()
+        with patch("apps.core.queue_service.QueueService.get_runtime_config", return_value={"enabled": True, "driver": "redis"}):
+            with patch.object(refresh_tag_stats_task, "delay") as delay:
+                with patch("apps.tags.services.TagService.refresh_tag_stats") as refresh_tag_stats:
+                    with self.captureOnCommitCallbacks(execute=True):
+                        result = TagService.dispatch_refresh_tag_stats([self.tag.id])
+
+        self.assertEqual(result["mode"], "queued")
+        delay.assert_called_once_with([self.tag.id])
+        refresh_tag_stats.assert_not_called()
 
     def test_pending_discussion_is_not_counted_until_approved(self):
         trusted_group = Group.objects.create(name="TagTrusted", color="#4d698e")

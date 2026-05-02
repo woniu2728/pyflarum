@@ -11,6 +11,10 @@
           <i class="fas fa-plus"></i>
           创建标签
         </button>
+        <button @click="refreshTagStats" class="Button" :disabled="refreshingStats">
+          <i class="fas fa-sync-alt" :class="{ 'fa-spin': refreshingStats }"></i>
+          {{ refreshingStats ? '刷新中...' : '刷新统计' }}
+        </button>
       </div>
 
       <div class="TagSummaryGrid">
@@ -440,6 +444,7 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const saving = ref(false)
 const movingTagId = ref(null)
+const refreshingStats = ref(false)
 const editingTag = ref(null)
 const iconSearch = ref('')
 const modalStore = useModalStore()
@@ -650,6 +655,33 @@ async function deleteTag(tag) {
       message: error.response?.data?.error || '未知错误',
       tone: 'danger'
     })
+  }
+}
+
+async function refreshTagStats() {
+  const confirmed = await modalStore.confirm({
+    title: '刷新标签统计',
+    message: '确定刷新全部标签的讨论数和最后发帖信息吗？数据量较大时建议在低峰期执行。',
+    confirmText: '刷新',
+    cancelText: '取消',
+    tone: 'warning'
+  })
+  if (!confirmed) {
+    return
+  }
+
+  refreshingStats.value = true
+  try {
+    await api.post('/admin/tags/stats/refresh')
+    await loadTags()
+  } catch (error) {
+    await modalStore.alert({
+      title: '刷新标签统计失败',
+      message: error.response?.data?.error || error.message || '未知错误',
+      tone: 'danger'
+    })
+  } finally {
+    refreshingStats.value = false
   }
 }
 

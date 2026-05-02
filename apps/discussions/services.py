@@ -141,7 +141,7 @@ class DiscussionService:
             if tags:
                 for tag in tags:
                     DiscussionTag.objects.create(discussion=discussion, tag=tag)
-                TagService.refresh_tag_stats([tag.id for tag in tags])
+                TagService.dispatch_refresh_tag_stats([tag.id for tag in tags])
 
             # 更新用户统计
             if not requires_approval:
@@ -508,7 +508,7 @@ class DiscussionService:
             if is_hidden is not None or tag_ids is not None:
                 refreshed_tag_ids = set(previous_tag_ids) | set(discussion.discussion_tags.values_list('tag_id', flat=True))
                 if refreshed_tag_ids:
-                    TagService.refresh_tag_stats(list(refreshed_tag_ids))
+                    TagService.dispatch_refresh_tag_stats(list(refreshed_tag_ids))
             return discussion
 
     @staticmethod
@@ -633,7 +633,7 @@ class DiscussionService:
 
             if tag_ids:
                 from apps.tags.services import TagService
-                TagService.refresh_tag_stats(tag_ids)
+                TagService.dispatch_refresh_tag_stats(tag_ids)
 
             # 更新作者讨论数
             if approved_discussion and discussion.user:
