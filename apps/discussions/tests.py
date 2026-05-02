@@ -622,6 +622,16 @@ class DiscussionApiTests(TestCase):
             content="用于验证隐藏接口",
             user=self.author,
         )
+        PostService.create_post(
+            discussion_id=discussion.id,
+            content="隐藏时需要扣回的回复",
+            user=self.reader,
+        )
+
+        self.author.refresh_from_db()
+        self.reader.refresh_from_db()
+        self.assertEqual(self.author.discussion_count, 1)
+        self.assertEqual(self.reader.comment_count, 1)
 
         hide_response = self.client.post(
             f"/api/discussions/{discussion.id}/hide",
@@ -632,6 +642,16 @@ class DiscussionApiTests(TestCase):
         discussion.refresh_from_db()
         self.assertTrue(discussion.is_hidden)
         self.assertEqual(discussion.hidden_user_id, admin.id)
+        self.author.refresh_from_db()
+        self.reader.refresh_from_db()
+        self.assertEqual(self.author.discussion_count, 0)
+        self.assertEqual(self.reader.comment_count, 0)
+
+        DiscussionService.set_hidden_state(discussion, admin, True)
+        self.author.refresh_from_db()
+        self.reader.refresh_from_db()
+        self.assertEqual(self.author.discussion_count, 0)
+        self.assertEqual(self.reader.comment_count, 0)
 
         guest_detail = self.client.get(f"/api/discussions/{discussion.id}")
         self.assertEqual(guest_detail.status_code, 404, guest_detail.content)
@@ -645,6 +665,10 @@ class DiscussionApiTests(TestCase):
         discussion.refresh_from_db()
         self.assertFalse(discussion.is_hidden)
         self.assertIsNone(discussion.hidden_user_id)
+        self.author.refresh_from_db()
+        self.reader.refresh_from_db()
+        self.assertEqual(self.author.discussion_count, 1)
+        self.assertEqual(self.reader.comment_count, 1)
 
         guest_detail = self.client.get(f"/api/discussions/{discussion.id}")
         self.assertEqual(guest_detail.status_code, 200, guest_detail.content)
@@ -771,6 +795,37 @@ class DiscussionApiTests(TestCase):
         DiscussionService.delete_discussion(discussion.id, admin)
 
         self.reader.refresh_from_db()
+        self.assertEqual(self.reader.comment_count, 0)
+
+    def test_delete_hidden_discussion_does_not_decrement_counts_again(self):
+        admin = User.objects.create_superuser(
+            username="delete-hidden-discussion-admin",
+            email="delete-hidden-discussion-admin@example.com",
+            password="password123",
+        )
+        discussion = DiscussionService.create_discussion(
+            title="Hidden delete discussion",
+            content="First post",
+            user=self.author,
+        )
+        PostService.create_post(
+            discussion_id=discussion.id,
+            content="Counted reply before hide",
+            user=self.reader,
+        )
+
+        DiscussionService.set_hidden_state(discussion, admin, True)
+        self.author.refresh_from_db()
+        self.reader.refresh_from_db()
+        self.assertEqual(self.author.discussion_count, 0)
+        self.assertEqual(self.reader.comment_count, 0)
+
+        discussion.refresh_from_db()
+        DiscussionService.delete_discussion(discussion.id, admin)
+
+        self.author.refresh_from_db()
+        self.reader.refresh_from_db()
+        self.assertEqual(self.author.discussion_count, 0)
         self.assertEqual(self.reader.comment_count, 0)
 
     def test_cannot_create_discussion_with_secondary_tag_only(self):

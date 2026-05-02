@@ -623,10 +623,31 @@ class DiscussionService:
         if not user.is_staff:
             raise PermissionDenied("没有权限隐藏/显示讨论")
 
+        was_hidden = discussion.hidden_at is not None
+        if was_hidden == is_hidden:
+            return discussion
+
+        should_adjust_counts = discussion.approval_status == Discussion.APPROVAL_APPROVED
+        approved_reply_counts = {}
+        if should_adjust_counts:
+            approved_reply_counts = DiscussionService._approved_reply_counts_by_author(discussion)
+
         discussion.hidden_at = timezone.now() if is_hidden else None
         discussion.hidden_user = user if is_hidden else None
-        discussion.save(update_fields=["hidden_at", "hidden_user"])
-        TagService.refresh_discussion_tag_stats(discussion.id)
+
+        with transaction.atomic():
+            discussion.save(update_fields=["hidden_at", "hidden_user"])
+            if should_adjust_counts:
+                discussion_delta = -1 if is_hidden else 1
+                reply_delta = -1 if is_hidden else 1
+                if discussion.user:
+                    User.objects.filter(id=discussion.user_id).update(
+                        discussion_count=F('discussion_count') + discussion_delta
+                    )
+                for user_id, total in approved_reply_counts.items():
+                    User.objects.filter(id=user_id).update(comment_count=F("comment_count") + (reply_delta * total))
+
+            TagService.refresh_discussion_tag_stats(discussion.id)
         return discussion
 
     @staticmethod
@@ -752,9 +773,12 @@ class DiscussionService:
             raise PermissionDenied("没有权限删除此讨论")
 
         with transaction.atomic():
-            approved_discussion = discussion.approval_status == Discussion.APPROVAL_APPROVED
+            counted_discussion = (
+                discussion.approval_status == Discussion.APPROVAL_APPROVED
+                and discussion.hidden_at is None
+            )
             approved_reply_counts = {}
-            if approved_discussion:
+            if counted_discussion:
                 approved_replies = (
                     Post.objects.filter(
                         discussion=discussion,
@@ -782,7 +806,7 @@ class DiscussionService:
                 TagService.dispatch_refresh_tag_stats(tag_ids)
 
             # 更新作者讨论数
-            if approved_discussion and discussion.user:
+            if counted_discussion and discussion.user:
                 discussion.user.discussion_count = F('discussion_count') - 1
                 discussion.user.save(update_fields=['discussion_count'])
 
