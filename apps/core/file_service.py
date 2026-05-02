@@ -10,6 +10,7 @@ from typing import Tuple
 from django.core.files.uploadedfile import UploadedFile
 from PIL import Image
 
+from apps.core.settings_service import ADVANCED_SETTINGS_DEFAULTS, get_setting_group
 from apps.core.storage_service import get_storage_backend
 
 
@@ -30,6 +31,8 @@ class FileUploadService:
     MAX_AVATAR_SIZE = 2 * 1024 * 1024
     MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
     MAX_SITE_ASSET_SIZE = 2 * 1024 * 1024
+    MIN_UPLOAD_SIZE_MB = 1
+    MAX_UPLOAD_SIZE_MB = 100
 
     AVATAR_SIZES = {
         'small': (50, 50),
@@ -39,7 +42,7 @@ class FileUploadService:
 
     @staticmethod
     def upload_avatar(file: UploadedFile, user_id: int) -> Tuple[str, dict]:
-        FileUploadService._validate_image(file, FileUploadService.MAX_AVATAR_SIZE)
+        FileUploadService._validate_image(file, FileUploadService.get_upload_limit_bytes("avatar"))
 
         ext = os.path.splitext(file.name)[1].lower()
         filename = f"{uuid.uuid4().hex}{ext}"
@@ -68,7 +71,7 @@ class FileUploadService:
 
     @staticmethod
     def upload_attachment(file: UploadedFile, user_id: int) -> Tuple[str, dict]:
-        FileUploadService._validate_attachment(file, FileUploadService.MAX_ATTACHMENT_SIZE)
+        FileUploadService._validate_attachment(file, FileUploadService.get_upload_limit_bytes("attachment"))
 
         ext = os.path.splitext(file.name)[1].lower()
         filename = f"{uuid.uuid4().hex}{ext}"
@@ -101,7 +104,7 @@ class FileUploadService:
         else:
             raise ValueError("不支持的站点资源类型")
 
-        FileUploadService._validate_site_asset(file, allowed_extensions, FileUploadService.MAX_SITE_ASSET_SIZE)
+        FileUploadService._validate_site_asset(file, allowed_extensions, FileUploadService.get_upload_limit_bytes("site_asset"))
 
         filename = f"{uuid.uuid4().hex}{ext}"
         backend = get_storage_backend()
@@ -159,6 +162,55 @@ class FileUploadService:
         if file.size > max_size:
             max_size_mb = max_size / (1024 * 1024)
             raise ValueError(f"文件大小超过限制（最大{max_size_mb}MB）")
+
+    @staticmethod
+    def get_upload_policy() -> dict:
+        settings_data = get_setting_group("advanced", ADVANCED_SETTINGS_DEFAULTS)
+        return {
+            "avatar_max_size_mb": FileUploadService._normalize_upload_size_mb(
+                settings_data.get("upload_avatar_max_size_mb"),
+                FileUploadService.MAX_AVATAR_SIZE,
+            ),
+            "attachment_max_size_mb": FileUploadService._normalize_upload_size_mb(
+                settings_data.get("upload_attachment_max_size_mb"),
+                FileUploadService.MAX_ATTACHMENT_SIZE,
+            ),
+            "site_asset_max_size_mb": FileUploadService._normalize_upload_size_mb(
+                settings_data.get("upload_site_asset_max_size_mb"),
+                FileUploadService.MAX_SITE_ASSET_SIZE,
+            ),
+            "allowed_image_extensions": FileUploadService.ALLOWED_IMAGE_EXTENSIONS,
+            "allowed_logo_extensions": FileUploadService.ALLOWED_LOGO_EXTENSIONS,
+            "allowed_favicon_extensions": FileUploadService.ALLOWED_FAVICON_EXTENSIONS,
+            "allowed_attachment_extensions": FileUploadService.ALLOWED_ATTACHMENT_EXTENSIONS,
+        }
+
+    @staticmethod
+    def get_upload_limit_bytes(kind: str) -> int:
+        policy = FileUploadService.get_upload_policy()
+        key_by_kind = {
+            "avatar": "avatar_max_size_mb",
+            "attachment": "attachment_max_size_mb",
+            "site_asset": "site_asset_max_size_mb",
+        }
+        default_by_kind = {
+            "avatar": FileUploadService.MAX_AVATAR_SIZE,
+            "attachment": FileUploadService.MAX_ATTACHMENT_SIZE,
+            "site_asset": FileUploadService.MAX_SITE_ASSET_SIZE,
+        }
+        key = key_by_kind.get(kind)
+        if not key:
+            return default_by_kind.get(kind, FileUploadService.MAX_ATTACHMENT_SIZE)
+        return int(policy[key] * 1024 * 1024)
+
+    @staticmethod
+    def _normalize_upload_size_mb(value, default_bytes: int) -> int:
+        default_mb = max(1, int(default_bytes / (1024 * 1024)))
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError):
+            normalized = default_mb
+        return min(FileUploadService.MAX_UPLOAD_SIZE_MB, max(FileUploadService.MIN_UPLOAD_SIZE_MB, normalized))
 
     @staticmethod
     def _generate_thumbnail_bytes(image_bytes: bytes, ext: str) -> dict:

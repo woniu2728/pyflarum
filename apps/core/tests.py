@@ -638,6 +638,9 @@ class AdminSettingsApiTests(TestCase):
                 "storage_driver": "r2",
                 "storage_attachments_dir": "uploads/files",
                 "storage_local_path": "custom-media",
+                "upload_avatar_max_size_mb": 3,
+                "upload_attachment_max_size_mb": 12,
+                "upload_site_asset_max_size_mb": 4,
                 "storage_r2_bucket": "forum-assets",
                 "storage_r2_endpoint": "https://example.r2.cloudflarestorage.com",
                 "storage_r2_public_url": "https://cdn.example.com",
@@ -651,6 +654,10 @@ class AdminSettingsApiTests(TestCase):
             json.loads(Setting.objects.get(key="advanced.storage_driver").value),
             "r2",
         )
+        self.assertEqual(
+            json.loads(Setting.objects.get(key="advanced.upload_attachment_max_size_mb").value),
+            12,
+        )
 
         response = self.client.get(
             "/api/admin/advanced",
@@ -661,6 +668,9 @@ class AdminSettingsApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["storage_driver"], "r2")
         self.assertEqual(payload["storage_attachments_dir"], "uploads/files")
+        self.assertEqual(payload["upload_avatar_max_size_mb"], 3)
+        self.assertEqual(payload["upload_attachment_max_size_mb"], 12)
+        self.assertEqual(payload["upload_site_asset_max_size_mb"], 4)
         self.assertEqual(payload["storage_r2_bucket"], "forum-assets")
         self.assertEqual(payload["storage_r2_public_url"], "https://cdn.example.com")
 
@@ -2683,6 +2693,37 @@ class LocalStorageSettingsTests(TestCase):
             self.assertEqual(stored_path.read_bytes(), b"hello storage")
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_attachment_upload_respects_runtime_size_limit(self):
+        Setting.objects.update_or_create(
+            key="advanced.upload_attachment_max_size_mb",
+            defaults={"value": json.dumps(1)},
+        )
+        file = SimpleUploadedFile("too-large.txt", b"x" * (1024 * 1024 + 1), content_type="text/plain")
+
+        with self.assertRaisesMessage(ValueError, "文件大小超过限制"):
+            FileUploadService.upload_attachment(file, 9)
+
+    def test_upload_policy_exposes_runtime_limits(self):
+        user = User.objects.create_user(
+            username="upload-policy-user",
+            email="upload-policy-user@example.com",
+            password="password123",
+        )
+        Setting.objects.update_or_create(
+            key="advanced.upload_attachment_max_size_mb",
+            defaults={"value": json.dumps(7)},
+        )
+        token = RefreshToken.for_user(user).access_token
+
+        response = self.client.get(
+            "/api/uploads/policy",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["attachment_max_size_mb"], 7)
+        self.assertIn(".pdf", response.json()["allowed_attachment_extensions"])
 
 
 class AdminGroupManagementApiTests(TestCase):

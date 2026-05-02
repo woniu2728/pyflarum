@@ -196,6 +196,50 @@
           </div>
         </div>
 
+        <div class="Form-section Form-section--nested">
+          <div class="Form-sectionHeader">
+            <h4>上传策略</h4>
+            <p>限制上传大小，扩展名白名单仍由服务端固定控制。</p>
+          </div>
+
+          <div class="Form-grid">
+            <div class="Form-group">
+              <label>头像最大体积（MB）</label>
+              <input
+                v-model.number="settings.upload_avatar_max_size_mb"
+                type="number"
+                min="1"
+                max="100"
+                class="FormControl"
+              />
+            </div>
+
+            <div class="Form-group">
+              <label>附件最大体积（MB）</label>
+              <input
+                v-model.number="settings.upload_attachment_max_size_mb"
+                type="number"
+                min="1"
+                max="100"
+                class="FormControl"
+              />
+            </div>
+
+            <div class="Form-group">
+              <label>站点资源最大体积（MB）</label>
+              <input
+                v-model.number="settings.upload_site_asset_max_size_mb"
+                type="number"
+                min="1"
+                max="100"
+                class="FormControl"
+              />
+            </div>
+          </div>
+
+          <p class="Form-help">头像默认 2MB，composer 附件默认 10MB，Logo/Favicon 默认 2MB。</p>
+        </div>
+
         <template v-if="settings.storage_driver === 'local'">
           <div class="Form-grid">
             <div class="Form-group">
@@ -535,6 +579,9 @@ const settings = ref({
   storage_driver: 'local',
   storage_attachments_dir: 'attachments',
   storage_avatars_dir: 'avatars',
+  upload_avatar_max_size_mb: 2,
+  upload_attachment_max_size_mb: 10,
+  upload_site_asset_max_size_mb: 2,
   storage_local_path: '',
   storage_local_base_url: '/media/',
   storage_s3_bucket: '',
@@ -688,6 +735,9 @@ function createSettingsSnapshot(value) {
     queue_driver: value.queue_driver,
     log_queries: Boolean(value.log_queries),
     storage_driver: value.storage_driver,
+    upload_avatar_max_size_mb: normalizeUploadSize(value.upload_avatar_max_size_mb),
+    upload_attachment_max_size_mb: normalizeUploadSize(value.upload_attachment_max_size_mb),
+    upload_site_asset_max_size_mb: normalizeUploadSize(value.upload_site_asset_max_size_mb),
   }
 }
 
@@ -704,9 +754,20 @@ function getSensitiveSettingChanges() {
     queue_driver: '队列驱动',
     log_queries: 'SQL 查询日志',
     storage_driver: '文件存储驱动',
+    upload_avatar_max_size_mb: '头像上传上限',
+    upload_attachment_max_size_mb: '附件上传上限',
+    upload_site_asset_max_size_mb: '站点资源上传上限',
   }
 
   return Object.keys(labels).filter(key => previous[key] !== current[key]).map(key => labels[key])
+}
+
+function normalizeUploadSize(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed)) {
+    return 1
+  }
+  return Math.min(100, Math.max(1, parsed))
 }
 </script>
 
@@ -755,6 +816,27 @@ function getSensitiveSettingChanges() {
 
 .Form-group--checkbox label {
   margin-bottom: 6px;
+}
+
+.Form-section--nested {
+  margin: 4px 0 22px;
+  padding: 16px;
+  background: var(--forum-bg-elevated-strong);
+  box-shadow: none;
+}
+
+.Form-section--nested .Form-sectionHeader {
+  margin-bottom: 14px;
+}
+
+.Form-section--nested h4 {
+  margin: 0 0 6px;
+  color: var(--forum-text-color);
+  font-size: 15px;
+}
+
+.Form-section--nested p {
+  margin: 0;
 }
 
 .Form-warning {

@@ -46,6 +46,12 @@ def get_system_status(request):
     }
 
 
+@router.get("/uploads/policy", auth=AuthBearer(), tags=["Uploads"])
+def get_upload_policy(request):
+    """获取当前上传策略，供前端展示限制和提示。"""
+    return FileUploadService.get_upload_policy()
+
+
 @router.post("/preview", response=MarkdownPreviewOutSchema, tags=["Forum"])
 def preview_markdown(request, payload: MarkdownPreviewInSchema):
     """实时预览 Markdown 内容"""
