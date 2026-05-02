@@ -151,7 +151,13 @@ class QueueService:
             return None
 
     @staticmethod
-    def dispatch_celery_task(task, *args, fallback: Optional[Callable[[], object]] = None, **kwargs):
+    def dispatch_celery_task(
+        task,
+        *args,
+        fallback: Optional[Callable[[], object]] = None,
+        countdown: Optional[int] = None,
+        **kwargs,
+    ):
         """
         Dispatch a Celery task when the runtime queue is enabled.
 
@@ -162,7 +168,10 @@ class QueueService:
         task_name = getattr(task, "name", repr(task))
         if QueueService.should_enqueue():
             try:
-                result = task.delay(*args, **kwargs)
+                if countdown is not None and hasattr(task, "apply_async"):
+                    result = task.apply_async(args=args, kwargs=kwargs, countdown=countdown)
+                else:
+                    result = task.delay(*args, **kwargs)
                 QueueService._record_metric("enqueued", task_name)
                 return result
             except Exception as exc:

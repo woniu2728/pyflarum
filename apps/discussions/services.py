@@ -22,6 +22,9 @@ class DiscussionService:
     """讨论服务"""
 
     VIEW_COUNT_THROTTLE_SECONDS = 60 * 15
+    VIEW_COUNT_FLUSH_DELAY_SECONDS = 60
+    VIEW_COUNT_CACHE_TIMEOUT = 60 * 60 * 24
+    VIEW_COUNT_PENDING_IDS_CACHE_KEY = "discussion.view_count.pending.ids"
 
     @staticmethod
     def _viewer_cache_identity(user: Optional[User]) -> str:
@@ -34,6 +37,14 @@ class DiscussionService:
         return f"discussion.viewed.{discussion_id}.{DiscussionService._viewer_cache_identity(user)}"
 
     @staticmethod
+    def _view_count_pending_cache_key(discussion_id: int) -> str:
+        return f"discussion.view_count.pending.{discussion_id}"
+
+    @staticmethod
+    def _view_count_flush_lock_cache_key(discussion_id: int) -> str:
+        return f"discussion.view_count.flush_lock.{discussion_id}"
+
+    @staticmethod
     def record_view(discussion: Discussion, user: Optional[User] = None) -> bool:
         cache_key = DiscussionService._view_count_cache_key(discussion.id, user)
         try:
@@ -43,9 +54,105 @@ class DiscussionService:
         except Exception:
             pass
 
-        Discussion.objects.filter(id=discussion.id).update(view_count=F('view_count') + 1)
+        try:
+            pending_count = DiscussionService._increment_pending_view_count(discussion.id)
+            DiscussionService.dispatch_view_count_flush(discussion.id, pending_count=pending_count)
+        except Exception:
+            Discussion.objects.filter(id=discussion.id).update(view_count=F('view_count') + 1)
+
         discussion.view_count = (discussion.view_count or 0) + 1
         return True
+
+    @staticmethod
+    def _increment_pending_view_count(discussion_id: int) -> int:
+        pending_key = DiscussionService._view_count_pending_cache_key(discussion_id)
+        cache.add(pending_key, 0, DiscussionService.VIEW_COUNT_CACHE_TIMEOUT)
+        pending_count = cache.incr(pending_key)
+        DiscussionService._remember_pending_view_discussion(discussion_id)
+        return int(pending_count or 0)
+
+    @staticmethod
+    def _remember_pending_view_discussion(discussion_id: int) -> None:
+        pending_ids = cache.get(DiscussionService.VIEW_COUNT_PENDING_IDS_CACHE_KEY) or []
+        if discussion_id not in pending_ids:
+            pending_ids.append(discussion_id)
+            cache.set(
+                DiscussionService.VIEW_COUNT_PENDING_IDS_CACHE_KEY,
+                pending_ids,
+                DiscussionService.VIEW_COUNT_CACHE_TIMEOUT,
+            )
+
+    @staticmethod
+    def dispatch_view_count_flush(discussion_id: int, pending_count: int = 0):
+        from apps.core.queue_service import QueueService
+        from apps.discussions.tasks import flush_discussion_view_count_task
+
+        def fallback():
+            return DiscussionService.flush_pending_view_count(discussion_id)
+
+        if QueueService.should_enqueue():
+            lock_key = DiscussionService._view_count_flush_lock_cache_key(discussion_id)
+            lock_timeout = DiscussionService.VIEW_COUNT_FLUSH_DELAY_SECONDS + 30
+            if cache.add(lock_key, True, lock_timeout):
+                return QueueService.dispatch_celery_task(
+                    flush_discussion_view_count_task,
+                    discussion_id,
+                    countdown=DiscussionService.VIEW_COUNT_FLUSH_DELAY_SECONDS,
+                    fallback=fallback,
+                )
+            return None
+
+        return QueueService.dispatch_celery_task(
+            flush_discussion_view_count_task,
+            discussion_id,
+            fallback=fallback,
+        )
+
+    @staticmethod
+    def flush_pending_view_count(discussion_id: int) -> int:
+        pending_key = DiscussionService._view_count_pending_cache_key(discussion_id)
+        lock_key = DiscussionService._view_count_flush_lock_cache_key(discussion_id)
+        cache.delete(lock_key)
+
+        try:
+            pending_count = int(cache.get(pending_key) or 0)
+        except (TypeError, ValueError):
+            pending_count = 0
+        if pending_count <= 0:
+            return 0
+
+        try:
+            remaining = cache.decr(pending_key, pending_count)
+            if remaining <= 0:
+                cache.delete(pending_key)
+        except Exception:
+            cache.delete(pending_key)
+            remaining = 0
+
+        Discussion.objects.filter(id=discussion_id).update(view_count=F('view_count') + pending_count)
+        if remaining > 0:
+            DiscussionService.dispatch_view_count_flush(discussion_id, pending_count=remaining)
+        return pending_count
+
+    @staticmethod
+    def flush_all_pending_view_counts() -> int:
+        pending_ids = cache.get(DiscussionService.VIEW_COUNT_PENDING_IDS_CACHE_KEY) or []
+        flushed_count = 0
+        active_ids = []
+        for discussion_id in pending_ids:
+            flushed_count += DiscussionService.flush_pending_view_count(int(discussion_id))
+            if cache.get(DiscussionService._view_count_pending_cache_key(int(discussion_id))):
+                active_ids.append(int(discussion_id))
+
+        if active_ids:
+            cache.set(
+                DiscussionService.VIEW_COUNT_PENDING_IDS_CACHE_KEY,
+                active_ids,
+                DiscussionService.VIEW_COUNT_CACHE_TIMEOUT,
+            )
+        else:
+            cache.delete(DiscussionService.VIEW_COUNT_PENDING_IDS_CACHE_KEY)
+        return flushed_count
 
     @staticmethod
     def _can_view_discussion(discussion: Discussion, user: Optional[User]) -> bool:

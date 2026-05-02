@@ -2,11 +2,13 @@ import json
 from unittest.mock import patch
 
 from django.core.cache import cache
+from django.core.management import call_command
 from django.test import TestCase, Client
 from django.test import override_settings
 from django.db import OperationalError
 from django.utils import timezone
 from datetime import timedelta
+from io import StringIO
 from ninja_jwt.tokens import RefreshToken
 
 from apps.discussions.models import Discussion
@@ -161,6 +163,67 @@ class DiscussionApiTests(TestCase):
         DiscussionService.get_discussion_by_id(discussion.id, self.author)
         discussion.refresh_from_db()
         self.assertEqual(discussion.view_count, 2)
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "discussion-view-count-flush-test"}})
+    def test_view_count_flushes_synchronously_when_queue_disabled(self):
+        cache.clear()
+        discussion = DiscussionService.create_discussion(
+            title="View count sync flush",
+            content="Initial post",
+            user=self.author,
+        )
+
+        DiscussionService.record_view(discussion, self.reader)
+
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.view_count, 1)
+        self.assertEqual(
+            cache.get(DiscussionService._view_count_pending_cache_key(discussion.id)),
+            None,
+        )
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "discussion-view-count-queue-test"}})
+    def test_view_count_is_queued_when_queue_enabled(self):
+        from apps.discussions.tasks import flush_discussion_view_count_task
+
+        cache.clear()
+        discussion = DiscussionService.create_discussion(
+            title="View count queued flush",
+            content="Initial post",
+            user=self.author,
+        )
+
+        with patch("apps.core.queue_service.QueueService.get_runtime_config", return_value={"enabled": True, "driver": "redis"}):
+            with patch.object(flush_discussion_view_count_task, "apply_async") as apply_async:
+                DiscussionService.record_view(discussion, self.reader)
+
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.view_count, 0)
+        self.assertEqual(cache.get(DiscussionService._view_count_pending_cache_key(discussion.id)), 1)
+        apply_async.assert_called_once()
+
+        flushed_count = DiscussionService.flush_pending_view_count(discussion.id)
+        discussion.refresh_from_db()
+        self.assertEqual(flushed_count, 1)
+        self.assertEqual(discussion.view_count, 1)
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "discussion-view-count-command-test"}})
+    def test_flush_discussion_view_counts_command_flushes_pending_counts(self):
+        cache.clear()
+        discussion = DiscussionService.create_discussion(
+            title="View count command flush",
+            content="Initial post",
+            user=self.author,
+        )
+        cache.set(DiscussionService._view_count_pending_cache_key(discussion.id), 3, 60)
+        cache.set(DiscussionService.VIEW_COUNT_PENDING_IDS_CACHE_KEY, [discussion.id], 60)
+
+        stdout = StringIO()
+        call_command("flush_discussion_view_counts", stdout=stdout)
+
+        discussion.refresh_from_db()
+        self.assertEqual(discussion.view_count, 3)
+        self.assertIn("已写回 3 次讨论浏览量", stdout.getvalue())
 
     def test_update_discussion_read_state_advances_progress(self):
         discussion = DiscussionService.create_discussion(
