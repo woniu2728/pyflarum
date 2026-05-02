@@ -31,7 +31,15 @@
         <div v-if="isSuspended" class="composer-notice composer-notice-warning">
           {{ suspensionNotice }}
         </div>
-        <div v-else-if="draftMessage" class="composer-notice">
+        <div
+          v-else-if="draftMessage"
+          class="composer-notice"
+          :class="{
+            'composer-notice-success': draftNoticeTone === 'success',
+            'composer-notice-warning': draftNoticeTone === 'warning',
+            'composer-notice-error': draftNoticeTone === 'error'
+          }"
+        >
           {{ draftMessage }}
         </div>
         <div
@@ -46,6 +54,16 @@
         </div>
         <div v-if="previewError" class="composer-notice composer-notice-error">
           {{ previewError }}
+        </div>
+        <div
+          v-if="submitNotice"
+          class="composer-notice"
+          :class="{
+            'composer-notice-success': submitNoticeTone === 'success',
+            'composer-notice-error': submitNoticeTone === 'error'
+          }"
+        >
+          {{ submitNotice }}
         </div>
 
         <input
@@ -258,8 +276,11 @@ const imageInput = ref(null)
 const emojiToolRef = ref(null)
 const draftSavedAt = ref('')
 const draftMessage = ref('')
+const draftNoticeTone = ref('info')
 const uploadNotice = ref('')
 const uploadNoticeTone = ref('info')
+const submitNotice = ref('')
+const submitNoticeTone = ref('info')
 const showEmojiPicker = ref(false)
 const emojiSuggestions = ref([])
 const emojiAutocompleteState = ref(null)
@@ -546,10 +567,13 @@ async function prepareComposer() {
     handlePrimaryTagChange()
     draftSavedAt.value = ''
     draftMessage.value = ''
+    draftNoticeTone.value = 'info'
+    submitNotice.value = ''
   } else if (!hasDraftContent.value) {
     restoreDraft()
   } else {
     draftMessage.value = ''
+    draftNoticeTone.value = 'info'
   }
 
   if (!isEditingDiscussion.value) {
@@ -652,6 +676,7 @@ function toggleExpanded() {
 function togglePreview() {
   showPreview.value = !showPreview.value
   previewError.value = ''
+  submitNotice.value = ''
   showEmojiPicker.value = false
   clearMentionSuggestions()
   clearEmojiAutocomplete()
@@ -716,6 +741,7 @@ async function closeComposer() {
   clearMentionSuggestions()
   clearEmojiAutocomplete()
   uploadNotice.value = ''
+  submitNotice.value = ''
   saveDraft(false)
   composerStore.closeComposer()
 }
@@ -749,12 +775,15 @@ function restoreDraft() {
       handlePrimaryTagChange()
     }
     draftSavedAt.value = draft.updatedAt || ''
+    draftNoticeTone.value = 'success'
     draftMessage.value = draftSavedAt.value
       ? `已恢复你在 ${formatDraftTime(draftSavedAt.value)} 保存的讨论草稿。`
       : '已恢复本地讨论草稿。'
     return true
   } catch (error) {
     console.error('恢复讨论草稿失败:', error)
+    draftNoticeTone.value = 'error'
+    draftMessage.value = '讨论草稿恢复失败，已保留当前编辑内容。'
     return false
   }
 }
@@ -789,6 +818,7 @@ function saveDraft(showMessage = true) {
     })
   )
   draftSavedAt.value = updatedAt
+  draftNoticeTone.value = 'success'
   draftMessage.value = showMessage ? '讨论草稿已保存。' : ''
 }
 
@@ -819,6 +849,7 @@ function clearDraftStorage(message = '') {
     window.localStorage.removeItem(getDraftKey())
   }
   draftSavedAt.value = ''
+  draftNoticeTone.value = message ? 'success' : 'info'
   draftMessage.value = message
 }
 
@@ -828,6 +859,8 @@ async function submitDiscussion() {
   showEmojiPicker.value = false
   submitting.value = true
   draftMessage.value = ''
+  submitNotice.value = ''
+  submitNoticeTone.value = 'info'
 
   try {
     let data
@@ -882,11 +915,8 @@ async function submitDiscussion() {
       error.response?.data?.detail ||
       error.message ||
       '发布失败，请稍后重试'
-    await modalStore.alert({
-      title: isEditingDiscussion.value ? '保存失败' : '发布失败',
-      message,
-      tone: 'danger'
-    })
+    submitNoticeTone.value = 'error'
+    submitNotice.value = message
   } finally {
     submitting.value = false
   }
@@ -1065,6 +1095,7 @@ async function uploadAndInsertFile(file, asImage) {
   uploading.value = true
   uploadNoticeTone.value = 'info'
   uploadNotice.value = `正在上传${asImage ? '图片' : '附件'}：${file.name}`
+  submitNotice.value = ''
   showEmojiPicker.value = false
 
   try {
@@ -1081,11 +1112,6 @@ async function uploadAndInsertFile(file, asImage) {
     const message = getComposerErrorMessage(error, asImage ? '图片上传失败' : '附件上传失败')
     uploadNoticeTone.value = 'error'
     uploadNotice.value = message
-    modalStore.alert({
-      title: asImage ? '图片上传失败' : '附件上传失败',
-      message,
-      tone: 'danger'
-    })
   } finally {
     uploading.value = false
   }
@@ -1282,6 +1308,7 @@ function resetComposer() {
     secondary_tag_id: ''
   }
   uploadNotice.value = ''
+  submitNotice.value = ''
   showEmojiPicker.value = false
   showPreview.value = false
   previewHtml.value = ''

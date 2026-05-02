@@ -35,6 +35,16 @@
 
       <div v-show="!composerStore.isMinimized" class="composer-body">
         <div
+          v-if="draftNotice"
+          class="composer-notice"
+          :class="{
+            'composer-notice-success': draftNoticeTone === 'success',
+            'composer-notice-error': draftNoticeTone === 'error'
+          }"
+        >
+          {{ draftNotice }}
+        </div>
+        <div
           v-if="uploadNotice"
           class="composer-notice"
           :class="{
@@ -46,6 +56,16 @@
         </div>
         <div v-if="previewError" class="composer-notice composer-notice-error">
           {{ previewError }}
+        </div>
+        <div
+          v-if="submitNotice"
+          class="composer-notice"
+          :class="{
+            'composer-notice-success': submitNoticeTone === 'success',
+            'composer-notice-error': submitNoticeTone === 'error'
+          }"
+        >
+          {{ submitNotice }}
         </div>
         <textarea
           v-show="!showPreview"
@@ -212,8 +232,12 @@ const attachmentInput = ref(null)
 const imageInput = ref(null)
 const emojiToolRef = ref(null)
 const composerDraftSavedAt = ref('')
+const draftNotice = ref('')
+const draftNoticeTone = ref('info')
 const uploadNotice = ref('')
 const uploadNoticeTone = ref('info')
+const submitNotice = ref('')
+const submitNoticeTone = ref('info')
 const showEmojiPicker = ref(false)
 const emojiSuggestions = ref([])
 const emojiAutocompleteState = ref(null)
@@ -377,9 +401,13 @@ watch(
 
     if (isEditing.value) {
       composerDraftSavedAt.value = ''
+      draftNotice.value = ''
+      submitNotice.value = ''
       replyContent.value = composerStore.current.initialContent || ''
     } else if (composerStore.current.initialContent?.trim()) {
       composerDraftSavedAt.value = ''
+      draftNotice.value = ''
+      submitNotice.value = ''
       replyContent.value = composerStore.current.initialContent
     } else {
       restoreComposerDraft()
@@ -518,6 +546,7 @@ function toggleComposerExpanded() {
 function togglePreview() {
   showPreview.value = !showPreview.value
   previewError.value = ''
+  submitNotice.value = ''
   showEmojiPicker.value = false
   clearMentionSuggestions()
   clearEmojiAutocomplete()
@@ -548,7 +577,7 @@ async function closeComposer(force = false) {
   clearMentionSuggestions()
   clearEmojiAutocomplete()
   if (!isEditing.value) {
-    saveComposerDraft()
+    saveComposerDraft(false)
   }
   resetComposerState()
 }
@@ -560,7 +589,9 @@ function cancelEdit() {
 function resetComposerState() {
   composerStore.closeComposer()
   composerDraftSavedAt.value = ''
+  draftNotice.value = ''
   uploadNotice.value = ''
+  submitNotice.value = ''
   showEmojiPicker.value = false
   showPreview.value = false
   previewHtml.value = ''
@@ -583,6 +614,7 @@ function restoreComposerDraft() {
   if (typeof window === 'undefined') return false
 
   composerDraftSavedAt.value = ''
+  draftNotice.value = ''
   const key = getComposerDraftKey()
   if (!key) return false
 
@@ -601,15 +633,21 @@ function restoreComposerDraft() {
 
     replyContent.value = draft.content
     composerDraftSavedAt.value = draft.updatedAt || ''
+    draftNoticeTone.value = 'success'
+    draftNotice.value = composerDraftSavedAt.value
+      ? `已恢复你在 ${formatDraftTime(composerDraftSavedAt.value)} 保存的回复草稿。`
+      : '已恢复本地回复草稿。'
     return true
   } catch (error) {
     console.error('恢复草稿失败:', error)
     replyContent.value = ''
+    draftNoticeTone.value = 'error'
+    draftNotice.value = '回复草稿恢复失败。'
     return false
   }
 }
 
-function saveComposerDraft() {
+function saveComposerDraft(showMessage = true) {
   if (typeof window === 'undefined' || isEditing.value) return
 
   const key = getComposerDraftKey()
@@ -619,6 +657,10 @@ function saveComposerDraft() {
   if (!content) {
     window.localStorage.removeItem(key)
     composerDraftSavedAt.value = ''
+    if (showMessage) {
+      draftNoticeTone.value = 'success'
+      draftNotice.value = '回复草稿已清空。'
+    }
     return
   }
 
@@ -631,6 +673,10 @@ function saveComposerDraft() {
     })
   )
   composerDraftSavedAt.value = updatedAt
+  if (showMessage) {
+    draftNoticeTone.value = 'success'
+    draftNotice.value = '回复草稿已保存。'
+  }
 }
 
 function clearComposerDraft() {
@@ -641,8 +687,11 @@ function clearComposerDraft() {
 
   window.localStorage.removeItem(key)
   composerDraftSavedAt.value = ''
+  draftNoticeTone.value = 'success'
+  draftNotice.value = '已清除本地回复草稿。'
   replyContent.value = ''
   uploadNotice.value = ''
+  submitNotice.value = ''
   showEmojiPicker.value = false
   showPreview.value = false
   previewHtml.value = ''
@@ -824,6 +873,7 @@ async function uploadAndInsertFile(file, asImage) {
   uploading.value = true
   uploadNoticeTone.value = 'info'
   uploadNotice.value = `正在上传${asImage ? '图片' : '附件'}：${file.name}`
+  submitNotice.value = ''
   showEmojiPicker.value = false
 
   try {
@@ -840,11 +890,6 @@ async function uploadAndInsertFile(file, asImage) {
     const message = getComposerErrorMessage(error, asImage ? '图片上传失败' : '附件上传失败')
     uploadNoticeTone.value = 'error'
     uploadNotice.value = message
-    await modalStore.alert({
-      title: asImage ? '图片上传失败' : '附件上传失败',
-      message,
-      tone: 'danger'
-    })
   } finally {
     uploading.value = false
   }
@@ -1040,6 +1085,8 @@ async function submitReply() {
   clearMentionSuggestions()
   clearEmojiAutocomplete()
   submitting.value = true
+  submitNotice.value = ''
+  submitNoticeTone.value = 'info'
   try {
     if (isEditing.value) {
       const data = await api.patch(`/posts/${composerStore.current.postId}`, {
@@ -1093,11 +1140,8 @@ async function submitReply() {
     resetComposerState()
   } catch (error) {
     console.error('提交失败:', error)
-    await modalStore.alert({
-      title: '提交失败',
-      message: error.response?.data?.error || error.message || '未知错误',
-      tone: 'danger'
-    })
+    submitNoticeTone.value = 'error'
+    submitNotice.value = error.response?.data?.error || error.message || '提交失败，请稍后重试'
   } finally {
     submitting.value = false
   }
