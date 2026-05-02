@@ -92,6 +92,43 @@
         </div>
       </section>
 
+      <section class="Form-section">
+        <div class="Form-sectionHeader">
+          <h3>站点公告</h3>
+          <p>在前台顶部展示一条全站公告，适合发布维护预告、运营通知或临时提醒。</p>
+        </div>
+
+        <label class="Form-toggle Announcement-toggle">
+          <input
+            v-model="settings.announcement_enabled"
+            type="checkbox"
+            class="FormControl-checkbox"
+          />
+          <span>启用全站公告</span>
+        </label>
+
+        <div class="Form-group">
+          <label>公告内容</label>
+          <textarea
+            v-model="settings.announcement_message"
+            class="FormControl"
+            rows="3"
+            maxlength="240"
+            placeholder="例如：今晚 23:00-23:30 将进行短暂维护。"
+          ></textarea>
+          <p class="Form-help">最多 240 个字符，内容为空时前台不会展示公告。</p>
+        </div>
+
+        <div class="Form-group">
+          <label>公告样式</label>
+          <select v-model="settings.announcement_tone" class="FormControl">
+            <option value="info">信息</option>
+            <option value="warning">提醒</option>
+            <option value="success">成功</option>
+          </select>
+        </div>
+      </section>
+
       <div class="Form-group">
         <label>默认语言</label>
         <select v-model="settings.default_locale" class="FormControl">
@@ -141,6 +178,9 @@ const settings = ref({
   seo_keywords: '',
   seo_robots_index: true,
   seo_robots_follow: true,
+  announcement_enabled: false,
+  announcement_message: '',
+  announcement_tone: 'info',
   default_locale: 'zh-CN',
   show_language_selector: false,
 })
@@ -159,6 +199,9 @@ onMounted(async () => {
       seo_keywords: data.seo_keywords || '',
       seo_robots_index: data.seo_robots_index !== false,
       seo_robots_follow: data.seo_robots_follow !== false,
+      announcement_enabled: Boolean(data.announcement_enabled),
+      announcement_message: data.announcement_message || '',
+      announcement_tone: ['info', 'warning', 'success'].includes(data.announcement_tone) ? data.announcement_tone : 'info',
       default_locale: data.default_locale || 'zh-CN',
       show_language_selector: Boolean(data.show_language_selector),
     }
@@ -221,6 +264,10 @@ async function handleSubmit() {
 
 .Form-actions {
   padding-top: 10px;
+}
+
+.Announcement-toggle {
+  margin-bottom: 20px;
 }
 
 @media (max-width: 768px) {

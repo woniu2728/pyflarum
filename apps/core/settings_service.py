@@ -40,6 +40,9 @@ BASIC_SETTINGS_DEFAULTS = {
     "seo_robots_follow": True,
     "welcome_title": "欢迎来到Bias",
     "welcome_message": "这是一个基于Django和Vue 3的现代化论坛",
+    "announcement_enabled": False,
+    "announcement_message": "",
+    "announcement_tone": "info",
     "default_locale": "zh-CN",
     "show_language_selector": False,
 }

@@ -583,6 +583,9 @@ class AdminSettingsApiTests(TestCase):
                 "seo_keywords": "Python, Django, Vue",
                 "seo_robots_index": False,
                 "seo_robots_follow": True,
+                "announcement_enabled": True,
+                "announcement_message": "今晚 23:00 进行维护。",
+                "announcement_tone": "warning",
                 "show_language_selector": True,
             }),
             content_type="application/json",
@@ -601,6 +604,10 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(
             json.loads(Setting.objects.get(key="basic.seo_robots_index").value),
             False,
+        )
+        self.assertEqual(
+            json.loads(Setting.objects.get(key="basic.announcement_message").value),
+            "今晚 23:00 进行维护。",
         )
 
 
@@ -938,6 +945,18 @@ class AdminSettingsApiTests(TestCase):
             defaults={"value": json.dumps("欢迎来到运行时论坛")},
         )
         Setting.objects.update_or_create(
+            key="basic.announcement_enabled",
+            defaults={"value": json.dumps(True)},
+        )
+        Setting.objects.update_or_create(
+            key="basic.announcement_message",
+            defaults={"value": json.dumps("运行时公告")},
+        )
+        Setting.objects.update_or_create(
+            key="basic.announcement_tone",
+            defaults={"value": json.dumps("warning")},
+        )
+        Setting.objects.update_or_create(
             key="appearance.primary_color",
             defaults={"value": json.dumps("#123456")},
         )
@@ -977,6 +996,9 @@ class AdminSettingsApiTests(TestCase):
         self.assertFalse(payload["seo_robots_index"])
         self.assertTrue(payload["seo_robots_follow"])
         self.assertEqual(payload["welcome_title"], "欢迎来到运行时论坛")
+        self.assertTrue(payload["announcement_enabled"])
+        self.assertEqual(payload["announcement_message"], "运行时公告")
+        self.assertEqual(payload["announcement_tone"], "warning")
         self.assertEqual(payload["primary_color"], "#123456")
         self.assertEqual(payload["logo_url"], "/media/runtime-logo.png")
         self.assertEqual(payload["auth_human_verification_provider"], "turnstile")

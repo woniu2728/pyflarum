@@ -11,6 +11,15 @@
     </template>
     <template v-else>
       <Header />
+      <div v-if="showAnnouncement" class="site-announcement" :class="`site-announcement--${announcementTone}`">
+        <div class="site-announcement-inner">
+          <i :class="announcementIcon"></i>
+          <p>{{ announcementMessage }}</p>
+          <button type="button" aria-label="关闭公告" @click="dismissAnnouncement">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
       <main class="main-content">
         <router-view />
       </main>
@@ -23,7 +32,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
@@ -41,7 +50,39 @@ const composerStore = useComposerStore()
 const forumStore = useForumStore()
 const notificationStore = useNotificationStore()
 const route = useRoute()
+const dismissedAnnouncementKey = ref('')
 const showMaintenance = computed(() => forumStore.settings.maintenance_mode && !authStore.user?.is_staff)
+const announcementMessage = computed(() => String(forumStore.settings.announcement_message || '').trim())
+const announcementTone = computed(() => {
+  const tone = String(forumStore.settings.announcement_tone || 'info')
+  return ['info', 'warning', 'success'].includes(tone) ? tone : 'info'
+})
+const announcementIcon = computed(() => {
+  if (announcementTone.value === 'warning') return 'fas fa-exclamation-triangle'
+  if (announcementTone.value === 'success') return 'fas fa-check-circle'
+  return 'fas fa-bullhorn'
+})
+const announcementKey = computed(() => {
+  if (!announcementMessage.value) return ''
+  return `${announcementTone.value}:${announcementMessage.value}`
+})
+const showAnnouncement = computed(() => (
+  Boolean(forumStore.settings.announcement_enabled)
+  && Boolean(announcementMessage.value)
+  && dismissedAnnouncementKey.value !== announcementKey.value
+))
+
+function loadDismissedAnnouncementKey() {
+  if (typeof window === 'undefined') return
+  dismissedAnnouncementKey.value = window.localStorage.getItem('bias.dismissedAnnouncement') || ''
+}
+
+function dismissAnnouncement() {
+  dismissedAnnouncementKey.value = announcementKey.value
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem('bias.dismissedAnnouncement', announcementKey.value)
+  }
+}
 
 function handleBeforeUnload(event) {
   if (!composerStore.hasUnsavedChanges) return
@@ -72,6 +113,7 @@ function handleAuthInvalidated() {
 
 onMounted(async () => {
   await forumStore.initialize()
+  loadDismissedAnnouncementKey()
 
   window.addEventListener('beforeunload', handleBeforeUnload)
   window.addEventListener('bias:auth-required', handleAuthRequired)
@@ -166,5 +208,76 @@ onBeforeUnmount(() => {
   flex: 1;
   padding-bottom: var(--composer-offset);
   transition: padding-bottom 0.15s ease;
+}
+
+.site-announcement {
+  border-bottom: 1px solid var(--forum-border-color);
+  background: var(--forum-info-bg);
+  color: var(--forum-text-color);
+}
+
+.site-announcement--warning {
+  background: var(--forum-warning-bg);
+  border-bottom-color: var(--forum-warning-border);
+}
+
+.site-announcement--success {
+  background: #edf8f2;
+  border-bottom-color: #c9ead8;
+}
+
+.site-announcement-inner {
+  max-width: 1200px;
+  min-height: 42px;
+  margin: 0 auto;
+  padding: 8px 20px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-announcement i {
+  color: var(--forum-primary-color);
+}
+
+.site-announcement--warning i {
+  color: var(--forum-warning-color);
+}
+
+.site-announcement--success i {
+  color: var(--forum-success-color);
+}
+
+.site-announcement p {
+  min-width: 0;
+  color: inherit;
+  font-size: var(--forum-font-size-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.site-announcement button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--forum-text-muted);
+}
+
+.site-announcement button:hover {
+  border-color: var(--forum-border-color);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+@media (max-width: 768px) {
+  .site-announcement-inner {
+    padding: 8px 14px;
+    gap: 8px;
+  }
 }
 </style>
