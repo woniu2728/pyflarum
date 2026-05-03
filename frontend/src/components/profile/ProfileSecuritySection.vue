@@ -1,6 +1,6 @@
 <template>
-  <div class="content-section security-section">
-    <div class="section-header">
+  <div class="profile-section security-section">
+    <div class="profile-section-header">
       <div>
         <h2>账号安全</h2>
         <p>查看邮箱验证状态，并修改登录密码。</p>
@@ -8,8 +8,8 @@
     </div>
 
     <div class="security-grid">
-      <section class="settings-card">
-        <div class="security-card-header">
+      <section class="profile-settings-card">
+        <div class="profile-card-header">
           <div>
             <h3>邮箱验证</h3>
             <p>验证邮箱后，可确保找回密码和安全通知正常送达。</p>
@@ -34,7 +34,7 @@
         <button
           v-if="!user.is_email_confirmed"
           type="button"
-          class="btn-secondary"
+          class="secondary"
           :disabled="verificationSending"
           @click="$emit('resend-verification')"
         >
@@ -42,8 +42,8 @@
         </button>
       </section>
 
-      <section class="settings-card">
-        <div class="security-card-header">
+      <section class="profile-settings-card">
+        <div class="profile-card-header">
           <div>
             <h3>修改密码</h3>
             <p>修改后，下次登录请使用新密码。</p>
@@ -53,38 +53,44 @@
         <ForumInlineMessage v-if="passwordSuccess" tone="success">{{ passwordSuccess }}</ForumInlineMessage>
         <ForumInlineMessage v-if="passwordError" tone="danger">{{ passwordError }}</ForumInlineMessage>
 
-        <div class="form-group">
-          <label>当前密码</label>
+        <div class="profile-form-group">
+          <label for="profile-old-password">当前密码</label>
           <input
+            id="profile-old-password"
             v-model="passwordForm.old_password"
+            name="old_password"
             type="password"
-            class="form-control"
+            class="profile-form-control"
             placeholder="请输入当前密码"
           />
         </div>
 
-        <div class="form-group">
-          <label>新密码</label>
+        <div class="profile-form-group">
+          <label for="profile-new-password">新密码</label>
           <input
+            id="profile-new-password"
             v-model="passwordForm.new_password"
+            name="new_password"
             type="password"
-            class="form-control"
+            class="profile-form-control"
             placeholder="请输入新密码"
           />
         </div>
 
-        <div class="form-group">
-          <label>确认新密码</label>
+        <div class="profile-form-group">
+          <label for="profile-confirm-password">确认新密码</label>
           <input
+            id="profile-confirm-password"
             v-model="passwordForm.confirm_password"
+            name="confirm_password"
             type="password"
-            class="form-control"
+            class="profile-form-control"
             placeholder="请再次输入新密码"
           />
         </div>
 
-        <div class="form-actions">
-          <button type="button" class="btn-primary" :disabled="changingPassword" @click="$emit('change-password')">
+        <div class="profile-form-actions">
+          <button type="button" class="primary" :disabled="changingPassword" @click="$emit('change-password')">
             {{ changingPassword ? '提交中...' : '更新密码' }}
           </button>
         </div>
@@ -135,56 +141,15 @@ defineEmits(['resend-verification', 'change-password'])
 </script>
 
 <style scoped>
-.content-section {
-  padding: 25px;
-  min-height: 200px;
-}
-
-.section-header {
-  margin-bottom: 24px;
-}
-
-.section-header h2 {
-  font-size: 22px;
-  color: #24313f;
-  margin-bottom: 8px;
-}
-
-.section-header p {
-  color: #6b7a88;
-  line-height: 1.6;
-}
-
 .security-grid {
   display: grid;
   gap: 18px;
 }
 
-.settings-card {
-  border: 1px solid #e5ebf0;
-  border-radius: 12px;
-  padding: 22px 24px;
-  background: #fbfcfd;
-}
-
-.security-card-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 18px;
-}
-
-.security-card-header h3 {
-  font-size: 18px;
-  color: #24313f;
-  margin-bottom: 6px;
-}
-
-.security-card-header p,
 .email-summary p {
   color: #6b7a88;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .email-summary {
@@ -193,6 +158,7 @@ defineEmits(['resend-verification', 'change-password'])
 
 .email-summary strong {
   color: #24313f;
+  overflow-wrap: anywhere;
 }
 
 .email-status {
@@ -213,81 +179,5 @@ defineEmits(['resend-verification', 'change-password'])
 .email-status.pending {
   background: #fff3cd;
   color: #856404;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.form-control {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  font-size: 14px;
-  font-family: inherit;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #4d698e;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-start;
-  gap: 10px;
-}
-
-.btn-primary,
-.btn-secondary {
-  padding: 8px 16px;
-  border-radius: 3px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-primary {
-  background: #4d698e;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #3d5875;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #e3e8ed;
-  color: #555;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #d3d8dd;
-}
-
-@media (max-width: 768px) {
-  .security-card-header {
-    flex-direction: column;
-  }
 }
 </style>

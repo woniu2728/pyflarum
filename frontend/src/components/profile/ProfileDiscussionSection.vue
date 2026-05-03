@@ -1,5 +1,5 @@
 <template>
-  <div class="content-section">
+  <div class="profile-section">
     <ForumStateBlock v-if="loading" class="section-state-block">加载中...</ForumStateBlock>
     <ForumStateBlock v-else-if="discussions.length === 0" class="section-state-block">
       {{ isOwnProfile ? '你还没有发起过讨论' : '该用户还没有发起过讨论' }}
@@ -64,11 +64,6 @@ defineProps({
 </script>
 
 <style scoped>
-.content-section {
-  padding: 25px;
-  min-height: 200px;
-}
-
 .section-state-block {
   margin: 0;
 }
@@ -83,6 +78,7 @@ defineProps({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   padding: 18px 0;
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.15s;
@@ -110,6 +106,8 @@ defineProps({
   display: block;
   margin-bottom: 6px;
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .discussion-title:hover {
@@ -120,7 +118,9 @@ defineProps({
 .discussion-title-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .discussion-meta {
@@ -133,7 +133,7 @@ defineProps({
   gap: 15px;
   color: #aaa;
   font-size: 14px;
-  padding-left: 15px;
+  flex-shrink: 0;
 }
 
 .stat {
@@ -168,5 +168,16 @@ defineProps({
   color: #9a5050;
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .discussion-item {
+    align-items: flex-start;
+  }
+
+  .discussion-stats {
+    padding-top: 2px;
+  }
 }
 </style>

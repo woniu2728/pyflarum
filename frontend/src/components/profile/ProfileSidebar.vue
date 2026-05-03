@@ -95,6 +95,7 @@ const items = computed(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
   padding: 14px 18px;
   color: #555;
   text-decoration: none;
@@ -123,11 +124,14 @@ const items = computed(() => {
   width: 18px;
   text-align: center;
   font-size: 15px;
+  flex-shrink: 0;
 }
 
 .nav-link span:first-of-type {
   flex: 1;
+  min-width: 0;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .badge-count {
@@ -138,6 +142,7 @@ const items = computed(() => {
   font-weight: 600;
   min-width: 24px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .nav-link.active .badge-count {

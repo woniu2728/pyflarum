@@ -139,6 +139,7 @@ defineEmits(['avatar-selected', 'open-settings'])
   display: flex;
   align-items: flex-start;
   gap: 20px;
+  min-width: 0;
 }
 
 .user-avatar {
@@ -219,6 +220,7 @@ defineEmits(['avatar-selected', 'open-settings'])
 
 .user-info-wrapper {
   flex: 1;
+  min-width: 0;
   padding-top: 8px;
 }
 
@@ -229,6 +231,7 @@ defineEmits(['avatar-selected', 'open-settings'])
   display: block;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   color: white;
+  overflow-wrap: anywhere;
 }
 
 .user-badges {
@@ -268,6 +271,7 @@ defineEmits(['avatar-selected', 'open-settings'])
 .user-info li {
   display: inline-block;
   margin-right: 18px;
+  overflow-wrap: anywhere;
 }
 
 .user-info i {
@@ -325,10 +329,17 @@ defineEmits(['avatar-selected', 'open-settings'])
 
   .user-info-wrapper {
     text-align: center;
+    width: 100%;
   }
 
   .user-badges {
     justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .user-info li {
+    display: block;
+    margin: 6px 0 0;
   }
 
   .avatar-group-badge {

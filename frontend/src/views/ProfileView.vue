@@ -194,9 +194,11 @@ watch(
   grid-template-columns: 220px 1fr;
   gap: 25px;
   padding: 40px 0 30px 0;
+  min-width: 0;
 }
 
 .user-content {
+  min-width: 0;
   background: white;
   border: 1px solid #e3e8ed;
   border-radius: 3px;
@@ -204,8 +206,14 @@ watch(
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 14px;
+  }
+
   .user-page-layout {
     grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 28px 0 22px;
   }
 }
 </style>

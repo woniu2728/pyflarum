@@ -1,5 +1,5 @@
 <template>
-  <div class="content-section">
+  <div class="profile-section">
     <ForumStateBlock v-if="loading" class="section-state-block">加载中...</ForumStateBlock>
     <ForumStateBlock v-else-if="posts.length === 0" class="section-state-block">
       {{ isOwnProfile ? '你还没有发表过回复' : '该用户还没有发表过回复' }}
@@ -57,11 +57,6 @@ defineProps({
 </script>
 
 <style scoped>
-.content-section {
-  padding: 25px;
-  min-height: 200px;
-}
-
 .section-state-block {
   margin: 0;
 }
@@ -92,13 +87,17 @@ defineProps({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 12px;
+  min-width: 0;
 }
 
 .post-header-main {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .post-discussion-link {
@@ -108,6 +107,8 @@ defineProps({
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .post-discussion-link:hover {
@@ -122,12 +123,15 @@ defineProps({
 .post-time {
   font-size: 13px;
   color: #aaa;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .post-content {
   color: #555;
   line-height: 1.7;
   font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
 .approval-pill {
@@ -152,5 +156,14 @@ defineProps({
   color: #9a5050;
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .post-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 </style>
