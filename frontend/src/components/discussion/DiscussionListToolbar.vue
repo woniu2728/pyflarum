@@ -2,7 +2,12 @@
   <div class="index-toolbar">
     <ul class="index-toolbar-view">
       <li v-for="option in sortOptions" :key="option.value">
-        <button class="btn-view" :class="{ active: sortBy === option.value }" @click="$emit('change-sort', option.value)">
+        <button
+          type="button"
+          class="btn-view"
+          :class="{ active: sortBy === option.value }"
+          @click="$emit('change-sort', option.value)"
+        >
           {{ option.label }}
         </button>
       </li>
@@ -11,6 +16,7 @@
     <ul class="index-toolbar-action">
       <li v-if="authStore.isAuthenticated">
         <button
+          type="button"
           class="btn-mark-read"
           :disabled="markingAllRead"
           title="全部标记为已读"
@@ -20,7 +26,13 @@
         </button>
       </li>
       <li>
-        <button class="btn-refresh" title="刷新" :disabled="refreshing" @click="$emit('refresh')">
+        <button
+          type="button"
+          class="btn-refresh"
+          title="刷新"
+          :disabled="refreshing"
+          @click="$emit('refresh')"
+        >
           <i class="fas fa-sync-alt" :class="{ 'fa-spin': refreshing }"></i>
         </button>
       </li>

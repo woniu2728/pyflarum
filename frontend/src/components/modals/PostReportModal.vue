@@ -26,8 +26,13 @@
         </div>
 
         <div class="form-group">
-          <label>举报原因</label>
-          <select v-model="form.reason" class="report-select">
+          <label for="post-report-reason">举报原因</label>
+          <select
+            id="post-report-reason"
+            v-model="form.reason"
+            name="reason"
+            class="report-select"
+          >
             <option v-for="option in REPORT_REASON_OPTIONS" :key="option" :value="option">
               {{ option }}
             </option>
@@ -35,12 +40,14 @@
         </div>
 
         <div class="form-group">
-          <label>补充说明</label>
+          <label for="post-report-message">补充说明</label>
           <p class="PostReportModal-help">
             {{ form.reason === '其他' ? '请尽量写清楚问题背景，方便版主快速判断。' : '可补充上下文、受影响内容或希望的处理方式。' }}
           </p>
           <textarea
+            id="post-report-message"
             v-model="form.message"
+            name="message"
             rows="4"
             class="report-textarea"
             placeholder="告诉管理员这条帖子为什么需要处理"

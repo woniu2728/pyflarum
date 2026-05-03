@@ -9,8 +9,10 @@
       </div>
       <div class="Modal-body">
         <div class="Form-group">
-          <label>{{ noteLabel }}</label>
+          <label for="admin-action-note">{{ noteLabel }}</label>
           <textarea
+            id="admin-action-note"
+            name="note"
             class="FormControl"
             rows="4"
             :value="note"

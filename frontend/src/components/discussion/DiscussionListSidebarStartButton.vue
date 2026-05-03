@@ -1,5 +1,6 @@
 <template>
   <button
+    type="button"
     class="btn-start-discussion"
     :class="{ 'btn-start-discussion--tag': Boolean(currentTag?.color) }"
     :style="startDiscussionButtonStyle"

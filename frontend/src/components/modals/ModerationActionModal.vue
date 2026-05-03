@@ -24,9 +24,11 @@
         </div>
 
         <div class="form-group">
-          <label>处理备注</label>
+          <label for="moderation-action-note">处理备注</label>
           <textarea
+            id="moderation-action-note"
             v-model="note"
+            name="note"
             rows="4"
             class="moderation-textarea"
             :placeholder="placeholder"
