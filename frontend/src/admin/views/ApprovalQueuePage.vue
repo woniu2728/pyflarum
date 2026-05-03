@@ -5,20 +5,13 @@
     title="审核队列"
     description="审核未验证邮箱用户提交的讨论和回复"
   >
-    <div class="ApprovalQueue-toolbar">
-      <button
-        v-for="option in filters"
-        :key="option.value"
-        @click="changeType(option.value)"
-        class="FilterButton"
-        :class="{ active: contentType === option.value }"
-      >
-        {{ option.label }}
-      </button>
-    </div>
+    <AdminFilterTabs v-model="contentType" :options="filters" @change="loadItems" />
 
     <div class="ApprovalQueue-list">
       <AdminStateBlock v-if="loading" class="ApprovalQueue-empty" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-else-if="loadError" class="ApprovalQueue-empty" tone="danger">
+        {{ loadError }}
+      </AdminStateBlock>
       <AdminStateBlock v-else-if="items.length === 0" class="ApprovalQueue-empty">当前没有待审核内容</AdminStateBlock>
       <div v-else class="ApprovalList">
         <article v-for="item in items" :key="`${item.type}-${item.id}`" class="ApprovalCard">
@@ -51,38 +44,26 @@
       </div>
     </div>
 
-    <div v-if="showModal" class="Modal" @click.self="closeModal">
-      <div class="Modal-content">
-        <div class="Modal-header">
-          <h3>{{ pendingAction === 'approve' ? '审核通过' : '拒绝内容' }}</h3>
-          <button @click="closeModal" class="Modal-close">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="Modal-body">
-          <div class="Form-group">
-            <label>备注</label>
-            <textarea
-              v-model="actionNote"
-              class="FormControl"
-              rows="4"
-              :placeholder="pendingAction === 'approve' ? '例如：内容符合社区规范，已放行' : '例如：内容质量不足，已拒绝'"
-            ></textarea>
-          </div>
-        </div>
-        <div class="Modal-footer">
-          <button @click="closeModal" class="Button Button--secondary">取消</button>
-          <button @click="submitAction" class="Button Button--primary" :disabled="saving">
-            {{ saving ? '提交中...' : '确认' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AdminActionNoteModal
+      :show="showModal"
+      :title="pendingAction === 'approve' ? '审核通过' : '拒绝内容'"
+      :description="pendingAction === 'approve' ? '通过后内容会对有权限的用户可见。' : '拒绝后作者仍可看到审核反馈。'"
+      note-label="审核备注"
+      v-model:note="actionNote"
+      :placeholder="pendingAction === 'approve' ? '例如：内容符合社区规范，已放行' : '例如：内容质量不足，已拒绝'"
+      :confirm-text="pendingAction === 'approve' ? '通过审核' : '拒绝并隐藏'"
+      :confirm-tone="pendingAction === 'approve' ? 'primary' : 'danger'"
+      :saving="saving"
+      @close="closeModal"
+      @submit="submitAction"
+    />
   </AdminPage>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import AdminActionNoteModal from '../components/AdminActionNoteModal.vue'
+import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import AdminPage from '../components/AdminPage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
@@ -90,6 +71,7 @@ import { useModalStore } from '../../stores/modal'
 
 const loading = ref(true)
 const saving = ref(false)
+const loadError = ref('')
 const items = ref([])
 const contentType = ref('all')
 const showModal = ref(false)
@@ -99,9 +81,9 @@ const actionNote = ref('')
 const modalStore = useModalStore()
 
 const filters = [
-  { value: 'all', label: '全部' },
-  { value: 'discussion', label: '讨论' },
-  { value: 'post', label: '回复' },
+  { value: 'all', label: '全部', icon: 'fas fa-layer-group' },
+  { value: 'discussion', label: '讨论', icon: 'fas fa-comments' },
+  { value: 'post', label: '回复', icon: 'fas fa-reply' },
 ]
 
 onMounted(() => {
@@ -110,6 +92,7 @@ onMounted(() => {
 
 async function loadItems() {
   loading.value = true
+  loadError.value = ''
   try {
     const data = await api.get('/admin/approval-queue', {
       params: { content_type: contentType.value }
@@ -117,15 +100,10 @@ async function loadItems() {
     items.value = data.data || []
   } catch (error) {
     console.error('加载审核队列失败:', error)
+    loadError.value = error.response?.data?.error || error.message || '加载审核队列失败，请稍后重试'
   } finally {
     loading.value = false
   }
-}
-
-function changeType(value) {
-  if (contentType.value === value) return
-  contentType.value = value
-  loadItems()
 }
 
 function itemLink(item) {
@@ -187,28 +165,6 @@ function formatDate(value) {
 </script>
 
 <style scoped>
-.ApprovalQueue-toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.FilterButton {
-  border: 1px solid var(--forum-border-color);
-  border-radius: var(--forum-radius-sm);
-  background: var(--forum-bg-elevated);
-  padding: 8px 14px;
-  cursor: pointer;
-  color: var(--forum-text-muted);
-  transition: all 0.2s;
-}
-
-.FilterButton.active {
-  background: var(--forum-primary-color);
-  border-color: var(--forum-primary-color);
-  color: var(--forum-text-inverse);
-}
-
 .ApprovalQueue-empty {
   box-shadow: var(--forum-shadow-sm);
 }
@@ -293,29 +249,7 @@ function formatDate(value) {
   margin-top: 16px;
 }
 
-.Modal-content {
-  width: min(520px, calc(100vw - 32px));
-}
-
 @media (max-width: 768px) {
-  .ApprovalQueue-toolbar {
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-  }
-
-  .ApprovalQueue-toolbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .FilterButton {
-    flex: 0 0 auto;
-    min-height: 38px;
-    border-radius: var(--forum-radius-pill);
-    white-space: nowrap;
-  }
-
   .ApprovalCard {
     border-radius: 16px;
     padding: 16px;
@@ -340,19 +274,5 @@ function formatDate(value) {
     text-align: center;
   }
 
-  .Modal-content {
-    width: 100%;
-    max-width: none;
-  }
-
-  .Modal-footer {
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
-
-  .Modal-footer .Button {
-    width: 100%;
-    justify-content: center;
-  }
 }
 </style>

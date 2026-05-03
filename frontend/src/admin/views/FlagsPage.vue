@@ -5,20 +5,13 @@
     title="举报管理"
     description="处理用户提交的帖子举报"
   >
-    <div class="FlagsPage-toolbar">
-      <button
-        v-for="option in filters"
-        :key="option.value"
-        @click="changeStatus(option.value)"
-        class="FilterButton"
-        :class="{ active: status === option.value }"
-      >
-        {{ option.label }}
-      </button>
-    </div>
+    <AdminFilterTabs v-model="status" :options="filters" @change="loadFlags" />
 
     <div class="FlagsPage-list">
       <AdminStateBlock v-if="loading" class="FlagsPage-empty" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-else-if="loadError" class="FlagsPage-empty" tone="danger">
+        {{ loadError }}
+      </AdminStateBlock>
       <AdminStateBlock v-else-if="flags.length === 0" class="FlagsPage-empty">暂无举报记录</AdminStateBlock>
       <div v-else class="FlagList">
         <article v-for="flag in flags" :key="flag.id" class="FlagCard">
@@ -64,38 +57,25 @@
       </div>
     </div>
 
-    <div v-if="showResolveModal" class="Modal" @click.self="closeResolveModal">
-      <div class="Modal-content">
-        <div class="Modal-header">
-          <h3>{{ pendingStatus === 'resolved' ? '标记举报已处理' : '忽略举报' }}</h3>
-          <button @click="closeResolveModal" class="Modal-close">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="Modal-body">
-          <div class="Form-group">
-            <label>处理备注</label>
-            <textarea
-              v-model="resolutionNote"
-              class="FormControl"
-              rows="4"
-              :placeholder="pendingStatus === 'resolved' ? '例如：已隐藏帖子并警告用户' : '例如：举报理由不足，暂不处理'"
-            ></textarea>
-          </div>
-        </div>
-        <div class="Modal-footer">
-          <button @click="closeResolveModal" class="Button Button--secondary">取消</button>
-          <button @click="resolveFlag" class="Button Button--primary" :disabled="saving">
-            {{ saving ? '提交中...' : '确认' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AdminActionNoteModal
+      :show="showResolveModal"
+      :title="pendingStatus === 'resolved' ? '标记举报已处理' : '忽略举报'"
+      :description="pendingStatus === 'resolved' ? '标记后这条举报会从待处理列表移出。' : '忽略后举报会进入已忽略列表，便于后续追溯。'"
+      note-label="处理备注"
+      v-model:note="resolutionNote"
+      :placeholder="pendingStatus === 'resolved' ? '例如：已隐藏帖子并警告用户' : '例如：举报理由不足，暂不处理'"
+      :confirm-text="pendingStatus === 'resolved' ? '标记已处理' : '忽略举报'"
+      :saving="saving"
+      @close="closeResolveModal"
+      @submit="resolveFlag"
+    />
   </AdminPage>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import AdminActionNoteModal from '../components/AdminActionNoteModal.vue'
+import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import AdminPage from '../components/AdminPage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
@@ -103,6 +83,7 @@ import { useModalStore } from '../../stores/modal'
 
 const loading = ref(true)
 const saving = ref(false)
+const loadError = ref('')
 const flags = ref([])
 const status = ref('open')
 const showResolveModal = ref(false)
@@ -112,9 +93,9 @@ const resolutionNote = ref('')
 const modalStore = useModalStore()
 
 const filters = [
-  { value: 'open', label: '待处理' },
-  { value: 'resolved', label: '已处理' },
-  { value: 'ignored', label: '已忽略' },
+  { value: 'open', label: '待处理', icon: 'fas fa-inbox' },
+  { value: 'resolved', label: '已处理', icon: 'fas fa-check-circle' },
+  { value: 'ignored', label: '已忽略', icon: 'fas fa-ban' },
 ]
 
 onMounted(() => {
@@ -123,6 +104,7 @@ onMounted(() => {
 
 async function loadFlags() {
   loading.value = true
+  loadError.value = ''
   try {
     const data = await api.get('/admin/flags', {
       params: { status: status.value }
@@ -130,15 +112,10 @@ async function loadFlags() {
     flags.value = data.data || []
   } catch (error) {
     console.error('加载举报失败:', error)
+    loadError.value = error.response?.data?.error || error.message || '加载举报失败，请稍后重试'
   } finally {
     loading.value = false
   }
-}
-
-function changeStatus(nextStatus) {
-  if (status.value === nextStatus) return
-  status.value = nextStatus
-  loadFlags()
 }
 
 function statusLabel(value) {
@@ -193,28 +170,6 @@ async function resolveFlag() {
 </script>
 
 <style scoped>
-.FlagsPage-toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.FilterButton {
-  border: 1px solid var(--forum-border-color);
-  border-radius: var(--forum-radius-sm);
-  background: var(--forum-bg-elevated);
-  padding: 8px 14px;
-  cursor: pointer;
-  color: var(--forum-text-muted);
-  transition: all 0.2s;
-}
-
-.FilterButton.active {
-  background: var(--forum-primary-color);
-  border-color: var(--forum-primary-color);
-  color: var(--forum-text-inverse);
-}
-
 .FlagsPage-empty {
   box-shadow: var(--forum-shadow-sm);
 }
@@ -322,29 +277,7 @@ async function resolveFlag() {
   font-size: var(--forum-font-size-sm);
 }
 
-.Modal-content {
-  width: min(520px, calc(100vw - 32px));
-}
-
 @media (max-width: 768px) {
-  .FlagsPage-toolbar {
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-  }
-
-  .FlagsPage-toolbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .FilterButton {
-    flex: 0 0 auto;
-    min-height: 38px;
-    border-radius: var(--forum-radius-pill);
-    white-space: nowrap;
-  }
-
   .FlagCard {
     border-radius: 16px;
     padding: 16px;
@@ -374,19 +307,5 @@ async function resolveFlag() {
     text-align: center;
   }
 
-  .Modal-content {
-    width: 100%;
-    max-width: none;
-  }
-
-  .Modal-footer {
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
-
-  .Modal-footer .Button {
-    width: 100%;
-    justify-content: center;
-  }
 }
 </style>
