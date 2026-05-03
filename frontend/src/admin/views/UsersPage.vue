@@ -767,6 +767,29 @@ const canDeleteCurrentUser = computed(() => {
   min-width: min(860px, calc(100vw - 24px));
 }
 
+.FormRow--toggles {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.FormRow--toggles .CheckboxField--toggle {
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px 14px;
+}
+
+.FormRow--toggles .CheckboxField--toggle input {
+  flex: 0 0 16px;
+}
+
+.FormRow--toggles .CheckboxField--toggle span {
+  min-width: 0;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .GroupChecklist {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -780,6 +803,7 @@ const canDeleteCurrentUser = computed(() => {
 
   .FormRow--toggles {
     gap: 10px;
+    grid-template-columns: 1fr;
   }
 
   .Modal-content--user {

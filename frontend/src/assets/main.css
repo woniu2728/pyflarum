@@ -569,6 +569,15 @@ select:focus {
   font-size: var(--forum-font-size-md);
 }
 
+#admin-app .CheckboxField input[type='checkbox'] {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+}
+
 #admin-app .CheckboxField--toggle {
   min-height: 46px;
   padding: 0 14px;
