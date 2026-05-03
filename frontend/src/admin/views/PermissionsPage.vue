@@ -242,6 +242,7 @@ import { useModalStore } from '../../stores/modal'
 
 const groups = ref([])
 const permissions = ref({})
+const permissionSections = ref([])
 const saving = ref(false)
 const errorMessage = ref('')
 const showGroupModal = ref(false)
@@ -252,58 +253,9 @@ const groupForm = ref(getEmptyGroupForm())
 const modalStore = useModalStore()
 const { saveSuccess, resetSaveFeedback, showSaveSuccess } = useAdminSaveFeedback()
 
-const permissionSections = [
-  {
-    name: 'view',
-    label: '查看权限',
-    permissions: [
-      { name: 'viewForum', label: '查看论坛', icon: 'fas fa-eye' },
-      { name: 'viewUserList', label: '查看用户列表', icon: 'fas fa-users' },
-      { name: 'searchUsers', label: '搜索用户', icon: 'fas fa-search' },
-    ],
-  },
-  {
-    name: 'start',
-    label: '发帖权限',
-    permissions: [
-      { name: 'startDiscussion', label: '发起讨论', icon: 'fas fa-edit' },
-      { name: 'startDiscussionWithoutApproval', label: '发起讨论免审核', icon: 'fas fa-user-check' },
-    ],
-  },
-  {
-    name: 'reply',
-    label: '回复权限',
-    permissions: [
-      { name: 'discussion.reply', label: '回复讨论', icon: 'fas fa-reply' },
-      { name: 'replyWithoutApproval', label: '回复免审核', icon: 'fas fa-user-check' },
-      { name: 'discussion.editOwn', label: '编辑自己的帖子', icon: 'fas fa-pencil-alt' },
-      { name: 'discussion.deleteOwn', label: '删除自己的帖子', icon: 'fas fa-times' },
-    ],
-  },
-  {
-    name: 'moderate',
-    label: '内容管理',
-    permissions: [
-      { name: 'discussion.edit', label: '编辑任意帖子', icon: 'fas fa-pencil-alt' },
-      { name: 'discussion.delete', label: '删除任意帖子', icon: 'fas fa-trash' },
-      { name: 'discussion.hide', label: '隐藏内容', icon: 'fas fa-eye-slash' },
-      { name: 'discussion.rename', label: '重命名讨论', icon: 'fas fa-heading' },
-      { name: 'discussion.lock', label: '锁定讨论', icon: 'fas fa-lock' },
-      { name: 'discussion.sticky', label: '置顶讨论', icon: 'fas fa-thumbtack' },
-    ],
-  },
-  {
-    name: 'user',
-    label: '用户管理',
-    permissions: [
-      { name: 'user.edit', label: '编辑用户资料', icon: 'fas fa-user-edit' },
-      { name: 'user.suspend', label: '封禁用户', icon: 'fas fa-user-slash' },
-    ],
-  },
-]
-
 onMounted(async () => {
   await loadGroups()
+  await loadPermissionMeta()
   await loadPermissions()
 })
 
@@ -326,6 +278,17 @@ async function loadPermissions() {
   } catch (error) {
     console.error('加载权限失败:', error)
     errorMessage.value = '加载权限失败'
+  }
+}
+
+async function loadPermissionMeta() {
+  try {
+    const data = await api.get('/admin/permissions/meta')
+    permissionSections.value = data.sections || []
+    errorMessage.value = ''
+  } catch (error) {
+    console.error('加载权限定义失败:', error)
+    errorMessage.value = '加载权限定义失败'
   }
 }
 

@@ -180,6 +180,10 @@
               <i class="fas fa-pencil-alt"></i>
               <span>编辑基础设置</span>
             </router-link>
+            <router-link to="/admin/modules" class="ActionsWidget-item">
+              <i class="fas fa-cubes"></i>
+              <span>查看模块中心</span>
+            </router-link>
             <router-link to="/admin/permissions" class="ActionsWidget-item">
               <i class="fas fa-key"></i>
               <span>管理权限</span>

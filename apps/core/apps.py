@@ -7,6 +7,10 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from django.db.backends.signals import connection_created
+        from apps.core.forum_registry import get_forum_registry
+
+        # Ensure builtin modules are registered during app startup.
+        get_forum_registry()
 
         connection_created.connect(
             configure_sqlite_pragmas,

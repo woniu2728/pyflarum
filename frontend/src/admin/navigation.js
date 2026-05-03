@@ -1,5 +1,6 @@
 export const coreItems = [
   { path: '/admin', icon: 'fas fa-chart-bar', label: '仪表盘' },
+  { path: '/admin/modules', icon: 'fas fa-cubes', label: '模块中心' },
   { path: '/admin/basics', icon: 'fas fa-pencil-alt', label: '基础设置' },
   { path: '/admin/permissions', icon: 'fas fa-key', label: '权限管理' },
   { path: '/admin/appearance', icon: 'fas fa-paint-brush', label: '外观设置' },

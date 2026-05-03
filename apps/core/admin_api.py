@@ -31,6 +31,7 @@ from apps.core.mail_drivers import (
     validate_mail_settings,
 )
 from apps.core.queue_service import QueueService
+from apps.core.forum_registry import get_forum_registry
 from apps.core.search_index_service import SearchIndexService
 from apps.core.file_service import FileUploadService
 from apps.core.settings_service import (
@@ -58,42 +59,13 @@ from apps.users.group_utils import get_primary_group, serialize_group_badge
 
 router = Router()
 
+REGISTRY = get_forum_registry()
+
 BUILTIN_GROUPS = {
     1: "Admin",
     2: "Guest",
     3: "Member",
     4: "Moderator",
-}
-
-VALID_PERMISSION_CODES = {
-    "viewForum",
-    "viewUserList",
-    "searchUsers",
-    "startDiscussion",
-    "startDiscussionWithoutApproval",
-    "discussion.reply",
-    "replyWithoutApproval",
-    "discussion.editOwn",
-    "discussion.deleteOwn",
-    "discussion.edit",
-    "discussion.delete",
-    "discussion.hide",
-    "discussion.rename",
-    "discussion.lock",
-    "discussion.sticky",
-    "user.edit",
-    "user.suspend",
-}
-
-PERMISSION_ALIASES = {
-    "reply": "discussion.reply",
-    "editOwnPosts": "discussion.editOwn",
-    "deleteOwnPosts": "discussion.deleteOwn",
-    "editPosts": "discussion.edit",
-    "deletePosts": "discussion.delete",
-    "hideDiscussions": "discussion.hide",
-    "lockDiscussions": "discussion.lock",
-    "stickyDiscussions": "discussion.sticky",
 }
 
 
@@ -203,10 +175,7 @@ def is_builtin_group(group: Group) -> bool:
 
 
 def normalize_permission_code(permission: str):
-    normalized = PERMISSION_ALIASES.get(permission, permission)
-    if normalized in VALID_PERMISSION_CODES:
-        return normalized
-    return None
+    return REGISTRY.normalize_permission_code(permission)
 
 
 def serialize_admin_user(user: User, include_details: bool = False) -> Dict[str, Any]:
@@ -237,6 +206,43 @@ def serialize_admin_user(user: User, include_details: bool = False) -> Dict[str,
         })
 
     return payload
+
+
+def serialize_module_definition(module) -> Dict[str, Any]:
+    return {
+        "id": module.module_id,
+        "name": module.name,
+        "description": module.description,
+        "version": module.version,
+        "category": module.category,
+        "is_core": module.is_core,
+        "enabled": module.enabled,
+        "dependencies": list(module.dependencies),
+        "capabilities": list(module.capabilities),
+        "permissions": [
+            {
+                "code": permission.code,
+                "label": permission.label,
+                "section": permission.section,
+                "section_label": permission.section_label,
+                "icon": permission.icon,
+                "description": permission.description,
+                "required_permissions": list(permission.required_permissions),
+                "aliases": list(permission.aliases),
+            }
+            for permission in module.permissions
+        ],
+        "admin_pages": [
+            {
+                "path": page.path,
+                "label": page.label,
+                "icon": page.icon,
+                "nav_section": page.nav_section,
+                "description": page.description,
+            }
+            for page in module.admin_pages
+        ],
+    }
 
 
 def parse_optional_datetime(value):
@@ -791,6 +797,39 @@ def serialize_approval_item(content_type: str, item) -> Dict[str, Any]:
 
 
 # ==================== 权限管理 ====================
+
+@router.get("/modules", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def list_admin_modules(request):
+    """获取内置模块注册信息"""
+    modules = [serialize_module_definition(module) for module in REGISTRY.get_modules()]
+    pages = [
+        {
+            "path": page.path,
+            "label": page.label,
+            "icon": page.icon,
+            "module_id": page.module_id,
+            "nav_section": page.nav_section,
+            "description": page.description,
+        }
+        for page in REGISTRY.get_admin_pages()
+    ]
+    return {
+        "modules": modules,
+        "admin_pages": pages,
+        "permission_aliases": REGISTRY.get_permission_aliases(),
+    }
+
+
+@router.get("/permissions/meta", auth=AuthBearer(), tags=["Admin"])
+@require_staff
+def get_permissions_meta(request):
+    """获取注册化权限元数据"""
+    return {
+        "sections": REGISTRY.get_permission_sections(),
+        "aliases": REGISTRY.get_permission_aliases(),
+    }
+
 
 @router.get("/permissions", auth=AuthBearer(), tags=["Admin"])
 @require_staff

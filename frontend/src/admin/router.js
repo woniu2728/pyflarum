@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import DashboardPage from './views/DashboardPage.vue'
+import ModulesPage from './views/ModulesPage.vue'
 import BasicsPage from './views/BasicsPage.vue'
 import PermissionsPage from './views/PermissionsPage.vue'
 import UsersPage from './views/UsersPage.vue'
@@ -20,6 +21,11 @@ const routes = [
     path: '/admin',
     name: 'admin-dashboard',
     component: DashboardPage,
+  },
+  {
+    path: '/admin/modules',
+    name: 'admin-modules',
+    component: ModulesPage,
   },
   {
     path: '/admin/basics',

@@ -2875,6 +2875,48 @@ class AdminPermissionsApiTests(TestCase):
         self.assertEqual(response.status_code, 400, response.content)
         self.assertIn("未知权限", response.json()["error"])
 
+    def test_permissions_meta_api_returns_registry_sections(self):
+        response = self.client.get(
+            "/api/admin/permissions/meta",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("sections", payload)
+        self.assertIn("aliases", payload)
+        section_names = {section["name"] for section in payload["sections"]}
+        self.assertIn("view", section_names)
+        self.assertIn("moderate", section_names)
+        all_permission_codes = {
+            permission["name"]
+            for section in payload["sections"]
+            for permission in section["permissions"]
+        }
+        self.assertIn("discussion.reply", all_permission_codes)
+        self.assertEqual(payload["aliases"]["reply"], "discussion.reply")
+
+    def test_modules_api_returns_builtin_registry_snapshot(self):
+        response = self.client.get(
+            "/api/admin/modules",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("modules", payload)
+        self.assertIn("admin_pages", payload)
+        module_ids = {module["id"] for module in payload["modules"]}
+        self.assertIn("core", module_ids)
+        self.assertIn("tags", module_ids)
+        self.assertIn("approval", module_ids)
+
+        core_module = next(module for module in payload["modules"] if module["id"] == "core")
+        admin_page_paths = {page["path"] for page in payload["admin_pages"]}
+        self.assertIn("/admin/modules", admin_page_paths)
+        self.assertTrue(core_module["is_core"])
+        self.assertIn("permissions", core_module)
+
 
 class AdminFlagManagementApiTests(TestCase):
     def setUp(self):
