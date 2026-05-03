@@ -149,6 +149,7 @@ defineEmits(['click', 'mark-read', 'delete'])
   color: var(--forum-text-color);
   line-height: 1.6;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .notification-title i {
@@ -170,6 +171,8 @@ defineEmits(['click', 'mark-read', 'delete'])
   margin-top: 8px;
   color: var(--forum-text-soft);
   font-size: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .notification-unread-dot {
@@ -223,6 +226,19 @@ defineEmits(['click', 'mark-read', 'delete'])
 
   .notification-title-row {
     gap: 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .notification-item {
+    gap: 12px 10px;
+    padding: 14px;
+  }
+
+  .notification-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
   }
 }
 </style>

@@ -173,6 +173,7 @@ function getNotificationAvatarColor(notification) {
   color: var(--forum-text-muted);
   font-size: 13px;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .preferences-link:hover {
@@ -193,6 +194,12 @@ function getNotificationAvatarColor(notification) {
 @media (max-width: 768px) {
   .hero-meta {
     align-items: stretch;
+  }
+}
+
+@media (max-width: 520px) {
+  .notification-content {
+    padding: 16px 12px 28px;
   }
 }
 </style>
