@@ -9,15 +9,20 @@
       <div class="AppearancePage-section">
         <h3 class="Section-title">颜色</h3>
         <div class="Form-group">
-          <label>主题色</label>
+          <label for="appearance-primary-color">主题色</label>
           <div class="ColorPicker">
             <input
+              id="appearance-primary-color-picker"
               v-model="settings.primary_color"
+              name="primary_color_picker"
               type="color"
               class="ColorPicker-input"
+              aria-label="主题色取色器"
             />
             <input
+              id="appearance-primary-color"
               v-model="settings.primary_color"
+              name="primary_color"
               type="text"
               class="FormControl ColorPicker-text"
               placeholder="#4d698e"
@@ -27,15 +32,20 @@
         </div>
 
         <div class="Form-group">
-          <label>强调色</label>
+          <label for="appearance-accent-color">强调色</label>
           <div class="ColorPicker">
             <input
+              id="appearance-accent-color-picker"
               v-model="settings.accent_color"
+              name="accent_color_picker"
               type="color"
               class="ColorPicker-input"
+              aria-label="强调色取色器"
             />
             <input
+              id="appearance-accent-color"
               v-model="settings.accent_color"
+              name="accent_color"
               type="text"
               class="FormControl ColorPicker-text"
               placeholder="#e74c3c"
@@ -57,7 +67,13 @@
             <p class="Form-help">建议上传透明背景 PNG、SVG 或 WebP，Header 会优先展示这里的资源。</p>
             <div class="AssetCard-actions">
               <label class="Button Button--secondary Button--upload" :class="{ 'is-disabled': uploadingLogo }">
-                <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" hidden @change="uploadAsset($event, 'logo')" />
+                <input
+                  name="logo_file"
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                  hidden
+                  @change="uploadAsset($event, 'logo')"
+                />
                 {{ uploadingLogo ? '上传中...' : '上传本地 Logo' }}
               </label>
               <button v-if="settings.logo_url" type="button" class="Button" @click="settings.logo_url = ''">清空</button>
@@ -66,9 +82,11 @@
         </div>
 
         <div class="Form-group Form-group--assetUrl">
-          <label>Logo URL</label>
+          <label for="appearance-logo-url">Logo URL</label>
           <input
+            id="appearance-logo-url"
             v-model="settings.logo_url"
+            name="logo_url"
             type="text"
             class="FormControl"
             placeholder="https://example.com/logo.png"
@@ -86,7 +104,13 @@
             <p class="Form-help">建议上传 `.ico`、PNG 或 SVG，小尺寸图标在浏览器标签页里更清晰。</p>
             <div class="AssetCard-actions">
               <label class="Button Button--secondary Button--upload" :class="{ 'is-disabled': uploadingFavicon }">
-                <input type="file" accept=".ico,.png,.svg,.webp" hidden @change="uploadAsset($event, 'favicon')" />
+                <input
+                  name="favicon_file"
+                  type="file"
+                  accept=".ico,.png,.svg,.webp"
+                  hidden
+                  @change="uploadAsset($event, 'favicon')"
+                />
                 {{ uploadingFavicon ? '上传中...' : '上传本地 Favicon' }}
               </label>
               <button v-if="settings.favicon_url" type="button" class="Button" @click="settings.favicon_url = ''">清空</button>
@@ -95,9 +119,11 @@
         </div>
 
         <div class="Form-group Form-group--assetUrl">
-          <label>Favicon URL</label>
+          <label for="appearance-favicon-url">Favicon URL</label>
           <input
+            id="appearance-favicon-url"
             v-model="settings.favicon_url"
+            name="favicon_url"
             type="text"
             class="FormControl"
             placeholder="https://example.com/favicon.ico"
@@ -131,9 +157,11 @@
         </div>
 
         <div class="Form-group">
-          <label>自定义CSS</label>
+          <label for="appearance-custom-css">自定义CSS</label>
           <textarea
+            id="appearance-custom-css"
             v-model="settings.custom_css"
+            name="custom_css"
             class="FormControl"
             rows="10"
             placeholder="/* 在这里添加自定义CSS */"
@@ -142,9 +170,11 @@
         </div>
 
         <div class="Form-group">
-          <label>自定义Header HTML</label>
+          <label for="appearance-custom-header">自定义Header HTML</label>
           <textarea
+            id="appearance-custom-header"
             v-model="settings.custom_header"
+            name="custom_header"
             class="FormControl"
             rows="5"
             placeholder="<!-- 在这里添加自定义HTML -->"
@@ -155,6 +185,7 @@
 
       <div class="Form-actions">
         <button
+          type="button"
           @click="saveSettings"
           class="Button Button--primary"
           :disabled="saving"

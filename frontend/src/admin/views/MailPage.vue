@@ -22,9 +22,11 @@
 
             <div class="Form-grid">
               <div class="Form-group Form-group--full">
-                <label>发件地址</label>
+                <label for="mail-from">发件地址</label>
                 <input
+                  id="mail-from"
                   v-model="settings.mail_from"
+                  name="mail_from"
                   type="text"
                   class="FormControl"
                   placeholder="Bias <your@gmail.com>"
@@ -36,9 +38,11 @@
               </div>
 
               <div class="Form-group">
-                <label>SMTP 主机</label>
+                <label for="mail-host">SMTP 主机</label>
                 <input
+                  id="mail-host"
                   v-model="settings.mail_host"
+                  name="mail_host"
                   type="text"
                   class="FormControl"
                   placeholder="smtp.gmail.com"
@@ -49,9 +53,11 @@
               </div>
 
               <div class="Form-group">
-                <label>SMTP 端口</label>
+                <label for="mail-port">SMTP 端口</label>
                 <input
+                  id="mail-port"
                   v-model="settings.mail_port"
+                  name="mail_port"
                   type="number"
                   class="FormControl"
                   placeholder="587"
@@ -62,8 +68,13 @@
               </div>
 
               <div class="Form-group">
-                <label>加密方式</label>
-                <select v-model="settings.mail_encryption" class="FormControl">
+                <label for="mail-encryption">加密方式</label>
+                <select
+                  id="mail-encryption"
+                  v-model="settings.mail_encryption"
+                  name="mail_encryption"
+                  class="FormControl"
+                >
                   <option value="">无</option>
                   <option value="tls">TLS</option>
                   <option value="ssl">SSL</option>
@@ -75,8 +86,13 @@
               </div>
 
               <div class="Form-group">
-                <label>邮件格式</label>
-                <select v-model="settings.mail_format" class="FormControl">
+                <label for="mail-format">邮件格式</label>
+                <select
+                  id="mail-format"
+                  v-model="settings.mail_format"
+                  name="mail_format"
+                  class="FormControl"
+                >
                   <option value="multipart">Multipart</option>
                   <option value="plain">Plain Text</option>
                   <option value="html">HTML</option>
@@ -88,9 +104,11 @@
               </div>
 
               <div class="Form-group">
-                <label>SMTP 用户名</label>
+                <label for="mail-username">SMTP 用户名</label>
                 <input
+                  id="mail-username"
                   v-model="settings.mail_username"
+                  name="mail_username"
                   type="text"
                   class="FormControl"
                   placeholder="your@gmail.com"
@@ -98,9 +116,11 @@
               </div>
 
               <div class="Form-group">
-                <label>SMTP 密码</label>
+                <label for="mail-password">SMTP 密码</label>
                 <input
+                  id="mail-password"
                   v-model="settings.mail_password"
+                  name="mail_password"
                   type="password"
                   class="FormControl"
                   placeholder="应用专用密码"
@@ -131,9 +151,11 @@
 
           <div class="TestMailPanel">
             <div class="Form-group TestMailPanel-input">
-              <label>测试收件箱</label>
+              <label for="mail-test-recipient">测试收件箱</label>
               <input
+                id="mail-test-recipient"
                 v-model="settings.mail_test_recipient"
+                name="mail_test_recipient"
                 type="email"
                 class="FormControl"
                 placeholder="admin@example.com"
