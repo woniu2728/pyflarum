@@ -51,7 +51,8 @@
                 <span>从这里开始是未读回复</span>
               </div>
 
-              <DiscussionPostItem
+              <component
+                :is="resolvePostComponent(post)"
                 :post="post"
                 :discussion="discussion"
                 :auth-store="authStore"
@@ -163,9 +164,9 @@ import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
 import DiscussionHero from '@/components/discussion/DiscussionHero.vue'
 import DiscussionMobileActions from '@/components/discussion/DiscussionMobileActions.vue'
-import DiscussionPostItem from '@/components/discussion/DiscussionPostItem.vue'
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
+import { getPostTypeDefinition } from '@/forum/postTypes'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
 import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
 import { useDiscussionDetailPage } from '@/composables/useDiscussionDetailPage'
@@ -315,6 +316,10 @@ const {
   togglePin,
   toggleSubscription
 })
+
+function resolvePostComponent(post) {
+  return getPostTypeDefinition(post?.type)?.component
+}
 
 watch(
   discussion,
