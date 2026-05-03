@@ -320,22 +320,32 @@
         <template v-if="settings.storage_driver === 's3'">
           <div class="Form-grid">
             <div class="Form-group">
-              <label>Bucket</label>
-              <input v-model="settings.storage_s3_bucket" type="text" class="FormControl" />
+              <label for="advanced-storage-s3-bucket">Bucket</label>
+              <input
+                id="advanced-storage-s3-bucket"
+                v-model="settings.storage_s3_bucket"
+                name="storage_s3_bucket"
+                type="text"
+                class="FormControl"
+              />
             </div>
             <div class="Form-group">
-              <label>Region</label>
+              <label for="advanced-storage-s3-region">Region</label>
               <input
+                id="advanced-storage-s3-region"
                 v-model="settings.storage_s3_region"
+                name="storage_s3_region"
                 type="text"
                 class="FormControl"
                 placeholder="ap-southeast-1"
               />
             </div>
             <div class="Form-group">
-              <label>Endpoint</label>
+              <label for="advanced-storage-s3-endpoint">Endpoint</label>
               <input
+                id="advanced-storage-s3-endpoint"
                 v-model="settings.storage_s3_endpoint"
+                name="storage_s3_endpoint"
                 type="text"
                 class="FormControl"
                 placeholder="https://s3.amazonaws.com"
@@ -343,9 +353,11 @@
               <p class="Form-help">使用 MinIO、Wasabi 等兼容服务时填写自定义 Endpoint</p>
             </div>
             <div class="Form-group">
-              <label>公共访问 URL</label>
+              <label for="advanced-storage-s3-public-url">公共访问 URL</label>
               <input
+                id="advanced-storage-s3-public-url"
                 v-model="settings.storage_s3_public_url"
+                name="storage_s3_public_url"
                 type="text"
                 class="FormControl"
                 placeholder="https://cdn.example.com"
@@ -353,17 +365,31 @@
               <p class="Form-help">如留空，系统会按标准 S3 域名尝试拼接</p>
             </div>
             <div class="Form-group">
-              <label>Access Key ID</label>
-              <input v-model="settings.storage_s3_access_key_id" type="text" class="FormControl" />
-            </div>
-            <div class="Form-group">
-              <label>Secret Access Key</label>
-              <input v-model="settings.storage_s3_secret_access_key" type="password" class="FormControl" />
-            </div>
-            <div class="Form-group">
-              <label>对象前缀</label>
+              <label for="advanced-storage-s3-access-key-id">Access Key ID</label>
               <input
+                id="advanced-storage-s3-access-key-id"
+                v-model="settings.storage_s3_access_key_id"
+                name="storage_s3_access_key_id"
+                type="text"
+                class="FormControl"
+              />
+            </div>
+            <div class="Form-group">
+              <label for="advanced-storage-s3-secret-access-key">Secret Access Key</label>
+              <input
+                id="advanced-storage-s3-secret-access-key"
+                v-model="settings.storage_s3_secret_access_key"
+                name="storage_s3_secret_access_key"
+                type="password"
+                class="FormControl"
+              />
+            </div>
+            <div class="Form-group">
+              <label for="advanced-storage-s3-object-prefix">对象前缀</label>
+              <input
+                id="advanced-storage-s3-object-prefix"
                 v-model="settings.storage_s3_object_prefix"
+                name="storage_s3_object_prefix"
                 type="text"
                 class="FormControl"
                 placeholder="bias"
@@ -372,7 +398,9 @@
             <div class="Form-group Form-group--checkbox">
               <label>
                 <input
+                  id="advanced-storage-s3-path-style"
                   v-model="settings.storage_s3_path_style"
+                  name="storage_s3_path_style"
                   type="checkbox"
                   class="FormControl-checkbox"
                 />
@@ -386,22 +414,32 @@
         <template v-if="settings.storage_driver === 'r2'">
           <div class="Form-grid">
             <div class="Form-group">
-              <label>Bucket</label>
-              <input v-model="settings.storage_r2_bucket" type="text" class="FormControl" />
+              <label for="advanced-storage-r2-bucket">Bucket</label>
+              <input
+                id="advanced-storage-r2-bucket"
+                v-model="settings.storage_r2_bucket"
+                name="storage_r2_bucket"
+                type="text"
+                class="FormControl"
+              />
             </div>
             <div class="Form-group">
-              <label>Endpoint</label>
+              <label for="advanced-storage-r2-endpoint">Endpoint</label>
               <input
+                id="advanced-storage-r2-endpoint"
                 v-model="settings.storage_r2_endpoint"
+                name="storage_r2_endpoint"
                 type="text"
                 class="FormControl"
                 placeholder="https://&lt;accountid&gt;.r2.cloudflarestorage.com"
               />
             </div>
             <div class="Form-group">
-              <label>公共访问 URL / CDN 域名</label>
+              <label for="advanced-storage-r2-public-url">公共访问 URL / CDN 域名</label>
               <input
+                id="advanced-storage-r2-public-url"
                 v-model="settings.storage_r2_public_url"
+                name="storage_r2_public_url"
                 type="text"
                 class="FormControl"
                 placeholder="https://pub-xxx.r2.dev"
@@ -409,17 +447,31 @@
               <p class="Form-help">R2 通常需要单独的公开域名，否则前台生成的附件链接不可访问</p>
             </div>
             <div class="Form-group">
-              <label>Access Key ID</label>
-              <input v-model="settings.storage_r2_access_key_id" type="text" class="FormControl" />
-            </div>
-            <div class="Form-group">
-              <label>Secret Access Key</label>
-              <input v-model="settings.storage_r2_secret_access_key" type="password" class="FormControl" />
-            </div>
-            <div class="Form-group">
-              <label>对象前缀</label>
+              <label for="advanced-storage-r2-access-key-id">Access Key ID</label>
               <input
+                id="advanced-storage-r2-access-key-id"
+                v-model="settings.storage_r2_access_key_id"
+                name="storage_r2_access_key_id"
+                type="text"
+                class="FormControl"
+              />
+            </div>
+            <div class="Form-group">
+              <label for="advanced-storage-r2-secret-access-key">Secret Access Key</label>
+              <input
+                id="advanced-storage-r2-secret-access-key"
+                v-model="settings.storage_r2_secret_access_key"
+                name="storage_r2_secret_access_key"
+                type="password"
+                class="FormControl"
+              />
+            </div>
+            <div class="Form-group">
+              <label for="advanced-storage-r2-object-prefix">对象前缀</label>
+              <input
+                id="advanced-storage-r2-object-prefix"
                 v-model="settings.storage_r2_object_prefix"
+                name="storage_r2_object_prefix"
                 type="text"
                 class="FormControl"
                 placeholder="bias"
@@ -431,22 +483,32 @@
         <template v-if="settings.storage_driver === 'oss'">
           <div class="Form-grid">
             <div class="Form-group">
-              <label>Bucket</label>
-              <input v-model="settings.storage_oss_bucket" type="text" class="FormControl" />
+              <label for="advanced-storage-oss-bucket">Bucket</label>
+              <input
+                id="advanced-storage-oss-bucket"
+                v-model="settings.storage_oss_bucket"
+                name="storage_oss_bucket"
+                type="text"
+                class="FormControl"
+              />
             </div>
             <div class="Form-group">
-              <label>Endpoint</label>
+              <label for="advanced-storage-oss-endpoint">Endpoint</label>
               <input
+                id="advanced-storage-oss-endpoint"
                 v-model="settings.storage_oss_endpoint"
+                name="storage_oss_endpoint"
                 type="text"
                 class="FormControl"
                 placeholder="oss-cn-hangzhou.aliyuncs.com"
               />
             </div>
             <div class="Form-group">
-              <label>公共访问 URL</label>
+              <label for="advanced-storage-oss-public-url">公共访问 URL</label>
               <input
+                id="advanced-storage-oss-public-url"
                 v-model="settings.storage_oss_public_url"
+                name="storage_oss_public_url"
                 type="text"
                 class="FormControl"
                 placeholder="https://cdn.example.com"
@@ -454,17 +516,31 @@
               <p class="Form-help">如留空，将按 Bucket + Endpoint 生成标准 OSS 访问地址</p>
             </div>
             <div class="Form-group">
-              <label>Access Key ID</label>
-              <input v-model="settings.storage_oss_access_key_id" type="text" class="FormControl" />
-            </div>
-            <div class="Form-group">
-              <label>Access Key Secret</label>
-              <input v-model="settings.storage_oss_access_key_secret" type="password" class="FormControl" />
-            </div>
-            <div class="Form-group">
-              <label>对象前缀</label>
+              <label for="advanced-storage-oss-access-key-id">Access Key ID</label>
               <input
+                id="advanced-storage-oss-access-key-id"
+                v-model="settings.storage_oss_access_key_id"
+                name="storage_oss_access_key_id"
+                type="text"
+                class="FormControl"
+              />
+            </div>
+            <div class="Form-group">
+              <label for="advanced-storage-oss-access-key-secret">Access Key Secret</label>
+              <input
+                id="advanced-storage-oss-access-key-secret"
+                v-model="settings.storage_oss_access_key_secret"
+                name="storage_oss_access_key_secret"
+                type="password"
+                class="FormControl"
+              />
+            </div>
+            <div class="Form-group">
+              <label for="advanced-storage-oss-object-prefix">对象前缀</label>
+              <input
+                id="advanced-storage-oss-object-prefix"
                 v-model="settings.storage_oss_object_prefix"
+                name="storage_oss_object_prefix"
                 type="text"
                 class="FormControl"
                 placeholder="bias"
@@ -476,35 +552,46 @@
         <template v-if="settings.storage_driver === 'imagebed'">
           <div class="Form-grid">
             <div class="Form-group">
-              <label>上传接口地址</label>
+              <label for="advanced-storage-imagebed-endpoint">上传接口地址</label>
               <input
+                id="advanced-storage-imagebed-endpoint"
                 v-model="settings.storage_imagebed_endpoint"
+                name="storage_imagebed_endpoint"
                 type="text"
                 class="FormControl"
                 placeholder="https://example.com/api/upload"
               />
             </div>
             <div class="Form-group">
-              <label>请求方法</label>
-              <select v-model="settings.storage_imagebed_method" class="FormControl">
+              <label for="advanced-storage-imagebed-method">请求方法</label>
+              <select
+                id="advanced-storage-imagebed-method"
+                v-model="settings.storage_imagebed_method"
+                name="storage_imagebed_method"
+                class="FormControl"
+              >
                 <option value="POST">POST</option>
                 <option value="PUT">PUT</option>
                 <option value="PATCH">PATCH</option>
               </select>
             </div>
             <div class="Form-group">
-              <label>文件字段名</label>
+              <label for="advanced-storage-imagebed-file-field">文件字段名</label>
               <input
+                id="advanced-storage-imagebed-file-field"
                 v-model="settings.storage_imagebed_file_field"
+                name="storage_imagebed_file_field"
                 type="text"
                 class="FormControl"
                 placeholder="file"
               />
             </div>
             <div class="Form-group">
-              <label>响应 URL 路径</label>
+              <label for="advanced-storage-imagebed-url-path">响应 URL 路径</label>
               <input
+                id="advanced-storage-imagebed-url-path"
                 v-model="settings.storage_imagebed_url_path"
+                name="storage_imagebed_url_path"
                 type="text"
                 class="FormControl"
                 placeholder="data.url"
@@ -514,9 +601,11 @@
           </div>
 
           <div class="Form-group">
-            <label>请求头 JSON</label>
+            <label for="advanced-storage-imagebed-headers">请求头 JSON</label>
             <textarea
+              id="advanced-storage-imagebed-headers"
               v-model="settings.storage_imagebed_headers"
+              name="storage_imagebed_headers"
               class="FormControl"
               rows="4"
               placeholder='{"Authorization":"Bearer token"}'
@@ -524,9 +613,11 @@
           </div>
 
           <div class="Form-group">
-            <label>额外表单参数 JSON</label>
+            <label for="advanced-storage-imagebed-form-data">额外表单参数 JSON</label>
             <textarea
+              id="advanced-storage-imagebed-form-data"
               v-model="settings.storage_imagebed_form_data"
+              name="storage_imagebed_form_data"
               class="FormControl"
               rows="4"
               placeholder='{"album":"forum"}'
@@ -541,7 +632,9 @@
         <div class="Form-group">
           <label>
             <input
+              id="advanced-maintenance-mode"
               v-model="settings.maintenance_mode"
+              name="maintenance_mode"
               type="checkbox"
               class="FormControl-checkbox"
             />
@@ -551,9 +644,11 @@
         </div>
 
         <div class="Form-group">
-          <label>维护提示信息</label>
+          <label for="advanced-maintenance-message">维护提示信息</label>
           <textarea
+            id="advanced-maintenance-message"
             v-model="settings.maintenance_message"
+            name="maintenance_message"
             class="FormControl"
             rows="3"
             placeholder="论坛正在维护中，请稍后再试..."
@@ -567,7 +662,9 @@
         <div class="Form-group">
           <label>
             <input
+              id="advanced-debug-mode"
               v-model="settings.debug_mode"
+              name="debug_mode"
               type="checkbox"
               class="FormControl-checkbox"
               disabled
@@ -580,7 +677,9 @@
         <div class="Form-group">
           <label>
             <input
+              id="advanced-log-queries"
               v-model="settings.log_queries"
+              name="log_queries"
               type="checkbox"
               class="FormControl-checkbox"
             />
@@ -592,6 +691,7 @@
 
       <div class="Form-actions">
         <button
+          type="button"
           @click="saveSettings"
           class="Button Button--primary"
           :disabled="saving"
