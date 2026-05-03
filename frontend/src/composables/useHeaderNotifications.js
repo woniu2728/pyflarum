@@ -61,6 +61,18 @@ export function useHeaderNotifications({
   }
 
   async function clearReadNotifications() {
+    if (!hasReadNotifications.value) return
+
+    const confirmed = modalStore
+      ? await modalStore.confirm({
+        title: '清除已读通知',
+        message: '确定要清除所有已读通知吗？未读通知会保留。',
+        confirmText: '清除',
+        tone: 'danger'
+      })
+      : true
+    if (!confirmed) return
+
     clearingRead.value = true
     try {
       const result = await notificationStore.clearReadNotifications()
