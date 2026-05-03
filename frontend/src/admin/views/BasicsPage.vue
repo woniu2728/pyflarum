@@ -7,9 +7,11 @@
   >
     <form @submit.prevent="handleSubmit" class="Form">
       <div class="Form-group">
-        <label>论坛名称</label>
+        <label for="basics-forum-title">论坛名称</label>
         <input
+          id="basics-forum-title"
           v-model="settings.forum_title"
+          name="forum_title"
           type="text"
           class="FormControl"
           placeholder="我的论坛"
@@ -18,9 +20,11 @@
       </div>
 
       <div class="Form-group">
-        <label>论坛描述</label>
+        <label for="basics-forum-description">论坛描述</label>
         <textarea
+          id="basics-forum-description"
           v-model="settings.forum_description"
+          name="forum_description"
           class="FormControl"
           rows="3"
           placeholder="一个很棒的社区"
@@ -35,9 +39,11 @@
         </div>
 
         <div class="Form-group">
-          <label>SEO 标题</label>
+          <label for="basics-seo-title">SEO 标题</label>
           <input
+            id="basics-seo-title"
             v-model="settings.seo_title"
+            name="seo_title"
             type="text"
             class="FormControl"
             placeholder="留空时使用论坛名称"
@@ -46,9 +52,11 @@
         </div>
 
         <div class="Form-group">
-          <label>SEO 描述</label>
+          <label for="basics-seo-description">SEO 描述</label>
           <textarea
+            id="basics-seo-description"
             v-model="settings.seo_description"
+            name="seo_description"
             class="FormControl"
             rows="3"
             placeholder="留空时使用论坛描述"
@@ -57,9 +65,11 @@
         </div>
 
         <div class="Form-group">
-          <label>SEO 关键词</label>
+          <label for="basics-seo-keywords">SEO 关键词</label>
           <input
+            id="basics-seo-keywords"
             v-model="settings.seo_keywords"
+            name="seo_keywords"
             type="text"
             class="FormControl"
             placeholder="论坛, 社区, 技术讨论"
@@ -71,6 +81,7 @@
           <label class="Form-toggle">
             <input
               v-model="settings.seo_robots_index"
+              name="seo_robots_index"
               type="checkbox"
               class="FormControl-checkbox"
             />
@@ -80,6 +91,7 @@
           <label class="Form-toggle">
             <input
               v-model="settings.seo_robots_follow"
+              name="seo_robots_follow"
               type="checkbox"
               class="FormControl-checkbox"
             />
@@ -101,6 +113,7 @@
         <label class="Form-toggle Announcement-toggle">
           <input
             v-model="settings.announcement_enabled"
+            name="announcement_enabled"
             type="checkbox"
             class="FormControl-checkbox"
           />
@@ -108,9 +121,11 @@
         </label>
 
         <div class="Form-group">
-          <label>公告内容</label>
+          <label for="basics-announcement-message">公告内容</label>
           <textarea
+            id="basics-announcement-message"
             v-model="settings.announcement_message"
+            name="announcement_message"
             class="FormControl"
             rows="3"
             maxlength="240"
@@ -120,8 +135,13 @@
         </div>
 
         <div class="Form-group">
-          <label>公告样式</label>
-          <select v-model="settings.announcement_tone" class="FormControl">
+          <label for="basics-announcement-tone">公告样式</label>
+          <select
+            id="basics-announcement-tone"
+            v-model="settings.announcement_tone"
+            name="announcement_tone"
+            class="FormControl"
+          >
             <option value="info">信息</option>
             <option value="warning">提醒</option>
             <option value="success">成功</option>
@@ -130,8 +150,13 @@
       </section>
 
       <div class="Form-group">
-        <label>默认语言</label>
-        <select v-model="settings.default_locale" class="FormControl">
+        <label for="basics-default-locale">默认语言</label>
+        <select
+          id="basics-default-locale"
+          v-model="settings.default_locale"
+          name="default_locale"
+          class="FormControl"
+        >
           <option value="zh-CN">简体中文</option>
           <option value="en">English</option>
         </select>
@@ -141,6 +166,7 @@
         <label>
           <input
             v-model="settings.show_language_selector"
+            name="show_language_selector"
             type="checkbox"
             class="FormControl-checkbox"
           />
