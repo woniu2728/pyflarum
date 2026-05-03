@@ -219,6 +219,22 @@ def serialize_module_definition(module) -> Dict[str, Any]:
         "enabled": module.enabled,
         "dependencies": list(module.dependencies),
         "capabilities": list(module.capabilities),
+        "notification_types": [
+            {
+                "code": notification_type.code,
+                "label": notification_type.label,
+                "description": notification_type.description,
+            }
+            for notification_type in module.notification_types
+        ],
+        "event_listeners": [
+            {
+                "event": listener.event,
+                "listener": listener.listener,
+                "description": listener.description,
+            }
+            for listener in module.event_listeners
+        ],
         "permissions": [
             {
                 "code": permission.code,
@@ -814,9 +830,29 @@ def list_admin_modules(request):
         }
         for page in REGISTRY.get_admin_pages()
     ]
+    notification_types = [
+        {
+            "code": notification_type.code,
+            "label": notification_type.label,
+            "module_id": notification_type.module_id,
+            "description": notification_type.description,
+        }
+        for notification_type in REGISTRY.get_notification_types()
+    ]
+    event_listeners = [
+        {
+            "event": listener.event,
+            "listener": listener.listener,
+            "module_id": listener.module_id,
+            "description": listener.description,
+        }
+        for listener in REGISTRY.get_event_listeners()
+    ]
     return {
         "modules": modules,
         "admin_pages": pages,
+        "notification_types": notification_types,
+        "event_listeners": event_listeners,
         "permission_aliases": REGISTRY.get_permission_aliases(),
     }
 

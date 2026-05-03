@@ -2929,16 +2929,22 @@ class AdminPermissionsApiTests(TestCase):
         payload = response.json()
         self.assertIn("modules", payload)
         self.assertIn("admin_pages", payload)
+        self.assertIn("notification_types", payload)
+        self.assertIn("event_listeners", payload)
         module_ids = {module["id"] for module in payload["modules"]}
         self.assertIn("core", module_ids)
         self.assertIn("tags", module_ids)
         self.assertIn("approval", module_ids)
+        self.assertIn("notifications", module_ids)
 
         core_module = next(module for module in payload["modules"] if module["id"] == "core")
+        notifications_module = next(module for module in payload["modules"] if module["id"] == "notifications")
         admin_page_paths = {page["path"] for page in payload["admin_pages"]}
         self.assertIn("/admin/modules", admin_page_paths)
         self.assertTrue(core_module["is_core"])
         self.assertIn("permissions", core_module)
+        self.assertTrue(any(item["code"] == "discussionReply" for item in notifications_module["notification_types"]))
+        self.assertTrue(any(item["event"] == "DiscussionApprovedEvent" for item in notifications_module["event_listeners"]))
 
 
 class AdminFlagManagementApiTests(TestCase):

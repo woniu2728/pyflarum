@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 from apps.core.version import APP_VERSION
 
@@ -30,6 +30,22 @@ class AdminPageDefinition:
 
 
 @dataclass(frozen=True)
+class NotificationTypeDefinition:
+    code: str
+    label: str
+    module_id: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class EventListenerDefinition:
+    event: str
+    listener: str
+    module_id: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class ForumModuleDefinition:
     module_id: str
     name: str
@@ -42,6 +58,8 @@ class ForumModuleDefinition:
     permissions: Tuple[PermissionDefinition, ...] = ()
     admin_pages: Tuple[AdminPageDefinition, ...] = ()
     capabilities: Tuple[str, ...] = ()
+    notification_types: Tuple[NotificationTypeDefinition, ...] = ()
+    event_listeners: Tuple[EventListenerDefinition, ...] = ()
 
 
 class ForumRegistry:
@@ -50,6 +68,8 @@ class ForumRegistry:
         self._permissions: Dict[str, PermissionDefinition] = {}
         self._permission_aliases: Dict[str, str] = {}
         self._admin_pages: List[AdminPageDefinition] = []
+        self._notification_types: Dict[str, NotificationTypeDefinition] = {}
+        self._event_listeners: List[EventListenerDefinition] = []
 
     def register_module(self, module: ForumModuleDefinition) -> ForumModuleDefinition:
         self._modules[module.module_id] = module
@@ -62,7 +82,14 @@ class ForumRegistry:
         for page in module.admin_pages:
             self._admin_pages.append(page)
 
+        for notification_type in module.notification_types:
+            self._notification_types[notification_type.code] = notification_type
+
+        for event_listener in module.event_listeners:
+            self._event_listeners.append(event_listener)
+
         self._admin_pages.sort(key=lambda item: (item.nav_section, item.label, item.path))
+        self._event_listeners.sort(key=lambda item: (item.event, item.module_id, item.listener))
         return module
 
     def get_modules(self) -> List[ForumModuleDefinition]:
@@ -96,6 +123,15 @@ class ForumRegistry:
 
     def get_admin_pages(self) -> List[AdminPageDefinition]:
         return list(self._admin_pages)
+
+    def get_notification_types(self) -> List[NotificationTypeDefinition]:
+        return sorted(
+            self._notification_types.values(),
+            key=lambda item: (item.module_id, item.label, item.code),
+        )
+
+    def get_event_listeners(self) -> List[EventListenerDefinition]:
+        return list(self._event_listeners)
 
     def get_permission_sections(self) -> List[dict]:
         sections: Dict[str, dict] = {}
@@ -467,6 +503,32 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                 ),
             ),
             capabilities=("discussion-approval", "post-approval"),
+            notification_types=(
+                NotificationTypeDefinition(
+                    code="discussionApproved",
+                    label="讨论审核通过",
+                    module_id="approval",
+                    description="通知作者其讨论已通过审核。",
+                ),
+                NotificationTypeDefinition(
+                    code="discussionRejected",
+                    label="讨论审核拒绝",
+                    module_id="approval",
+                    description="通知作者其讨论未通过审核。",
+                ),
+                NotificationTypeDefinition(
+                    code="postApproved",
+                    label="回复审核通过",
+                    module_id="approval",
+                    description="通知作者其回复已通过审核。",
+                ),
+                NotificationTypeDefinition(
+                    code="postRejected",
+                    label="回复审核拒绝",
+                    module_id="approval",
+                    description="通知作者其回复未通过审核。",
+                ),
+            ),
         )
     )
 
@@ -499,6 +561,14 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             category="feature",
             dependencies=("discussions", "notifications"),
             capabilities=("follow-discussion", "following-feed"),
+            event_listeners=(
+                EventListenerDefinition(
+                    event="PostCreatedEvent",
+                    listener="handle_post_created",
+                    module_id="subscriptions",
+                    description="已发布回复后为讨论作者和关注者派发讨论回复通知。",
+                ),
+            ),
         )
     )
 
@@ -510,6 +580,14 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             category="feature",
             dependencies=("discussions", "notifications"),
             capabilities=("post-likes",),
+            notification_types=(
+                NotificationTypeDefinition(
+                    code="postLiked",
+                    label="回复被点赞",
+                    module_id="likes",
+                    description="通知回复作者其内容被点赞。",
+                ),
+            ),
         )
     )
 
@@ -521,6 +599,14 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             category="feature",
             dependencies=("discussions", "notifications", "users"),
             capabilities=("user-mentions",),
+            notification_types=(
+                NotificationTypeDefinition(
+                    code="userMentioned",
+                    label="@提及通知",
+                    module_id="mentions",
+                    description="通知用户其在回复中被提及。",
+                ),
+            ),
         )
     )
 
@@ -532,6 +618,46 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             category="feature",
             dependencies=("users",),
             capabilities=("in-app-notifications", "notification-stats", "notification-websocket"),
+            notification_types=(
+                NotificationTypeDefinition(
+                    code="discussionReply",
+                    label="讨论新回复",
+                    module_id="notifications",
+                    description="通知讨论作者和关注者有新回复。",
+                ),
+                NotificationTypeDefinition(
+                    code="postReply",
+                    label="回复被回应",
+                    module_id="notifications",
+                    description="通知被回复的楼层作者。",
+                ),
+                NotificationTypeDefinition(
+                    code="userSuspended",
+                    label="账号封禁通知",
+                    module_id="notifications",
+                    description="通知用户账号已被管理员封禁。",
+                ),
+                NotificationTypeDefinition(
+                    code="userUnsuspended",
+                    label="账号解除封禁",
+                    module_id="notifications",
+                    description="通知用户账号已恢复正常。",
+                ),
+            ),
+            event_listeners=(
+                EventListenerDefinition(
+                    event="DiscussionApprovedEvent",
+                    listener="handle_discussion_approved",
+                    module_id="notifications",
+                    description="讨论审核通过后通知作者。",
+                ),
+                EventListenerDefinition(
+                    event="PostApprovedEvent",
+                    listener="handle_post_approved",
+                    module_id="notifications",
+                    description="回复审核通过后通知作者。",
+                ),
+            ),
         )
     )
 
@@ -543,5 +669,50 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             category="infrastructure",
             dependencies=("notifications",),
             capabilities=("websocket", "presence", "typing"),
+            event_listeners=(
+                EventListenerDefinition(
+                    event="NotificationCreated",
+                    listener="dispatch_notification_batch",
+                    module_id="realtime",
+                    description="通知创建后通过 WebSocket 批量推送到前端。",
+                ),
+            ),
+        )
+    )
+
+    registry.register_module(
+        ForumModuleDefinition(
+            module_id="tag-stats",
+            name="Tag Stats",
+            description="标签统计刷新与讨论标签侧的聚合更新。",
+            category="infrastructure",
+            dependencies=("tags", "discussions"),
+            capabilities=("tag-stats-refresh",),
+            event_listeners=(
+                EventListenerDefinition(
+                    event="DiscussionCreatedEvent",
+                    listener="handle_discussion_created",
+                    module_id="tag-stats",
+                    description="讨论创建后刷新标签统计。",
+                ),
+                EventListenerDefinition(
+                    event="DiscussionApprovedEvent",
+                    listener="handle_discussion_approved",
+                    module_id="tag-stats",
+                    description="讨论审核通过后刷新标签统计。",
+                ),
+                EventListenerDefinition(
+                    event="PostCreatedEvent",
+                    listener="handle_post_created",
+                    module_id="tag-stats",
+                    description="回复发布后刷新标签最后活跃时间。",
+                ),
+                EventListenerDefinition(
+                    event="PostApprovedEvent",
+                    listener="handle_post_approved",
+                    module_id="tag-stats",
+                    description="待审核回复通过后刷新标签统计。",
+                ),
+            ),
         )
     )

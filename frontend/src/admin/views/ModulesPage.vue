@@ -77,6 +77,28 @@
                 </ul>
                 <p v-else class="ModuleEmpty">暂无权限声明</p>
               </div>
+
+              <div>
+                <h5>通知类型</h5>
+                <ul v-if="module.notification_types.length" class="ModuleList">
+                  <li v-for="notificationType in module.notification_types" :key="notificationType.code">
+                    <code>{{ notificationType.code }}</code>
+                    <span>{{ notificationType.label }}</span>
+                  </li>
+                </ul>
+                <p v-else class="ModuleEmpty">暂无通知类型</p>
+              </div>
+
+              <div>
+                <h5>事件监听</h5>
+                <ul v-if="module.event_listeners.length" class="ModuleList">
+                  <li v-for="listener in module.event_listeners" :key="`${listener.event}:${listener.listener}`">
+                    <code>{{ listener.event }}</code>
+                    <span>{{ listener.listener }}</span>
+                  </li>
+                </ul>
+                <p v-else class="ModuleEmpty">暂无事件监听</p>
+              </div>
             </div>
           </article>
         </div>
@@ -111,6 +133,55 @@
           </table>
         </div>
       </section>
+
+      <section class="ModulesPage-section">
+        <div class="ModulesPage-sectionHeader">
+          <h3>通知类型与事件监听</h3>
+          <p>这部分用于校验模块级通知协议和领域事件挂接情况，方便后续扩展继续沿统一机制注册。</p>
+        </div>
+
+        <div class="ModulesPage-grid ModulesPage-grid--secondary">
+          <article class="ModuleCard">
+            <div class="ModuleCard-header">
+              <div>
+                <div class="ModuleCard-titleRow">
+                  <h4>通知类型</h4>
+                </div>
+                <p>所有已在注册中心声明的站内通知类型。</p>
+              </div>
+            </div>
+
+            <ul v-if="notificationTypes.length" class="ModuleList ModuleList--dense">
+              <li v-for="notificationType in notificationTypes" :key="notificationType.code">
+                <code>{{ notificationType.code }}</code>
+                <span>{{ notificationType.label }}</span>
+                <small>{{ moduleNameMap[notificationType.module_id] || notificationType.module_id }}</small>
+              </li>
+            </ul>
+            <p v-else class="ModuleEmpty">暂无通知类型</p>
+          </article>
+
+          <article class="ModuleCard">
+            <div class="ModuleCard-header">
+              <div>
+                <div class="ModuleCard-titleRow">
+                  <h4>事件监听器</h4>
+                </div>
+                <p>当前内置模块通过事件总线挂接的监听入口。</p>
+              </div>
+            </div>
+
+            <ul v-if="eventListeners.length" class="ModuleList ModuleList--dense">
+              <li v-for="listener in eventListeners" :key="`${listener.event}:${listener.listener}:${listener.module_id}`">
+                <code>{{ listener.event }}</code>
+                <span>{{ listener.listener }}</span>
+                <small>{{ moduleNameMap[listener.module_id] || listener.module_id }}</small>
+              </li>
+            </ul>
+            <p v-else class="ModuleEmpty">暂无事件监听器</p>
+          </article>
+        </div>
+      </section>
     </div>
   </AdminPage>
 </template>
@@ -126,6 +197,8 @@ const loading = ref(true)
 const errorMessage = ref('')
 const modules = ref([])
 const adminPages = ref([])
+const notificationTypes = ref([])
+const eventListeners = ref([])
 
 const summaryItems = computed(() => {
   const moduleList = modules.value
@@ -138,6 +211,8 @@ const summaryItems = computed(() => {
     { label: '核心模块', value: String(coreCount) },
     { label: '权限声明', value: String(permissionCount) },
     { label: '后台入口', value: String(adminPageCount) },
+    { label: '通知类型', value: String(notificationTypes.value.length) },
+    { label: '事件监听', value: String(eventListeners.value.length) },
   ]
 })
 
@@ -160,6 +235,8 @@ async function loadModules() {
       categoryLabel: resolveCategoryLabel(module.category),
     }))
     adminPages.value = data.admin_pages || []
+    notificationTypes.value = data.notification_types || []
+    eventListeners.value = data.event_listeners || []
   } catch (error) {
     console.error('加载模块信息失败:', error)
     errorMessage.value = error.response?.data?.error || '加载模块信息失败，请稍后重试'
@@ -180,6 +257,8 @@ function buildModuleSummary(module) {
     { label: '后台页数', value: String(module.admin_pages?.length || 0) },
     { label: '依赖数', value: String(module.dependencies?.length || 0) },
     { label: '能力项', value: String(module.capabilities?.length || 0) },
+    { label: '通知数', value: String(module.notification_types?.length || 0) },
+    { label: '监听器', value: String(module.event_listeners?.length || 0) },
   ]
 }
 </script>
@@ -355,6 +434,21 @@ function buildModuleSummary(module) {
   overflow-wrap: anywhere;
 }
 
+.ModuleList--dense {
+  gap: 10px;
+}
+
+.ModuleList--dense li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ModuleList--dense small {
+  color: var(--forum-text-soft);
+  font-size: 12px;
+}
+
 .ModuleList code {
   margin-right: 8px;
 }
@@ -394,6 +488,10 @@ function buildModuleSummary(module) {
 
 .AdminTable td code {
   color: var(--forum-text-color);
+}
+
+.ModulesPage-grid--secondary {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 @media (max-width: 768px) {
