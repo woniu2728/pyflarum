@@ -25,6 +25,7 @@ FORUM_REGISTRY = get_forum_registry()
 DEFAULT_POST_TYPE = FORUM_REGISTRY.get_default_post_type_code()
 DISCUSSION_COUNTED_POST_TYPES = FORUM_REGISTRY.get_discussion_counted_post_type_codes()
 USER_COUNTED_POST_TYPES = FORUM_REGISTRY.get_user_counted_post_type_codes()
+DISCUSSION_RENAMED_POST_TYPE = "discussionRenamed"
 
 
 class DiscussionService:
@@ -570,6 +571,7 @@ class DiscussionService:
         with transaction.atomic():
             previous_tag_ids = list(discussion.discussion_tags.values_list('tag_id', flat=True))
             first_post = None
+            previous_title = discussion.title
             if content is not None:
                 first_post = Post.objects.get(id=discussion.first_post_id)
 
@@ -628,6 +630,13 @@ class DiscussionService:
                 ])
 
             discussion.save()
+            if title is not None and title != previous_title:
+                DiscussionService._create_discussion_renamed_post(
+                    discussion=discussion,
+                    actor=user,
+                    previous_title=previous_title,
+                    current_title=title,
+                )
             if is_hidden is not None or tag_ids is not None:
                 refreshed_tag_ids = set(previous_tag_ids) | set(discussion.discussion_tags.values_list('tag_id', flat=True))
                 if refreshed_tag_ids:
@@ -837,6 +846,38 @@ class DiscussionService:
                 User.objects.filter(id=user_id).update(comment_count=F("comment_count") - total)
 
         return True
+
+    @staticmethod
+    def _create_discussion_renamed_post(
+        discussion: Discussion,
+        actor: User,
+        previous_title: str,
+        current_title: str,
+    ) -> Post:
+        last_post = Post.objects.filter(discussion=discussion).order_by("-number").first()
+        next_number = (last_post.number + 1) if last_post else 1
+        renamed_post = Post.objects.create(
+            discussion=discussion,
+            number=next_number,
+            user=actor,
+            type=DISCUSSION_RENAMED_POST_TYPE,
+            content=f"from: {previous_title}\nto: {current_title}",
+            content_html="",
+            approval_status=Post.APPROVAL_APPROVED,
+            approved_at=timezone.now(),
+            approved_by=actor,
+        )
+        discussion.last_post_id = renamed_post.id
+        discussion.last_post_number = renamed_post.number
+        discussion.last_posted_at = renamed_post.created_at
+        discussion.last_posted_user = actor
+        discussion.save(update_fields=[
+            "last_post_id",
+            "last_post_number",
+            "last_posted_at",
+            "last_posted_user",
+        ])
+        return renamed_post
 
     @staticmethod
     def can_edit_discussion(discussion: Discussion, user: User) -> bool:

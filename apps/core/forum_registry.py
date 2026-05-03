@@ -561,6 +561,18 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     counts_toward_user=True,
                     searchable=True,
                 ),
+                PostTypeDefinition(
+                    code="discussionRenamed",
+                    label="讨论改标题",
+                    module_id="discussions",
+                    description="记录讨论标题被修改的系统事件帖，不计入回复统计和全文搜索。",
+                    icon="fas fa-heading",
+                    is_default=False,
+                    is_stream_visible=True,
+                    counts_toward_discussion=False,
+                    counts_toward_user=False,
+                    searchable=False,
+                ),
             ),
         )
     )

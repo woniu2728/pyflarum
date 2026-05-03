@@ -114,6 +114,7 @@ class PostOutSchema(BaseModel):
     can_edit: bool = False
     can_delete: bool = False
     can_like: bool = False
+    event_data: Optional[dict] = None
     viewer_has_open_flag: bool = False
     open_flag_count: int = 0
     open_flags: List[dict] = []

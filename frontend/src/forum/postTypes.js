@@ -1,4 +1,5 @@
 import DiscussionPostItem from '@/components/discussion/DiscussionPostItem.vue'
+import DiscussionRenamedPostItem from '@/components/discussion/DiscussionRenamedPostItem.vue'
 
 const postTypeDefinitions = []
 
@@ -38,4 +39,11 @@ registerPostType({
   component: DiscussionPostItem,
   isDefault: true,
   order: 10
+})
+
+registerPostType({
+  type: 'discussionRenamed',
+  label: '讨论改标题',
+  component: DiscussionRenamedPostItem,
+  order: 20
 })

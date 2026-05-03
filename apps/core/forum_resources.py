@@ -122,6 +122,15 @@ def bootstrap_forum_resource_fields() -> None:
             description="当前用户是否可在前台处理举报。",
         )
     )
+    registry.register_field(
+        ResourceFieldDefinition(
+            resource="post",
+            field="event_data",
+            module_id="posts",
+            resolver=_resolve_post_event_data,
+            description="系统事件帖的结构化元数据。",
+        )
+    )
 
     registry.register_field(
         ResourceFieldDefinition(
@@ -342,6 +351,30 @@ def _resolve_post_open_flags(post, context: dict) -> list[dict]:
 def _resolve_post_can_moderate_flags(post, context: dict) -> bool:
     user = context.get("user")
     return bool(user and user.is_staff)
+
+
+def _resolve_post_event_data(post, context: dict) -> dict | None:
+    if getattr(post, "type", "") != "discussionRenamed":
+        return None
+
+    lines = [
+        line.strip()
+        for line in (getattr(post, "content", "") or "").splitlines()
+        if line.strip()
+    ]
+    if len(lines) < 2:
+        return None
+
+    previous_title = lines[0].removeprefix("from:").strip()
+    current_title = lines[1].removeprefix("to:").strip()
+    if not previous_title or not current_title:
+        return None
+
+    return {
+        "kind": "discussionRenamed",
+        "old_title": previous_title,
+        "new_title": current_title,
+    }
 
 
 def _resolve_tag_can_start_discussion(tag, context: dict) -> bool:

@@ -14,6 +14,7 @@ from ninja_jwt.tokens import RefreshToken
 from apps.core.models import AuditLog
 from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
+from apps.posts.models import Post
 from apps.posts.services import PostService
 from apps.tags.models import Tag
 from apps.users.models import Group, Permission, User
@@ -718,6 +719,50 @@ class DiscussionApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403, response.content)
         self.assertEqual(response.json()["error"], "没有权限编辑此讨论")
+
+    def test_updating_discussion_title_creates_discussion_renamed_event_post(self):
+        member_group = Group.objects.create(name="DiscussionRenameAuthor", color="#4d698e")
+        Permission.objects.create(group=member_group, permission="startDiscussion")
+        Permission.objects.create(group=member_group, permission="discussion.editOwn")
+        self.author.user_groups.add(member_group)
+
+        discussion = DiscussionService.create_discussion(
+            title="Original title",
+            content="Original content",
+            user=self.author,
+        )
+
+        response = self.client.patch(
+            f"/api/discussions/{discussion.id}",
+            data=json.dumps({
+                "title": "Updated title",
+            }),
+            content_type="application/json",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        discussion.refresh_from_db()
+        renamed_post = Post.objects.get(discussion=discussion, number=2)
+        self.assertEqual(renamed_post.type, "discussionRenamed")
+        self.assertEqual(renamed_post.content, "from: Original title\nto: Updated title")
+        self.assertEqual(discussion.last_post_id, renamed_post.id)
+        self.assertEqual(discussion.last_post_number, 2)
+        self.assertEqual(discussion.comment_count, 1)
+
+        posts_response = self.client.get(f"/api/discussions/{discussion.id}/posts")
+        self.assertEqual(posts_response.status_code, 200, posts_response.content)
+        payload = posts_response.json()["data"]
+        event_post = next(item for item in payload if item["id"] == renamed_post.id)
+        self.assertEqual(event_post["type"], "discussionRenamed")
+        self.assertEqual(
+            event_post["event_data"],
+            {
+                "kind": "discussionRenamed",
+                "old_title": "Original title",
+                "new_title": "Updated title",
+            },
+        )
 
     def test_owner_with_delete_own_permission_can_delete_discussion(self):
         member_group = Group.objects.create(name="DiscussionAuthorDeleteOwn", color="#4d698e")
