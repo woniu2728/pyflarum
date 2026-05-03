@@ -52,12 +52,29 @@ export function useNotificationPage({
   }
 
   async function markAllAsRead() {
+    const unreadCount = notifications.value.filter(notification => !notification.is_read).length
+    if (unreadCount === 0) return
+
+    const confirmed = await modalStore.confirm({
+      title: '全部标记为已读',
+      message: `确定将当前 ${unreadCount} 条未读通知标记为已读吗？`,
+      confirmText: '标记已读',
+      cancelText: '取消',
+      tone: 'primary'
+    })
+    if (!confirmed) return
+
     marking.value = true
 
     try {
       await notificationStore.markAllAsRead()
       notifications.value.forEach(notification => {
         notification.is_read = true
+      })
+      await modalStore.alert({
+        title: '已全部标记为已读',
+        message: '当前页面的未读通知已更新为已读。',
+        tone: 'success'
       })
     } catch (error) {
       console.error('标记失败:', error)
