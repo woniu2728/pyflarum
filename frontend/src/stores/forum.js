@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/api'
+import { syncNotificationTypes } from '@/forum/notificationTypes'
 import { syncPostTypes } from '@/forum/postTypes'
 
 const DEFAULT_SETTINGS = {
@@ -30,6 +31,7 @@ const DEFAULT_SETTINGS = {
   auth_turnstile_site_key: '',
   auth_human_verification_login_enabled: false,
   auth_human_verification_register_enabled: false,
+  notification_types: [],
   post_types: [],
 }
 
@@ -59,6 +61,7 @@ export const useForumStore = defineStore('forum', () => {
     try {
       const data = await api.get('/forum')
       settings.value = { ...DEFAULT_SETTINGS, ...data }
+      syncNotificationTypes(settings.value.notification_types)
       syncPostTypes(settings.value.post_types)
     } catch (error) {
       console.error('加载论坛设置失败:', error)

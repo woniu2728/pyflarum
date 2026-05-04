@@ -35,6 +35,8 @@ class NotificationTypeDefinition:
     label: str
     module_id: str
     description: str = ""
+    icon: str = "fas fa-bell"
+    navigation_scope: str = "notifications"
 
 
 @dataclass(frozen=True)
@@ -823,24 +825,32 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     label="讨论审核通过",
                     module_id="approval",
                     description="通知作者其讨论已通过审核。",
+                    icon="fas fa-circle-check",
+                    navigation_scope="discussion",
                 ),
                 NotificationTypeDefinition(
                     code="discussionRejected",
                     label="讨论审核拒绝",
                     module_id="approval",
                     description="通知作者其讨论未通过审核。",
+                    icon="fas fa-circle-xmark",
+                    navigation_scope="discussion",
                 ),
                 NotificationTypeDefinition(
                     code="postApproved",
                     label="回复审核通过",
                     module_id="approval",
                     description="通知作者其回复已通过审核。",
+                    icon="fas fa-check",
+                    navigation_scope="post",
                 ),
                 NotificationTypeDefinition(
                     code="postRejected",
                     label="回复审核拒绝",
                     module_id="approval",
                     description="通知作者其回复未通过审核。",
+                    icon="fas fa-xmark",
+                    navigation_scope="post",
                 ),
             ),
         )
@@ -900,6 +910,8 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     label="回复被点赞",
                     module_id="likes",
                     description="通知回复作者其内容被点赞。",
+                    icon="fas fa-thumbs-up",
+                    navigation_scope="post",
                 ),
             ),
         )
@@ -919,6 +931,8 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     label="@提及通知",
                     module_id="mentions",
                     description="通知用户其在回复中被提及。",
+                    icon="fas fa-at",
+                    navigation_scope="post",
                 ),
             ),
         )
@@ -938,24 +952,32 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     label="讨论新回复",
                     module_id="notifications",
                     description="通知讨论作者和关注者有新回复。",
+                    icon="fas fa-reply",
+                    navigation_scope="post",
                 ),
                 NotificationTypeDefinition(
                     code="postReply",
                     label="回复被回应",
                     module_id="notifications",
                     description="通知被回复的楼层作者。",
+                    icon="fas fa-comment-dots",
+                    navigation_scope="post",
                 ),
                 NotificationTypeDefinition(
                     code="userSuspended",
                     label="账号封禁通知",
                     module_id="notifications",
                     description="通知用户账号已被管理员封禁。",
+                    icon="fas fa-user-lock",
+                    navigation_scope="profile",
                 ),
                 NotificationTypeDefinition(
                     code="userUnsuspended",
                     label="账号解除封禁",
                     module_id="notifications",
                     description="通知用户账号已恢复正常。",
+                    icon="fas fa-user-check",
+                    navigation_scope="profile",
                 ),
             ),
             event_listeners=(

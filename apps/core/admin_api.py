@@ -235,6 +235,8 @@ def serialize_module_definition(module) -> Dict[str, Any]:
                 "code": notification_type.code,
                 "label": notification_type.label,
                 "description": notification_type.description,
+                "icon": notification_type.icon,
+                "navigation_scope": notification_type.navigation_scope,
             }
             for notification_type in module.notification_types
         ],
@@ -872,6 +874,8 @@ def list_admin_modules(request):
             "label": notification_type.label,
             "module_id": notification_type.module_id,
             "description": notification_type.description,
+            "icon": notification_type.icon,
+            "navigation_scope": notification_type.navigation_scope,
         }
         for notification_type in REGISTRY.get_notification_types()
     ]

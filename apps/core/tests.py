@@ -1200,6 +1200,22 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(payload["announcement_tone"], "warning")
         self.assertEqual(payload["primary_color"], "#123456")
         self.assertEqual(payload["logo_url"], "/media/runtime-logo.png")
+        self.assertIn("notification_types", payload)
+        self.assertTrue(
+            any(
+                item["code"] == "discussionReply"
+                and item["icon"] == "fas fa-reply"
+                and item["navigation_scope"] == "post"
+                for item in payload["notification_types"]
+            )
+        )
+        self.assertTrue(
+            any(
+                item["code"] == "userSuspended"
+                and item["navigation_scope"] == "profile"
+                for item in payload["notification_types"]
+            )
+        )
         self.assertEqual(payload["auth_human_verification_provider"], "turnstile")
         self.assertEqual(payload["auth_turnstile_site_key"], "public-site-key")
         self.assertTrue(payload["auth_human_verification_login_enabled"])
@@ -3129,7 +3145,14 @@ class AdminPermissionsApiTests(TestCase):
         self.assertTrue(any(item["module_id"] == "discussions" and item["target"] == "post" and item["code"] == "author" for item in payload["search_filters"]))
         self.assertTrue(any(item["field"] == "can_start_discussion" for item in tags_module["resource_fields"]))
         self.assertTrue(any(item["resource"] == "search_post" and item["field"] == "user" for item in payload["resource_fields"]))
-        self.assertTrue(any(item["code"] == "discussionReply" for item in notifications_module["notification_types"]))
+        self.assertTrue(
+            any(
+                item["code"] == "discussionReply"
+                and item["icon"] == "fas fa-reply"
+                and item["navigation_scope"] == "post"
+                for item in notifications_module["notification_types"]
+            )
+        )
         self.assertTrue(any(item["event"] == "DiscussionApprovedEvent" for item in notifications_module["event_listeners"]))
         self.assertTrue(any(item["code"] == "comment" and item["is_default"] for item in posts_module["post_types"]))
         self.assertTrue(any(item["module_id"] == "posts" and item["code"] == "comment" for item in payload["post_types"]))

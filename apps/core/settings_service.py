@@ -326,6 +326,18 @@ def get_public_forum_settings() -> dict:
             ),
         })
 
+    forum_settings["notification_types"] = [
+        {
+            "code": definition.code,
+            "label": definition.label,
+            "description": definition.description,
+            "icon": definition.icon,
+            "module_id": definition.module_id,
+            "navigation_scope": definition.navigation_scope,
+        }
+        for definition in FORUM_REGISTRY.get_notification_types()
+    ]
+
     forum_settings["post_types"] = [
         {
             "code": definition.code,
