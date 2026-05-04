@@ -190,6 +190,10 @@ defineEmits(['start-discussion'])
   margin: 0;
 }
 
+.index-nav-item-wrap {
+  list-style: none;
+}
+
 .index-nav-list li {
   margin-bottom: 10px;
 }
@@ -212,12 +216,7 @@ defineEmits(['start-discussion'])
 }
 
 .index-nav-description {
-  display: block;
-  margin-left: 28px;
-  margin-top: 2px;
-  font-size: 12px;
-  color: inherit;
-  opacity: 0.78;
+  display: none;
 }
 
 .index-nav-badge {

@@ -17,8 +17,10 @@
             @click="$emit('select', item)"
           >
             <i v-if="item.icon" :class="item.icon"></i>
-            <span>{{ item.label }}</span>
-            <small v-if="item.description" :class="itemDescriptionClass">{{ item.description }}</small>
+            <span class="forum-nav-list__content">
+              <span class="forum-nav-list__label">{{ item.label }}</span>
+              <small v-if="item.description" :class="itemDescriptionClass">{{ item.description }}</small>
+            </span>
             <span v-if="item.badge" :class="itemBadgeClass">{{ item.badge }}</span>
           </component>
         </li>
@@ -75,13 +77,25 @@ defineEmits(['select'])
 
 .forum-nav-list__item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   position: relative;
 }
 
+.forum-nav-list__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.forum-nav-list__label {
+  min-width: 0;
+}
+
 .forum-nav-list__description {
-  display: none;
+  display: block;
 }
 
 .forum-nav-list__badge {

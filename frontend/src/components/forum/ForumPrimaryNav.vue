@@ -90,12 +90,7 @@ const navSections = computed(() => getForumNavSections({
 }
 
 .forum-primary-nav__description {
-  display: block;
-  margin-left: 28px;
-  margin-top: 2px;
-  font-size: 12px;
-  color: inherit;
-  opacity: 0.78;
+  display: none;
 }
 
 .forum-primary-nav__badge {

@@ -210,7 +210,45 @@ def serialize_admin_user(user: User, include_details: bool = False) -> Dict[str,
     return payload
 
 
-def serialize_module_definition(module) -> Dict[str, Any]:
+def resolve_module_category_label(category: str) -> str:
+    if category == "core":
+        return "核心"
+    if category == "infrastructure":
+        return "基础设施"
+    return "功能模块"
+
+
+def build_module_dependency_state(module, module_map: Dict[str, Any]) -> Dict[str, Any]:
+    missing_dependencies = []
+    disabled_dependencies = []
+
+    for dependency in module.dependencies:
+        dependency_module = module_map.get(dependency)
+        if dependency_module is None:
+            missing_dependencies.append(dependency)
+        elif not dependency_module.enabled:
+            disabled_dependencies.append(dependency)
+
+    if missing_dependencies:
+        status = "missing"
+        label = "缺少依赖"
+    elif disabled_dependencies:
+        status = "disabled"
+        label = "依赖未启用"
+    else:
+        status = "healthy"
+        label = "依赖正常"
+
+    return {
+        "status": status,
+        "label": label,
+        "missing": missing_dependencies,
+        "disabled": disabled_dependencies,
+    }
+
+
+def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str, Any]:
+    dependency_state = build_module_dependency_state(module, module_map)
     resource_fields = [
         {
             "resource": definition.resource,
@@ -226,9 +264,14 @@ def serialize_module_definition(module) -> Dict[str, Any]:
         "description": module.description,
         "version": module.version,
         "category": module.category,
+        "category_label": resolve_module_category_label(module.category),
         "is_core": module.is_core,
         "enabled": module.enabled,
         "dependencies": list(module.dependencies),
+        "dependency_status": dependency_state["status"],
+        "dependency_status_label": dependency_state["label"],
+        "missing_dependencies": dependency_state["missing"],
+        "disabled_dependencies": dependency_state["disabled"],
         "capabilities": list(module.capabilities),
         "notification_types": [
             {
@@ -243,6 +286,16 @@ def serialize_module_definition(module) -> Dict[str, Any]:
                 "preference_default_enabled": notification_type.preference_default_enabled,
             }
             for notification_type in module.notification_types
+        ],
+        "user_preferences": [
+            {
+                "key": preference.key,
+                "label": preference.label,
+                "description": preference.description,
+                "category": preference.category,
+                "default_value": preference.default_value,
+            }
+            for preference in module.user_preferences
         ],
         "event_listeners": [
             {
@@ -300,7 +353,46 @@ def serialize_module_definition(module) -> Dict[str, Any]:
             }
             for page in module.admin_pages
         ],
+        "registration_counts": {
+            "permissions": len(module.permissions),
+            "admin_pages": len(module.admin_pages),
+            "notification_types": len(module.notification_types),
+            "user_preferences": len(module.user_preferences),
+            "event_listeners": len(module.event_listeners),
+            "post_types": len(module.post_types),
+            "search_filters": len(module.search_filters),
+            "resource_fields": len(resource_fields),
+        },
     }
+
+
+def build_module_category_summaries(modules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for module in modules:
+        category_id = module["category"]
+        group = grouped.setdefault(
+            category_id,
+            {
+                "id": category_id,
+                "label": module["category_label"],
+                "module_count": 0,
+                "enabled_count": 0,
+                "attention_count": 0,
+            },
+        )
+        group["module_count"] += 1
+        if module["enabled"]:
+            group["enabled_count"] += 1
+        if module["dependency_status"] != "healthy":
+            group["attention_count"] += 1
+
+    return sorted(
+        grouped.values(),
+        key=lambda item: (
+            0 if item["id"] == "core" else 1,
+            item["label"],
+        ),
+    )
 
 
 def parse_optional_datetime(value):
@@ -860,7 +952,9 @@ def serialize_approval_item(content_type: str, item) -> Dict[str, Any]:
 @require_staff
 def list_admin_modules(request):
     """获取内置模块注册信息"""
-    modules = [serialize_module_definition(module) for module in REGISTRY.get_modules()]
+    registry_modules = REGISTRY.get_modules()
+    module_map = {module.module_id: module for module in registry_modules}
+    modules = [serialize_module_definition(module, module_map) for module in registry_modules]
     pages = [
         {
             "path": page.path,
@@ -931,10 +1025,52 @@ def list_admin_modules(request):
         }
         for definition in RESOURCE_REGISTRY.get_all_fields()
     ]
+    user_preferences = [
+        {
+            "key": preference.key,
+            "label": preference.label,
+            "module_id": preference.module_id,
+            "description": preference.description,
+            "category": preference.category,
+            "default_value": preference.default_value,
+        }
+        for preference in REGISTRY.get_user_preferences()
+    ]
+    category_summaries = build_module_category_summaries(modules)
+    dependency_attention = [
+        {
+            "module_id": module["id"],
+            "module_name": module["name"],
+            "status": module["dependency_status"],
+            "label": module["dependency_status_label"],
+            "missing": module["missing_dependencies"],
+            "disabled": module["disabled_dependencies"],
+        }
+        for module in modules
+        if module["dependency_status"] != "healthy"
+    ]
+    summary = {
+        "module_count": len(modules),
+        "core_count": sum(1 for module in modules if module["is_core"]),
+        "enabled_count": sum(1 for module in modules if module["enabled"]),
+        "permission_count": sum(len(module["permissions"]) for module in modules),
+        "admin_page_count": len(pages),
+        "notification_type_count": len(notification_types),
+        "user_preference_count": len(user_preferences),
+        "event_listener_count": len(event_listeners),
+        "post_type_count": len(post_types),
+        "resource_field_count": len(resource_fields),
+        "search_filter_count": len(search_filters),
+        "dependency_issue_count": len(dependency_attention),
+    }
     return {
+        "summary": summary,
         "modules": modules,
+        "category_summaries": category_summaries,
+        "dependency_attention": dependency_attention,
         "admin_pages": pages,
         "notification_types": notification_types,
+        "user_preferences": user_preferences,
         "event_listeners": event_listeners,
         "post_types": post_types,
         "search_filters": search_filters,

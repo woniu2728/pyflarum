@@ -3128,9 +3128,13 @@ class AdminPermissionsApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
+        self.assertIn("summary", payload)
         self.assertIn("modules", payload)
+        self.assertIn("category_summaries", payload)
+        self.assertIn("dependency_attention", payload)
         self.assertIn("admin_pages", payload)
         self.assertIn("notification_types", payload)
+        self.assertIn("user_preferences", payload)
         self.assertIn("event_listeners", payload)
         self.assertIn("post_types", payload)
         self.assertIn("search_filters", payload)
@@ -3141,6 +3145,9 @@ class AdminPermissionsApiTests(TestCase):
         self.assertIn("tags", module_ids)
         self.assertIn("approval", module_ids)
         self.assertIn("notifications", module_ids)
+        self.assertGreaterEqual(payload["summary"]["module_count"], len(module_ids))
+        self.assertGreaterEqual(payload["summary"]["enabled_count"], 1)
+        self.assertGreaterEqual(payload["summary"]["user_preference_count"], 1)
 
         core_module = next(module for module in payload["modules"] if module["id"] == "core")
         posts_module = next(module for module in payload["modules"] if module["id"] == "posts")
@@ -3149,9 +3156,13 @@ class AdminPermissionsApiTests(TestCase):
         admin_page_paths = {page["path"] for page in payload["admin_pages"]}
         self.assertIn("/admin/modules", admin_page_paths)
         self.assertTrue(core_module["is_core"])
+        self.assertEqual(core_module["category_label"], "核心")
+        self.assertIn("dependency_status", core_module)
+        self.assertIn("registration_counts", core_module)
         self.assertIn("permissions", core_module)
         self.assertIn("resource_fields", tags_module)
         self.assertIn("search_filters", tags_module)
+        self.assertEqual(core_module["dependency_status"], "healthy")
         discussions_module = next(module for module in payload["modules"] if module["id"] == "discussions")
         self.assertTrue(any(item["code"] == "author" and item["syntax"] == "author:<username>" for item in discussions_module["search_filters"]))
         self.assertTrue(any(item["code"] == "is_sticky" and item["syntax"] == "is:sticky" for item in discussions_module["search_filters"]))
@@ -3162,6 +3173,8 @@ class AdminPermissionsApiTests(TestCase):
         self.assertTrue(any(item["module_id"] == "discussions" and item["target"] == "post" and item["code"] == "author" for item in payload["search_filters"]))
         self.assertTrue(any(item["field"] == "can_start_discussion" for item in tags_module["resource_fields"]))
         self.assertTrue(any(item["resource"] == "search_post" and item["field"] == "user" for item in payload["resource_fields"]))
+        self.assertTrue(any(item["module_id"] == "notifications" for item in payload["user_preferences"]))
+        self.assertTrue(any(item["id"] == "core" for item in payload["category_summaries"]))
         self.assertTrue(
             any(
                 item["code"] == "discussionReply"
