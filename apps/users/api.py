@@ -364,6 +364,6 @@ def upload_avatar(request, user_id: int):
             FileUploadService.delete_file(previous_avatar)
 
         user = User.objects.prefetch_related("user_groups").get(id=user.id)
-        return _attach_primary_group(user)
+        return _serialize_user_detail_payload(user)
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=400)
