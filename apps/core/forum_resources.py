@@ -395,6 +395,36 @@ def _resolve_post_event_data(post, context: dict) -> dict | None:
             "is_sticky": normalized == "sticky",
         }
 
+    if post_type == "discussionHidden":
+        normalized = (getattr(post, "content", "") or "").strip().lower()
+        if normalized not in {"hidden", "restored"}:
+            return None
+
+        return {
+            "kind": "discussionHidden",
+            "is_hidden": normalized == "hidden",
+        }
+
+    if post_type == "discussionTagged":
+        lines = [
+            line.strip()
+            for line in (getattr(post, "content", "") or "").splitlines()
+            if line.strip()
+        ]
+        added = []
+        removed = []
+        for line in lines:
+            if line.startswith("added:"):
+                added = [item for item in line.removeprefix("added:").split("|") if item]
+            elif line.startswith("removed:"):
+                removed = [item for item in line.removeprefix("removed:").split("|") if item]
+
+        return {
+            "kind": "discussionTagged",
+            "added_tags": added,
+            "removed_tags": removed,
+        }
+
     return None
 
 

@@ -28,6 +28,8 @@ USER_COUNTED_POST_TYPES = FORUM_REGISTRY.get_user_counted_post_type_codes()
 DISCUSSION_RENAMED_POST_TYPE = "discussionRenamed"
 DISCUSSION_LOCKED_POST_TYPE = "discussionLocked"
 DISCUSSION_STICKY_POST_TYPE = "discussionSticky"
+DISCUSSION_TAGGED_POST_TYPE = "discussionTagged"
+DISCUSSION_HIDDEN_POST_TYPE = "discussionHidden"
 
 
 class DiscussionService:
@@ -572,6 +574,11 @@ class DiscussionService:
 
         with transaction.atomic():
             previous_tag_ids = list(discussion.discussion_tags.values_list('tag_id', flat=True))
+            previous_tag_names = list(
+                discussion.discussion_tags.select_related("tag")
+                .order_by("tag__name")
+                .values_list("tag__name", flat=True)
+            )
             first_post = None
             previous_title = discussion.title
             if content is not None:
@@ -594,10 +601,13 @@ class DiscussionService:
                     for tag in tags
                 ])
 
+            should_persist_discussion = True
+
             if is_locked is not None:
                 if not user.is_staff:
                     raise PermissionDenied("没有权限锁定/解锁讨论")
-                discussion.is_locked = is_locked
+                DiscussionService.set_locked_state(discussion, user, is_locked)
+                should_persist_discussion = False
 
             if is_sticky is not None:
                 if not user.is_staff:
@@ -631,7 +641,8 @@ class DiscussionService:
                     'approval_status', 'approved_at', 'approved_by', 'approval_note', 'hidden_at', 'hidden_user'
                 ])
 
-            discussion.save()
+            if should_persist_discussion:
+                discussion.save()
             if title is not None and title != previous_title:
                 DiscussionService._create_system_event_post(
                     discussion=discussion,
@@ -639,6 +650,24 @@ class DiscussionService:
                     post_type=DISCUSSION_RENAMED_POST_TYPE,
                     content=f"from: {previous_title}\nto: {title}",
                 )
+            if tag_ids is not None:
+                current_tag_names = list(
+                    discussion.discussion_tags.select_related("tag")
+                    .order_by("tag__name")
+                    .values_list("tag__name", flat=True)
+                )
+                added_tags = [name for name in current_tag_names if name not in previous_tag_names]
+                removed_tags = [name for name in previous_tag_names if name not in current_tag_names]
+                if added_tags or removed_tags:
+                    DiscussionService._create_system_event_post(
+                        discussion=discussion,
+                        actor=user,
+                        post_type=DISCUSSION_TAGGED_POST_TYPE,
+                        content=(
+                            f"added:{'|'.join(added_tags)}\n"
+                            f"removed:{'|'.join(removed_tags)}"
+                        ),
+                    )
             if is_hidden is not None or tag_ids is not None:
                 refreshed_tag_ids = set(previous_tag_ids) | set(discussion.discussion_tags.values_list('tag_id', flat=True))
                 if refreshed_tag_ids:
@@ -674,6 +703,12 @@ class DiscussionService:
                 for user_id, total in approved_reply_counts.items():
                     User.objects.filter(id=user_id).update(comment_count=F("comment_count") + (reply_delta * total))
 
+            DiscussionService._create_system_event_post(
+                discussion=discussion,
+                actor=user,
+                post_type=DISCUSSION_HIDDEN_POST_TYPE,
+                content="hidden" if is_hidden else "restored",
+            )
             TagService.refresh_discussion_tag_stats(discussion.id)
         return discussion
 

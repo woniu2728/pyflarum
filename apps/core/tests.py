@@ -1204,6 +1204,8 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(payload["auth_turnstile_site_key"], "public-site-key")
         self.assertTrue(payload["auth_human_verification_login_enabled"])
         self.assertFalse(payload["auth_human_verification_register_enabled"])
+        self.assertTrue(any(item["code"] == "comment" and item["is_default"] for item in payload["post_types"]))
+        self.assertTrue(any(item["code"] == "discussionRenamed" for item in payload["post_types"]))
         self.assertNotIn("auth_turnstile_secret_key", payload)
 
     @patch("apps.core.admin_api.FileUploadService.upload_site_asset")

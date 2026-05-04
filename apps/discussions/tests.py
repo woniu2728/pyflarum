@@ -803,6 +803,46 @@ class DiscussionApiTests(TestCase):
             },
         )
 
+    def test_updating_discussion_locked_state_creates_discussion_locked_event_post(self):
+        discussion = DiscussionService.create_discussion(
+            title="Patch lock me",
+            content="Original content",
+            user=self.author,
+        )
+        admin = User.objects.create_superuser(
+            username="discussion-patch-lock-admin",
+            email="discussion-patch-lock-admin@example.com",
+            password="password123",
+        )
+
+        response = self.client.patch(
+            f"/api/discussions/{discussion.id}",
+            data=json.dumps({
+                "is_locked": True,
+            }),
+            content_type="application/json",
+            **self.auth_header(admin),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        discussion.refresh_from_db()
+        self.assertTrue(discussion.is_locked)
+        locked_post = Post.objects.get(discussion=discussion, number=2)
+        self.assertEqual(locked_post.type, "discussionLocked")
+        self.assertEqual(locked_post.content, "locked")
+
+        posts_response = self.client.get(f"/api/discussions/{discussion.id}/posts")
+        self.assertEqual(posts_response.status_code, 200, posts_response.content)
+        payload = posts_response.json()["data"]
+        event_post = next(item for item in payload if item["id"] == locked_post.id)
+        self.assertEqual(
+            event_post["event_data"],
+            {
+                "kind": "discussionLocked",
+                "is_locked": True,
+            },
+        )
+
     def test_sticky_discussion_creates_discussion_sticky_event_post(self):
         discussion = DiscussionService.create_discussion(
             title="Pin me",
@@ -839,6 +879,87 @@ class DiscussionApiTests(TestCase):
             {
                 "kind": "discussionSticky",
                 "is_sticky": True,
+            },
+        )
+
+    def test_updating_discussion_tags_creates_discussion_tagged_event_post(self):
+        member_group = Group.objects.create(name="DiscussionTagEditor", color="#4d698e")
+        Permission.objects.create(group=member_group, permission="startDiscussion")
+        Permission.objects.create(group=member_group, permission="discussion.editOwn")
+        self.author.user_groups.add(member_group)
+
+        original_tag = Tag.objects.create(name="后端", slug="backend", color="#2980b9")
+        new_tag = Tag.objects.create(name="前端", slug="frontend", color="#e67e22")
+        discussion = DiscussionService.create_discussion(
+            title="Retag me",
+            content="Original content",
+            user=self.author,
+            tag_ids=[original_tag.id],
+        )
+
+        response = self.client.patch(
+            f"/api/discussions/{discussion.id}",
+            data=json.dumps({
+                "tag_ids": [new_tag.id],
+            }),
+            content_type="application/json",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        tagged_post = Post.objects.get(discussion=discussion, number=2)
+        self.assertEqual(tagged_post.type, "discussionTagged")
+
+        posts_response = self.client.get(f"/api/discussions/{discussion.id}/posts")
+        payload = posts_response.json()["data"]
+        event_post = next(item for item in payload if item["id"] == tagged_post.id)
+        self.assertEqual(
+            event_post["event_data"],
+            {
+                "kind": "discussionTagged",
+                "added_tags": [new_tag.name],
+                "removed_tags": [original_tag.name],
+            },
+        )
+
+    def test_hiding_discussion_creates_discussion_hidden_event_post(self):
+        discussion = DiscussionService.create_discussion(
+            title="Hide me",
+            content="Original content",
+            user=self.author,
+        )
+        admin = User.objects.create_superuser(
+            username="discussion-hide-admin",
+            email="discussion-hide-admin@example.com",
+            password="password123",
+        )
+
+        response = self.client.post(
+            f"/api/discussions/{discussion.id}/hide",
+            **self.auth_header(admin),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        hidden_post = Post.objects.get(discussion=discussion, number=2)
+        self.assertEqual(hidden_post.type, "discussionHidden")
+
+        hidden_detail = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            **self.auth_header(admin),
+        )
+        self.assertEqual(hidden_detail.status_code, 200, hidden_detail.content)
+
+        posts_response = self.client.get(
+            f"/api/discussions/{discussion.id}/posts",
+            **self.auth_header(admin),
+        )
+        payload = posts_response.json()["data"]
+        event_post = next(item for item in payload if item["id"] == hidden_post.id)
+        self.assertEqual(
+            event_post["event_data"],
+            {
+                "kind": "discussionHidden",
+                "is_hidden": True,
             },
         )
 

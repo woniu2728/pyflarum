@@ -1,9 +1,19 @@
 import DiscussionPostItem from '@/components/discussion/DiscussionPostItem.vue'
 import DiscussionLockedPostItem from '@/components/discussion/DiscussionLockedPostItem.vue'
 import DiscussionRenamedPostItem from '@/components/discussion/DiscussionRenamedPostItem.vue'
+import DiscussionHiddenPostItem from '@/components/discussion/DiscussionHiddenPostItem.vue'
 import DiscussionStickyPostItem from '@/components/discussion/DiscussionStickyPostItem.vue'
+import DiscussionTaggedPostItem from '@/components/discussion/DiscussionTaggedPostItem.vue'
 
 const postTypeDefinitions = []
+const postTypeComponents = {
+  comment: DiscussionPostItem,
+  discussionRenamed: DiscussionRenamedPostItem,
+  discussionLocked: DiscussionLockedPostItem,
+  discussionSticky: DiscussionStickyPostItem,
+  discussionTagged: DiscussionTaggedPostItem,
+  discussionHidden: DiscussionHiddenPostItem
+}
 
 export function registerPostType(definition) {
   const normalizedDefinition = {
@@ -35,31 +45,53 @@ export function getPostTypeDefinition(type) {
   )
 }
 
-registerPostType({
-  type: 'comment',
-  label: '普通回复',
-  component: DiscussionPostItem,
-  isDefault: true,
-  order: 10
-})
+export function syncPostTypes(definitions = []) {
+  definitions.forEach((definition, index) => {
+    const type = String(definition?.code || definition?.type || '')
+    if (!type) {
+      return
+    }
 
-registerPostType({
-  type: 'discussionRenamed',
-  label: '讨论改标题',
-  component: DiscussionRenamedPostItem,
-  order: 20
-})
+    registerPostType({
+      ...definition,
+      type,
+      component: postTypeComponents[type] || DiscussionPostItem,
+      isDefault: Boolean(definition?.is_default ?? definition?.isDefault),
+      order: Number(definition?.order ?? ((index + 1) * 10))
+    })
+  })
+}
 
-registerPostType({
-  type: 'discussionLocked',
-  label: '讨论锁定状态变更',
-  component: DiscussionLockedPostItem,
-  order: 30
-})
-
-registerPostType({
-  type: 'discussionSticky',
-  label: '讨论置顶状态变更',
-  component: DiscussionStickyPostItem,
-  order: 40
-})
+syncPostTypes([
+  {
+    code: 'comment',
+    label: '普通回复',
+    is_default: true,
+    order: 10
+  },
+  {
+    code: 'discussionRenamed',
+    label: '讨论改标题',
+    order: 20
+  },
+  {
+    code: 'discussionLocked',
+    label: '讨论锁定状态变更',
+    order: 30
+  },
+  {
+    code: 'discussionSticky',
+    label: '讨论置顶状态变更',
+    order: 40
+  },
+  {
+    code: 'discussionTagged',
+    label: '讨论标签变更',
+    order: 50
+  },
+  {
+    code: 'discussionHidden',
+    label: '讨论隐藏状态变更',
+    order: 60
+  }
+])

@@ -24,10 +24,12 @@ from apps.core.mail_templates import (
     DEFAULT_VERIFICATION_TEXT,
 )
 from apps.core.models import Setting
+from apps.core.forum_registry import get_forum_registry
 
 
 ADVANCED_SETTINGS_CACHE_KEY = "settings.group.advanced"
 PUBLIC_FORUM_SETTINGS_CACHE_KEY = "settings.public.forum"
+FORUM_REGISTRY = get_forum_registry()
 
 
 BASIC_SETTINGS_DEFAULTS = {
@@ -323,6 +325,22 @@ def get_public_forum_settings() -> dict:
                 advanced_settings.get("auth_human_verification_register_enabled", True)
             ),
         })
+
+    forum_settings["post_types"] = [
+        {
+            "code": definition.code,
+            "label": definition.label,
+            "description": definition.description,
+            "icon": definition.icon,
+            "module_id": definition.module_id,
+            "is_default": definition.is_default,
+            "is_stream_visible": definition.is_stream_visible,
+            "counts_toward_discussion": definition.counts_toward_discussion,
+            "counts_toward_user": definition.counts_toward_user,
+            "searchable": definition.searchable,
+        }
+        for definition in FORUM_REGISTRY.get_post_types()
+    ]
 
     if cache_lifetime > 0:
         _cache_set(PUBLIC_FORUM_SETTINGS_CACHE_KEY, forum_settings, cache_lifetime)
