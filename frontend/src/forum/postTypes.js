@@ -4,6 +4,7 @@ import DiscussionRenamedPostItem from '@/components/discussion/DiscussionRenamed
 import DiscussionHiddenPostItem from '@/components/discussion/DiscussionHiddenPostItem.vue'
 import DiscussionStickyPostItem from '@/components/discussion/DiscussionStickyPostItem.vue'
 import DiscussionTaggedPostItem from '@/components/discussion/DiscussionTaggedPostItem.vue'
+import DiscussionGenericEventPostItem from '@/components/discussion/DiscussionGenericEventPostItem.vue'
 
 const postTypeDefinitions = []
 const postTypeComponents = {
@@ -36,6 +37,17 @@ export function getPostTypeDefinition(type) {
   const exactMatch = postTypeDefinitions.find(item => item.type === normalizedType)
   if (exactMatch) {
     return exactMatch
+  }
+
+  if (normalizedType !== 'comment') {
+    return {
+      type: normalizedType,
+      label: normalizedType,
+      component: DiscussionGenericEventPostItem,
+      order: 999,
+      isDefault: false,
+      isFallback: true
+    }
   }
 
   return (

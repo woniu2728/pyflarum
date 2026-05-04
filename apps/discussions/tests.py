@@ -802,6 +802,21 @@ class DiscussionApiTests(TestCase):
                 "is_locked": True,
             },
         )
+        self.assertEqual(
+            event_post["post_type"],
+            {
+                "code": "discussionLocked",
+                "label": "讨论锁定状态变更",
+                "description": "记录讨论被锁定或解除锁定的系统事件帖，不计入回复统计和全文搜索。",
+                "icon": "fas fa-lock",
+                "module_id": "discussions",
+                "is_default": False,
+                "is_stream_visible": True,
+                "counts_toward_discussion": False,
+                "counts_toward_user": False,
+                "searchable": False,
+            },
+        )
 
     def test_updating_discussion_locked_state_creates_discussion_locked_event_post(self):
         discussion = DiscussionService.create_discussion(

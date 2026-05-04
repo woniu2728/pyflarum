@@ -125,6 +125,15 @@ def bootstrap_forum_resource_fields() -> None:
     registry.register_field(
         ResourceFieldDefinition(
             resource="post",
+            field="post_type",
+            module_id="posts",
+            resolver=_resolve_post_type_definition,
+            description="当前帖子的类型定义元数据。",
+        )
+    )
+    registry.register_field(
+        ResourceFieldDefinition(
+            resource="post",
             field="event_data",
             module_id="posts",
             resolver=_resolve_post_event_data,
@@ -351,6 +360,27 @@ def _resolve_post_open_flags(post, context: dict) -> list[dict]:
 def _resolve_post_can_moderate_flags(post, context: dict) -> bool:
     user = context.get("user")
     return bool(user and user.is_staff)
+
+
+def _resolve_post_type_definition(post, context: dict) -> dict | None:
+    from apps.core.forum_registry import get_forum_registry
+
+    definition = get_forum_registry().get_post_type(getattr(post, "type", ""))
+    if not definition:
+        return None
+
+    return {
+        "code": definition.code,
+        "label": definition.label,
+        "description": definition.description,
+        "icon": definition.icon,
+        "module_id": definition.module_id,
+        "is_default": definition.is_default,
+        "is_stream_visible": definition.is_stream_visible,
+        "counts_toward_discussion": definition.counts_toward_discussion,
+        "counts_toward_user": definition.counts_toward_user,
+        "searchable": definition.searchable,
+    }
 
 
 def _resolve_post_event_data(post, context: dict) -> dict | None:
