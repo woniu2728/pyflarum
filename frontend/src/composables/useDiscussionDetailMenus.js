@@ -56,18 +56,7 @@ export function useDiscussionDetailMenus({
   }))
 
   function hasPostControls(post) {
-    return getPostMenuItems({
-      canDeletePost,
-      canEditPost,
-      canModeratePostVisibility,
-      canReportPost,
-      post
-    }).length > 0
-  }
-
-  async function handleOpenReportModal(post) {
-    activePostMenuId.value = null
-    await openReportModal(post)
+    return getPostMenuOptions(post).length > 0
   }
 
   function getPostMenuOptions(post) {
@@ -78,6 +67,11 @@ export function useDiscussionDetailMenus({
       canReportPost,
       post
     })
+  }
+
+  async function handleOpenReportModal(post) {
+    activePostMenuId.value = null
+    await openReportModal(post)
   }
 
   return {

@@ -1,36 +1,18 @@
 import { buildUserPath } from '@/utils/forum'
+import {
+  getForumNavItems,
+  registerDiscussionAction,
+  registerForumNavItem,
+  registerHeaderItem,
+  registerPostAction,
+} from '@/forum/frontendRegistry'
 
-const forumNavItems = []
-
-export function registerForumNavItem(item) {
-  const normalizedItem = {
-    order: 100,
-    ...item
-  }
-
-  const existingIndex = forumNavItems.findIndex(entry => entry.key === normalizedItem.key)
-  if (existingIndex >= 0) {
-    forumNavItems.splice(existingIndex, 1, normalizedItem)
-    return normalizedItem
-  }
-
-  forumNavItems.push(normalizedItem)
-  return normalizedItem
-}
-
-export function getForumNavItems(context = {}) {
-  return [...forumNavItems]
-    .sort((left, right) => (left.order || 100) - (right.order || 100))
-    .filter(item => {
-      if (typeof item.isVisible !== 'function') {
-        return true
-      }
-      return item.isVisible(context)
-    })
-    .map(item => ({
-      ...item,
-      to: typeof item.to === 'function' ? item.to(context) : item.to
-    }))
+export {
+  getForumNavItems,
+  registerDiscussionAction,
+  registerForumNavItem,
+  registerHeaderItem,
+  registerPostAction,
 }
 
 registerForumNavItem({
@@ -65,6 +47,36 @@ registerForumNavItem({
   label: '通知',
   order: 40,
   isVisible: ({ showNotifications }) => Boolean(showNotifications)
+})
+
+registerHeaderItem({
+  key: 'notifications-shortcut',
+  placement: 'account-start',
+  order: 10,
+  icon: 'fas fa-inbox',
+  label: '通知中心',
+  to: '/notifications',
+  isVisible: ({ authStore }) => Boolean(authStore?.isAuthenticated && authStore?.user)
+})
+
+registerHeaderItem({
+  key: 'admin-shortcut',
+  placement: 'account-start',
+  order: 20,
+  icon: 'fas fa-cubes',
+  label: '模块中心',
+  href: '/admin.html#/admin/modules',
+  isVisible: ({ authStore }) => Boolean(authStore?.user?.is_staff)
+})
+
+registerHeaderItem({
+  key: 'mobile-admin-shortcut',
+  placement: 'mobile-user',
+  order: 10,
+  icon: 'fas fa-cubes',
+  label: '模块中心',
+  href: '/admin.html#/admin/modules',
+  isVisible: ({ authStore }) => Boolean(authStore?.user?.is_staff)
 })
 
 registerForumNavItem({
