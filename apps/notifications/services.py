@@ -3,7 +3,7 @@
 """
 from typing import Optional, List, Tuple
 from django.db import transaction
-from django.db.models import Q, F, Count
+from django.db.models import Q, Count
 from django.core.cache import cache
 from django.utils import timezone
 from apps.notifications.models import Notification
@@ -158,6 +158,36 @@ class NotificationService:
         transaction.on_commit(enqueue)
 
     @staticmethod
+    def _collect_type_counts(queryset) -> dict:
+        return {
+            item["type"]: item["count"]
+            for item in queryset.values("type").annotate(count=Count("id"))
+        }
+
+    @staticmethod
+    def _build_filtered_queryset(
+        user: User,
+        is_read: Optional[bool] = None,
+        type: Optional[str] = None,
+        discussion_id: Optional[int] = None,
+    ):
+        queryset = Notification.objects.filter(user=user)
+
+        if is_read is not None:
+            queryset = queryset.filter(is_read=is_read)
+
+        if type:
+            queryset = queryset.filter(type=type)
+
+        if discussion_id is not None:
+            queryset = queryset.filter(
+                Q(subject_type='discussion', subject_id=discussion_id)
+                | Q(data__discussion_id=discussion_id)
+            )
+
+        return queryset
+
+    @staticmethod
     def get_notification_list(
         user: User,
         is_read: Optional[bool] = None,
@@ -179,24 +209,14 @@ class NotificationService:
             Tuple[List[Notification], int, int, dict, dict]: (通知列表, 总数, 未读数, 各类型总数, 各类型未读数)
         """
         base_queryset = Notification.objects.filter(user=user)
-        queryset = base_queryset.select_related('from_user')
+        queryset = NotificationService._build_filtered_queryset(
+            user=user,
+            is_read=is_read,
+            type=type,
+        ).select_related('from_user')
 
-        type_counts = {
-            item["type"]: item["count"]
-            for item in base_queryset.values("type").annotate(count=Count("id"))
-        }
-        unread_type_counts = {
-            item["type"]: item["count"]
-            for item in base_queryset.filter(is_read=False).values("type").annotate(count=Count("id"))
-        }
-
-        # 过滤已读状态
-        if is_read is not None:
-            queryset = queryset.filter(is_read=is_read)
-
-        # 过滤通知类型
-        if type:
-            queryset = queryset.filter(type=type)
+        type_counts = NotificationService._collect_type_counts(base_queryset)
+        unread_type_counts = NotificationService._collect_type_counts(base_queryset.filter(is_read=False))
 
         # 排序
         queryset = queryset.order_by('-created_at')
@@ -265,16 +285,33 @@ class NotificationService:
         Returns:
             int: 标记的数量
         """
-        count = Notification.objects.filter(
+        count, _ = NotificationService.mark_filtered_as_read(user)
+        return count
+
+    @staticmethod
+    def mark_filtered_as_read(
+        user: User,
+        type: Optional[str] = None,
+        discussion_id: Optional[int] = None,
+    ) -> Tuple[int, dict]:
+        queryset = NotificationService._build_filtered_queryset(
             user=user,
-            is_read=False
-        ).update(
+            is_read=False,
+            type=type,
+            discussion_id=discussion_id,
+        )
+        type_counts = NotificationService._collect_type_counts(queryset)
+
+        if not type_counts:
+            return 0, {}
+
+        count = queryset.update(
             is_read=True,
             read_at=timezone.now()
         )
         if count:
             NotificationService.invalidate_unread_count(user.id)
-        return count
+        return count, type_counts
 
     @staticmethod
     def delete_notification(notification_id: int, user: User) -> bool:
@@ -309,11 +346,28 @@ class NotificationService:
         Returns:
             int: 删除的数量
         """
-        count, _ = Notification.objects.filter(
-            user=user,
-            is_read=True
-        ).delete()
+        count, _ = NotificationService.delete_filtered_read(user)
         return count
+
+    @staticmethod
+    def delete_filtered_read(
+        user: User,
+        type: Optional[str] = None,
+        discussion_id: Optional[int] = None,
+    ) -> Tuple[int, dict]:
+        queryset = NotificationService._build_filtered_queryset(
+            user=user,
+            is_read=True,
+            type=type,
+            discussion_id=discussion_id,
+        )
+        type_counts = NotificationService._collect_type_counts(queryset)
+
+        if not type_counts:
+            return 0, {}
+
+        count, _ = queryset.delete()
+        return count, type_counts
 
     @staticmethod
     def get_unread_count(user: User) -> int:

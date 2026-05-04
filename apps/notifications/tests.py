@@ -369,6 +369,115 @@ class NotificationServiceTests(TestCase):
         self.assertEqual(payload["unread_type_counts"]["postLiked"], 1)
         self.assertEqual(payload["unread_type_counts"]["postReply"], 1)
 
+    def test_mark_filtered_as_read_endpoint_supports_type_and_discussion_filters(self):
+        other_discussion = DiscussionService.create_discussion(
+            title="Another discussion",
+            content="Seed content",
+            user=self.author,
+        )
+        matching = Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            data={
+                "post_id": self.initial_reply.id,
+                "discussion_id": self.discussion.id,
+                "discussion_title": self.discussion.title,
+            },
+        )
+        Notification.objects.create(
+            user=self.author,
+            from_user=self.participant,
+            type="postLiked",
+            subject_type="discussion",
+            subject_id=other_discussion.id,
+            data={
+                "discussion_id": other_discussion.id,
+                "discussion_title": other_discussion.title,
+            },
+        )
+        Notification.objects.create(
+            user=self.author,
+            from_user=self.participant,
+            type="postReply",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            data={
+                "post_id": self.initial_reply.id,
+                "discussion_id": self.discussion.id,
+                "discussion_title": self.discussion.title,
+            },
+        )
+
+        response = self.client.post(
+            f"/api/notifications/read-filtered?type=postLiked&discussion_id={self.discussion.id}",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["type_counts"]["postLiked"], 1)
+        matching.refresh_from_db()
+        self.assertTrue(matching.is_read)
+        self.assertEqual(Notification.objects.filter(user=self.author, is_read=False, type="postLiked").count(), 1)
+        self.assertEqual(Notification.objects.filter(user=self.author, is_read=False, type="postReply").count(), 1)
+
+    def test_clear_filtered_read_endpoint_supports_type_and_discussion_filters(self):
+        matching = Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postReply",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            is_read=True,
+            data={
+                "post_id": self.initial_reply.id,
+                "discussion_id": self.discussion.id,
+                "discussion_title": self.discussion.title,
+            },
+        )
+        Notification.objects.create(
+            user=self.author,
+            from_user=self.participant,
+            type="postReply",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            is_read=True,
+            data={
+                "post_id": self.initial_reply.id,
+                "discussion_id": self.discussion.id,
+                "discussion_title": self.discussion.title,
+            },
+        )
+        retained = Notification.objects.create(
+            user=self.author,
+            from_user=self.participant,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            is_read=True,
+            data={
+                "post_id": self.initial_reply.id,
+                "discussion_id": self.discussion.id,
+                "discussion_title": self.discussion.title,
+            },
+        )
+
+        response = self.client.delete(
+            f"/api/notifications/read/clear-filtered?type=postReply&discussion_id={self.discussion.id}",
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["count"], 2)
+        self.assertEqual(payload["type_counts"]["postReply"], 2)
+        self.assertFalse(Notification.objects.filter(id=matching.id).exists())
+        self.assertTrue(Notification.objects.filter(id=retained.id).exists())
+
     def test_notification_detail_exposes_registered_from_user_summary(self):
         group = self.replier.user_groups.create(name="Notifier", color="#1abc9c", icon="fas fa-bell")
         notification = Notification.objects.create(

@@ -22,13 +22,22 @@
           <template #meta>
             <div class="hero-meta">
               <button
-                v-if="notifications.length > 0"
+                v-if="filteredUnreadCount > 0"
                 type="button"
                 class="secondary"
                 :disabled="marking"
                 @click="markAllAsRead"
               >
-                {{ marking ? '处理中...' : '全部标记为已读' }}
+                {{ marking ? '处理中...' : (hasActiveFilter ? '当前筛选标记已读' : '全部标记为已读') }}
+              </button>
+              <button
+                v-if="filteredReadCount > 0"
+                type="button"
+                class="secondary"
+                :disabled="marking"
+                @click="clearReadNotifications"
+              >
+                {{ marking ? '处理中...' : (hasActiveFilter ? '当前筛选清除已读' : '当前页清除已读') }}
               </button>
               <button
                 type="button"
@@ -117,6 +126,27 @@
               </button>
             </header>
 
+            <div v-if="group.discussionId" class="notification-group-panel-actions">
+              <button
+                v-if="group.items.some(item => !item.is_read)"
+                type="button"
+                class="secondary"
+                :disabled="marking"
+                @click="markGroupAsRead(group)"
+              >
+                整组标记已读
+              </button>
+              <button
+                v-if="group.items.some(item => item.is_read)"
+                type="button"
+                class="secondary danger"
+                :disabled="marking"
+                @click="clearGroupReadNotifications(group)"
+              >
+                整组清理已读
+              </button>
+            </div>
+
             <ForumNotificationList
               :notifications="group.items"
               :format-date="formatDate"
@@ -193,11 +223,17 @@ const {
   activeType,
   unreadOnly,
   viewMode,
+  filteredUnreadCount,
+  filteredReadCount,
+  hasActiveFilter,
   notificationTypeItems,
   viewModeItems,
   groupedNotifications,
   markAsRead,
   markAllAsRead,
+  clearReadNotifications,
+  markGroupAsRead,
+  clearGroupReadNotifications,
   deleteNotification,
   handleNotificationClick,
   changeType,
@@ -337,11 +373,22 @@ function getNotificationAvatarColor(notification) {
   color: #758698;
 }
 
+.notification-group-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
 .hero-meta {
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
+}
+
+.secondary.danger {
+  color: #a44d47;
 }
 
 .preferences-link {

@@ -216,6 +216,19 @@ export const useNotificationStore = defineStore('notification', () => {
     return data
   }
 
+  async function markFilteredAsRead(params = {}) {
+    const type = typeof params.type === 'string' ? params.type.trim() : ''
+    const discussionId = Number(params.discussionId)
+
+    const data = await api.post('/notifications/read-filtered', null, {
+      params: {
+        ...(type ? { type } : {}),
+        ...(Number.isInteger(discussionId) && discussionId > 0 ? { discussion_id: discussionId } : {})
+      }
+    })
+    return data
+  }
+
   async function deleteNotification(notificationId) {
     const notification = notifications.value.find(n => n.id === notificationId)
     await api.delete(`/notifications/${notificationId}`)
@@ -234,6 +247,19 @@ export const useNotificationStore = defineStore('notification', () => {
     const removedCount = Number(data.count || 0)
     totalCount.value = Math.max(0, totalCount.value - removedCount)
     readCount.value = Math.max(0, readCount.value - removedCount)
+    return data
+  }
+
+  async function clearFilteredReadNotifications(params = {}) {
+    const type = typeof params.type === 'string' ? params.type.trim() : ''
+    const discussionId = Number(params.discussionId)
+
+    const data = await api.delete('/notifications/read/clear-filtered', {
+      params: {
+        ...(type ? { type } : {}),
+        ...(Number.isInteger(discussionId) && discussionId > 0 ? { discussion_id: discussionId } : {})
+      }
+    })
     return data
   }
 
@@ -279,8 +305,10 @@ export const useNotificationStore = defineStore('notification', () => {
     ensureFetched,
     markAsRead,
     markAllAsRead,
+    markFilteredAsRead,
     deleteNotification,
     clearReadNotifications,
+    clearFilteredReadNotifications,
     getNotificationMessage,
     requestPermission
   }

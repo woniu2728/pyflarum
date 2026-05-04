@@ -18,6 +18,13 @@ router = Router()
 RESOURCE_REGISTRY = get_resource_registry()
 
 
+def _normalize_notification_type(type_value: Optional[str]) -> Optional[str]:
+    if type_value is None:
+        return None
+    normalized = type_value.strip()
+    return normalized or None
+
+
 def _serialize_notification(notification):
     payload = {
         "id": notification.id,
@@ -56,7 +63,7 @@ def list_notifications(
     notifications, total, unread_count, type_counts, unread_type_counts = NotificationService.get_notification_list(
         user=request.auth,
         is_read=is_read,
-        type=type,
+        type=_normalize_notification_type(type),
         page=page,
         limit=limit,
     )
@@ -95,6 +102,31 @@ def delete_all_read(request):
     return {"message": f"已删除{count}条已读通知", "count": count}
 
 
+@router.delete("/notifications/read/clear-filtered", auth=AuthBearer(), tags=["Notifications"])
+def delete_filtered_read(
+    request,
+    type: Optional[str] = None,
+    discussion_id: Optional[int] = None,
+):
+    """
+    删除当前筛选范围内的已读通知
+
+    需要认证
+    """
+    normalized_type = _normalize_notification_type(type)
+    count, type_counts = NotificationService.delete_filtered_read(
+        request.auth,
+        type=normalized_type,
+        discussion_id=discussion_id,
+    )
+
+    return {
+        "message": f"已删除{count}条已读通知",
+        "count": count,
+        "type_counts": type_counts,
+    }
+
+
 @router.post("/notifications/{notification_id}/read", auth=AuthBearer(), tags=["Notifications"])
 def mark_notification_as_read(request, notification_id: int):
     """
@@ -120,6 +152,31 @@ def mark_all_as_read(request):
     count = NotificationService.mark_all_as_read(request.auth)
 
     return {"message": f"已标记{count}条通知为已读", "count": count}
+
+
+@router.post("/notifications/read-filtered", auth=AuthBearer(), tags=["Notifications"])
+def mark_filtered_as_read(
+    request,
+    type: Optional[str] = None,
+    discussion_id: Optional[int] = None,
+):
+    """
+    标记当前筛选范围内的未读通知为已读
+
+    需要认证
+    """
+    normalized_type = _normalize_notification_type(type)
+    count, type_counts = NotificationService.mark_filtered_as_read(
+        request.auth,
+        type=normalized_type,
+        discussion_id=discussion_id,
+    )
+
+    return {
+        "message": f"已标记{count}条通知为已读",
+        "count": count,
+        "type_counts": type_counts,
+    }
 
 
 @router.get("/notifications/{notification_id}", response=NotificationOutSchema, auth=AuthBearer(), tags=["Notifications"])
