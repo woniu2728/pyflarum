@@ -1,18 +1,23 @@
 import { computed, ref, watch } from 'vue'
 import api from '@/api'
-import { unwrapList } from '@/utils/forum'
+import { useResourceStore } from '@/stores/resource'
+import { normalizeDiscussion, normalizePost, normalizeUser, unwrapList } from '@/utils/forum'
 import { highlightSearchText } from '@/utils/search'
 import { renderTwemojiHtml } from '@/utils/twemoji'
 
 export function useSearchResultsPage({ route, router }) {
+  const resourceStore = useResourceStore()
   const loading = ref(false)
   const total = ref(0)
   const discussionTotal = ref(0)
   const postTotal = ref(0)
   const userTotal = ref(0)
-  const discussions = ref([])
-  const posts = ref([])
-  const users = ref([])
+  const discussionIds = ref([])
+  const postIds = ref([])
+  const userIds = ref([])
+  const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
+  const posts = computed(() => resourceStore.list('posts', postIds.value))
+  const users = computed(() => resourceStore.list('users', userIds.value))
 
   const normalizedQuery = computed(() => String(route.query.q || '').trim())
   const searchType = computed(() => {
@@ -80,9 +85,15 @@ export function useSearchResultsPage({ route, router }) {
       discussionTotal.value = data.discussion_total ?? (data.discussions || []).length
       postTotal.value = data.post_total ?? (data.posts || []).length
       userTotal.value = data.user_total ?? (data.users || []).length
-      discussions.value = unwrapList(data.discussions || [])
-      posts.value = unwrapList(data.posts || [])
-      users.value = unwrapList(data.users || [])
+      discussionIds.value = unwrapList(data.discussions || [])
+        .map(normalizeDiscussion)
+        .map(item => resourceStore.upsert('discussions', item).id)
+      postIds.value = unwrapList(data.posts || [])
+        .map(normalizePost)
+        .map(item => resourceStore.upsert('posts', item).id)
+      userIds.value = unwrapList(data.users || [])
+        .map(normalizeUser)
+        .map(item => resourceStore.upsert('users', item).id)
     } catch (error) {
       console.error('加载搜索结果失败:', error)
       resetResults()
@@ -96,9 +107,9 @@ export function useSearchResultsPage({ route, router }) {
     discussionTotal.value = 0
     postTotal.value = 0
     userTotal.value = 0
-    discussions.value = []
-    posts.value = []
-    users.value = []
+    discussionIds.value = []
+    postIds.value = []
+    userIds.value = []
   }
 
   function changeType(type) {

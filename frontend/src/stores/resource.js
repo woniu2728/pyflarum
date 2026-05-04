@@ -29,6 +29,22 @@ function normalizeNotification(notification = {}) {
   }
 }
 
+function inferTypeFromCollectionKey(key) {
+  const normalized = normalizeResourceType(key)
+  if (!normalized) return ''
+
+  if (NORMALIZERS[normalized]) return normalized
+  if (normalized.endsWith('ies')) {
+    const singular = `${normalized.slice(0, -3)}y`
+    if (NORMALIZERS[singular]) return singular
+  }
+  if (normalized.endsWith('s')) {
+    const singular = normalized.slice(0, -1)
+    if (NORMALIZERS[singular]) return singular
+  }
+  return ''
+}
+
 function normalizeResourceType(type) {
   return String(type || '').trim().toLowerCase()
 }
@@ -113,11 +129,27 @@ export const useResourceStore = defineStore('resource', () => {
     return pairs
   }
 
+  function extractCollectionItems(payload = {}) {
+    if (!payload || typeof payload !== 'object') return []
+
+    const pairs = []
+    for (const [key, value] of Object.entries(payload)) {
+      const inferredType = inferTypeFromCollectionKey(key)
+      if (!inferredType || !Array.isArray(value)) continue
+      pairs.push([inferredType, value])
+    }
+    return pairs
+  }
+
   function mergePayload(payload = {}, explicitType = '') {
     const items = []
 
     if (explicitType) {
       items.push(...upsertMany(explicitType, unwrapList(payload)))
+    }
+
+    for (const [resourceType, resourceItems] of extractCollectionItems(payload)) {
+      items.push(...upsertMany(resourceType, resourceItems))
     }
 
     for (const [resourceType, resourceItem] of extractResourceItems(payload)) {

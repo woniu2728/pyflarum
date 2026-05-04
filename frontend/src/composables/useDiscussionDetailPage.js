@@ -1,5 +1,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
+import { useResourceStore } from '@/stores/resource'
 import {
   formatRelativeTime,
   normalizeDiscussion,
@@ -13,8 +14,11 @@ export function useDiscussionDetailPage({
   route,
   router
 }) {
-  const discussion = ref(null)
-  const posts = ref([])
+  const resourceStore = useResourceStore()
+  const discussionId = ref(null)
+  const postIds = ref([])
+  const discussion = computed(() => (discussionId.value ? resourceStore.get('discussions', discussionId.value) : null))
+  const posts = computed(() => resourceStore.list('posts', postIds.value))
   const loading = ref(true)
   const loadingMore = ref(false)
   const loadingPrevious = ref(false)
@@ -222,7 +226,8 @@ export function useDiscussionDetailPage({
   async function loadDiscussion() {
     try {
       const data = await api.get(`/discussions/${route.params.id}`)
-      discussion.value = normalizeDiscussion(data)
+      const normalizedDiscussion = resourceStore.upsert('discussions', normalizeDiscussion(data))
+      discussionId.value = normalizedDiscussion.id
       lastReportedReadNumber = Number(discussion.value?.last_read_post_number || 0)
     } catch (error) {
       console.error('加载讨论失败:', error)
@@ -259,7 +264,7 @@ export function useDiscussionDetailPage({
 
   function replacePosts(data) {
     const items = unwrapList(data).map(normalizePost)
-    posts.value = items
+    postIds.value = items.map(item => resourceStore.upsert('posts', item).id)
     firstLoadedPage.value = data.page || 1
     lastLoadedPage.value = data.page || 1
     totalPosts.value = data.total || items.length
@@ -272,7 +277,8 @@ export function useDiscussionDetailPage({
 
   function appendPosts(data) {
     const items = unwrapList(data).map(normalizePost)
-    posts.value.push(...items)
+    const ids = items.map(item => resourceStore.upsert('posts', item).id)
+    postIds.value = [...postIds.value, ...ids]
     lastLoadedPage.value = data.page || lastLoadedPage.value + 1
     totalPosts.value = data.total || totalPosts.value
     nextTick(() => {
@@ -286,7 +292,8 @@ export function useDiscussionDetailPage({
     const anchorNumber = posts.value[0]?.number
     const anchorTop = anchorNumber ? document.getElementById(`post-${anchorNumber}`)?.getBoundingClientRect().top : null
     const items = unwrapList(data).map(normalizePost)
-    posts.value.unshift(...items)
+    const ids = items.map(item => resourceStore.upsert('posts', item).id)
+    postIds.value = [...ids, ...postIds.value]
     firstLoadedPage.value = data.page || Math.max(1, firstLoadedPage.value - 1)
     totalPosts.value = data.total || totalPosts.value
     nextTick(() => {
@@ -359,7 +366,7 @@ export function useDiscussionDetailPage({
   }
 
   function resetPostStream() {
-    posts.value = []
+    postIds.value = []
     firstLoadedPage.value = 1
     lastLoadedPage.value = 1
     totalPosts.value = 0
@@ -739,7 +746,8 @@ export function useDiscussionDetailPage({
     const newPost = normalizePost(detail.post)
     if (posts.value.some(post => post.id === newPost.id)) return
 
-    posts.value.push(newPost)
+    const mergedPost = resourceStore.upsert('posts', newPost)
+    postIds.value = [...postIds.value, mergedPost.id]
     discussion.value.comment_count = (discussion.value.comment_count || 0) + 1
     discussion.value.last_post_id = newPost.id
     discussion.value.last_post_number = Math.max(discussion.value.last_post_number || 0, newPost.number || 0)
@@ -783,10 +791,9 @@ export function useDiscussionDetailPage({
   }
 
   function upsertPost(rawPost) {
-    const updatedPost = normalizePost(rawPost)
-    const index = posts.value.findIndex(post => post.id === updatedPost.id)
-    if (index !== -1) {
-      posts.value[index] = updatedPost
+    const updatedPost = resourceStore.upsert('posts', normalizePost(rawPost))
+    if (!postIds.value.includes(updatedPost.id)) {
+      postIds.value = [...postIds.value, updatedPost.id]
     }
   }
 

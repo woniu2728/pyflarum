@@ -143,8 +143,17 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useModalStore } from '@/stores/modal'
+import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
-import { buildDiscussionPath, buildUserPath, formatRelativeTime, unwrapList } from '@/utils/forum'
+import {
+  buildDiscussionPath,
+  buildUserPath,
+  formatRelativeTime,
+  normalizeDiscussion,
+  normalizePost,
+  normalizeUser,
+  unwrapList
+} from '@/utils/forum'
 import { highlightSearchText } from '@/utils/search'
 import { renderTwemojiHtml } from '@/utils/twemoji'
 
@@ -165,16 +174,15 @@ const props = defineProps({
 
 const router = useRouter()
 const modalStore = useModalStore()
+const resourceStore = useResourceStore()
 const root = ref(null)
 const inputRef = ref(null)
 const query = ref(String(props.initialQuery || ''))
 const activeType = ref(['all', 'discussions', 'posts', 'users'].includes(props.initialType) ? props.initialType : 'all')
 const loading = ref(false)
-const searchResults = ref({
-  discussions: [],
-  posts: [],
-  users: [],
-})
+const discussionIds = ref([])
+const postIds = ref([])
+const userIds = ref([])
 const totals = ref({
   discussions: 0,
   posts: 0,
@@ -185,6 +193,11 @@ let searchTimer = null
 let requestId = 0
 
 const normalizedQuery = computed(() => query.value.trim())
+const searchResults = computed(() => ({
+  discussions: resourceStore.list('discussions', discussionIds.value),
+  posts: resourceStore.list('posts', postIds.value),
+  users: resourceStore.list('users', userIds.value),
+}))
 const tabs = computed(() => [
   { value: 'all', label: '全部', count: totals.value.discussions + totals.value.posts + totals.value.users },
   { value: 'discussions', label: '讨论', count: totals.value.discussions },
@@ -265,7 +278,9 @@ watch(
 
     if (!normalizedQuery.value) {
       loading.value = false
-      searchResults.value = { discussions: [], posts: [], users: [] }
+      discussionIds.value = []
+      postIds.value = []
+      userIds.value = []
       totals.value = { discussions: 0, posts: 0, users: 0 }
       return
     }
@@ -333,16 +348,22 @@ async function fetchResults() {
       posts: data.post_total ?? 0,
       users: data.user_total ?? 0,
     }
-    searchResults.value = {
-      discussions: unwrapList(data.discussions || []),
-      posts: unwrapList(data.posts || []),
-      users: unwrapList(data.users || []),
-    }
+    discussionIds.value = unwrapList(data.discussions || [])
+      .map(normalizeDiscussion)
+      .map(item => resourceStore.upsert('discussions', item).id)
+    postIds.value = unwrapList(data.posts || [])
+      .map(normalizePost)
+      .map(item => resourceStore.upsert('posts', item).id)
+    userIds.value = unwrapList(data.users || [])
+      .map(normalizeUser)
+      .map(item => resourceStore.upsert('users', item).id)
   } catch (error) {
     if (currentRequestId !== requestId) return
 
     console.error('加载搜索结果失败:', error)
-    searchResults.value = { discussions: [], posts: [], users: [] }
+    discussionIds.value = []
+    postIds.value = []
+    userIds.value = []
     totals.value = { discussions: 0, posts: 0, users: 0 }
   } finally {
     if (currentRequestId === requestId) {
