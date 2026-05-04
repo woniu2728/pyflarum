@@ -2,7 +2,7 @@
   <DiscussionEventPostBase
     :post="post"
     :is-target="isTarget"
-    icon="fas fa-heading"
+    icon="fas fa-thumbtack"
     variant="warm"
     :format-absolute-date="formatAbsoluteDate"
     :format-date="formatDate"
@@ -10,10 +10,7 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>将讨论标题从</span>
-      <span class="event-post-title event-post-title--old">“{{ oldTitle }}”</span>
-      <span>改为</span>
-      <span class="event-post-title">“{{ newTitle }}”</span>
+      <span>{{ isSticky ? '置顶了该讨论' : '取消了该讨论的置顶状态' }}</span>
     </template>
   </DiscussionEventPostBase>
 </template>
@@ -33,18 +30,5 @@ const props = defineProps({
 defineEmits(['jump-to-post'])
 
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
-const oldTitle = computed(() => props.post.event_data?.old_title || '旧标题')
-const newTitle = computed(() => props.post.event_data?.new_title || '新标题')
+const isSticky = computed(() => Boolean(props.post.event_data?.is_sticky))
 </script>
-
-<style scoped>
-.event-post-title {
-  color: #7a4a16;
-  font-weight: 700;
-}
-
-.event-post-title--old {
-  text-decoration: line-through;
-  opacity: 0.72;
-}
-</style>

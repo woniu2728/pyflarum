@@ -253,8 +253,8 @@ def toggle_pin_discussion(request, discussion_id: int):
 
     try:
         discussion = Discussion.objects.get(id=discussion_id)
-        discussion.is_sticky = not discussion.is_sticky
-        discussion.save(update_fields=['is_sticky'])
+        DiscussionService.set_sticky_state(discussion, request.auth, not discussion.is_sticky)
+        discussion.refresh_from_db()
         log_admin_action(
             request,
             "admin.discussion.sticky" if discussion.is_sticky else "admin.discussion.unsticky",

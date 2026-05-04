@@ -385,6 +385,16 @@ def _resolve_post_event_data(post, context: dict) -> dict | None:
             "is_locked": normalized == "locked",
         }
 
+    if post_type == "discussionSticky":
+        normalized = (getattr(post, "content", "") or "").strip().lower()
+        if normalized not in {"sticky", "unsticky"}:
+            return None
+
+        return {
+            "kind": "discussionSticky",
+            "is_sticky": normalized == "sticky",
+        }
+
     return None
 
 

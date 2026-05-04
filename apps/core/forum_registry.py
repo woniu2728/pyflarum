@@ -585,6 +585,18 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     counts_toward_user=False,
                     searchable=False,
                 ),
+                PostTypeDefinition(
+                    code="discussionSticky",
+                    label="讨论置顶状态变更",
+                    module_id="discussions",
+                    description="记录讨论被置顶或取消置顶的系统事件帖，不计入回复统计和全文搜索。",
+                    icon="fas fa-thumbtack",
+                    is_default=False,
+                    is_stream_visible=True,
+                    counts_toward_discussion=False,
+                    counts_toward_user=False,
+                    searchable=False,
+                ),
             ),
         )
     )

@@ -803,6 +803,45 @@ class DiscussionApiTests(TestCase):
             },
         )
 
+    def test_sticky_discussion_creates_discussion_sticky_event_post(self):
+        discussion = DiscussionService.create_discussion(
+            title="Pin me",
+            content="Original content",
+            user=self.author,
+        )
+        admin = User.objects.create_superuser(
+            username="discussion-sticky-admin",
+            email="discussion-sticky-admin@example.com",
+            password="password123",
+        )
+
+        response = self.client.post(
+            f"/api/discussions/{discussion.id}/pin",
+            **self.auth_header(admin),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        discussion.refresh_from_db()
+        self.assertTrue(discussion.is_sticky)
+        sticky_post = Post.objects.get(discussion=discussion, number=2)
+        self.assertEqual(sticky_post.type, "discussionSticky")
+        self.assertEqual(sticky_post.content, "sticky")
+        self.assertEqual(discussion.last_post_id, sticky_post.id)
+        self.assertEqual(discussion.comment_count, 1)
+
+        posts_response = self.client.get(f"/api/discussions/{discussion.id}/posts")
+        self.assertEqual(posts_response.status_code, 200, posts_response.content)
+        payload = posts_response.json()["data"]
+        event_post = next(item for item in payload if item["id"] == sticky_post.id)
+        self.assertEqual(event_post["type"], "discussionSticky")
+        self.assertEqual(
+            event_post["event_data"],
+            {
+                "kind": "discussionSticky",
+                "is_sticky": True,
+            },
+        )
+
     def test_owner_with_delete_own_permission_can_delete_discussion(self):
         member_group = Group.objects.create(name="DiscussionAuthorDeleteOwn", color="#4d698e")
         Permission.objects.create(group=member_group, permission="startDiscussion")

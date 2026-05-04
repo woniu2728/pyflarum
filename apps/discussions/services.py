@@ -27,6 +27,7 @@ DISCUSSION_COUNTED_POST_TYPES = FORUM_REGISTRY.get_discussion_counted_post_type_
 USER_COUNTED_POST_TYPES = FORUM_REGISTRY.get_user_counted_post_type_codes()
 DISCUSSION_RENAMED_POST_TYPE = "discussionRenamed"
 DISCUSSION_LOCKED_POST_TYPE = "discussionLocked"
+DISCUSSION_STICKY_POST_TYPE = "discussionSticky"
 
 
 class DiscussionService:
@@ -601,7 +602,7 @@ class DiscussionService:
             if is_sticky is not None:
                 if not user.is_staff:
                     raise PermissionDenied("没有权限置顶/取消置顶讨论")
-                discussion.is_sticky = is_sticky
+                DiscussionService.set_sticky_state(discussion, user, is_sticky)
 
             if is_hidden is not None:
                 DiscussionService.set_hidden_state(discussion, user, is_hidden)
@@ -863,6 +864,24 @@ class DiscussionService:
             actor=actor,
             post_type=DISCUSSION_LOCKED_POST_TYPE,
             content="locked" if is_locked else "unlocked",
+        )
+        return discussion
+
+    @staticmethod
+    def set_sticky_state(discussion: Discussion, actor: User, is_sticky: bool) -> Discussion:
+        if not actor.is_staff:
+            raise PermissionDenied("没有权限置顶/取消置顶讨论")
+
+        if discussion.is_sticky == is_sticky:
+            return discussion
+
+        discussion.is_sticky = is_sticky
+        discussion.save(update_fields=["is_sticky"])
+        DiscussionService._create_system_event_post(
+            discussion=discussion,
+            actor=actor,
+            post_type=DISCUSSION_STICKY_POST_TYPE,
+            content="sticky" if is_sticky else "unsticky",
         )
         return discussion
 
