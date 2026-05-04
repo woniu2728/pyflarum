@@ -510,10 +510,10 @@ const filteredModules = computed(() => {
       module.name,
       module.id,
       module.description,
-      ...(module.capabilities || []),
-      ...(module.dependencies || []),
-      ...(module.permissions || []).map(item => item.code),
-      ...(module.admin_pages || []).map(item => item.path),
+      ...module.capabilities,
+      ...module.dependencies,
+      ...module.permissions.map(item => item.code),
+      ...module.admin_pages.map(item => item.path),
     ]
       .filter(Boolean)
       .join(' ')
@@ -550,6 +550,34 @@ const summaryItems = computed(() => [
 
 const moduleNameMap = computed(() => Object.fromEntries(modules.value.map(item => [item.id, item.name])))
 
+function resolveCategoryLabel(category) {
+  if (category === 'core') return '核心'
+  if (category === 'infrastructure') return '基础设施'
+  return '功能模块'
+}
+
+function normalizeModule(module) {
+  return {
+    ...module,
+    category_label: module.category_label || resolveCategoryLabel(module.category),
+    capabilities: module.capabilities || [],
+    dependencies: module.dependencies || [],
+    permissions: module.permissions || [],
+    admin_pages: module.admin_pages || [],
+    notification_types: module.notification_types || [],
+    user_preferences: module.user_preferences || [],
+    event_listeners: module.event_listeners || [],
+    post_types: module.post_types || [],
+    resource_fields: module.resource_fields || [],
+    search_filters: module.search_filters || [],
+    missing_dependencies: module.missing_dependencies || [],
+    disabled_dependencies: module.disabled_dependencies || [],
+    dependency_status: module.dependency_status || 'healthy',
+    dependency_status_label: module.dependency_status_label || '依赖正常',
+    registration_counts: module.registration_counts || {},
+  }
+}
+
 onMounted(async () => {
   await loadModules()
 })
@@ -561,7 +589,7 @@ async function loadModules() {
   try {
     const data = await api.get('/admin/modules')
     summary.value = data.summary || {}
-    modules.value = data.modules || []
+    modules.value = (data.modules || []).map(normalizeModule)
     categorySummaries.value = data.category_summaries || []
     dependencyAttention.value = data.dependency_attention || []
     adminPages.value = data.admin_pages || []

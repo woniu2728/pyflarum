@@ -55,7 +55,7 @@ const navSections = computed(() => getForumNavSections({
   gap: 12px;
 }
 
-.forum-primary-nav__title {
+.forum-primary-nav :deep(.forum-primary-nav__title) {
   margin: 0 0 4px;
   padding: 0 12px;
   color: var(--forum-text-soft);
@@ -65,35 +65,45 @@ const navSections = computed(() => getForumNavSections({
   text-transform: uppercase;
 }
 
-.forum-primary-nav__section {
+.forum-primary-nav :deep(.forum-primary-nav__section) {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.forum-primary-nav__itemWrap {
+.forum-primary-nav :deep(.forum-primary-nav__itemWrap) {
   list-style: none;
 }
 
-.forum-primary-nav__item {
+.forum-primary-nav :deep(.forum-primary-nav__item) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 12px;
   border-radius: var(--forum-radius-sm);
   color: var(--forum-text-muted);
   text-decoration: none;
 }
 
-.forum-primary-nav__item:hover,
-.forum-primary-nav__item.active {
+.forum-primary-nav :deep(.forum-primary-nav__item i) {
+  width: 18px;
+  text-align: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.forum-primary-nav :deep(.forum-primary-nav__item:hover),
+.forum-primary-nav :deep(.forum-primary-nav__item.active) {
   background: var(--forum-primary-color);
   color: var(--forum-text-inverse);
   text-decoration: none;
 }
 
-.forum-primary-nav__description {
+.forum-primary-nav :deep(.forum-primary-nav__description) {
   display: none;
 }
 
-.forum-primary-nav__badge {
+.forum-primary-nav :deep(.forum-primary-nav__badge) {
   margin-left: auto;
   background: rgba(231, 124, 47, 0.16);
   color: inherit;

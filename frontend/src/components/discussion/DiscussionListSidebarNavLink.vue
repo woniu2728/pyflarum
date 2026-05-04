@@ -61,7 +61,7 @@ defineProps({
 
 .nav-item.active {
   background: none;
-  color: var(--forum-primary-color);
+  color: inherit;
   font-weight: 700;
 }
 

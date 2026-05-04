@@ -132,6 +132,35 @@ defineProps({
   line-height: 1.7;
   font-size: 15px;
   overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.post-content :deep(img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.post-content :deep(video),
+.post-content :deep(iframe),
+.post-content :deep(table),
+.post-content :deep(pre),
+.post-content :deep(code) {
+  max-width: 100%;
+}
+
+.post-content :deep(pre) {
+  overflow-x: auto;
+}
+
+.post-content :deep(table) {
+  display: block;
+  overflow-x: auto;
+}
+
+.post-content :deep(a) {
+  overflow-wrap: anywhere;
 }
 
 .approval-pill {

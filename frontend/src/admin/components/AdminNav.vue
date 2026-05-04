@@ -96,7 +96,7 @@ function handleLogout() {
   gap: var(--forum-space-7);
 }
 
-.AdminNav-title {
+.AdminNav :deep(.AdminNav-title) {
   font-size: var(--forum-font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
@@ -106,13 +106,24 @@ function handleLogout() {
   letter-spacing: 0.5px;
 }
 
-.AdminNav-list {
+.AdminNav :deep(.AdminNav-list) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.AdminNav-item {
+.AdminNav :deep(.AdminNav-itemWrap) {
+  list-style: none;
+  margin: 0;
+}
+
+.AdminNav :deep(.AdminNav-item) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 12px;
   color: var(--forum-text-muted);
   text-decoration: none;
@@ -121,38 +132,34 @@ function handleLogout() {
   transition: all 0.2s;
 }
 
-.AdminNav-item i {
+.AdminNav :deep(.AdminNav-item i) {
   width: 18px;
   text-align: center;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
-.AdminNav-item:hover {
+.AdminNav :deep(.AdminNav-item:hover) {
   background: var(--forum-bg-subtle);
   color: var(--forum-text-color);
   text-decoration: none;
 }
 
-.AdminNav-item.active {
+.AdminNav :deep(.AdminNav-item.active) {
   background: var(--forum-primary-color);
   color: var(--forum-text-inverse);
   box-shadow: var(--forum-shadow-sm);
 }
 
-.AdminNav-item.active:hover {
+.AdminNav :deep(.AdminNav-item.active:hover) {
   background: var(--forum-primary-strong);
 }
 
-.AdminNav-description {
-  display: block;
-  margin-left: 28px;
-  margin-top: 2px;
-  font-size: 12px;
-  color: inherit;
-  opacity: 0.78;
+.AdminNav :deep(.AdminNav-description) {
+  display: none;
 }
 
-.AdminNav-badge {
+.AdminNav :deep(.AdminNav-badge) {
   margin-left: auto;
   background: rgba(77, 105, 142, 0.12);
   color: inherit;

@@ -117,6 +117,6 @@ defineProps({
 }
 
 .tag-link--child {
-  margin-left: 10px;
+  margin-left: 0;
 }
 </style>
