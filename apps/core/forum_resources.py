@@ -455,7 +455,14 @@ def _resolve_post_event_data(post, context: dict) -> dict | None:
             "removed_tags": removed,
         }
 
-    if post_type in {"discussionApproved", "discussionRejected", "discussionResubmitted"}:
+    if post_type in {
+        "discussionApproved",
+        "discussionRejected",
+        "discussionResubmitted",
+        "postApproved",
+        "postRejected",
+        "postResubmitted",
+    }:
         lines = [
             line.strip()
             for line in (getattr(post, "content", "") or "").splitlines()
@@ -463,11 +470,21 @@ def _resolve_post_event_data(post, context: dict) -> dict | None:
         ]
         note = ""
         previous_status = ""
+        target_post_id = None
+        target_post_number = None
         for line in lines:
             if line.startswith("note:"):
                 note = line.removeprefix("note:").strip()
             elif line.startswith("previous_status:"):
                 previous_status = line.removeprefix("previous_status:").strip()
+            elif line.startswith("target_post_id:"):
+                raw_value = line.removeprefix("target_post_id:").strip()
+                if raw_value.isdigit():
+                    target_post_id = int(raw_value)
+            elif line.startswith("target_post_number:"):
+                raw_value = line.removeprefix("target_post_number:").strip()
+                if raw_value.isdigit():
+                    target_post_number = int(raw_value)
 
         event_data = {
             "kind": post_type,
@@ -475,6 +492,10 @@ def _resolve_post_event_data(post, context: dict) -> dict | None:
         }
         if previous_status:
             event_data["previous_status"] = previous_status
+        if target_post_id is not None:
+            event_data["target_post_id"] = target_post_id
+        if target_post_number is not None:
+            event_data["target_post_number"] = target_post_number
         return event_data
 
     return None

@@ -27,6 +27,9 @@ DEFAULT_POST_TYPE = FORUM_REGISTRY.get_default_post_type_code()
 STREAM_POST_TYPES = FORUM_REGISTRY.get_stream_post_type_codes()
 DISCUSSION_COUNTED_POST_TYPES = FORUM_REGISTRY.get_discussion_counted_post_type_codes()
 USER_COUNTED_POST_TYPES = FORUM_REGISTRY.get_user_counted_post_type_codes()
+POST_APPROVED_EVENT_TYPE = "postApproved"
+POST_REJECTED_EVENT_TYPE = "postRejected"
+POST_RESUBMITTED_EVENT_TYPE = "postResubmitted"
 
 
 class PostService:
@@ -371,12 +374,14 @@ class PostService:
             post.edited_at = timezone.now()
             post.edited_user = user
             update_fields = ['content', 'content_html', 'edited_at', 'edited_user']
+            previous_approval_status = None
 
             if (
                 post.approval_status == Post.APPROVAL_REJECTED
                 and not user.is_staff
                 and post.user_id == user.id
             ):
+                previous_approval_status = post.approval_status
                 post.approval_status = Post.APPROVAL_PENDING
                 post.approved_at = None
                 post.approved_by = None
@@ -392,6 +397,19 @@ class PostService:
             # 重新处理@提及
             PostMentionsUser.objects.filter(post=post).delete()
             PostService._process_mentions(post, content)
+
+            if previous_approval_status:
+                PostService._create_moderation_event_post(
+                    discussion=post.discussion,
+                    actor=user,
+                    event_type=POST_RESUBMITTED_EVENT_TYPE,
+                    content=(
+                        f"target_post_id: {post.id}\n"
+                        f"target_post_number: {post.number}\n"
+                        f"previous_status: {previous_approval_status}\n"
+                        "note:"
+                    ),
+                )
 
             return post
 
@@ -600,6 +618,7 @@ class PostService:
 
     @staticmethod
     def approve_post(post: Post, admin_user: User, note: str = "") -> Post:
+        previous_status = post.approval_status
         was_counted = (
             post.approval_status == Post.APPROVAL_APPROVED
             and post.hidden_at is None
@@ -658,6 +677,18 @@ class PostService:
             else:
                 TagService.refresh_discussion_tag_stats(discussion.id)
 
+            PostService._create_moderation_event_post(
+                discussion=discussion,
+                actor=admin_user,
+                event_type=POST_APPROVED_EVENT_TYPE,
+                content=(
+                    f"target_post_id: {post.id}\n"
+                    f"target_post_number: {post.number}\n"
+                    f"previous_status: {previous_status}\n"
+                    f"note: {note}"
+                ),
+            )
+
         post.refresh_from_db()
         return post
 
@@ -691,7 +722,39 @@ class PostService:
             if previous_status != Post.APPROVAL_REJECTED:
                 from apps.notifications.services import NotificationService
                 NotificationService.notify_post_rejected(post, admin_user, note=note)
+            PostService._create_moderation_event_post(
+                discussion=post.discussion,
+                actor=admin_user,
+                event_type=POST_REJECTED_EVENT_TYPE,
+                content=(
+                    f"target_post_id: {post.id}\n"
+                    f"target_post_number: {post.number}\n"
+                    f"previous_status: {previous_status}\n"
+                    f"note: {note}"
+                ),
+            )
         return post
+
+    @staticmethod
+    def _create_moderation_event_post(
+        discussion: Discussion,
+        actor: User,
+        event_type: str,
+        content: str,
+    ) -> Post:
+        last_post = Post.objects.filter(discussion=discussion).order_by("-number").first()
+        next_number = (last_post.number + 1) if last_post else 1
+        return Post.objects.create(
+            discussion=discussion,
+            number=next_number,
+            user=actor,
+            type=event_type,
+            content=content,
+            content_html="",
+            approval_status=Post.APPROVAL_APPROVED,
+            approved_at=timezone.now(),
+            approved_by=actor,
+        )
 
     @staticmethod
     def unlike_post(post_id: int, user: User) -> bool:

@@ -8,6 +8,9 @@ import DiscussionGenericEventPostItem from '@/components/discussion/DiscussionGe
 import DiscussionApprovedPostItem from '@/components/discussion/DiscussionApprovedPostItem.vue'
 import DiscussionRejectedPostItem from '@/components/discussion/DiscussionRejectedPostItem.vue'
 import DiscussionResubmittedPostItem from '@/components/discussion/DiscussionResubmittedPostItem.vue'
+import PostApprovedPostItem from '@/components/discussion/PostApprovedPostItem.vue'
+import PostRejectedPostItem from '@/components/discussion/PostRejectedPostItem.vue'
+import PostResubmittedPostItem from '@/components/discussion/PostResubmittedPostItem.vue'
 
 const postTypeDefinitions = []
 const postTypeComponents = {
@@ -19,7 +22,10 @@ const postTypeComponents = {
   discussionHidden: DiscussionHiddenPostItem,
   discussionApproved: DiscussionApprovedPostItem,
   discussionRejected: DiscussionRejectedPostItem,
-  discussionResubmitted: DiscussionResubmittedPostItem
+  discussionResubmitted: DiscussionResubmittedPostItem,
+  postApproved: PostApprovedPostItem,
+  postRejected: PostRejectedPostItem,
+  postResubmitted: PostResubmittedPostItem
 }
 
 export function registerPostType(definition) {
@@ -126,5 +132,20 @@ syncPostTypes([
     code: 'discussionResubmitted',
     label: '讨论重新提交审核',
     order: 90
+  },
+  {
+    code: 'postApproved',
+    label: '回复审核通过',
+    order: 100
+  },
+  {
+    code: 'postRejected',
+    label: '回复审核拒绝',
+    order: 110
+  },
+  {
+    code: 'postResubmitted',
+    label: '回复重新提交审核',
+    order: 120
   }
 ])

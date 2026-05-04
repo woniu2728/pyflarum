@@ -534,6 +534,17 @@ class PostFlagApiTests(TestCase):
         )
         self.assertEqual(list_response.status_code, 200, list_response.content)
         self.assertTrue(any(item["id"] == pending_post.id for item in list_response.json()["data"]))
+        approved_event = next(item for item in list_response.json()["data"] if item["type"] == "postApproved")
+        self.assertEqual(
+            approved_event["event_data"],
+            {
+                "kind": "postApproved",
+                "note": "已通过审核",
+                "previous_status": "pending",
+                "target_post_id": pending_post.id,
+                "target_post_number": pending_post.number,
+            },
+        )
 
     def test_post_approval_transitions_keep_discussion_and_author_counts_consistent(self):
         trusted_group = Group.objects.create(name="TrustedReplyCounts", color="#4d698e")
@@ -569,6 +580,65 @@ class PostFlagApiTests(TestCase):
         self.assertEqual(self.discussion.comment_count, 2)
         self.assertEqual(self.reporter.comment_count, 0)
         self.assertEqual(self.discussion.last_post_id, self.post.id)
+
+    def test_rejecting_post_creates_post_rejected_event_post(self):
+        pending_post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="待拒绝回复",
+            user=self.reporter,
+        )
+
+        PostService.reject_post(pending_post, self.admin, note="回复质量不足")
+
+        posts_response = self.client.get(
+            f"/api/discussions/{self.discussion.id}/posts",
+            **self.admin_auth_header(),
+        )
+        self.assertEqual(posts_response.status_code, 200, posts_response.content)
+        rejected_event = next(item for item in posts_response.json()["data"] if item["type"] == "postRejected")
+        self.assertEqual(
+            rejected_event["event_data"],
+            {
+                "kind": "postRejected",
+                "note": "回复质量不足",
+                "previous_status": "approved",
+                "target_post_id": pending_post.id,
+                "target_post_number": pending_post.number,
+            },
+        )
+
+    def test_editing_rejected_post_creates_post_resubmitted_event_post(self):
+        rejected_post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="被拒绝的回复",
+            user=self.reporter,
+        )
+        PostService.reject_post(rejected_post, self.admin, note="请补充更多细节")
+
+        response = self.client.patch(
+            f"/api/posts/{rejected_post.id}",
+            data='{"content":"修改后的回复内容"}',
+            content_type="application/json",
+            **self.auth_header(),
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+
+        posts_response = self.client.get(
+            f"/api/discussions/{self.discussion.id}/posts",
+            **self.auth_header(),
+        )
+        self.assertEqual(posts_response.status_code, 200, posts_response.content)
+        resubmitted_event = next(item for item in posts_response.json()["data"] if item["type"] == "postResubmitted")
+        self.assertEqual(
+            resubmitted_event["event_data"],
+            {
+                "kind": "postResubmitted",
+                "note": "",
+                "previous_status": "rejected",
+                "target_post_id": rejected_post.id,
+                "target_post_number": rejected_post.number,
+            },
+        )
 
     def test_cannot_reply_in_tag_without_reply_permission(self):
         admin = User.objects.create_superuser(
