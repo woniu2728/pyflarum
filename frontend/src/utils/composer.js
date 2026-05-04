@@ -2,6 +2,22 @@ import api from '@/api'
 export { EMOJI_GROUPS, searchEmojiItems } from '@/utils/emojiData'
 
 export const COMPOSER_EMOJI_PICKER_WIDTH = 420
+export const BASE_COMPOSER_TOOLS = [
+  { key: 'upload', title: '上传附件', icon: 'fas fa-file-upload', order: 10 },
+  { key: 'heading', title: '标题', label: 'H', before: '## ', after: '', order: 20 },
+  { key: 'bold', title: '加粗', label: 'B', before: '**', after: '**', order: 30 },
+  { key: 'italic', title: '斜体', label: 'I', before: '*', after: '*', order: 40 },
+  { key: 'strike', title: '删除线', label: 'S', before: '~~', after: '~~', order: 50 },
+  { key: 'quote', title: '引用', icon: 'fas fa-quote-left', order: 60 },
+  { key: 'spoiler', title: '提示/警告', icon: 'fas fa-exclamation-triangle', before: '> **提示：** ', after: '', order: 70 },
+  { key: 'code', title: '代码', icon: 'fas fa-code', before: '`', after: '`', order: 80 },
+  { key: 'link', title: '链接', icon: 'fas fa-link', order: 90 },
+  { key: 'image', title: '图片', icon: 'fas fa-image', order: 100 },
+  { key: 'bullets', title: '无序列表', icon: 'fas fa-list-ul', order: 110 },
+  { key: 'ordered', title: '有序列表', icon: 'fas fa-list-ol', order: 120 },
+  { key: 'mention', title: '@ 提及', icon: 'fas fa-at', before: '@', after: '', order: 130 },
+  { key: 'emoji', title: '表情', icon: 'far fa-smile', order: 140 }
+]
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']
 
@@ -23,6 +39,12 @@ export async function fetchComposerPreview(content) {
 }
 
 export function buildComposerToolReplacement(tool, selected) {
+  if (typeof tool?.replacement === 'function') {
+    return tool.replacement(selected, tool)
+  }
+  if (typeof tool?.replacement === 'string') {
+    return tool.replacement
+  }
   if (tool.key === 'link') {
     return selected ? `[${selected}](https://)` : '[链接文字](https://)'
   }
@@ -42,6 +64,9 @@ export function buildComposerToolReplacement(tool, selected) {
 }
 
 export function defaultToolCursorOffset(tool) {
+  if (typeof tool?.cursorOffset === 'number') {
+    return tool.cursorOffset
+  }
   const replacement = buildComposerToolReplacement(tool, '')
   if (tool.key === 'link') return replacement.indexOf('https://')
   return replacement.length
@@ -210,6 +235,7 @@ function prefixOrderedLines(content) {
 }
 
 function defaultToolText(tool) {
+  if (tool.placeholder) return tool.placeholder
   if (tool.key === 'code') return 'code'
   if (tool.key === 'heading') return '标题'
   return '文本'

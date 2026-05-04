@@ -162,11 +162,13 @@ import ComposerHeaderBar from '@/components/composer/ComposerHeaderBar.vue'
 import ComposerNoticeStack from '@/components/composer/ComposerNoticeStack.vue'
 import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue'
 import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
+import { getComposerNotices, getComposerTools, runComposerSubmitGuards } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
 import api from '@/api'
 import {
+  BASE_COMPOSER_TOOLS,
   COMPOSER_EMOJI_PICKER_WIDTH,
   EMOJI_GROUPS,
   buildEmojiReplacement,
@@ -230,22 +232,6 @@ let previewTimer = null
 let mentionTimer = null
 let mentionRequestId = 0
 
-const composerTools = [
-  { key: 'upload', title: '上传附件', icon: 'fas fa-file-upload' },
-  { key: 'heading', title: '标题', label: 'H', before: '## ', after: '' },
-  { key: 'bold', title: '加粗', label: 'B', before: '**', after: '**' },
-  { key: 'italic', title: '斜体', label: 'I', before: '*', after: '*' },
-  { key: 'strike', title: '删除线', label: 'S', before: '~~', after: '~~' },
-  { key: 'quote', title: '引用', icon: 'fas fa-quote-left' },
-  { key: 'spoiler', title: '提示/警告', icon: 'fas fa-exclamation-triangle', before: '> **提示：** ', after: '' },
-  { key: 'code', title: '代码', icon: 'fas fa-code', before: '`', after: '`' },
-  { key: 'link', title: '链接', icon: 'fas fa-link' },
-  { key: 'image', title: '图片', icon: 'fas fa-image' },
-  { key: 'bullets', title: '无序列表', icon: 'fas fa-list-ul' },
-  { key: 'ordered', title: '有序列表', icon: 'fas fa-list-ol' },
-  { key: 'mention', title: '@ 提及', icon: 'fas fa-at', before: '@', after: '' },
-  { key: 'emoji', title: '表情', icon: 'far fa-smile' }
-]
 const emojiGroups = EMOJI_GROUPS
 
 const showComposer = computed(() => {
@@ -310,6 +296,10 @@ const previewStatusText = computed(() => {
   if (!replyContent.value.trim()) return '暂无内容'
   return '按论坛最终渲染效果预览'
 })
+const composerTools = computed(() => {
+  return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+})
 const composerNotices = computed(() => {
   return [
     {
@@ -335,8 +325,10 @@ const composerNotices = computed(() => {
       label: isEditing.value ? '保存' : '发布',
       tone: submitNoticeTone.value,
       message: submitNotice.value
-    }
+    },
+    ...getComposerNotices(buildComposerExtensionContext())
   ]
+    .filter(item => item?.message)
 })
 const emojiPickerStyle = computed(() => {
   const anchor = emojiToolRef.value
@@ -700,6 +692,11 @@ function clearComposerDraft() {
 async function applyComposerTool(tool) {
   composerStore.showComposer()
   await nextTick()
+
+  if (typeof tool.run === 'function') {
+    await tool.run(buildComposerToolContext(tool))
+    return
+  }
 
   if (tool.key === 'upload') {
     showEmojiPicker.value = false
@@ -1085,6 +1082,17 @@ async function submitReply() {
   submitNotice.value = ''
   submitNoticeTone.value = 'info'
   try {
+    const blocked = await runComposerSubmitGuards({
+      ...buildComposerExtensionContext(),
+      modalStore,
+      submitKind: isEditing.value ? 'edit-post' : 'reply',
+    })
+    if (blocked) {
+      submitNoticeTone.value = blocked.tone || 'error'
+      submitNotice.value = blocked.message || '当前内容未通过校验。'
+      return
+    }
+
     if (isEditing.value) {
       const data = await api.patch(`/posts/${composerStore.current.postId}`, {
         content: replyContent.value
@@ -1193,6 +1201,41 @@ function clearComposerViewportEffects() {
   if (typeof document === 'undefined') return
   document.documentElement.style.setProperty('--composer-offset', '0px')
   document.body.style.overflow = ''
+}
+
+function buildComposerExtensionContext() {
+  return {
+    authStore,
+    composerStore,
+    content: replyContent.value,
+    discussionId: discussionId.value,
+    discussionTitle: composerStore.current.discussionTitle || '',
+    isEditing: isEditing.value,
+    mode: isEditing.value ? 'edit' : 'reply',
+    route,
+    router,
+    type: 'post',
+  }
+}
+
+function buildComposerToolContext(tool) {
+  const textarea = composerTextarea.value
+  return {
+    ...buildComposerExtensionContext(),
+    tool,
+    insertText: insertComposerText,
+    focusEditor: () => composerTextarea.value?.focus(),
+    openAttachmentPicker: () => attachmentInput.value?.click(),
+    openImagePicker: () => imageInput.value?.click(),
+    selectionEnd: textarea?.selectionEnd ?? replyContent.value.length,
+    selectionStart: textarea?.selectionStart ?? replyContent.value.length,
+    setEmojiPickerVisible(value) {
+      showEmojiPicker.value = Boolean(value)
+    },
+    setPreviewVisible(value) {
+      showPreview.value = Boolean(value)
+    },
+  }
 }
 </script>
 

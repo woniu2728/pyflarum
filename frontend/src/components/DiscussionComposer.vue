@@ -200,11 +200,13 @@ import ComposerHeaderBar from '@/components/composer/ComposerHeaderBar.vue'
 import ComposerNoticeStack from '@/components/composer/ComposerNoticeStack.vue'
 import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue'
 import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
+import { getComposerNotices, getComposerTools, runComposerSubmitGuards } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
 import api from '@/api'
 import {
+  BASE_COMPOSER_TOOLS,
   COMPOSER_EMOJI_PICKER_WIDTH,
   EMOJI_GROUPS,
   buildEmojiReplacement,
@@ -276,22 +278,6 @@ const viewportWidth = ref(typeof window === 'undefined' ? 1280 : window.innerWid
 let resizeStartY = 0
 let resizeStartHeight = composerHeight.value
 
-const composerTools = [
-  { key: 'upload', title: '上传附件', icon: 'fas fa-file-upload' },
-  { key: 'heading', title: '标题', label: 'H', before: '## ', after: '' },
-  { key: 'bold', title: '加粗', label: 'B', before: '**', after: '**' },
-  { key: 'italic', title: '斜体', label: 'I', before: '*', after: '*' },
-  { key: 'strike', title: '删除线', label: 'S', before: '~~', after: '~~' },
-  { key: 'quote', title: '引用', icon: 'fas fa-quote-left' },
-  { key: 'spoiler', title: '提示/警告', icon: 'fas fa-exclamation-triangle', before: '> **提示：** ', after: '' },
-  { key: 'code', title: '代码', icon: 'fas fa-code', before: '`', after: '`' },
-  { key: 'link', title: '链接', icon: 'fas fa-link' },
-  { key: 'image', title: '图片', icon: 'fas fa-image' },
-  { key: 'bullets', title: '无序列表', icon: 'fas fa-list-ul' },
-  { key: 'ordered', title: '有序列表', icon: 'fas fa-list-ol' },
-  { key: 'mention', title: '@ 提及', icon: 'fas fa-at', before: '@', after: '' },
-  { key: 'emoji', title: '表情', icon: 'far fa-smile' }
-]
 const emojiGroups = EMOJI_GROUPS
 
 const availableTags = computed(() => flattenTags(tags.value))
@@ -379,6 +365,10 @@ const previewStatusText = computed(() => {
   if (!form.value.content.trim()) return '暂无内容'
   return '按论坛最终渲染效果预览'
 })
+const composerTools = computed(() => {
+  return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+})
 const composerNotices = computed(() => {
   return [
     {
@@ -410,8 +400,10 @@ const composerNotices = computed(() => {
       label: isEditingDiscussion.value ? '保存' : '发布',
       tone: submitNoticeTone.value,
       message: submitNotice.value
-    }
+    },
+    ...getComposerNotices(buildComposerExtensionContext())
   ]
+    .filter(item => item?.message)
 })
 const emojiPickerStyle = computed(() => {
   const anchor = emojiToolRef.value
@@ -868,6 +860,17 @@ async function submitDiscussion() {
   submitNoticeTone.value = 'info'
 
   try {
+    const blocked = await runComposerSubmitGuards({
+      ...buildComposerExtensionContext(),
+      modalStore,
+      submitKind: isEditingDiscussion.value ? 'edit-discussion' : 'discussion',
+    })
+    if (blocked) {
+      submitNoticeTone.value = blocked.tone || 'error'
+      submitNotice.value = blocked.message || '当前内容未通过校验。'
+      return
+    }
+
     let data
     if (isEditingDiscussion.value) {
       data = await api.patch(`/discussions/${composerStore.current.discussionId}`, {
@@ -930,6 +933,11 @@ async function submitDiscussion() {
 async function applyComposerTool(tool) {
   composerStore.isMinimized = false
   await nextTick()
+
+  if (typeof tool.run === 'function') {
+    await tool.run(buildComposerToolContext(tool))
+    return
+  }
 
   if (tool.key === 'upload') {
     showEmojiPicker.value = false
@@ -1375,6 +1383,43 @@ function clearComposerViewportEffects() {
   if (typeof document === 'undefined') return
   document.documentElement.style.setProperty('--composer-offset', '0px')
   document.body.style.overflow = ''
+}
+
+function buildComposerExtensionContext() {
+  return {
+    authStore,
+    composerStore,
+    content: form.value.content,
+    discussionId: Number(composerStore.current.discussionId || 0),
+    isEditing: isEditingDiscussion.value,
+    mode: isEditingDiscussion.value ? 'edit' : 'create',
+    primaryTagId: form.value.primary_tag_id,
+    route: null,
+    router,
+    secondaryTagId: form.value.secondary_tag_id,
+    title: form.value.title,
+    type: 'discussion',
+  }
+}
+
+function buildComposerToolContext(tool) {
+  const textarea = composerTextarea.value
+  return {
+    ...buildComposerExtensionContext(),
+    tool,
+    insertText: insertComposerText,
+    focusEditor: () => composerTextarea.value?.focus(),
+    openAttachmentPicker: () => attachmentInput.value?.click(),
+    openImagePicker: () => imageInput.value?.click(),
+    selectionEnd: textarea?.selectionEnd ?? form.value.content.length,
+    selectionStart: textarea?.selectionStart ?? form.value.content.length,
+    setEmojiPickerVisible(value) {
+      showEmojiPicker.value = Boolean(value)
+    },
+    setPreviewVisible(value) {
+      showPreview.value = Boolean(value)
+    },
+  }
 }
 </script>
 

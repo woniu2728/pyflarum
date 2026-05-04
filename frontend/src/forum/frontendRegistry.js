@@ -3,6 +3,9 @@ const discussionActionItems = []
 const postActionItems = []
 const headerItems = []
 const forumNavSections = []
+const composerTools = []
+const composerNotices = []
+const composerSubmitGuards = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -140,4 +143,67 @@ export function getHeaderItems(context = {}, placement = '') {
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)
+}
+
+export function registerComposerTool(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerTools, normalizedItem.key, normalizedItem)
+}
+
+export function getComposerTools(context = {}) {
+  return [...composerTools]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerComposerNotice(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerNotices, normalizedItem.key, normalizedItem)
+}
+
+export function getComposerNotices(context = {}) {
+  return [...composerNotices]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerComposerSubmitGuard(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerSubmitGuards, normalizedItem.key, normalizedItem)
+}
+
+export async function runComposerSubmitGuards(context = {}) {
+  const guards = [...composerSubmitGuards]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+
+  for (const guard of guards) {
+    const isVisible = typeof guard.isVisible === 'function' ? guard.isVisible(context) : true
+    if (!isVisible) {
+      continue
+    }
+
+    const result = typeof guard.check === 'function'
+      ? await guard.check(context)
+      : true
+
+    if (result === false) {
+      return {
+        key: guard.key,
+        message: guard.message || '提交已取消。',
+        tone: guard.tone || 'error',
+      }
+    }
+
+    if (result && typeof result === 'object') {
+      return {
+        key: guard.key,
+        tone: guard.tone || 'error',
+        ...result,
+      }
+    }
+  }
+
+  return null
 }

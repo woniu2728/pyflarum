@@ -2,19 +2,31 @@ import { buildUserPath } from '@/utils/forum'
 import {
   getForumNavItems,
   getForumNavSections,
+  getComposerNotices,
+  getComposerTools,
   registerDiscussionAction,
+  registerComposerNotice,
+  registerComposerSubmitGuard,
+  registerComposerTool,
   registerForumNavItem,
   registerForumNavSection,
   registerPostAction,
+  runComposerSubmitGuards,
 } from '@/forum/frontendRegistry'
 
 export {
   getForumNavItems,
   getForumNavSections,
+  getComposerNotices,
+  getComposerTools,
   registerDiscussionAction,
+  registerComposerNotice,
+  registerComposerSubmitGuard,
+  registerComposerTool,
   registerForumNavItem,
   registerForumNavSection,
   registerPostAction,
+  runComposerSubmitGuards,
 }
 
 registerForumNavSection({
