@@ -264,7 +264,7 @@ export function useDiscussionDetailPage({
 
   function replacePosts(data) {
     const items = unwrapList(data).map(normalizePost)
-    postIds.value = items.map(item => resourceStore.upsert('posts', item).id)
+    postIds.value = collectPostIds(items)
     firstLoadedPage.value = data.page || 1
     lastLoadedPage.value = data.page || 1
     totalPosts.value = data.total || items.length
@@ -277,8 +277,7 @@ export function useDiscussionDetailPage({
 
   function appendPosts(data) {
     const items = unwrapList(data).map(normalizePost)
-    const ids = items.map(item => resourceStore.upsert('posts', item).id)
-    postIds.value = [...postIds.value, ...ids]
+    mergePostIds(collectPostIds(items))
     lastLoadedPage.value = data.page || lastLoadedPage.value + 1
     totalPosts.value = data.total || totalPosts.value
     nextTick(() => {
@@ -292,8 +291,7 @@ export function useDiscussionDetailPage({
     const anchorNumber = posts.value[0]?.number
     const anchorTop = anchorNumber ? document.getElementById(`post-${anchorNumber}`)?.getBoundingClientRect().top : null
     const items = unwrapList(data).map(normalizePost)
-    const ids = items.map(item => resourceStore.upsert('posts', item).id)
-    postIds.value = [...ids, ...postIds.value]
+    mergePostIds(collectPostIds(items), { prepend: true })
     firstLoadedPage.value = data.page || Math.max(1, firstLoadedPage.value - 1)
     totalPosts.value = data.total || totalPosts.value
     nextTick(() => {
@@ -375,6 +373,23 @@ export function useDiscussionDetailPage({
     currentVisiblePostNumber.value = normalizePostNumber(route.query.near) || 1
     currentVisiblePostProgress.value = currentVisiblePostNumber.value
     scrubberPreviewNumber.value = null
+  }
+
+  function collectPostIds(items = []) {
+    return items.map(item => resourceStore.upsert('posts', item).id)
+  }
+
+  function mergePostIds(ids = [], { prepend = false } = {}) {
+    const source = prepend ? [...ids, ...postIds.value] : [...postIds.value, ...ids]
+    const seen = new Set()
+    postIds.value = source.filter(id => {
+      const key = String(id)
+      if (seen.has(key)) {
+        return false
+      }
+      seen.add(key)
+      return true
+    })
   }
 
   function handlePostScroll() {
@@ -720,16 +735,19 @@ export function useDiscussionDetailPage({
         if (!discussion.value) return
 
         lastReportedReadNumber = Number(data.last_read_post_number || targetNumber)
-        discussion.value.last_read_post_number = lastReportedReadNumber
-        discussion.value.last_read_at = data.last_read_at || discussion.value.last_read_at
-        discussion.value.unread_count = Math.max((discussion.value.last_post_number || 0) - lastReportedReadNumber, 0)
-        discussion.value.is_unread = discussion.value.unread_count > 0
+        const unreadCount = Math.max((discussion.value.last_post_number || 0) - lastReportedReadNumber, 0)
+        patchDiscussion({
+          last_read_post_number: lastReportedReadNumber,
+          last_read_at: data.last_read_at || discussion.value.last_read_at,
+          unread_count: unreadCount,
+          is_unread: unreadCount > 0,
+        })
         window.dispatchEvent(new CustomEvent('bias:discussion-read-state-updated', {
           detail: {
             discussionId: discussion.value.id,
             lastReadPostNumber: lastReportedReadNumber,
-            lastReadAt: discussion.value.last_read_at,
-            unreadCount: discussion.value.unread_count
+            lastReadAt: data.last_read_at || discussion.value.last_read_at,
+            unreadCount
           }
         }))
       } catch (error) {
@@ -747,28 +765,31 @@ export function useDiscussionDetailPage({
     if (posts.value.some(post => post.id === newPost.id)) return
 
     const mergedPost = resourceStore.upsert('posts', newPost)
-    postIds.value = [...postIds.value, mergedPost.id]
-    discussion.value.comment_count = (discussion.value.comment_count || 0) + 1
-    discussion.value.last_post_id = newPost.id
-    discussion.value.last_post_number = Math.max(discussion.value.last_post_number || 0, newPost.number || 0)
-    discussion.value.last_posted_at = newPost.created_at || discussion.value.last_posted_at
+    mergePostIds([mergedPost.id])
     totalPosts.value = Math.max(totalPosts.value + 1, posts.value.length)
     lastLoadedPage.value = Math.max(lastLoadedPage.value, Math.ceil(totalPosts.value / pageLimit))
     lastReportedReadNumber = Math.max(lastReportedReadNumber, newPost.number || 0)
-    discussion.value.last_read_post_number = Math.max(Number(discussion.value.last_read_post_number || 0), newPost.number || 0)
-    discussion.value.last_read_at = newPost.created_at || discussion.value.last_read_at
-    discussion.value.unread_count = Math.max((discussion.value.last_post_number || 0) - discussion.value.last_read_post_number, 0)
-    discussion.value.is_unread = discussion.value.unread_count > 0
-    if (authStore.user?.preferences?.follow_after_reply) {
-      discussion.value.is_subscribed = true
-    }
+    const lastReadPostNumber = Math.max(Number(discussion.value.last_read_post_number || 0), newPost.number || 0)
+    const lastPostNumber = Math.max(discussion.value.last_post_number || 0, newPost.number || 0)
+    const unreadCount = Math.max(lastPostNumber - lastReadPostNumber, 0)
+    patchDiscussion({
+      comment_count: (discussion.value.comment_count || 0) + 1,
+      last_post_id: newPost.id,
+      last_post_number: lastPostNumber,
+      last_posted_at: newPost.created_at || discussion.value.last_posted_at,
+      last_read_post_number: lastReadPostNumber,
+      last_read_at: newPost.created_at || discussion.value.last_read_at,
+      unread_count: unreadCount,
+      is_unread: unreadCount > 0,
+      ...(authStore.user?.preferences?.follow_after_reply ? { is_subscribed: true } : {}),
+    })
 
     window.dispatchEvent(new CustomEvent('bias:discussion-read-state-updated', {
       detail: {
         discussionId: discussion.value.id,
-        lastReadPostNumber: discussion.value.last_read_post_number,
-        lastReadAt: discussion.value.last_read_at,
-        unreadCount: discussion.value.unread_count
+        lastReadPostNumber,
+        lastReadAt: newPost.created_at || discussion.value.last_read_at,
+        unreadCount
       }
     }))
 
@@ -793,8 +814,18 @@ export function useDiscussionDetailPage({
   function upsertPost(rawPost) {
     const updatedPost = resourceStore.upsert('posts', normalizePost(rawPost))
     if (!postIds.value.includes(updatedPost.id)) {
-      postIds.value = [...postIds.value, updatedPost.id]
+      mergePostIds([updatedPost.id])
     }
+  }
+
+  function patchDiscussion(patch) {
+    if (!discussionId.value) return null
+    return resourceStore.patch('discussions', discussionId.value, patch)
+  }
+
+  function removePost(postId) {
+    postIds.value = postIds.value.filter(id => String(id) !== String(postId))
+    resourceStore.remove('posts', postId)
   }
 
   return {
@@ -835,6 +866,8 @@ export function useDiscussionDetailPage({
     unreadCount,
     unreadHeightPercent,
     unreadTopPercent,
+    patchDiscussion,
+    removePost,
     upsertPost
   }
 }

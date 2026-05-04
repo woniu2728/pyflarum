@@ -112,6 +112,31 @@ export const useResourceStore = defineStore('resource', () => {
     delete buckets.value[normalizedType][entityId]
   }
 
+  function removeMany(type, ids = []) {
+    ids.forEach(id => remove(type, id))
+  }
+
+  function patch(type, id, updater) {
+    const normalizedType = normalizeResourceType(type)
+    const entityId = getEntityId({ id })
+    if (!normalizedType || entityId === null) return null
+
+    const currentItem = get(normalizedType, entityId) || { id: entityId }
+    const nextPatch = typeof updater === 'function'
+      ? updater({ ...currentItem })
+      : updater
+
+    if (!nextPatch || typeof nextPatch !== 'object') {
+      return get(normalizedType, entityId) || null
+    }
+
+    return upsert(normalizedType, {
+      ...currentItem,
+      ...nextPatch,
+      id: nextPatch.id ?? currentItem.id ?? entityId,
+    })
+  }
+
   function extractResourceItems(payload = {}) {
     if (!payload || typeof payload !== 'object') return []
 
@@ -170,9 +195,11 @@ export const useResourceStore = defineStore('resource', () => {
     stats,
     get,
     list,
+    patch,
     upsert,
     upsertMany,
     remove,
+    removeMany,
     mergePayload,
   }
 })

@@ -1,11 +1,13 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import api from '@/api'
+import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { useResourceStore } from '@/stores/resource'
-import { normalizeDiscussion, normalizePost, normalizeUser, unwrapList } from '@/utils/forum'
+import { unwrapList } from '@/utils/forum'
 import { highlightSearchText } from '@/utils/search'
 import { renderTwemojiHtml } from '@/utils/twemoji'
 
 export function useSearchResultsPage({ route, router }) {
+  const routeState = useSearchRouteState({ route, router })
   const resourceStore = useResourceStore()
   const loading = ref(false)
   const total = ref(0)
@@ -15,19 +17,14 @@ export function useSearchResultsPage({ route, router }) {
   const discussionIds = ref([])
   const postIds = ref([])
   const userIds = ref([])
+  let activeController = null
+  let activeRequestId = 0
   const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
   const posts = computed(() => resourceStore.list('posts', postIds.value))
   const users = computed(() => resourceStore.list('users', userIds.value))
-
-  const normalizedQuery = computed(() => String(route.query.q || '').trim())
-  const searchType = computed(() => {
-    const value = String(route.query.type || 'all')
-    return ['all', 'discussions', 'posts', 'users'].includes(value) ? value : 'all'
-  })
-  const page = computed(() => {
-    const value = Number(route.query.page || 1)
-    return Number.isFinite(value) && value > 0 ? value : 1
-  })
+  const normalizedQuery = routeState.normalizedQuery
+  const searchType = routeState.searchType
+  const page = routeState.page
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
   const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
   const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
@@ -64,12 +61,22 @@ export function useSearchResultsPage({ route, router }) {
     { immediate: true }
   )
 
+  onBeforeUnmount(() => {
+    activeController?.abort()
+  })
+
   async function loadResults() {
     if (!normalizedQuery.value) {
+      activeController?.abort()
       resetResults()
       return
     }
 
+    activeController?.abort()
+    const requestId = activeRequestId + 1
+    activeRequestId = requestId
+    const controller = new AbortController()
+    activeController = controller
     loading.value = true
     try {
       const data = await api.get('/search', {
@@ -78,27 +85,35 @@ export function useSearchResultsPage({ route, router }) {
           type: searchType.value,
           page: page.value,
           limit: 20
-        }
+        },
+        signal: controller.signal
       })
+
+      if (requestId !== activeRequestId) {
+        return
+      }
 
       total.value = data.total || 0
       discussionTotal.value = data.discussion_total ?? (data.discussions || []).length
       postTotal.value = data.post_total ?? (data.posts || []).length
       userTotal.value = data.user_total ?? (data.users || []).length
-      discussionIds.value = unwrapList(data.discussions || [])
-        .map(normalizeDiscussion)
-        .map(item => resourceStore.upsert('discussions', item).id)
-      postIds.value = unwrapList(data.posts || [])
-        .map(normalizePost)
-        .map(item => resourceStore.upsert('posts', item).id)
-      userIds.value = unwrapList(data.users || [])
-        .map(normalizeUser)
-        .map(item => resourceStore.upsert('users', item).id)
+      discussionIds.value = resourceStore.upsertMany('discussions', unwrapList(data.discussions || []))
+        .map(item => item.id)
+      postIds.value = resourceStore.upsertMany('posts', unwrapList(data.posts || []))
+        .map(item => item.id)
+      userIds.value = resourceStore.upsertMany('users', unwrapList(data.users || []))
+        .map(item => item.id)
     } catch (error) {
+      if (isCanceledRequest(error)) {
+        return
+      }
       console.error('加载搜索结果失败:', error)
       resetResults()
     } finally {
-      loading.value = false
+      if (requestId === activeRequestId) {
+        loading.value = false
+        activeController = null
+      }
     }
   }
 
@@ -113,25 +128,29 @@ export function useSearchResultsPage({ route, router }) {
   }
 
   function changeType(type) {
-    router.push({
-      path: '/search',
-      query: {
-        q: normalizedQuery.value,
-        type,
-        ...(type === 'all' ? {} : { page: 1 })
-      }
+    const nextType = ['all', 'discussions', 'posts', 'users'].includes(type) ? type : 'all'
+    if (nextType === searchType.value) {
+      return
+    }
+
+    routeState.push({
+      searchType: nextType,
+      page: 1,
     })
   }
 
   function changePage(nextPage) {
-    router.push({
-      path: '/search',
-      query: {
-        q: normalizedQuery.value,
-        type: searchType.value,
-        page: nextPage
-      }
+    if (nextPage === page.value) {
+      return
+    }
+
+    routeState.push({
+      page: nextPage,
     })
+  }
+
+  function isCanceledRequest(error) {
+    return error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
   }
 
   function getDiscussionTitleHtml(discussion) {

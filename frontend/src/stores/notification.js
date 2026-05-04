@@ -215,7 +215,7 @@ export const useNotificationStore = defineStore('notification', () => {
     await api.post(`/notifications/${notificationId}/read`)
 
     if (notification && !notification.is_read) {
-      notification.is_read = true
+      resourceStore.patch('notifications', notificationId, { is_read: true })
       unreadCount.value = Math.max(0, unreadCount.value - 1)
       readCount.value += 1
     }
@@ -223,8 +223,8 @@ export const useNotificationStore = defineStore('notification', () => {
 
   async function markAllAsRead() {
     const data = await api.post('/notifications/read-all')
-    notifications.value.forEach(notification => {
-      notification.is_read = true
+    notificationIds.value.forEach(id => {
+      resourceStore.patch('notifications', id, { is_read: true })
     })
     readCount.value += unreadCount.value
     unreadCount.value = 0
@@ -263,7 +263,7 @@ export const useNotificationStore = defineStore('notification', () => {
       .filter(notification => notification.is_read)
       .map(notification => notification.id)
     notificationIds.value = notificationIds.value.filter(id => !removedIds.includes(id))
-    removedIds.forEach(id => resourceStore.remove('notifications', id))
+    resourceStore.removeMany('notifications', removedIds)
     const removedCount = Number(data.count || 0)
     totalCount.value = Math.max(0, totalCount.value - removedCount)
     readCount.value = Math.max(0, readCount.value - removedCount)

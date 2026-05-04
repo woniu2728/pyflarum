@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import api from '@/api'
+import { useResourceStore } from '@/stores/resource'
 import { formatRelativeTime } from '@/utils/forum'
 import ModerationActionModal from '@/components/modals/ModerationActionModal.vue'
 import PostReportModal from '@/components/modals/PostReportModal.vue'
@@ -11,13 +12,16 @@ export function useDiscussionDetailInteractions({
   hasActiveComposer,
   modalStore,
   posts,
+  patchDiscussion,
   refreshDiscussion,
+  removePost,
   route,
   router,
   scrollToPost,
   totalPosts,
   upsertPost
 }) {
+  const resourceStore = useResourceStore()
   const togglingSubscription = ref(false)
   const likePendingPostIds = ref([])
   const flagPendingPostIds = ref([])
@@ -87,17 +91,23 @@ export function useDiscussionDetailInteractions({
     const previousLikeCount = Number(post.like_count || 0)
     try {
       if (previousLiked) {
-        post.like_count = Math.max(0, previousLikeCount - 1)
-        post.is_liked = false
+        resourceStore.patch('posts', post.id, {
+          like_count: Math.max(0, previousLikeCount - 1),
+          is_liked: false,
+        })
         await api.delete(`/posts/${post.id}/like`)
       } else {
-        post.like_count = previousLikeCount + 1
-        post.is_liked = true
+        resourceStore.patch('posts', post.id, {
+          like_count: previousLikeCount + 1,
+          is_liked: true,
+        })
         await api.post(`/posts/${post.id}/like`)
       }
     } catch (error) {
-      post.like_count = previousLikeCount
-      post.is_liked = previousLiked
+      resourceStore.patch('posts', post.id, {
+        like_count: previousLikeCount,
+        is_liked: previousLiked,
+      })
       console.error('点赞失败:', error)
       await modalStore.alert({
         title: '点赞失败',
@@ -195,9 +205,17 @@ export function useDiscussionDetailInteractions({
   async function deletePost(post) {
     try {
       await api.delete(`/posts/${post.id}`)
-      posts.value = posts.value.filter(item => item.id !== post.id)
-      discussion.value.comment_count--
+      removePost(post.id)
+      const shouldRefreshDiscussion = Number(post?.number || 0) >= Number(discussion.value?.last_post_number || 0)
+
+      patchDiscussion(currentDiscussion => ({
+        comment_count: Math.max(0, Number(currentDiscussion.comment_count || 0) - 1),
+      }))
       totalPosts.value = Math.max(0, totalPosts.value - 1)
+
+      if (shouldRefreshDiscussion) {
+        await refreshDiscussion()
+      }
     } catch (error) {
       console.error('删除失败:', error)
       await modalStore.alert({
@@ -341,7 +359,9 @@ export function useDiscussionDetailInteractions({
       )
 
       if (result?.reported) {
-        post.viewer_has_open_flag = true
+        resourceStore.patch('posts', post.id, {
+          viewer_has_open_flag: true,
+        })
         await modalStore.alert({
           title: '举报已提交',
           message: '版主会尽快查看并处理。'
@@ -401,7 +421,9 @@ export function useDiscussionDetailInteractions({
   async function togglePin() {
     try {
       await api.post(`/discussions/${discussion.value.id}/pin`)
-      discussion.value.is_sticky = !discussion.value.is_sticky
+      patchDiscussion(currentDiscussion => ({
+        is_sticky: !currentDiscussion.is_sticky,
+      }))
     } catch (error) {
       console.error('操作失败:', error)
     }
@@ -410,7 +432,9 @@ export function useDiscussionDetailInteractions({
   async function toggleLock() {
     try {
       await api.post(`/discussions/${discussion.value.id}/lock`)
-      discussion.value.is_locked = !discussion.value.is_locked
+      patchDiscussion(currentDiscussion => ({
+        is_locked: !currentDiscussion.is_locked,
+      }))
     } catch (error) {
       console.error('操作失败:', error)
     }
@@ -419,7 +443,9 @@ export function useDiscussionDetailInteractions({
   async function toggleHide() {
     try {
       await api.post(`/discussions/${discussion.value.id}/hide`)
-      discussion.value.is_hidden = !discussion.value.is_hidden
+      patchDiscussion(currentDiscussion => ({
+        is_hidden: !currentDiscussion.is_hidden,
+      }))
     } catch (error) {
       console.error('操作失败:', error)
     }
@@ -453,10 +479,10 @@ export function useDiscussionDetailInteractions({
     try {
       if (discussion.value.is_subscribed) {
         await api.delete(`/discussions/${discussion.value.id}/subscribe`)
-        discussion.value.is_subscribed = false
+        patchDiscussion({ is_subscribed: false })
       } else {
         await api.post(`/discussions/${discussion.value.id}/subscribe`)
-        discussion.value.is_subscribed = true
+        patchDiscussion({ is_subscribed: true })
       }
     } catch (error) {
       console.error('更新关注状态失败:', error)
