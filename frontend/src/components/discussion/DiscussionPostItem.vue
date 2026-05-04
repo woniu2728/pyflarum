@@ -93,10 +93,22 @@
                 v-for="item in postMenuItems"
                 :key="item.key"
                 type="button"
-                :class="{ 'is-danger': item.tone === 'danger' }"
+                class="post-controls-menu-item"
+                :class="{
+                  'is-danger': item.tone === 'danger',
+                  'is-disabled': item.disabled
+                }"
+                :disabled="item.disabled"
+                :title="item.disabledReason || item.description || ''"
                 @click="handleMenuAction(item.key, post)"
               >
-                {{ item.label }}
+                <span class="post-controls-menu-item-main">
+                  <i v-if="item.icon" :class="item.icon"></i>
+                  <span>{{ item.label }}</span>
+                </span>
+                <small v-if="item.description || item.disabledReason">
+                  {{ item.disabledReason || item.description }}
+                </small>
               </button>
             </div>
           </div>
@@ -714,7 +726,7 @@ function handleMenuAction(eventName, payload) {
   z-index: 8;
 }
 
-.post-controls-menu button {
+.post-controls-menu-item {
   width: 100%;
   border: 0;
   background: transparent;
@@ -724,18 +736,43 @@ function handleMenuAction(eventName, payload) {
   border-radius: var(--forum-radius-sm);
   font-size: var(--forum-font-size-sm);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.post-controls-menu button:hover {
+.post-controls-menu-item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.post-controls-menu-item small {
+  color: var(--forum-text-soft);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.post-controls-menu-item:hover {
   background: var(--forum-bg-subtle);
 }
 
-.post-controls-menu button.is-danger {
+.post-controls-menu-item.is-danger {
   color: var(--forum-danger-color);
 }
 
-.post-controls-menu button.is-danger:hover {
+.post-controls-menu-item.is-danger:hover {
   background: var(--forum-danger-soft);
+}
+
+.post-controls-menu-item.is-disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.post-controls-menu-item.is-disabled:hover {
+  background: transparent;
 }
 
 .post-footer {

@@ -24,9 +24,32 @@ export function useDiscussionDetailMenus({
   toggleHide,
   toggleLock,
   togglePin,
-  toggleSubscription
+  toggleSubscription,
+  togglePostHidden,
+  deletePost,
+  editPost,
+  modalStore
 }) {
+  async function maybeConfirmAction(item) {
+    if (!item?.confirm || !modalStore) {
+      return true
+    }
+
+    return modalStore.confirm({
+      cancelText: '取消',
+      confirmText: '继续',
+      tone: item.tone === 'danger' ? 'danger' : 'primary',
+      ...item.confirm,
+    })
+  }
+
   async function handleDiscussionMenuSelection(action) {
+    const item = discussionMenuItems.value.find(entry => entry.key === action)
+    if (!item || item.disabled) return
+
+    const confirmed = await maybeConfirmAction(item)
+    if (!confirmed) return
+
     const actionMap = {
       reply: openComposer,
       login: goToLoginForReply,
@@ -74,10 +97,31 @@ export function useDiscussionDetailMenus({
     await openReportModal(post)
   }
 
+  async function handlePostMenuSelection(post, action) {
+    const item = getPostMenuOptions(post).find(entry => entry.key === action)
+    if (!item || item.disabled) return
+
+    const confirmed = await maybeConfirmAction(item)
+    if (!confirmed) return
+
+    const actionMap = {
+      'edit-post': editPost,
+      'delete-post': deletePost,
+      'toggle-hide-post': togglePostHidden,
+      'open-report-modal': handleOpenReportModal,
+    }
+    const handler = actionMap[action]
+    if (!handler) return
+
+    activePostMenuId.value = null
+    await handler(post)
+  }
+
   return {
     discussionMenuItems,
     getPostMenuOptions,
     handleDiscussionMenuSelection,
+    handlePostMenuSelection,
     hasPostControls,
     handleOpenReportModal
   }

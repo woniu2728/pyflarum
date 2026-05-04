@@ -82,10 +82,10 @@
                 @toggle-like="toggleLike"
                 @reply-to-post="replyToPost"
                 @toggle-post-menu="togglePostMenu"
-                @edit-post="editPost"
-                @delete-post="deletePost"
-                @toggle-hide-post="togglePostHidden"
-                @open-report-modal="handleOpenReportModal"
+                @edit-post="post => handlePostMenuSelection(post, 'edit-post')"
+                @delete-post="post => handlePostMenuSelection(post, 'delete-post')"
+                @toggle-hide-post="post => handlePostMenuSelection(post, 'toggle-hide-post')"
+                @open-report-modal="post => handlePostMenuSelection(post, 'open-report-modal')"
                 @moderate-post="({ post: targetPost, action }) => moderatePost(targetPost, action)"
                 @resolve-post-flags="({ post: targetPost, status }) => resolvePostFlags(targetPost, status)"
                 @close-post-menu="activePostMenuId = null"
@@ -245,9 +245,7 @@ const {
   canReportPost,
   canShowDiscussionMenu,
   deleteDiscussion,
-  deletePost,
   editDiscussion,
-  editPost,
   flagPendingPostIds,
   formatAbsoluteDate,
   formatDate,
@@ -266,7 +264,6 @@ const {
   toggleLike,
   toggleLock,
   togglePin,
-  togglePostHidden,
   toggleSubscription,
   togglingSubscription
 } = useDiscussionDetailInteractions({
@@ -293,6 +290,7 @@ const {
   discussionMenuItems,
   getPostMenuOptions,
   handleDiscussionMenuSelection,
+  handlePostMenuSelection,
   hasPostControls,
   handleOpenReportModal
 } = useDiscussionDetailMenus({
@@ -307,10 +305,13 @@ const {
   canReplyFromMenu,
   discussion,
   deleteDiscussion,
+  deletePost,
   editDiscussion,
+  editPost,
   goToLoginForReply,
   hasActiveComposer,
   isSuspended,
+  modalStore,
   openComposer,
   openReportModal,
   showDiscussionMenu,
@@ -318,6 +319,7 @@ const {
   toggleHide,
   toggleLock,
   togglePin,
+  togglePostHidden,
   toggleSubscription
 })
 

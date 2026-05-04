@@ -28,11 +28,28 @@ function resolveRegisteredItem(item, context = {}) {
     return null
   }
 
+  const resolvedItem = typeof item.resolve === 'function'
+    ? item.resolve(context)
+    : item
+
+  if (!resolvedItem) {
+    return null
+  }
+
   return {
     ...item,
-    to: typeof item.to === 'function' ? item.to(context) : item.to,
-    href: typeof item.href === 'function' ? item.href(context) : item.href,
-    badge: typeof item.badge === 'function' ? item.badge(context) : item.badge,
+    ...resolvedItem,
+    to: typeof resolvedItem.to === 'function' ? resolvedItem.to(context) : resolvedItem.to,
+    href: typeof resolvedItem.href === 'function' ? resolvedItem.href(context) : resolvedItem.href,
+    badge: typeof resolvedItem.badge === 'function' ? resolvedItem.badge(context) : resolvedItem.badge,
+    description: typeof resolvedItem.description === 'function' ? resolvedItem.description(context) : resolvedItem.description,
+    disabledReason: typeof resolvedItem.disabledReason === 'function' ? resolvedItem.disabledReason(context) : resolvedItem.disabledReason,
+    confirm: typeof resolvedItem.confirm === 'function' ? resolvedItem.confirm(context) : resolvedItem.confirm,
+    disabled: Boolean(
+      typeof resolvedItem.isDisabled === 'function'
+        ? resolvedItem.isDisabled(context)
+        : resolvedItem.disabled
+    ),
   }
 }
 

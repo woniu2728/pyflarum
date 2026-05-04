@@ -5,10 +5,22 @@
         v-for="item in menuItems"
         :key="item.key"
         type="button"
-        :class="{ 'is-danger': item.tone === 'danger' }"
+        class="discussion-actions-menu-item"
+        :class="{
+          'is-danger': item.tone === 'danger',
+          'is-disabled': item.disabled
+        }"
+        :disabled="item.disabled"
+        :title="item.disabledReason || item.description || ''"
         @click="$emit('menu-action', item.key)"
       >
-        {{ item.label }}
+        <span class="discussion-actions-menu-item-main">
+          <i v-if="item.icon" :class="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </span>
+        <small v-if="item.description || item.disabledReason">
+          {{ item.disabledReason || item.description }}
+        </small>
       </button>
     </div>
   </div>
@@ -87,7 +99,7 @@ defineExpose({
   z-index: 5;
 }
 
-.discussion-actions-menu button {
+.discussion-actions-menu-item {
   width: 100%;
   margin: 0;
   border: 0;
@@ -98,18 +110,43 @@ defineExpose({
   text-align: left;
   font-size: var(--forum-font-size-sm);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.discussion-actions-menu button:hover {
+.discussion-actions-menu-item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.discussion-actions-menu-item small {
+  color: var(--forum-text-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.discussion-actions-menu-item:hover {
   background: var(--forum-bg-subtle);
 }
 
-.discussion-actions-menu button.is-danger {
+.discussion-actions-menu-item.is-danger {
   color: var(--forum-danger-color);
 }
 
-.discussion-actions-menu button.is-danger:hover {
+.discussion-actions-menu-item.is-danger:hover {
   background: var(--forum-danger-soft);
+}
+
+.discussion-actions-menu-item.is-disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.discussion-actions-menu-item.is-disabled:hover {
+  background: transparent;
 }
 
 @media (max-width: 768px) {
