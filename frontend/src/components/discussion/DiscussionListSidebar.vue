@@ -12,20 +12,12 @@
 
     <nav class="index-nav-list">
       <ul class="index-nav-base-list">
-        <li>
+        <li v-for="item in sidebarFilterItems" :key="item.code">
           <DiscussionListSidebarNavLink
-            to="/"
-            icon="far fa-comments"
-            label="全部讨论"
-            :active="false"
-          />
-        </li>
-        <li v-if="showFollowingLink">
-          <DiscussionListSidebarNavLink
-            to="/following"
-            icon="fas fa-bell"
-            label="关注中"
-            :active="isFollowingPage"
+            :to="item.to"
+            :icon="item.icon"
+            :label="item.label"
+            :active="item.active"
           />
         </li>
         <li v-if="showProfileLink">
@@ -96,17 +88,13 @@ const props = defineProps({
     type: Object,
     default: null
   },
-  isAllDiscussionsPage: {
-    type: Boolean,
-    default: false
-  },
-  isFollowingPage: {
-    type: Boolean,
-    default: false
-  },
   isOwnProfilePage: {
     type: Boolean,
     default: false
+  },
+  sidebarFilterItems: {
+    type: Array,
+    default: () => []
   },
   isTagsPage: {
     type: Boolean,
@@ -158,7 +146,6 @@ const showStartDiscussionButton = computed(() => {
   return !props.authStore.isAuthenticated || props.authStore.canStartDiscussion
 })
 
-const showFollowingLink = computed(() => Boolean(props.authStore?.user))
 const showProfileLink = computed(() => Boolean(props.authStore?.user))
 
 defineEmits(['start-discussion'])

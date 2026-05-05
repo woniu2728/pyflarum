@@ -1,10 +1,18 @@
 import { computed } from 'vue'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 
+const DEFAULT_DISCUSSION_FILTERS = [
+  { code: 'all', label: '全部讨论', icon: 'far fa-comments' },
+  { code: 'following', label: '关注中', icon: 'fas fa-bell', requires_authenticated_user: true },
+  { code: 'my', label: '我的讨论', icon: 'fas fa-pen' },
+  { code: 'unread', label: '未读', icon: 'fas fa-circle', requires_authenticated_user: true },
+]
+
 export function useDiscussionListNavigation({
   authStore,
   currentTag,
   currentTagSlug,
+  filterOptions,
   isFollowingPage,
   listFilter,
   route,
@@ -23,6 +31,7 @@ export function useDiscussionListNavigation({
   const currentTagContextParent = computed(() => findSidebarContextParent(currentTagSlug.value, tags.value))
   const sidebarPrimaryTagItems = computed(() => buildSidebarPrimaryTagItems(tags.value, currentTagContextParent.value))
   const sidebarSecondaryTagItems = computed(() => buildSidebarSecondaryTagItems(tags.value))
+  const sidebarFilterItems = computed(() => buildSidebarFilterItems())
   const hasSidebarTagNavigation = computed(() => tags.value.length > 0)
   const showMoreTagsLink = computed(() => sidebarSecondaryTagItems.value.length > 0)
   const startDiscussionButtonStyle = computed(() => getStartDiscussionButtonStyle(currentTag.value))
@@ -41,6 +50,63 @@ export function useDiscussionListNavigation({
     }
     return '暂无讨论。'
   })
+
+  function buildSidebarFilterItems() {
+    const sourceFilters = Array.isArray(filterOptions?.value) && filterOptions.value.length
+      ? filterOptions.value
+      : DEFAULT_DISCUSSION_FILTERS
+    const fallbackByCode = new Map(DEFAULT_DISCUSSION_FILTERS.map(item => [item.code, item]))
+
+    return sourceFilters
+      .map(item => {
+        const fallback = fallbackByCode.get(item.code) || {}
+        return {
+          ...fallback,
+          ...item,
+          label: item.label || fallback.label || item.code,
+          icon: item.icon || fallback.icon || 'far fa-comments',
+        }
+      })
+      .filter(item => !(item.requires_authenticated_user && !authStore.user))
+      .map(item => ({
+        ...item,
+        to: buildDiscussionFilterLocation(item.code),
+        active: isDiscussionFilterActive(item.code),
+      }))
+  }
+
+  function buildDiscussionFilterLocation(filterCode) {
+    if (filterCode === 'following') {
+      return '/following'
+    }
+
+    if (filterCode === 'all') {
+      return '/'
+    }
+
+    return {
+      path: '/',
+      query: {
+        filter: filterCode,
+      },
+    }
+  }
+
+  function isDiscussionFilterActive(filterCode) {
+    if (currentTagSlug.value || route.name === 'tags') {
+      return false
+    }
+
+    if (filterCode === 'following') {
+      return isFollowingPage.value
+    }
+
+    if (route.name !== 'home') {
+      return false
+    }
+
+    return listFilter.value === filterCode
+  }
 
   function buildSidebarPrimaryTagItems(sourceTags, contextParent) {
     return sortForumSidebarTags(flattenTags(sourceTags)).filter(tag => {
@@ -162,6 +228,7 @@ export function useDiscussionListNavigation({
     isOwnProfilePage,
     isSidebarTagActive,
     isTagsPage,
+    sidebarFilterItems,
     showMoreTagsLink,
     sidebarPrimaryTagItems,
     sidebarSecondaryTagItems,

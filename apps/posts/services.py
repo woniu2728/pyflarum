@@ -37,6 +37,8 @@ POST_HIDDEN_EVENT_TYPE = "postHidden"
 class PostService:
     """帖子服务"""
 
+    POST_NUMBER_CONFLICT_RETRY_ATTEMPTS = 3
+
     @staticmethod
     def annotate_flag_state(queryset, user: Optional[User] = None):
         if user and user.is_authenticated:
@@ -160,9 +162,13 @@ class PostService:
         TagService.ensure_can_reply_in_discussion(user, discussion)
 
         with transaction.atomic():
-            # 获取下一个楼层号
-            last_post = Post.objects.filter(discussion=discussion).order_by('-number').first()
-            next_number = (last_post.number + 1) if last_post else 1
+            discussion = PostService._lock_discussion_for_post_number(discussion.id)
+
+            if discussion.approval_status != Discussion.APPROVAL_APPROVED and not user.is_staff:
+                raise ValueError("讨论正在审核中，暂时无法回复")
+
+            if discussion.is_locked and not user.is_staff:
+                raise ValueError("讨论已锁定，无法回复")
 
             reply_target = None
             if reply_to_post_id:
@@ -171,10 +177,8 @@ class PostService:
                     discussion=discussion,
                 ).select_related('user').first()
 
-            # 创建帖子
-            post = Post.objects.create(
+            post = PostService._create_post_with_sequential_number(
                 discussion=discussion,
-                number=next_number,
                 user=user,
                 content=content,
                 content_html=PostService._render_markdown(content),
@@ -504,6 +508,51 @@ class PostService:
         return post
 
     @staticmethod
+    def _lock_discussion_for_post_number(discussion_id: int) -> Discussion:
+        return Discussion.objects.select_for_update().get(id=discussion_id)
+
+    @staticmethod
+    def _allocate_next_post_number(discussion: Discussion) -> int:
+        last_post = (
+            Post.objects.filter(discussion=discussion)
+            .order_by("-number")
+            .only("number")
+            .first()
+        )
+        return (last_post.number + 1) if last_post else 1
+
+    @staticmethod
+    def _is_post_number_conflict(exc: IntegrityError) -> bool:
+        message = str(exc).lower()
+        return (
+            "unique" in message
+            and "post" in message
+            and "number" in message
+        )
+
+    @staticmethod
+    def _create_post_with_sequential_number(**post_kwargs) -> Post:
+        last_error = None
+
+        for attempt in range(PostService.POST_NUMBER_CONFLICT_RETRY_ATTEMPTS):
+            next_number = PostService._allocate_next_post_number(post_kwargs["discussion"])
+            try:
+                return Post.objects.create(
+                    **post_kwargs,
+                    number=next_number,
+                )
+            except IntegrityError as exc:
+                if not PostService._is_post_number_conflict(exc):
+                    raise
+                last_error = exc
+                if attempt == PostService.POST_NUMBER_CONFLICT_RETRY_ATTEMPTS - 1:
+                    raise
+
+        if last_error:
+            raise last_error
+        raise IntegrityError("帖子楼层分配失败")
+
+    @staticmethod
     def _refresh_discussion_approved_stats(discussion: Discussion) -> Discussion:
         approved_posts = Post.objects.filter(
             discussion=discussion,
@@ -787,11 +836,9 @@ class PostService:
         event_type: str,
         content: str,
     ) -> Post:
-        last_post = Post.objects.filter(discussion=discussion).order_by("-number").first()
-        next_number = (last_post.number + 1) if last_post else 1
-        return Post.objects.create(
-            discussion=discussion,
-            number=next_number,
+        locked_discussion = PostService._lock_discussion_for_post_number(discussion.id)
+        return PostService._create_post_with_sequential_number(
+            discussion=locked_discussion,
             user=actor,
             type=event_type,
             content=content,

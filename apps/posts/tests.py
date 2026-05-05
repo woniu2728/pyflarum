@@ -99,6 +99,25 @@ class PostPaginationTests(TestCase):
         self.assertEqual(state.last_read_post_number, reply.number)
         self.assertFalse(state.is_subscribed)
 
+    def test_create_post_locks_discussion_before_allocating_floor_number(self):
+        discussion = DiscussionService.create_discussion(
+            title="Locked numbering discussion",
+            content="First post",
+            user=self.user,
+        )
+
+        with patch(
+            "apps.posts.services.PostService._lock_discussion_for_post_number",
+            wraps=PostService._lock_discussion_for_post_number,
+        ) as lock_discussion_mock:
+            PostService.create_post(
+                discussion_id=discussion.id,
+                content="Reply with lock",
+                user=self.user,
+            )
+
+        self.assertTrue(lock_discussion_mock.called)
+
 
 class PostFlagApiTests(TestCase):
     def setUp(self):

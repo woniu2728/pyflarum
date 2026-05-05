@@ -4,9 +4,8 @@
       <DiscussionListSidebar
         :auth-store="authStore"
         :current-tag="currentTag"
-        :is-all-discussions-page="isAllDiscussionsPage"
-        :is-following-page="isFollowingPage"
         :is-own-profile-page="isOwnProfilePage"
+        :sidebar-filter-items="sidebarFilterItems"
         :is-tags-page="isTagsPage"
         :has-sidebar-tag-navigation="hasSidebarTagNavigation"
         :sidebar-primary-tag-items="sidebarPrimaryTagItems"
@@ -94,6 +93,7 @@ const {
   isTagsPage,
   isAllDiscussionsPage,
   isOwnProfilePage,
+  sidebarFilterItems,
   sidebarPrimaryTagItems,
   sidebarSecondaryTagItems,
   hasSidebarTagNavigation,
