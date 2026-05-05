@@ -72,12 +72,12 @@ defineEmits(['change-sort', 'change-filter', 'change-search', 'mark-all-read', '
 
 const normalizedSortOptions = computed(() => {
   if (props.sortOptions.length) {
-    return props.sortOptions
+    return props.sortOptions.filter(option => option.toolbar_visible !== false)
   }
 
   return [
     { code: 'latest', label: '最新活跃', icon: 'fas fa-clock' },
-    { code: 'newest', label: '新主题', icon: 'fas fa-sparkles' },
+    { code: 'newest', label: '新主题', icon: 'fas fa-file-alt' },
     { code: 'top', label: '热门', icon: 'fas fa-fire' },
   ]
 })

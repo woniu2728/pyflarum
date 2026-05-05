@@ -104,6 +104,7 @@ class DiscussionSortDefinition:
     icon: str = "fas fa-sort"
     is_default: bool = False
     order: int = 100
+    toolbar_visible: bool = True
 
 
 @dataclass(frozen=True)
@@ -622,6 +623,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     icon="fas fa-clock",
                     is_default=True,
                     order=10,
+                    toolbar_visible=True,
                 ),
                 DiscussionSortDefinition(
                     code="newest",
@@ -629,8 +631,9 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     module_id="discussions",
                     applier=_apply_discussion_newest_sort,
                     description="按讨论创建时间倒序，优先展示最新发布的主题。",
-                    icon="fas fa-sparkles",
+                    icon="fas fa-file-alt",
                     order=20,
+                    toolbar_visible=True,
                 ),
                 DiscussionSortDefinition(
                     code="top",
@@ -640,6 +643,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     description="按回复数和浏览量综合排序，优先展示热门讨论。",
                     icon="fas fa-fire",
                     order=30,
+                    toolbar_visible=True,
                 ),
                 DiscussionSortDefinition(
                     code="unanswered",
@@ -649,6 +653,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     description="优先展示还没有收到其他回复的讨论，便于发现待回应主题。",
                     icon="fas fa-comment-slash",
                     order=40,
+                    toolbar_visible=False,
                 ),
                 DiscussionSortDefinition(
                     code="oldest",
@@ -658,6 +663,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     description="按讨论创建时间正序排序。",
                     icon="fas fa-hourglass-start",
                     order=50,
+                    toolbar_visible=False,
                 ),
             ),
             discussion_list_filters=(

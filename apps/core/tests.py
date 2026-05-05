@@ -101,11 +101,19 @@ class ForumRegistryTests(TestCase):
     def test_builtin_registry_exposes_discussion_sort_catalog(self):
         registry = get_forum_registry()
 
-        sort_codes = [item.code for item in registry.get_discussion_sorts()]
+        sorts = registry.get_discussion_sorts()
+        sort_codes = [item.code for item in sorts]
         self.assertIn("latest", sort_codes)
         self.assertIn("top", sort_codes)
         self.assertIn("unanswered", sort_codes)
         self.assertEqual(registry.get_default_discussion_sort_code(), "latest")
+        newest_sort = next(item for item in sorts if item.code == "newest")
+        unanswered_sort = next(item for item in sorts if item.code == "unanswered")
+        oldest_sort = next(item for item in sorts if item.code == "oldest")
+        self.assertEqual(newest_sort.icon, "fas fa-file-alt")
+        self.assertTrue(newest_sort.toolbar_visible)
+        self.assertFalse(unanswered_sort.toolbar_visible)
+        self.assertFalse(oldest_sort.toolbar_visible)
 
     def test_builtin_registry_exposes_discussion_list_filter_catalog(self):
         registry = get_forum_registry()
@@ -202,7 +210,8 @@ class ChineseSearchTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["sort"], "unanswered")
         self.assertTrue(any(item["code"] == "latest" and item["is_default"] for item in payload["available_sorts"]))
-        self.assertTrue(any(item["code"] == "unanswered" for item in payload["available_sorts"]))
+        self.assertTrue(any(item["code"] == "unanswered" and item["toolbar_visible"] is False for item in payload["available_sorts"]))
+        self.assertTrue(any(item["code"] == "newest" and item["icon"] == "fas fa-file-alt" for item in payload["available_sorts"]))
 
     def test_discussions_api_returns_registered_filter_catalog(self):
         DiscussionService.create_discussion(
@@ -3437,6 +3446,8 @@ class AdminPermissionsApiTests(TestCase):
         self.assertTrue(any(item["module_id"] == "discussions" and item["code"] == "author" for item in payload["search_filters"]))
         self.assertTrue(any(item["module_id"] == "discussions" and item["target"] == "post" and item["code"] == "author" for item in payload["search_filters"]))
         self.assertTrue(any(item["module_id"] == "discussions" and item["code"] == "unanswered" for item in payload["discussion_sorts"]))
+        self.assertTrue(any(item["code"] == "unanswered" and item["toolbar_visible"] is False for item in payload["discussion_sorts"]))
+        self.assertTrue(any(item["code"] == "newest" and item["icon"] == "fas fa-file-alt" for item in payload["discussion_sorts"]))
         self.assertTrue(any(item["module_id"] == "discussions" and item["code"] == "unread" for item in payload["discussion_list_filters"]))
         self.assertTrue(any(item["code"] == "following" and item["route_path"] == "/following" for item in payload["discussion_list_filters"]))
         self.assertTrue(any(item["code"] == "my" and item["sidebar_visible"] is False for item in payload["discussion_list_filters"]))

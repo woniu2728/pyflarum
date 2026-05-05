@@ -338,6 +338,7 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
                 "description": discussion_sort.description,
                 "icon": discussion_sort.icon,
                 "is_default": discussion_sort.is_default,
+                "toolbar_visible": discussion_sort.toolbar_visible,
             }
             for discussion_sort in module.discussion_sorts
         ],
@@ -1051,6 +1052,7 @@ def list_admin_modules(request):
             "description": discussion_sort.description,
             "icon": discussion_sort.icon,
             "is_default": discussion_sort.is_default,
+            "toolbar_visible": discussion_sort.toolbar_visible,
         }
         for discussion_sort in REGISTRY.get_discussion_sorts()
     ]

@@ -52,6 +52,7 @@ def _serialize_discussion_sort(definition):
         "description": definition.description,
         "icon": definition.icon,
         "is_default": definition.is_default,
+        "toolbar_visible": definition.toolbar_visible,
     }
 
 
