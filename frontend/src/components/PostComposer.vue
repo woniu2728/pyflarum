@@ -75,6 +75,7 @@
         <ComposerActionBar
           :submit-disabled="submitting || uploading || !replyContent.trim() || isSuspended"
           :submit-text="submitting ? '提交中...' : (uploading ? '上传中...' : (isEditing ? '更新回复' : '发布回复'))"
+          :secondary-actions="composerSecondaryActions"
           @submit="submitReply"
         >
           <template #formatting>
@@ -119,16 +120,17 @@
             </template>
           </template>
 
-          <template #secondary>
+          <template #secondary="{ items }">
             <button
-              v-if="composerDraftSavedAt && !isEditing"
+              v-for="item in items"
+              :key="item.key"
               type="button"
               class="composer-secondary"
-              @click="clearComposerDraft"
+              :disabled="submitting || item.disabled"
+              @click="handleComposerSecondaryAction(item)"
             >
-              清除草稿
+              {{ item.label }}
             </button>
-            <button v-if="isEditing" type="button" class="composer-secondary" @click="cancelEdit">取消编辑</button>
           </template>
         </ComposerActionBar>
 
@@ -162,7 +164,7 @@ import ComposerHeaderBar from '@/components/composer/ComposerHeaderBar.vue'
 import ComposerNoticeStack from '@/components/composer/ComposerNoticeStack.vue'
 import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue'
 import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
-import { getComposerNotices, getComposerTools, runComposerSubmitGuards } from '@/forum/registry'
+import { getComposerNotices, getComposerSecondaryActions, getComposerTools, runComposerSubmitGuards } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
@@ -300,6 +302,9 @@ const previewStatusText = computed(() => {
 const composerTools = computed(() => {
   return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
+})
+const composerSecondaryActions = computed(() => {
+  return getComposerSecondaryActions(buildComposerExtensionContext())
 })
 const composerNotices = computed(() => {
   return [
@@ -1262,6 +1267,24 @@ function buildComposerToolContext(tool) {
     setPreviewVisible(value) {
       showPreview.value = Boolean(value)
     },
+  }
+}
+
+function handleComposerSecondaryAction(item) {
+  if (item.disabled) return
+
+  if (typeof item.onClick === 'function') {
+    item.onClick(buildComposerExtensionContext())
+    return
+  }
+
+  if (item.action === 'clear-draft') {
+    clearComposerDraft()
+    return
+  }
+
+  if (item.action === 'cancel-edit') {
+    cancelEdit()
   }
 }
 </script>

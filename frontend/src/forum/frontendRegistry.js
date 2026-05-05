@@ -6,6 +6,7 @@ const forumNavSections = []
 const composerTools = []
 const composerNotices = []
 const composerSubmitGuards = []
+const composerSecondaryActions = []
 const profilePanels = []
 
 function upsertByKey(target, key, value) {
@@ -181,6 +182,18 @@ export function getComposerNotices(context = {}) {
 export function registerComposerSubmitGuard(item) {
   const normalizedItem = normalizeRegisteredItem(item)
   return upsertByKey(composerSubmitGuards, normalizedItem.key, normalizedItem)
+}
+
+export function registerComposerSecondaryAction(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerSecondaryActions, normalizedItem.key, normalizedItem)
+}
+
+export function getComposerSecondaryActions(context = {}) {
+  return [...composerSecondaryActions]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
 }
 
 export function registerProfilePanel(item) {

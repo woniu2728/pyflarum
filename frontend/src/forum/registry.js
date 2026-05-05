@@ -2,12 +2,14 @@ import { defineAsyncComponent } from 'vue'
 import { buildUserPath } from '@/utils/forum'
 import {
   getComposerNotices,
+  getComposerSecondaryActions,
   getComposerTools,
   getForumNavItems,
   getForumNavSections,
   getProfilePanels,
   registerDiscussionAction,
   registerComposerNotice,
+  registerComposerSecondaryAction,
   registerComposerSubmitGuard,
   registerComposerTool,
   registerForumNavItem,
@@ -21,9 +23,11 @@ export {
   getForumNavItems,
   getForumNavSections,
   getComposerNotices,
+  getComposerSecondaryActions,
   getComposerTools,
   registerDiscussionAction,
   registerComposerNotice,
+  registerComposerSecondaryAction,
   registerComposerSubmitGuard,
   registerComposerTool,
   registerForumNavItem,
@@ -355,4 +359,34 @@ registerComposerSubmitGuard({
       message: '请选择主标签后再发布讨论。',
     }
   },
+})
+
+registerComposerSecondaryAction({
+  key: 'clear-discussion-draft',
+  order: 10,
+  isVisible: ({ type, isEditing, hasDraftContent }) => type === 'discussion' && !isEditing && Boolean(hasDraftContent),
+  resolve: () => ({
+    label: '清除草稿',
+    action: 'clear-draft',
+  }),
+})
+
+registerComposerSecondaryAction({
+  key: 'clear-post-draft',
+  order: 10,
+  isVisible: ({ type, isEditing, hasDraftContent }) => type === 'post' && !isEditing && Boolean(hasDraftContent),
+  resolve: () => ({
+    label: '清除草稿',
+    action: 'clear-draft',
+  }),
+})
+
+registerComposerSecondaryAction({
+  key: 'cancel-post-edit',
+  order: 20,
+  isVisible: ({ type, isEditing }) => type === 'post' && Boolean(isEditing),
+  resolve: () => ({
+    label: '取消编辑',
+    action: 'cancel-edit',
+  }),
 })

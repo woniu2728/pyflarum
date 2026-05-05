@@ -15,7 +15,7 @@
     </div>
 
     <div class="composer-secondary-actions">
-      <slot name="secondary" />
+      <slot name="secondary" :items="secondaryActions" />
     </div>
   </div>
 </template>
@@ -29,6 +29,10 @@ defineProps({
   submitText: {
     type: String,
     required: true
+  },
+  secondaryActions: {
+    type: Array,
+    default: () => []
   }
 })
 
