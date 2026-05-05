@@ -2,7 +2,11 @@
   <article
     :id="`post-${post.number}`"
     class="post-item"
-    :class="{ 'is-hidden': post.is_hidden, 'is-target': isTarget }"
+    tabindex="0"
+    :class="{
+      'is-hidden': post.is_hidden,
+      'is-target': isTarget,
+    }"
   >
     <div class="post-container">
       <aside class="post-side">
@@ -235,6 +239,7 @@ function handleMenuAction(eventName, payload) {
   position: relative;
   padding: 22px 0 24px;
   transition: opacity 0.2s, transform 0.2s;
+  outline: none;
 }
 
 .post-item::after {
@@ -816,21 +821,31 @@ function handleMenuAction(eventName, payload) {
     position: relative;
     top: auto;
     right: auto;
-    opacity: 1;
+    opacity: 0;
+    pointer-events: none;
     justify-content: flex-end;
-    margin-top: 14px;
-    gap: 8px;
+    margin-top: 12px;
+    gap: 6px;
+    transition: opacity 0.16s ease;
+  }
+
+  .post-item:focus .post-actions,
+  .post-item:focus-within .post-actions,
+  .post-actions.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .post-action {
-    min-width: 44px;
+    min-width: 38px;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 12px;
+    min-height: 36px;
+    padding: 0 10px;
     border-radius: 3px;
     background: transparent;
     border: 1px solid var(--forum-border-color);
     color: var(--forum-text-muted);
+    font-size: 13px;
   }
 
   .post-action span {
@@ -838,8 +853,8 @@ function handleMenuAction(eventName, payload) {
   }
 
   .post-action--icon {
-    min-width: 40px;
-    width: 44px;
+    min-width: 36px;
+    width: 38px;
     padding-left: 0;
     padding-right: 0;
   }

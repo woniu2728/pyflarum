@@ -9,15 +9,15 @@
         'is-disabled': item.disabled,
       }]"
       :disabled="item.disabled"
-      :title="item.disabledReason || item.description || ''"
+      :title="item.disabledReason || ''"
       @click="$emit('select', item.key)"
     >
       <span :class="`${itemClass}__main`">
         <i v-if="item.icon" :class="item.icon"></i>
         <span>{{ item.label }}</span>
       </span>
-      <small v-if="item.description || item.disabledReason">
-        {{ item.disabledReason || item.description }}
+      <small v-if="item.disabledReason">
+        {{ item.disabledReason }}
       </small>
     </button>
   </div>

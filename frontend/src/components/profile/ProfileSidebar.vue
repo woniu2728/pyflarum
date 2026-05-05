@@ -19,59 +19,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-
-const props = defineProps({
+defineProps({
   activeTab: {
     type: String,
     required: true
   },
-  isOwnProfile: {
-    type: Boolean,
-    default: false
-  },
-  user: {
-    type: Object,
-    required: true
+  items: {
+    type: Array,
+    default: () => []
   }
 })
 
 defineEmits(['change-tab'])
-
-const items = computed(() => {
-  const baseItems = [
-    {
-      key: 'discussions',
-      label: '讨论',
-      icon: 'fas fa-bars',
-      count: props.user.discussion_count || 0
-    },
-    {
-      key: 'posts',
-      label: '回复',
-      icon: 'far fa-comment',
-      count: props.user.comment_count || 0
-    }
-  ]
-
-  if (!props.isOwnProfile) {
-    return baseItems
-  }
-
-  return [
-    ...baseItems,
-    {
-      key: 'settings',
-      label: '设置',
-      icon: 'fas fa-user-cog'
-    },
-    {
-      key: 'security',
-      label: '安全',
-      icon: 'fas fa-shield-alt'
-    }
-  ]
-})
 </script>
 
 <style scoped>

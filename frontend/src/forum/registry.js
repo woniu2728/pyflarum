@@ -1,15 +1,18 @@
+import { defineAsyncComponent } from 'vue'
 import { buildUserPath } from '@/utils/forum'
 import {
   getComposerNotices,
   getComposerTools,
   getForumNavItems,
   getForumNavSections,
+  getProfilePanels,
   registerDiscussionAction,
   registerComposerNotice,
   registerComposerSubmitGuard,
   registerComposerTool,
   registerForumNavItem,
   registerForumNavSection,
+  registerProfilePanel,
   registerPostAction,
   runComposerSubmitGuards,
 } from '@/forum/frontendRegistry'
@@ -25,8 +28,10 @@ export {
   registerComposerTool,
   registerForumNavItem,
   registerForumNavSection,
+  registerProfilePanel,
   registerPostAction,
   runComposerSubmitGuards,
+  getProfilePanels,
 }
 
 registerForumNavSection({
@@ -100,6 +105,99 @@ registerForumNavItem({
   order: 50,
   surfaces: ['discussion-sidebar', 'mobile-drawer'],
   isVisible: ({ authStore }) => Boolean(authStore?.user)
+})
+
+const ProfileDiscussionSection = defineAsyncComponent(() => import('@/components/profile/ProfileDiscussionSection.vue'))
+const ProfilePostSection = defineAsyncComponent(() => import('@/components/profile/ProfilePostSection.vue'))
+const ProfileSettingsSection = defineAsyncComponent(() => import('@/components/profile/ProfileSettingsSection.vue'))
+const ProfileSecuritySection = defineAsyncComponent(() => import('@/components/profile/ProfileSecuritySection.vue'))
+
+registerProfilePanel({
+  key: 'discussions',
+  label: '讨论',
+  icon: 'fas fa-bars',
+  order: 10,
+  badge: ({ user }) => Number(user?.discussion_count || 0),
+  resolve: context => ({
+    component: ProfileDiscussionSection,
+    componentProps: {
+      discussions: context.discussions,
+      loading: context.loadingDiscussions,
+      isOwnProfile: context.isOwnProfile,
+      buildDiscussionPath: context.buildDiscussionPath,
+      formatDate: context.formatDate,
+    },
+  }),
+})
+
+registerProfilePanel({
+  key: 'posts',
+  label: '回复',
+  icon: 'far fa-comment',
+  order: 20,
+  badge: ({ user }) => Number(user?.comment_count || 0),
+  resolve: context => ({
+    component: ProfilePostSection,
+    componentProps: {
+      posts: context.posts,
+      loading: context.loadingPosts,
+      isOwnProfile: context.isOwnProfile,
+      buildDiscussionPath: context.buildDiscussionPath,
+      formatDate: context.formatDate,
+    },
+  }),
+})
+
+registerProfilePanel({
+  key: 'settings',
+  label: '设置',
+  icon: 'fas fa-user-cog',
+  order: 30,
+  isVisible: ({ isOwnProfile }) => Boolean(isOwnProfile),
+  resolve: context => ({
+    component: ProfileSettingsSection,
+    componentProps: {
+      user: context.user,
+      editForm: context.editForm,
+      preferences: context.preferences,
+      saving: context.saving,
+      settingsSuccess: context.settingsSuccess,
+      settingsError: context.settingsError,
+      loadingPreferences: context.loadingPreferences,
+      savingPreferences: context.savingPreferences,
+      preferencesSuccess: context.preferencesSuccess,
+      preferencesError: context.preferencesError,
+    },
+    componentEvents: {
+      saveProfile: context.saveProfile,
+      savePreferences: context.savePreferences,
+    },
+  }),
+})
+
+registerProfilePanel({
+  key: 'security',
+  label: '安全',
+  icon: 'fas fa-shield-alt',
+  order: 40,
+  isVisible: ({ isOwnProfile }) => Boolean(isOwnProfile),
+  resolve: context => ({
+    component: ProfileSecuritySection,
+    componentProps: {
+      user: context.user,
+      passwordForm: context.passwordForm,
+      verificationSending: context.verificationSending,
+      verificationSuccess: context.verificationSuccess,
+      verificationError: context.verificationError,
+      changingPassword: context.changingPassword,
+      passwordSuccess: context.passwordSuccess,
+      passwordError: context.passwordError,
+    },
+    componentEvents: {
+      resendVerification: context.resendVerificationEmail,
+      changePassword: context.changePassword,
+    },
+  }),
 })
 
 function formatComposerSuspensionNotice(user = {}, fallbackMessage) {

@@ -49,17 +49,63 @@
       </button>
     </div>
 
-    <ForumNavList
-      :sections="navSections"
-      root-class="mobile-drawer-nav"
-      section-title-class="mobile-drawer-title"
-      section-list-class="mobile-drawer-nav-section"
-      item-wrapper-class="mobile-drawer-item-wrap"
-      item-class="mobile-drawer-link"
-      item-description-class="mobile-drawer-description"
-      item-badge-class="mobile-drawer-badge"
-      @select="$emit('close')"
-    />
+    <nav class="mobile-drawer-nav">
+      <div class="mobile-drawer-nav-section">
+        <router-link
+          to="/"
+          class="mobile-drawer-link"
+          :class="{ active: isMobileNavActive('home') }"
+          @click="$emit('close')"
+        >
+          <i class="far fa-comments"></i>
+          <span>全部讨论</span>
+        </router-link>
+        <router-link
+          v-if="authStore.isAuthenticated && authStore.user"
+          to="/following"
+          class="mobile-drawer-link"
+          :class="{ active: isMobileNavActive('following') }"
+          @click="$emit('close')"
+        >
+          <i class="fas fa-bell"></i>
+          <span>关注中</span>
+        </router-link>
+        <router-link
+          to="/tags"
+          class="mobile-drawer-link"
+          :class="{ active: isMobileNavActive('tags') }"
+          @click="$emit('close')"
+        >
+          <i class="fas fa-tags"></i>
+          <span>全部标签</span>
+        </router-link>
+      </div>
+
+      <div v-if="authStore.isAuthenticated && authStore.user" class="mobile-drawer-nav-section">
+        <h4 class="mobile-drawer-title">个人</h4>
+        <router-link
+          to="/notifications"
+          class="mobile-drawer-link"
+          :class="{ active: isMobileNavActive('notifications') }"
+          @click="$emit('close')"
+        >
+          <i class="fas fa-inbox"></i>
+          <span>通知</span>
+          <span v-if="notificationStore.unreadCount > 0" class="mobile-drawer-badge">
+            {{ notificationStore.unreadCount }}
+          </span>
+        </router-link>
+        <router-link
+          :to="profilePath()"
+          class="mobile-drawer-link"
+          :class="{ active: isMobileNavActive('profile') }"
+          @click="$emit('close')"
+        >
+          <i class="fas fa-user"></i>
+          <span>我的主页</span>
+        </router-link>
+      </div>
+    </nav>
 
     <div v-if="authStore.isAuthenticated && authStore.user" class="mobile-drawer-user">
       <div class="mobile-drawer-userCard">
@@ -77,6 +123,15 @@
           <span>@{{ authStore.user?.username }}</span>
         </div>
       </div>
+      <a
+        v-if="authStore.user?.is_staff"
+        href="/admin.html"
+        class="mobile-drawer-link"
+        @click="$emit('close')"
+      >
+        <i class="fas fa-cog"></i>
+        <span>管理后台</span>
+      </a>
       <button type="button" class="mobile-drawer-link mobile-drawer-link--danger" @click="$emit('logout')">
         <i class="fas fa-sign-out-alt"></i>
         <span>登出</span>
@@ -91,11 +146,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import ForumNavList from '@/components/forum/ForumNavList.vue'
-import { getForumNavSections } from '@/forum/registry'
-
-const props = defineProps({
+defineProps({
   showMobileDrawer: {
     type: Boolean,
     default: false
@@ -142,18 +193,6 @@ defineEmits([
   'open-login',
   'open-register'
 ])
-
-const navSections = computed(() => getForumNavSections({
-  authStore: props.authStore,
-  showNotifications: props.authStore.isAuthenticated && Boolean(props.authStore.user),
-  notificationStore: props.notificationStore,
-}).map(section => ({
-  ...section,
-  items: section.items.map(item => ({
-    ...item,
-    active: props.isMobileNavActive(item.key),
-  }))
-})))
 </script>
 
 <style scoped>
@@ -238,7 +277,7 @@ const navSections = computed(() => getForumNavSections({
 .mobile-drawer-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
@@ -246,9 +285,9 @@ const navSections = computed(() => getForumNavSections({
 .mobile-drawer-compose,
 .mobile-drawer-link {
   width: 100%;
-  min-height: 42px;
-  padding: 0 14px;
-  border-radius: 12px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -270,48 +309,44 @@ const navSections = computed(() => getForumNavSections({
 .mobile-drawer-nav {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   margin-bottom: 16px;
 }
 
 .mobile-drawer-title {
-  margin: 0 0 6px;
-  padding: 0 2px;
-  color: #7d8d9d;
-  font-size: 11px;
+  margin: 0 0 8px;
+  color: #233c59;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 .mobile-drawer-nav-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.mobile-drawer-item-wrap {
-  list-style: none;
+  gap: 10px;
 }
 
 .mobile-drawer-link {
   background: transparent;
-  color: #4d5f72;
+  min-height: auto;
+  padding: 0;
+  border-radius: 0;
+  color: #426287;
   justify-content: flex-start;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .mobile-drawer-link.active {
-  background: #edf3f8;
   color: var(--forum-primary-color);
 }
 
-.mobile-drawer-description {
-  display: block;
-  margin-left: 28px;
-  margin-top: 2px;
-  color: inherit;
-  font-size: 12px;
-  opacity: 0.78;
+.mobile-drawer-link i {
+  width: 24px;
+  text-align: center;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .mobile-drawer-link--danger {
@@ -321,18 +356,19 @@ const navSections = computed(() => getForumNavSections({
 .mobile-drawer-badge {
   margin-left: auto;
   min-width: 22px;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: #e86f2d;
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   text-align: center;
 }
 
 .mobile-drawer-user {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mobile-drawer-userCard {

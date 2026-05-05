@@ -173,6 +173,44 @@ export function getNotificationText(notification, fallbackMessage = '') {
   return fallbackMessage || notification?.message || definition.label || '你有新通知'
 }
 
+export function resolveNotificationGroup(notification, fallbackTitle = '论坛') {
+  const definition = getNotificationTypeDefinition(notification?.type)
+
+  if (typeof definition.getGroup === 'function') {
+    const resolvedGroup = definition.getGroup(notification, fallbackTitle)
+    if (resolvedGroup?.key) {
+      return {
+        discussionId: Number(resolvedGroup.discussionId || 0),
+        key: resolvedGroup.key,
+        title: resolvedGroup.title || definition.label || fallbackTitle,
+      }
+    }
+  }
+
+  const discussionId = normalizeDiscussionId(notification)
+  if (discussionId) {
+    return {
+      discussionId,
+      key: `discussion-${discussionId}`,
+      title: describeDiscussionTitle(notification) || definition.label || fallbackTitle,
+    }
+  }
+
+  if (definition.navigationScope === 'profile') {
+    return {
+      discussionId: 0,
+      key: `profile-${definition.type}`,
+      title: definition.groupLabel || '账号状态',
+    }
+  }
+
+  return {
+    discussionId: 0,
+    key: `type-${definition.type || 'general'}`,
+    title: definition.groupLabel || definition.label || fallbackTitle,
+  }
+}
+
 export async function resolveNotificationPath(notification) {
   const definition = getNotificationTypeDefinition(notification?.type)
 
@@ -200,6 +238,7 @@ syncNotificationTypes([
     label: '讨论新回复',
     icon: 'fas fa-reply',
     navigation_scope: 'post',
+    groupLabel: '讨论互动',
     order: 10,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -212,6 +251,7 @@ syncNotificationTypes([
     label: '回复被点赞',
     icon: 'fas fa-thumbs-up',
     navigation_scope: 'post',
+    groupLabel: '互动反馈',
     order: 20,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -223,6 +263,7 @@ syncNotificationTypes([
     label: '@提及通知',
     icon: 'fas fa-at',
     navigation_scope: 'post',
+    groupLabel: '互动反馈',
     order: 30,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -234,6 +275,7 @@ syncNotificationTypes([
     label: '回复被回应',
     icon: 'fas fa-comment-dots',
     navigation_scope: 'post',
+    groupLabel: '互动反馈',
     order: 40,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -245,6 +287,7 @@ syncNotificationTypes([
     label: '讨论审核通过',
     icon: 'fas fa-circle-check',
     navigation_scope: 'discussion',
+    groupLabel: '审核结果',
     order: 50,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -257,6 +300,7 @@ syncNotificationTypes([
     label: '讨论审核拒绝',
     icon: 'fas fa-circle-xmark',
     navigation_scope: 'discussion',
+    groupLabel: '审核结果',
     order: 60,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -269,6 +313,7 @@ syncNotificationTypes([
     label: '回复审核通过',
     icon: 'fas fa-check',
     navigation_scope: 'post',
+    groupLabel: '审核结果',
     order: 70,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -281,6 +326,7 @@ syncNotificationTypes([
     label: '回复审核拒绝',
     icon: 'fas fa-xmark',
     navigation_scope: 'post',
+    groupLabel: '审核结果',
     order: 80,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -293,6 +339,7 @@ syncNotificationTypes([
     label: '账号封禁通知',
     icon: 'fas fa-user-lock',
     navigation_scope: 'profile',
+    groupLabel: '账号状态',
     order: 90,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -304,6 +351,7 @@ syncNotificationTypes([
     label: '账号解除封禁',
     icon: 'fas fa-user-check',
     navigation_scope: 'profile',
+    groupLabel: '账号状态',
     order: 100,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -315,6 +363,7 @@ syncNotificationTypes([
     label: '发起讨论',
     icon: 'fas fa-pen',
     navigation_scope: 'discussion',
+    groupLabel: '讨论动态',
     order: 110,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)
@@ -327,6 +376,7 @@ syncNotificationTypes([
     label: '发表回复',
     icon: 'fas fa-message',
     navigation_scope: 'post',
+    groupLabel: '讨论动态',
     order: 120,
     getText(notification) {
       const fromUser = describeNotificationActor(notification)

@@ -23,58 +23,16 @@
         <div class="user-page-layout">
           <ProfileSidebar
             :active-tab="activeTab"
-            :is-own-profile="isOwnProfile"
-            :user="user"
+            :items="profilePanels"
             @change-tab="switchTab"
           />
 
           <main class="user-content">
-            <ProfileDiscussionSection
-              v-if="activeTab === 'discussions'"
-              :discussions="discussions"
-              :loading="loadingDiscussions"
-              :is-own-profile="isOwnProfile"
-              :build-discussion-path="buildDiscussionPath"
-              :format-date="formatDate"
-            />
-
-            <ProfilePostSection
-              v-if="activeTab === 'posts'"
-              :posts="posts"
-              :loading="loadingPosts"
-              :is-own-profile="isOwnProfile"
-              :build-discussion-path="buildDiscussionPath"
-              :format-date="formatDate"
-            />
-
-            <ProfileSettingsSection
-              v-if="activeTab === 'settings' && isOwnProfile"
-              :user="user"
-              :edit-form="editForm"
-              :preferences="preferences"
-              :saving="saving"
-              :settings-success="settingsSuccess"
-              :settings-error="settingsError"
-              :loading-preferences="loadingPreferences"
-              :saving-preferences="savingPreferences"
-              :preferences-success="preferencesSuccess"
-              :preferences-error="preferencesError"
-              @save-profile="saveProfile"
-              @save-preferences="savePreferences"
-            />
-
-            <ProfileSecuritySection
-              v-if="activeTab === 'security' && isOwnProfile"
-              :user="user"
-              :password-form="passwordForm"
-              :verification-sending="verificationSending"
-              :verification-success="verificationSuccess"
-              :verification-error="verificationError"
-              :changing-password="changingPassword"
-              :password-success="passwordSuccess"
-              :password-error="passwordError"
-              @resend-verification="resendVerificationEmail"
-              @change-password="changePassword"
+            <component
+              :is="activePanel?.component"
+              v-if="activePanel?.component"
+              v-bind="activePanel.componentProps || {}"
+              v-on="activePanel.componentEvents || {}"
             />
           </main>
         </div>
@@ -84,18 +42,15 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
-import ProfileDiscussionSection from '@/components/profile/ProfileDiscussionSection.vue'
 import ProfileHero from '@/components/profile/ProfileHero.vue'
-import ProfilePostSection from '@/components/profile/ProfilePostSection.vue'
-import ProfileSecuritySection from '@/components/profile/ProfileSecuritySection.vue'
-import ProfileSettingsSection from '@/components/profile/ProfileSettingsSection.vue'
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue'
+import { getProfilePanels } from '@/forum/registry'
 import { useProfilePage } from '@/composables/useProfilePage'
 import { useProfilePresentation } from '@/composables/useProfilePresentation'
 import {
@@ -154,6 +109,57 @@ const {
   formatJoinDate,
   formatLastSeen
 } = useProfilePresentation(user)
+
+const profilePanels = computed(() => {
+  if (!user.value) return []
+
+  return getProfilePanels({
+    authStore,
+    user: user.value,
+    discussions: discussions.value,
+    posts: posts.value,
+    loadingDiscussions: loadingDiscussions.value,
+    loadingPosts: loadingPosts.value,
+    isOwnProfile: isOwnProfile.value,
+    buildDiscussionPath,
+    formatDate,
+    editForm: editForm.value,
+    preferences: preferences.value,
+    saving: saving.value,
+    settingsSuccess: settingsSuccess.value,
+    settingsError: settingsError.value,
+    loadingPreferences: loadingPreferences.value,
+    savingPreferences: savingPreferences.value,
+    preferencesSuccess: preferencesSuccess.value,
+    preferencesError: preferencesError.value,
+    saveProfile,
+    savePreferences,
+    passwordForm: passwordForm.value,
+    verificationSending: verificationSending.value,
+    verificationSuccess: verificationSuccess.value,
+    verificationError: verificationError.value,
+    resendVerificationEmail,
+    changingPassword: changingPassword.value,
+    passwordSuccess: passwordSuccess.value,
+    passwordError: passwordError.value,
+    changePassword,
+  })
+})
+
+const activePanel = computed(() => {
+  return profilePanels.value.find(item => item.key === activeTab.value) || profilePanels.value[0] || null
+})
+
+watch(
+  profilePanels,
+  value => {
+    if (!value.length) return
+    if (!value.some(item => item.key === activeTab.value)) {
+      switchTab(value[0].key)
+    }
+  },
+  { immediate: true }
+)
 
 watch(
   user,

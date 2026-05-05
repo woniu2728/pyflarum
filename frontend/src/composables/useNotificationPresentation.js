@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import {
   getNotificationIcon,
+  resolveNotificationGroup,
   getNotificationText,
   resolveNotificationPath,
 } from '@/forum/notificationTypes'
@@ -22,14 +23,15 @@ export function useNotificationGroups(notificationItems, fallbackTitle = '论坛
     const seen = new Map()
 
     for (const notification of notificationItems.value) {
-      const discussionId = notification.data?.discussion_id || 0
-      const key = discussionId ? `discussion-${discussionId}` : 'general'
+      const resolvedGroup = resolveNotificationGroup(notification, fallbackTitle)
+      const discussionId = Number(resolvedGroup.discussionId || 0)
+      const key = resolvedGroup.key || 'general'
 
       if (!seen.has(key)) {
         const group = {
           key,
           discussionId,
-          title: notification.data?.discussion_title || fallbackTitle,
+          title: resolvedGroup.title || fallbackTitle,
           items: []
         }
         seen.set(key, group)

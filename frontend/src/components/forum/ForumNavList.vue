@@ -1,27 +1,30 @@
 <template>
-  <div :class="rootClass">
+  <div :class="['forum-nav-list', rootClass]">
     <template v-for="section in sections" :key="section.key || section.title || 'default'">
-      <h4 v-if="section.title" :class="sectionTitleClass">{{ section.title }}</h4>
-      <ul :class="sectionListClass">
+      <h4 v-if="section.title" :class="['forum-nav-list__title', sectionTitleClass]">{{ section.title }}</h4>
+      <ul :class="['forum-nav-list__section', sectionListClass]">
         <li
           v-for="item in section.items"
           :key="item.key || item.path || item.to || item.label"
-          :class="itemWrapperClass"
+          :class="['forum-nav-list__itemWrap', itemWrapperClass]"
         >
           <component
             :is="item.href ? 'a' : 'router-link'"
             :to="item.href ? undefined : item.to"
             :href="item.href || undefined"
-            :class="[itemClass, { active: item.active, 'is-muted': item.muted }]"
+            :class="['forum-nav-list__item', itemClass, { active: item.active, 'is-muted': item.muted }]"
             :title="item.description || ''"
             @click="$emit('select', item)"
           >
             <i v-if="item.icon" :class="item.icon"></i>
             <span class="forum-nav-list__content">
               <span class="forum-nav-list__label">{{ item.label }}</span>
-              <small v-if="item.description" :class="itemDescriptionClass">{{ item.description }}</small>
+              <small
+                v-if="showDescriptions && item.description"
+                :class="['forum-nav-list__description', itemDescriptionClass]"
+              >{{ item.description }}</small>
             </span>
-            <span v-if="item.badge" :class="itemBadgeClass">{{ item.badge }}</span>
+            <span v-if="item.badge" :class="['forum-nav-list__badge', itemBadgeClass]">{{ item.badge }}</span>
           </component>
         </li>
       </ul>
@@ -62,6 +65,10 @@ defineProps({
   itemBadgeClass: {
     type: String,
     default: 'forum-nav-list__badge'
+  },
+  showDescriptions: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -69,17 +76,31 @@ defineEmits(['select'])
 </script>
 
 <style scoped>
+.forum-nav-list {
+  min-width: 0;
+}
+
+.forum-nav-list__title {
+  margin: 0;
+}
+
 .forum-nav-list__section {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
+.forum-nav-list__itemWrap {
+  list-style: none;
+  margin: 0;
+}
+
 .forum-nav-list__item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   position: relative;
+  text-decoration: none;
 }
 
 .forum-nav-list__content {
@@ -92,6 +113,12 @@ defineEmits(['select'])
 
 .forum-nav-list__label {
   min-width: 0;
+}
+
+.forum-nav-list__item i {
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .forum-nav-list__description {

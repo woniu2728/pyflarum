@@ -70,12 +70,6 @@ export function useProfilePage({
     await refreshProfile()
   })
 
-  watch(isOwnProfile, (value) => {
-    if (!value && (activeTab.value === 'settings' || activeTab.value === 'security')) {
-      activeTab.value = 'discussions'
-    }
-  })
-
   async function refreshProfile() {
     await loadUser()
     if (isOwnProfile.value) {
@@ -162,11 +156,6 @@ export function useProfilePage({
   }
 
   function switchTab(tab) {
-    if (!isOwnProfile.value && (tab === 'settings' || tab === 'security')) {
-      activeTab.value = 'discussions'
-      return
-    }
-
     activeTab.value = tab
     if (tab === 'posts' && posts.value.length === 0) {
       loadPosts()
