@@ -255,6 +255,8 @@ class PostFlagApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403, response.content)
         self.assertIn("只有管理员", response.json()["error"])
+        self.assertEqual(response.json()["message"], response.json()["error"])
+        self.assertEqual(response.json()["code"], "forbidden")
 
     def test_suspended_user_cannot_reply_or_report_post(self):
         self.reporter.suspended_until = timezone.now() + timedelta(days=2)

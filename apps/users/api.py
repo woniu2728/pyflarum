@@ -13,6 +13,7 @@ from django.db.models import Q
 from typing import List
 
 from apps.core.auth import get_optional_user
+from apps.core.api_errors import api_error
 from apps.core.forum_resources import serialize_user_payload
 from apps.core.human_verification import HumanVerificationError, verify_human_verification
 from apps.core.services import PaginationService
@@ -130,9 +131,9 @@ def register(request, payload: UserRegisterSchema):
         )
         return user
     except HumanVerificationError as e:
-        return JsonResponse({"error": str(e)}, status=e.status_code)
+        return api_error(str(e), status=e.status_code)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/login", response=TokenSchema, tags=["Auth"])
@@ -150,9 +151,9 @@ def login(request, payload: UserLoginSchema):
         response = JsonResponse({"access": str(refresh.access_token)})
         return _set_refresh_token_cookie(response, refresh)
     except HumanVerificationError as e:
-        return JsonResponse({"error": str(e)}, status=e.status_code)
+        return api_error(str(e), status=e.status_code)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=401)
+        return api_error(str(e), status=401)
 
 
 @router.post("/token/refresh", response=TokenSchema, tags=["Auth"])
@@ -160,13 +161,13 @@ def refresh_access_token(request):
     """使用 HttpOnly Cookie 中的 refresh token 换取新的 access token"""
     refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE_NAME)
     if not refresh_token:
-        return JsonResponse({"error": "登录状态已过期，请重新登录"}, status=401)
+        return api_error("登录状态已过期，请重新登录", status=401)
 
     try:
         refresh = RefreshToken(refresh_token)
         return {"access": str(refresh.access_token)}
     except TokenError:
-        response = JsonResponse({"error": "登录状态已过期，请重新登录"}, status=401)
+        response = api_error("登录状态已过期，请重新登录", status=401)
         return _clear_refresh_token_cookie(response)
 
 
@@ -184,7 +185,7 @@ def verify_email(request, payload: EmailVerifySchema):
         user = UserService.verify_email(payload.token)
         return user
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/me/resend-email-verification", auth=AuthBearer(), tags=["Users"])
@@ -200,7 +201,7 @@ def resend_email_verification(request):
 
         return response
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/forgot-password", tags=["Auth"])
@@ -216,7 +217,7 @@ def forgot_password(request, payload: PasswordResetRequestSchema):
 
         return response
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/reset-password", response=UserOutSchema, tags=["Auth"])
@@ -226,7 +227,7 @@ def reset_password(request, payload: PasswordResetSchema):
         user = UserService.reset_password(payload.token, payload.password)
         return user
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 # ==================== 用户信息 ====================
@@ -263,9 +264,9 @@ def list_users(request, page: int = 1, limit: int = 20, q: str = None):
 
     if q:
         if not UserService.has_forum_permission(user, "searchUsers"):
-            return JsonResponse({"error": "没有权限搜索用户"}, status=403)
+            return api_error("没有权限搜索用户", status=403)
     elif not UserService.has_forum_permission(user, "viewUserList"):
-        return JsonResponse({"error": "没有权限查看用户列表"}, status=403)
+        return api_error("没有权限查看用户列表", status=403)
 
     queryset = User.objects.prefetch_related("user_groups").all()
 
@@ -302,7 +303,7 @@ def update_user(request, user_id: int, payload: UserUpdateSchema):
 
     # 检查权限：只能修改自己的信息
     if request.auth.id != user.id and not request.auth.is_staff:
-        return JsonResponse({"error": "无权限"}, status=403)
+        return api_error("无权限", status=403)
 
     try:
         user = UserService.update_user(
@@ -314,7 +315,7 @@ def update_user(request, user_id: int, payload: UserUpdateSchema):
         user = User.objects.prefetch_related("user_groups").get(id=user.id)
         return _serialize_user_detail_payload(user)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/{user_id}/password", auth=AuthBearer(), tags=["Users"])
@@ -324,13 +325,13 @@ def change_password(request, user_id: int, payload: PasswordChangeSchema):
 
     # 检查权限：只能修改自己的密码
     if request.auth.id != user.id:
-        return JsonResponse({"error": "无权限"}, status=403)
+        return api_error("无权限", status=403)
 
     try:
         UserService.change_password(user, payload.old_password, payload.new_password)
         return {"message": "密码修改成功"}
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/{user_id}/avatar", response=UserOutSchema, auth=AuthBearer(), tags=["Users"])
@@ -340,11 +341,11 @@ def upload_avatar(request, user_id: int):
 
     # 检查权限
     if request.auth.id != user.id:
-        return JsonResponse({"error": "无权限"}, status=403)
+        return api_error("无权限", status=403)
 
     avatar = request.FILES.get("avatar")
     if not avatar:
-        return JsonResponse({"error": "请选择要上传的头像"}, status=400)
+        return api_error("请选择要上传的头像", status=400)
 
     try:
         previous_avatar = user.avatar_url
@@ -358,4 +359,4 @@ def upload_avatar(request, user_id: int):
         user = User.objects.prefetch_related("user_groups").get(id=user.id)
         return _serialize_user_detail_payload(user)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)

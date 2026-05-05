@@ -212,6 +212,18 @@ class DiscussionApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["page"], 1)
         self.assertEqual(payload["limit"], 100)
+        self.assertTrue(any(item["code"] == "following" and item["route_path"] == "/following" for item in payload["available_filters"]))
+        self.assertTrue(any(item["code"] == "my" and item["sidebar_visible"] is False for item in payload["available_filters"]))
+
+    def test_discussion_detail_not_found_returns_structured_error_payload(self):
+        response = self.client.get("/api/discussions/999999")
+
+        self.assertEqual(response.status_code, 404, response.content)
+        payload = response.json()
+        self.assertEqual(payload["error"], "讨论不存在")
+        self.assertEqual(payload["message"], "讨论不存在")
+        self.assertEqual(payload["code"], "not_found")
+        self.assertIn("request_id", payload)
 
     def test_discussion_detail_does_not_mark_everything_read_immediately(self):
         discussion = DiscussionService.create_discussion(

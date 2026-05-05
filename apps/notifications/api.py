@@ -3,7 +3,6 @@
 """
 from typing import Optional
 from ninja import Router
-from django.http import JsonResponse
 
 from apps.notifications.schemas import (
     NotificationOutSchema,
@@ -14,6 +13,7 @@ from apps.notifications.services import NotificationService
 from apps.core.auth import AuthBearer
 from apps.core.resource_registry import get_resource_registry
 from apps.core.services import PaginationService
+from apps.core.api_errors import api_error
 
 router = Router()
 RESOURCE_REGISTRY = get_resource_registry()
@@ -139,7 +139,7 @@ def mark_notification_as_read(request, notification_id: int):
     success = NotificationService.mark_as_read(notification_id, request.auth)
 
     if not success:
-        return JsonResponse({"error": "通知不存在"}, status=404)
+        return api_error("通知不存在", status=404)
 
     return {"message": "已标记为已读"}
 
@@ -191,7 +191,7 @@ def get_notification(request, notification_id: int):
     notification = NotificationService.get_notification_by_id(notification_id, request.auth)
 
     if not notification:
-        return JsonResponse({"error": "通知不存在"}, status=404)
+        return api_error("通知不存在", status=404)
 
     return _serialize_notification(notification)
 
@@ -206,6 +206,6 @@ def delete_notification(request, notification_id: int):
     success = NotificationService.delete_notification(notification_id, request.auth)
 
     if not success:
-        return JsonResponse({"error": "通知不存在"}, status=404)
+        return api_error("通知不存在", status=404)
 
     return {"message": "通知已删除"}

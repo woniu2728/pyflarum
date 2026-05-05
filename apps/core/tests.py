@@ -110,12 +110,23 @@ class ForumRegistryTests(TestCase):
     def test_builtin_registry_exposes_discussion_list_filter_catalog(self):
         registry = get_forum_registry()
 
-        filter_codes = [item.code for item in registry.get_discussion_list_filters()]
+        filters = registry.get_discussion_list_filters()
+        filter_codes = [item.code for item in filters]
         self.assertIn("all", filter_codes)
         self.assertIn("following", filter_codes)
         self.assertIn("my", filter_codes)
         self.assertIn("unread", filter_codes)
         self.assertEqual(registry.get_default_discussion_list_filter_code(), "all")
+        all_filter = next(item for item in filters if item.code == "all")
+        following_filter = next(item for item in filters if item.code == "following")
+        my_filter = next(item for item in filters if item.code == "my")
+        unread_filter = next(item for item in filters if item.code == "unread")
+        self.assertTrue(all_filter.sidebar_visible)
+        self.assertEqual(all_filter.route_path, "/")
+        self.assertTrue(following_filter.sidebar_visible)
+        self.assertEqual(following_filter.route_path, "/following")
+        self.assertFalse(my_filter.sidebar_visible)
+        self.assertFalse(unread_filter.sidebar_visible)
 
 
 class ChineseSearchTests(TestCase):
@@ -207,7 +218,9 @@ class ChineseSearchTests(TestCase):
         self.assertEqual(payload["filter"], "my")
         self.assertTrue(any(item["code"] == "all" and item["is_default"] for item in payload["available_filters"]))
         self.assertTrue(any(item["code"] == "following" and item["requires_authenticated_user"] for item in payload["available_filters"]))
-        self.assertTrue(any(item["code"] == "my" for item in payload["available_filters"]))
+        self.assertTrue(any(item["code"] == "following" and item["route_path"] == "/following" for item in payload["available_filters"]))
+        self.assertTrue(any(item["code"] == "my" and item["sidebar_visible"] is False for item in payload["available_filters"]))
+        self.assertTrue(any(item["code"] == "unread" and item["sidebar_visible"] is False for item in payload["available_filters"]))
 
     def test_discussion_list_supports_registered_my_and_unread_filters(self):
         other_user = User.objects.create_user(
@@ -3425,6 +3438,8 @@ class AdminPermissionsApiTests(TestCase):
         self.assertTrue(any(item["module_id"] == "discussions" and item["target"] == "post" and item["code"] == "author" for item in payload["search_filters"]))
         self.assertTrue(any(item["module_id"] == "discussions" and item["code"] == "unanswered" for item in payload["discussion_sorts"]))
         self.assertTrue(any(item["module_id"] == "discussions" and item["code"] == "unread" for item in payload["discussion_list_filters"]))
+        self.assertTrue(any(item["code"] == "following" and item["route_path"] == "/following" for item in payload["discussion_list_filters"]))
+        self.assertTrue(any(item["code"] == "my" and item["sidebar_visible"] is False for item in payload["discussion_list_filters"]))
         self.assertTrue(any(item["field"] == "can_start_discussion" for item in tags_module["resource_fields"]))
         self.assertTrue(any(item["resource"] == "search_post" and item["field"] == "user" for item in payload["resource_fields"]))
         self.assertTrue(any(item["module_id"] == "notifications" for item in payload["user_preferences"]))

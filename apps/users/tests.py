@@ -264,6 +264,8 @@ class UserProfileApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403, response.content)
         self.assertEqual(response.json()["error"], "没有权限查看用户列表")
+        self.assertEqual(response.json()["message"], "没有权限查看用户列表")
+        self.assertEqual(response.json()["code"], "forbidden")
 
     def test_search_users_requires_search_users_permission(self):
         user = User.objects.create_user(

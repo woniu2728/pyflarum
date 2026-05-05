@@ -5,7 +5,6 @@ from typing import Optional
 from ninja import Router
 from django.db.models import Count
 from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
 
 from apps.posts.models import Post, PostLike, PostFlag
 from apps.posts.schemas import (
@@ -25,6 +24,7 @@ from apps.core.forum_resources import serialize_user_payload
 from apps.core.forum_registry import get_forum_registry
 from apps.core.resource_registry import get_resource_registry
 from apps.core.services import PaginationService
+from apps.core.api_errors import api_error
 
 router = Router()
 RESOURCE_REGISTRY = get_resource_registry()
@@ -175,9 +175,9 @@ def create_post(request, discussion_id: int, payload: PostCreateSchema):
         post.is_liked = False
         return _serialize_post(post, request.auth)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.get("/discussions/{discussion_id}/posts", response=PostListSchema, tags=["Posts"])
@@ -229,7 +229,7 @@ def get_post(request, post_id: int):
     post = PostService.get_post_by_id(post_id, user)
 
     if not post:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
 
     return _serialize_post(post, user)
 
@@ -253,11 +253,11 @@ def update_post(request, post_id: int, payload: PostUpdateSchema):
 
         return _serialize_post(post, request.auth)
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.delete("/posts/{post_id}", auth=AuthBearer(), tags=["Posts"])
@@ -287,11 +287,11 @@ def delete_post(request, post_id: int):
             )
         return {"message": "帖子已删除"}
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/posts/{post_id}/hide", auth=AuthBearer(), tags=["Posts"])
@@ -318,11 +318,11 @@ def toggle_hide_post(request, post_id: int):
             "is_hidden": bool(post.hidden_at),
         }
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/posts/{post_id}/like", auth=AuthBearer(), tags=["Posts"])
@@ -336,11 +336,11 @@ def like_post(request, post_id: int):
         PostService.like_post(post_id, request.auth)
         return {"message": "点赞成功"}
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.delete("/posts/{post_id}/like", auth=AuthBearer(), tags=["Posts"])
@@ -354,11 +354,11 @@ def unlike_post(request, post_id: int):
         PostService.unlike_post(post_id, request.auth)
         return {"message": "取消点赞成功"}
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/posts/{post_id}/report", auth=AuthBearer(), tags=["Posts"])
@@ -373,11 +373,11 @@ def report_post(request, post_id: int, payload: PostReportSchema):
         )
         return _serialize_flag(flag)
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)
 
 
 @router.post("/posts/{post_id}/flags/resolve", auth=AuthBearer(), tags=["Posts"])
@@ -402,15 +402,15 @@ def resolve_post_flags(request, post_id: int, payload: PostFlagResolveSchema):
         )
         post = PostService.get_post_by_id(post_id, request.auth)
         if not post:
-            return JsonResponse({"error": "帖子不存在"}, status=404)
+            return api_error("帖子不存在", status=404)
         return {
             "message": "举报已处理",
             "resolved_count": resolved_count,
             "post": _serialize_post(post, request.auth),
         }
     except Post.DoesNotExist:
-        return JsonResponse({"error": "帖子不存在"}, status=404)
+        return api_error("帖子不存在", status=404)
     except PermissionDenied as e:
-        return JsonResponse({"error": str(e)}, status=403)
+        return api_error(str(e), status=403)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return api_error(str(e), status=400)

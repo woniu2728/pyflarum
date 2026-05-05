@@ -117,6 +117,8 @@ class DiscussionListFilterDefinition:
     is_default: bool = False
     requires_authenticated_user: bool = False
     order: int = 100
+    sidebar_visible: bool = True
+    route_path: str = "/"
 
 
 @dataclass(frozen=True)
@@ -668,6 +670,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     icon="far fa-comments",
                     is_default=True,
                     order=10,
+                    route_path="/",
                 ),
                 DiscussionListFilterDefinition(
                     code="following",
@@ -678,6 +681,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     icon="fas fa-bell",
                     requires_authenticated_user=True,
                     order=20,
+                    route_path="/following",
                 ),
                 DiscussionListFilterDefinition(
                     code="my",
@@ -688,6 +692,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     icon="fas fa-user",
                     requires_authenticated_user=True,
                     order=30,
+                    sidebar_visible=False,
                 ),
                 DiscussionListFilterDefinition(
                     code="unread",
@@ -698,6 +703,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     icon="fas fa-circle",
                     requires_authenticated_user=True,
                     order=40,
+                    sidebar_visible=False,
                 ),
             ),
             search_filters=(

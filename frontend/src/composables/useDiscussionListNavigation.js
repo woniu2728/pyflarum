@@ -3,10 +3,9 @@ import { getForumNavItems } from '@/forum/registry'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 
 const DEFAULT_DISCUSSION_FILTERS = [
-  { code: 'all', label: '全部讨论', icon: 'far fa-comments' },
-  { code: 'following', label: '关注中', icon: 'fas fa-bell', requires_authenticated_user: true },
+  { code: 'all', label: '全部讨论', icon: 'far fa-comments', sidebar_visible: true, route_path: '/' },
+  { code: 'following', label: '关注中', icon: 'fas fa-bell', requires_authenticated_user: true, sidebar_visible: true, route_path: '/following' },
 ]
-const SIDEBAR_HIDDEN_DISCUSSION_FILTER_CODES = new Set(['my', 'unread'])
 
 export function useDiscussionListNavigation({
   authStore,
@@ -68,7 +67,7 @@ export function useDiscussionListNavigation({
     const fallbackByCode = new Map(DEFAULT_DISCUSSION_FILTERS.map(item => [item.code, item]))
 
     return sourceFilters
-      .filter(item => !SIDEBAR_HIDDEN_DISCUSSION_FILTER_CODES.has(item.code))
+      .filter(item => item.sidebar_visible !== false)
       .map(item => {
         const fallback = fallbackByCode.get(item.code) || {}
         const navItem = navItemsByCode.get(item.code) || {}
@@ -83,14 +82,17 @@ export function useDiscussionListNavigation({
       .filter(item => !(item.requires_authenticated_user && !authStore.user))
       .map(item => ({
         ...item,
-        to: item.to || buildDiscussionFilterLocation(item.code),
+        to: item.to || buildDiscussionFilterLocation(item),
         active: isDiscussionFilterActive(item.code),
       }))
   }
 
-  function buildDiscussionFilterLocation(filterCode) {
-    if (filterCode === 'following') {
-      return '/following'
+  function buildDiscussionFilterLocation(filterItem) {
+    const filterCode = filterItem?.code
+    const routePath = String(filterItem?.route_path || '').trim()
+
+    if (routePath && routePath !== '/') {
+      return routePath
     }
 
     if (filterCode === 'all') {

@@ -58,6 +58,7 @@ from apps.tags.services import TagService
 from apps.notifications.services import NotificationService
 from apps.users.group_utils import get_primary_group, serialize_group_badge
 from apps.core.services import PaginationService
+from apps.core.api_errors import api_error
 
 router = Router()
 
@@ -84,7 +85,7 @@ class AuthBearer(HttpBearer):
 
 
 def admin_error(message: str, status: int = 400):
-    return JsonResponse({"error": message}, status=status)
+    return api_error(message, status=status)
 
 
 def serialize_audit_log(log: AuditLog) -> Dict[str, Any]:
@@ -348,6 +349,8 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
                 "icon": discussion_list_filter.icon,
                 "is_default": discussion_list_filter.is_default,
                 "requires_authenticated_user": discussion_list_filter.requires_authenticated_user,
+                "sidebar_visible": discussion_list_filter.sidebar_visible,
+                "route_path": discussion_list_filter.route_path,
             }
             for discussion_list_filter in module.discussion_list_filters
         ],
@@ -1060,6 +1063,8 @@ def list_admin_modules(request):
             "icon": discussion_list_filter.icon,
             "is_default": discussion_list_filter.is_default,
             "requires_authenticated_user": discussion_list_filter.requires_authenticated_user,
+            "sidebar_visible": discussion_list_filter.sidebar_visible,
+            "route_path": discussion_list_filter.route_path,
         }
         for discussion_list_filter in REGISTRY.get_discussion_list_filters()
     ]
