@@ -100,6 +100,12 @@
                   >
                     {{ module.dependency_status_label }}
                   </span>
+                  <span
+                    class="ModuleStatus"
+                    :class="module.health_status === 'healthy' ? 'ModuleStatus--enabled' : 'ModuleStatus--warning'"
+                  >
+                    {{ module.health_status_label }}
+                  </span>
                 </div>
                 <p>{{ module.description }}</p>
               </div>
@@ -123,6 +129,20 @@
                 <span>依赖</span>
                 <strong>{{ module.dependencies.length ? module.dependencies.join(', ') : '无' }}</strong>
               </div>
+              <div class="ModuleMeta-row">
+                <span>启动方式</span>
+                <strong>{{ module.runtime?.boot_mode_label || '静态注册' }}</strong>
+              </div>
+              <div class="ModuleMeta-row">
+                <span>设置组</span>
+                <strong>{{ module.settings?.groups?.length ? module.settings.groups.join(', ') : '无' }}</strong>
+              </div>
+              <div class="ModuleMeta-row">
+                <span>文档</span>
+                <strong>
+                  <a :href="module.documentation_url">{{ module.documentation_url }}</a>
+                </strong>
+              </div>
             </div>
 
             <div v-if="module.missing_dependencies.length || module.disabled_dependencies.length" class="ModuleWarnings">
@@ -131,6 +151,11 @@
               </p>
               <p v-if="module.disabled_dependencies.length">
                 未启用依赖: <code>{{ module.disabled_dependencies.join(', ') }}</code>
+              </p>
+            </div>
+            <div v-if="module.health_issues.length" class="ModuleWarnings ModuleWarnings--neutral">
+              <p v-for="issue in module.health_issues" :key="issue">
+                {{ issue }}
               </p>
             </div>
 
@@ -146,6 +171,7 @@
                 <ul v-if="module.admin_pages.length" class="ModuleList">
                   <li v-for="page in module.admin_pages" :key="page.path">
                     <router-link :to="page.path">{{ page.label }}</router-link>
+                    <small v-if="page.settings_group">设置组: {{ page.settings_group }}</small>
                   </li>
                 </ul>
                 <p v-else class="ModuleEmpty">暂无后台入口</p>
@@ -160,6 +186,25 @@
                   </li>
                 </ul>
                 <p v-else class="ModuleEmpty">暂无权限声明</p>
+              </div>
+
+              <div>
+                <h5>设置与运行时</h5>
+                <ul v-if="module.settings?.has_settings || module.runtime" class="ModuleList">
+                  <li v-if="module.settings?.groups?.length">
+                    <span>设置组</span>
+                    <code>{{ module.settings.groups.join(', ') }}</code>
+                  </li>
+                  <li v-if="module.settings?.has_settings">
+                    <span>已配置键</span>
+                    <code>{{ module.settings.configured_key_count }}</code>
+                  </li>
+                  <li v-if="module.runtime?.migration_label">
+                    <span>迁移状态</span>
+                    <code>{{ module.runtime.migration_label }}</code>
+                  </li>
+                </ul>
+                <p v-else class="ModuleEmpty">暂无设置或运行时元数据</p>
               </div>
 
               <div>
@@ -642,6 +687,8 @@ const summaryItems = computed(() => [
   { label: '搜索过滤', value: String(summary.value.search_filter_count ?? searchFilters.value.length) },
   { label: '讨论排序', value: String(summary.value.discussion_sort_count ?? discussionSorts.value.length) },
   { label: '列表过滤', value: String(summary.value.discussion_list_filter_count ?? discussionListFilters.value.length) },
+  { label: '设置组', value: String(summary.value.settings_group_count ?? 0) },
+  { label: '健康关注', value: String(summary.value.health_attention_count ?? 0) },
 ])
 
 const moduleNameMap = computed(() => Object.fromEntries(modules.value.map(item => [item.id, item.name])))
@@ -673,6 +720,12 @@ function normalizeModule(module) {
     dependency_status: module.dependency_status || 'healthy',
     dependency_status_label: module.dependency_status_label || '依赖正常',
     registration_counts: module.registration_counts || {},
+    health_issues: module.health_issues || [],
+    health_status: module.health_status || 'healthy',
+    health_status_label: module.health_status_label || '健康',
+    settings: module.settings || { groups: [], group_count: 0, configured_key_count: 0, has_settings: false },
+    runtime: module.runtime || {},
+    documentation_url: module.documentation_url || '',
   }
 }
 
@@ -941,6 +994,11 @@ function formatPostTypeCapabilities(postType) {
   background: #fff9ef;
 }
 
+.ModuleWarnings--neutral {
+  border-color: var(--forum-border-color);
+  background: var(--forum-bg-subtle);
+}
+
 .ModuleWarnings p {
   margin: 0;
 }
@@ -980,6 +1038,12 @@ function formatPostTypeCapabilities(postType) {
 
 .ModuleList li {
   overflow-wrap: anywhere;
+}
+
+.ModuleList li small {
+  display: block;
+  margin-top: 4px;
+  color: var(--forum-text-soft);
 }
 
 .ModuleList--dense {

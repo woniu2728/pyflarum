@@ -28,6 +28,7 @@ class AdminPageDefinition:
     module_id: str
     nav_section: str = "feature"
     description: str = ""
+    settings_group: str = ""
 
 
 @dataclass(frozen=True)
@@ -142,6 +143,8 @@ class ForumModuleDefinition:
     search_filters: Tuple[SearchFilterDefinition, ...] = ()
     discussion_sorts: Tuple[DiscussionSortDefinition, ...] = ()
     discussion_list_filters: Tuple[DiscussionListFilterDefinition, ...] = ()
+    settings_groups: Tuple[str, ...] = ()
+    documentation_url: str = ""
 
 
 class ForumRegistry:
@@ -372,6 +375,26 @@ class ForumRegistry:
             for section in sorted(sections.values(), key=lambda item: item["label"])
         ]
 
+    def expand_permissions(self, permission_codes: List[str] | Tuple[str, ...]) -> List[str]:
+        resolved: List[str] = []
+        visited: set[str] = set()
+
+        def visit(code: str) -> None:
+          normalized = self.normalize_permission_code(code)
+          if not normalized or normalized in visited:
+              return
+          visited.add(normalized)
+          definition = self.get_permission(normalized)
+          if definition:
+              for dependency in definition.required_permissions:
+                  visit(dependency)
+          resolved.append(normalized)
+
+        for permission_code in permission_codes or []:
+            visit(permission_code)
+
+        return resolved
+
 
 _registry: ForumRegistry | None = None
 
@@ -416,6 +439,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     module_id="core",
                     nav_section="core",
                     description="维护论坛标题、公告与 SEO 基础信息。",
+                    settings_group="basic",
                 ),
                 AdminPageDefinition(
                     path="/admin/permissions",
@@ -432,6 +456,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     module_id="core",
                     nav_section="core",
                     description="维护主题色、Logo 与自定义样式。",
+                    settings_group="appearance",
                 ),
                 AdminPageDefinition(
                     path="/admin/mail",
@@ -440,6 +465,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     module_id="core",
                     nav_section="feature",
                     description="配置邮件驱动与测试投递。",
+                    settings_group="mail",
                 ),
                 AdminPageDefinition(
                     path="/admin/advanced",
@@ -448,6 +474,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     module_id="core",
                     nav_section="feature",
                     description="管理缓存、队列、存储和维护模式。",
+                    settings_group="advanced",
                 ),
                 AdminPageDefinition(
                     path="/admin/audit-logs",
@@ -466,6 +493,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                 "advanced",
                 "audit-log",
             ),
+            settings_groups=("basic", "appearance", "mail", "advanced"),
         )
     )
 

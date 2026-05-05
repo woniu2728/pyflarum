@@ -3,9 +3,14 @@
     className="PermissionsPage"
     icon="fas fa-key"
     title="权限管理"
-    description="配置用户组和权限"
+    description="配置用户组和权限，并检查权限来源与依赖关系"
   >
     <div class="PermissionsPage-content">
+      <AdminInlineMessage v-if="permissionMetaSummary" tone="neutral">
+        当前共注册 {{ permissionMetaSummary.permissionCount }} 项权限，来自 {{ permissionMetaSummary.moduleCount }} 个模块。
+        保存时会自动补齐依赖权限，避免出现“子权限已勾选但前置权限缺失”的配置。
+      </AdminInlineMessage>
+
       <!-- 用户组管理 -->
       <div class="PermissionsPage-groups">
         <div class="GroupBar">
@@ -62,8 +67,20 @@
                   :key="permission.name"
                 >
                   <td class="PermissionGrid-permission">
-                    <i :class="permission.icon"></i>
-                    {{ permission.label }}
+                    <div class="PermissionCell-main">
+                      <div class="PermissionCell-title">
+                        <i :class="permission.icon"></i>
+                        <span>{{ permission.label }}</span>
+                      </div>
+                      <div class="PermissionCell-meta">
+                        <code>{{ permission.name }}</code>
+                        <span>{{ resolveModuleName(permission.module_id) }}</span>
+                      </div>
+                      <p v-if="permission.description" class="PermissionCell-description">{{ permission.description }}</p>
+                      <p v-if="permission.required_permissions?.length" class="PermissionCell-dependencies">
+                        依赖: <code>{{ permission.required_permissions.join(', ') }}</code>
+                      </p>
+                    </div>
                   </td>
                   <td
                     v-for="group in groups"
@@ -99,7 +116,15 @@
                   <i :class="permission.icon"></i>
                   <strong>{{ permission.label }}</strong>
                 </div>
+                <div class="PermissionMobileCard-meta">
+                  <code>{{ permission.name }}</code>
+                  <span>{{ resolveModuleName(permission.module_id) }}</span>
+                </div>
               </div>
+              <p v-if="permission.description" class="PermissionMobileCard-description">{{ permission.description }}</p>
+              <p v-if="permission.required_permissions?.length" class="PermissionMobileCard-dependencies">
+                依赖: <code>{{ permission.required_permissions.join(', ') }}</code>
+              </p>
 
               <div class="PermissionMobileMatrix">
                 <label
@@ -233,7 +258,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminPage from '../components/AdminPage.vue'
 import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
@@ -243,6 +268,7 @@ import { useModalStore } from '../../stores/modal'
 const groups = ref([])
 const permissions = ref({})
 const permissionSections = ref([])
+const permissionModules = ref([])
 const saving = ref(false)
 const errorMessage = ref('')
 const showGroupModal = ref(false)
@@ -285,12 +311,27 @@ async function loadPermissionMeta() {
   try {
     const data = await api.get('/admin/permissions/meta')
     permissionSections.value = data.sections || []
+    permissionModules.value = data.modules || []
     errorMessage.value = ''
   } catch (error) {
     console.error('加载权限定义失败:', error)
     errorMessage.value = '加载权限定义失败'
   }
 }
+
+const permissionMetaSummary = computed(() => {
+  const permissionCount = permissionSections.value.reduce((total, section) => {
+    return total + (section.permissions?.length || 0)
+  }, 0)
+  return {
+    permissionCount,
+    moduleCount: permissionModules.value.length,
+  }
+})
+
+const moduleNameMap = computed(() => {
+  return Object.fromEntries(permissionModules.value.map(module => [module.id, module.name]))
+})
 
 function hasPermission(groupId, permissionName) {
   return permissions.value[groupId]?.includes(permissionName) || false
@@ -314,6 +355,10 @@ function togglePermission(groupId, permissionName, event) {
       (p) => p !== permissionName
     )
   }
+}
+
+function resolveModuleName(moduleId) {
+  return moduleNameMap.value[moduleId] || moduleId || '未知模块'
 }
 
 async function savePermissions() {
@@ -615,6 +660,35 @@ function getEmptyGroupForm() {
   text-align: center;
 }
 
+.PermissionCell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.PermissionCell-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--forum-text-color);
+}
+
+.PermissionCell-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--forum-text-soft);
+  font-size: 12px;
+}
+
+.PermissionCell-description,
+.PermissionCell-dependencies {
+  margin: 0;
+  color: var(--forum-text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .PermissionGrid-cell {
   text-align: center;
 }
@@ -760,6 +834,23 @@ function getEmptyGroupForm() {
     width: 16px;
     color: var(--forum-text-soft);
     text-align: center;
+  }
+
+  .PermissionMobileCard-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--forum-text-soft);
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .PermissionMobileCard-description,
+  .PermissionMobileCard-dependencies {
+    margin: 0 0 8px;
+    color: var(--forum-text-soft);
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .PermissionMobileMatrix {

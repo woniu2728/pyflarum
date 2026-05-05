@@ -47,7 +47,7 @@ from apps.core.settings_service import (
     save_setting_group,
     sync_mail_settings_to_site_config,
 )
-from apps.core.models import AuditLog
+from apps.core.models import AuditLog, Setting
 from apps.users.models import User, Group, Permission
 from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
@@ -249,8 +249,77 @@ def build_module_dependency_state(module, module_map: Dict[str, Any]) -> Dict[st
     }
 
 
+def build_module_health_state(module, dependency_state: Dict[str, Any]) -> Dict[str, Any]:
+    issues = []
+
+    if dependency_state["status"] != "healthy":
+        issues.append(dependency_state["label"])
+
+    if module.enabled and not module.capabilities:
+        issues.append("未声明能力项")
+
+    status = "healthy"
+    label = "健康"
+    if issues:
+        status = "attention"
+        label = "需关注"
+
+    return {
+        "status": status,
+        "label": label,
+        "issues": issues,
+    }
+
+
+def build_module_settings_overview(module) -> Dict[str, Any]:
+    setting_keys = []
+    for group_name in module.settings_groups:
+        if group_name == "basic":
+            setting_keys.extend([f"basic.{key}" for key in BASIC_SETTINGS_DEFAULTS.keys()])
+        elif group_name == "appearance":
+            setting_keys.extend([f"appearance.{key}" for key in APPEARANCE_SETTINGS_DEFAULTS.keys()])
+        elif group_name == "advanced":
+            setting_keys.extend([f"advanced.{key}" for key in ADVANCED_SETTINGS_DEFAULTS.keys()])
+        elif group_name == "mail":
+            setting_keys.extend([f"mail.{key}" for key in get_mail_settings_defaults().keys()])
+
+    configured_count = 0
+    if setting_keys:
+        configured_count = Setting.objects.filter(key__in=setting_keys).count()
+
+    return {
+        "groups": list(module.settings_groups),
+        "group_count": len(module.settings_groups),
+        "configured_key_count": configured_count,
+        "has_settings": bool(module.settings_groups),
+    }
+
+
+def resolve_module_documentation_url(module) -> str:
+    if module.documentation_url:
+        return module.documentation_url
+    return f"/admin/modules?module={module.module_id}"
+
+
+def build_module_runtime_state(module) -> Dict[str, Any]:
+    migration_state = "built-in"
+    migration_label = "内置模块"
+    if module.module_id == "core":
+        migration_label = "核心底座"
+
+    return {
+        "migration_state": migration_state,
+        "migration_label": migration_label,
+        "boot_mode": "static",
+        "boot_mode_label": "启动时静态注册",
+    }
+
+
 def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str, Any]:
     dependency_state = build_module_dependency_state(module, module_map)
+    health_state = build_module_health_state(module, dependency_state)
+    settings_overview = build_module_settings_overview(module)
+    runtime_state = build_module_runtime_state(module)
     resource_fields = [
         {
             "resource": definition.resource,
@@ -274,7 +343,13 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
         "dependency_status_label": dependency_state["label"],
         "missing_dependencies": dependency_state["missing"],
         "disabled_dependencies": dependency_state["disabled"],
+        "health_status": health_state["status"],
+        "health_status_label": health_state["label"],
+        "health_issues": health_state["issues"],
         "capabilities": list(module.capabilities),
+        "settings": settings_overview,
+        "documentation_url": resolve_module_documentation_url(module),
+        "runtime": runtime_state,
         "notification_types": [
             {
                 "code": notification_type.code,
@@ -376,6 +451,7 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
                 "icon": page.icon,
                 "nav_section": page.nav_section,
                 "description": page.description,
+                "settings_group": page.settings_group,
             }
             for page in module.admin_pages
         ],
@@ -390,6 +466,7 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
             "discussion_sorts": len(module.discussion_sorts),
             "discussion_list_filters": len(module.discussion_list_filters),
             "resource_fields": len(resource_fields),
+            "settings_groups": len(module.settings_groups),
         },
     }
 
@@ -991,6 +1068,7 @@ def list_admin_modules(request):
             "module_id": page.module_id,
             "nav_section": page.nav_section,
             "description": page.description,
+            "settings_group": page.settings_group,
         }
         for page in REGISTRY.get_admin_pages()
     ]
@@ -1117,7 +1195,9 @@ def list_admin_modules(request):
         "search_filter_count": len(search_filters),
         "discussion_sort_count": len(discussion_sorts),
         "discussion_list_filter_count": len(discussion_list_filters),
+        "settings_group_count": sum(len(module["settings"]["groups"]) for module in modules),
         "dependency_issue_count": len(dependency_attention),
+        "health_attention_count": sum(1 for module in modules if module["health_status"] != "healthy"),
     }
     return {
         "summary": summary,
@@ -1144,6 +1224,15 @@ def get_permissions_meta(request):
     return {
         "sections": REGISTRY.get_permission_sections(),
         "aliases": REGISTRY.get_permission_aliases(),
+        "modules": [
+            {
+                "id": module.module_id,
+                "name": module.name,
+                "category": module.category,
+                "enabled": module.enabled,
+            }
+            for module in REGISTRY.get_modules()
+        ],
     }
 
 
@@ -1190,6 +1279,8 @@ def save_permissions(request, payload: Dict[int, List[str]] = Body(...)):
                 return admin_error(f"未知权限: {permission_name}", status=400)
             if normalized_permission not in normalized_permissions:
                 normalized_permissions.append(normalized_permission)
+
+        normalized_permissions = REGISTRY.expand_permissions(normalized_permissions)
 
         normalized_payload[group.id] = {
             "group": group,

@@ -3353,7 +3353,23 @@ class AdminPermissionsApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(
             set(Permission.objects.filter(group=self.group).values_list("permission", flat=True)),
-            {"discussion.reply", "discussion.edit"},
+            {"discussion.reply", "discussion.edit", "viewForum"},
+        )
+
+    def test_permissions_api_expands_required_permissions_on_save(self):
+        response = self.client.post(
+            "/api/admin/permissions",
+            data=json.dumps({
+                str(self.group.id): ["replyWithoutApproval"],
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            set(Permission.objects.filter(group=self.group).values_list("permission", flat=True)),
+            {"replyWithoutApproval", "discussion.reply", "viewForum"},
         )
 
     def test_permissions_api_rejects_unknown_permission(self):
@@ -3379,6 +3395,7 @@ class AdminPermissionsApiTests(TestCase):
         payload = response.json()
         self.assertIn("sections", payload)
         self.assertIn("aliases", payload)
+        self.assertIn("modules", payload)
         section_names = {section["name"] for section in payload["sections"]}
         self.assertIn("view", section_names)
         self.assertIn("moderate", section_names)
@@ -3389,6 +3406,7 @@ class AdminPermissionsApiTests(TestCase):
         }
         self.assertIn("discussion.reply", all_permission_codes)
         self.assertEqual(payload["aliases"]["reply"], "discussion.reply")
+        self.assertTrue(any(module["id"] == "core" for module in payload["modules"]))
 
     def test_modules_api_returns_builtin_registry_snapshot(self):
         response = self.client.get(
@@ -3430,11 +3448,18 @@ class AdminPermissionsApiTests(TestCase):
         self.assertTrue(core_module["is_core"])
         self.assertEqual(core_module["category_label"], "核心")
         self.assertIn("dependency_status", core_module)
+        self.assertIn("health_status", core_module)
+        self.assertIn("settings", core_module)
+        self.assertIn("runtime", core_module)
         self.assertIn("registration_counts", core_module)
         self.assertIn("permissions", core_module)
+        self.assertIn("documentation_url", core_module)
         self.assertIn("resource_fields", tags_module)
         self.assertIn("search_filters", tags_module)
         self.assertEqual(core_module["dependency_status"], "healthy")
+        self.assertEqual(core_module["health_status"], "healthy")
+        self.assertIn("basic", core_module["settings"]["groups"])
+        self.assertEqual(core_module["runtime"]["boot_mode"], "static")
         discussions_module = next(module for module in payload["modules"] if module["id"] == "discussions")
         self.assertIn("discussion_sorts", discussions_module)
         self.assertIn("discussion_list_filters", discussions_module)
