@@ -100,6 +100,7 @@
           :get-display-name="getUserDisplayName"
           :get-icon-class="getNotificationIconClass"
           :get-message-html="getNotificationMessageHtml"
+          :get-presentation="getNotificationPresentation"
           @click="handleNotificationClick"
           @mark-read="markAsRead"
           @delete="deleteNotification"
@@ -155,6 +156,7 @@
               :get-display-name="getUserDisplayName"
               :get-icon-class="getNotificationIconClass"
               :get-message-html="getNotificationMessageHtml"
+              :get-presentation="getNotificationPresentation"
               @click="handleNotificationClick"
               @mark-read="markAsRead"
               @delete="deleteNotification"
@@ -178,6 +180,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getNotificationIconClass,
+  getNotificationPresentationModel,
   getNotificationTextHtml
 } from '@/composables/useNotificationPresentation'
 import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
@@ -264,6 +267,10 @@ function formatDate(dateString) {
 
 function getNotificationMessageHtml(notification) {
   return getNotificationTextHtml(notification)
+}
+
+function getNotificationPresentation(notification) {
+  return getNotificationPresentationModel(notification)
 }
 
 function getNotificationAvatarInitial(notification) {

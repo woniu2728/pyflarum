@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import {
+  getNotificationPresentationModel,
   resolveNotificationPath,
   useNotificationGroups
 } from '@/composables/useNotificationPresentation'
@@ -30,6 +31,10 @@ export function useHeaderNotifications({
       .filter(item => item.total > 0 || item.unread > 0)
       .slice(0, 4)
   })
+
+  function getNotificationPresentation(notification) {
+    return getNotificationPresentationModel(notification)
+  }
 
   async function refreshMenuNotifications() {
     await notificationStore.fetchNotifications({ limit: 8 })
@@ -149,6 +154,7 @@ export function useHeaderNotifications({
     actionTone,
     markingAllRead,
     clearingRead,
+    getNotificationPresentation,
     toggleNotifications,
     markAllNotificationsAsRead,
     clearReadNotifications,

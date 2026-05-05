@@ -10,6 +10,7 @@
       :get-display-name="getDisplayName"
       :get-icon-class="getIconClass"
       :get-message-html="getMessageHtml"
+      :get-presentation="getPresentation"
       @click="$emit('click', notification)"
       @mark-read="$emit('mark-read', $event)"
       @delete="$emit('delete', $event)"
@@ -44,6 +45,10 @@ defineProps({
   getMessageHtml: {
     type: Function,
     required: true
+  },
+  getPresentation: {
+    type: Function,
+    default: null
   },
   notifications: {
     type: Array,

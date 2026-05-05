@@ -93,10 +93,10 @@
                 :src="notification.from_user.avatar_url"
                 :alt="notification.from_user.display_name || notification.from_user.username"
               />
-              <i v-else :class="getNotificationIconClass(notification.type)"></i>
+              <i v-else :class="getNotificationPresentation(notification).iconClass || getNotificationIconClass(notification.type)"></i>
             </span>
             <span class="notification-entry-main">
-              <span class="notification-entry-message" v-html="getNotificationTextHtml(notification)"></span>
+              <span class="notification-entry-message" v-html="getNotificationPresentation(notification).messageHtml || getNotificationTextHtml(notification)"></span>
               <span class="notification-entry-time">{{ formatRelativeTime(notification.created_at) }}</span>
             </span>
             <span v-if="!notification.is_read" class="notification-entry-unread"></span>
@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   showNotifications: {
     type: Boolean,
     default: false
@@ -163,6 +163,10 @@ defineProps({
     type: Function,
     required: true
   },
+  getNotificationPresentation: {
+    type: Function,
+    default: null
+  },
   formatRelativeTime: {
     type: Function,
     required: true
@@ -178,6 +182,17 @@ defineEmits([
   'notification-click',
   'open-page'
 ])
+
+function getNotificationPresentation(notification) {
+  if (typeof props.getNotificationPresentation === 'function') {
+    return props.getNotificationPresentation(notification) || {}
+  }
+
+  return {
+    iconClass: props.getNotificationIconClass(notification.type),
+    messageHtml: props.getNotificationTextHtml(notification),
+  }
+}
 </script>
 
 <style scoped>

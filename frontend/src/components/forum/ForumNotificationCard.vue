@@ -16,15 +16,15 @@
     <div class="notification-main">
       <div class="notification-title-row">
         <div class="notification-title">
-          <i :class="getIconClass(notification.type)"></i>
-          <span v-html="getMessageHtml(notification)"></span>
+          <i :class="getPresentation(notification).iconClass || getIconClass(notification.type)"></i>
+          <span v-html="getPresentation(notification).messageHtml || getMessageHtml(notification)"></span>
         </div>
         <span v-if="!notification.is_read" class="notification-unread-dot"></span>
       </div>
 
       <div class="notification-meta">
         <span>{{ formatDate(notification.created_at) }}</span>
-        <span v-if="notification.data?.discussion_title">{{ notification.data.discussion_title }}</span>
+        <span v-if="getPresentation(notification).metaText">{{ getPresentation(notification).metaText }}</span>
       </div>
     </div>
 
@@ -51,7 +51,7 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   formatDate: {
     type: Function,
     required: true
@@ -76,6 +76,10 @@ defineProps({
     type: Function,
     required: true
   },
+  getPresentation: {
+    type: Function,
+    default: null
+  },
   notification: {
     type: Object,
     required: true
@@ -83,6 +87,18 @@ defineProps({
 })
 
 defineEmits(['click', 'mark-read', 'delete'])
+
+function getPresentation(notification) {
+  if (typeof props.getPresentation === 'function') {
+    return props.getPresentation(notification) || {}
+  }
+
+  return {
+    iconClass: props.getIconClass(notification.type),
+    messageHtml: props.getMessageHtml(notification),
+    metaText: notification?.data?.discussion_title || '',
+  }
+}
 </script>
 
 <style scoped>

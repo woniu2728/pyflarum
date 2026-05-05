@@ -173,6 +173,33 @@ export function getNotificationText(notification, fallbackMessage = '') {
   return fallbackMessage || notification?.message || definition.label || '你有新通知'
 }
 
+export function getNotificationPresentation(notification, fallbackMessage = '') {
+  const definition = getNotificationTypeDefinition(notification?.type)
+  const messageText = getNotificationText(notification, fallbackMessage)
+  const discussionTitle = describeDiscussionTitle(notification)
+  const metaText = typeof definition.getMeta === 'function'
+    ? definition.getMeta(notification)
+    : (discussionTitle || definition.groupLabel || definition.label || '')
+  const browserTitle = typeof definition.getBrowserTitle === 'function'
+    ? definition.getBrowserTitle(notification)
+    : (definition.label || '新通知')
+  const browserBody = typeof definition.getBrowserBody === 'function'
+    ? definition.getBrowserBody(notification)
+    : messageText
+
+  return {
+    browserBody,
+    browserTitle,
+    definition,
+    discussionTitle,
+    iconClass: getNotificationIcon(notification?.type),
+    label: definition.label || '通知',
+    messageText,
+    metaText,
+    type: definition.type || normalizeType(notification?.type),
+  }
+}
+
 export function resolveNotificationGroup(notification, fallbackTitle = '论坛') {
   const definition = getNotificationTypeDefinition(notification?.type)
 

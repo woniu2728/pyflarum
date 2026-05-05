@@ -69,6 +69,7 @@
               :action-tone="actionTone"
               :marking-all-read="markingAllRead"
               :clearing-read="clearingRead"
+              :get-notification-presentation="getNotificationPresentation"
               :get-notification-icon-class="getNotificationIconClass"
               :get-notification-text-html="getNotificationTextHtml"
               :format-relative-time="formatRelativeTime"
@@ -80,6 +81,19 @@
               @notification-click="handleNotificationClick"
               @open-page="openNotificationsPage"
             />
+
+            <component
+              :is="item.href ? 'a' : 'button'"
+              v-for="item in headerActionItems"
+              :key="item.key"
+              v-bind="item.href ? { href: item.href } : { type: 'button' }"
+              class="header-plugin-action"
+              :title="item.description || item.label"
+              @click="handleHeaderItemClick(item, $event)"
+            >
+              <i v-if="item.icon" :class="item.icon"></i>
+              <span v-if="item.label">{{ item.label }}</span>
+            </component>
 
             <!-- 用户菜单 -->
             <HeaderUserMenu
@@ -139,6 +153,7 @@ import {
   getNotificationIconClass,
   getNotificationTextHtml
 } from '@/composables/useNotificationPresentation'
+import { getHeaderItems } from '@/forum/frontendRegistry'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
@@ -195,6 +210,7 @@ const {
   actionTone,
   markingAllRead,
   clearingRead,
+  getNotificationPresentation,
   toggleNotifications,
   markAllNotificationsAsRead,
   clearReadNotifications,
@@ -226,6 +242,13 @@ const {
 })
 const currentSearchQuery = computed(() => String(route.query.q ?? route.query.search ?? '').trim())
 const searchPreviewText = computed(() => currentSearchQuery.value || '')
+const headerActionItems = computed(() => getHeaderItems({
+  authStore,
+  forumStore,
+  notificationStore,
+  route,
+  router,
+}, 'after-search'))
 const showAuthenticatedUi = computed(() => authStore.isAuthenticated && Boolean(authStore.user) && !authStore.isRestoringSession)
 const showSessionPlaceholder = computed(() => authStore.isRestoringSession && authStore.isAuthenticated && !authStore.user)
 const {
@@ -282,6 +305,24 @@ function handleMobileRightAction() {
       return
     default:
       startDiscussionFromHeader()
+  }
+}
+
+function handleHeaderItemClick(item, event) {
+  if (item.disabled) {
+    event?.preventDefault?.()
+    return
+  }
+
+  if (typeof item.onClick === 'function') {
+    event?.preventDefault?.()
+    item.onClick({
+      authStore,
+      forumStore,
+      notificationStore,
+      route,
+      router,
+    })
   }
 }
 
@@ -381,6 +422,27 @@ function openSearchFromDrawer() {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.header-plugin-action {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e3e8ed;
+  border-radius: 3px;
+  background: #fff;
+  color: #5c6f84;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.header-plugin-action:hover {
+  background: #f5f8fa;
+  color: #31465d;
+  text-decoration: none;
 }
 
 .header-account-cluster {
@@ -538,6 +600,7 @@ function openSearchFromDrawer() {
   .logo,
   .search-box,
   .notifications-dropdown,
+  .header-plugin-action,
   .user-dropdown,
   .header-account-cluster,
   .header-session-placeholder,

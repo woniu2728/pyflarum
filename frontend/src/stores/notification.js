@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api from '@/api'
-import { getNotificationText } from '@/composables/useNotificationPresentation'
+import { getNotificationPresentationModel } from '@/composables/useNotificationPresentation'
 import { useAuthStore } from '@/stores/auth'
 import { unwrapList } from '@/utils/forum'
 import { useResourceStore } from '@/stores/resource'
@@ -100,8 +100,9 @@ export const useNotificationStore = defineStore('notification', () => {
 
         // 显示浏览器通知
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('新通知', {
-            body: getNotificationMessage(notification),
+          const presentation = getNotificationPresentation(notification)
+          new Notification(presentation.browserTitle || '新通知', {
+            body: presentation.browserBody || '您有新通知',
             icon: '/favicon.ico'
           })
         }
@@ -298,7 +299,11 @@ export const useNotificationStore = defineStore('notification', () => {
 
   // 获取通知消息
   function getNotificationMessage(notification) {
-    return getNotificationText(notification, '您有新通知')
+    return getNotificationPresentation(notification).messageText || '您有新通知'
+  }
+
+  function getNotificationPresentation(notification) {
+    return getNotificationPresentationModel(notification, '您有新通知')
   }
 
   // 请求通知权限
@@ -329,6 +334,7 @@ export const useNotificationStore = defineStore('notification', () => {
     deleteNotification,
     clearReadNotifications,
     clearFilteredReadNotifications,
+    getNotificationPresentation,
     getNotificationMessage,
     requestPermission
   }

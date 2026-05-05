@@ -1,13 +1,14 @@
 import { computed } from 'vue'
 import {
   getNotificationIcon,
+  getNotificationPresentation,
   resolveNotificationGroup,
   getNotificationText,
   resolveNotificationPath,
 } from '@/forum/notificationTypes'
 import { renderTwemojiText } from '@/utils/twemoji'
 
-export { getNotificationText, resolveNotificationPath }
+export { getNotificationPresentation, getNotificationText, resolveNotificationPath }
 
 export function getNotificationIconClass(type) {
   return getNotificationIcon(type)
@@ -15,6 +16,14 @@ export function getNotificationIconClass(type) {
 
 export function getNotificationTextHtml(notification, fallbackMessage = '') {
   return renderTwemojiText(getNotificationText(notification, fallbackMessage))
+}
+
+export function getNotificationPresentationModel(notification, fallbackMessage = '') {
+  const presentation = getNotificationPresentation(notification, fallbackMessage)
+  return {
+    ...presentation,
+    messageHtml: renderTwemojiText(presentation.messageText || ''),
+  }
 }
 
 export function useNotificationGroups(notificationItems, fallbackTitle = '论坛') {
