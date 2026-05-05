@@ -20,7 +20,7 @@ from apps.users.models import User
 from apps.users.preferences import get_user_preference_value
 from apps.users.services import UserService
 from apps.core.visibility import build_discussion_visibility_q, build_post_visibility_q
-import re
+from apps.core.mentions import extract_mentioned_usernames
 
 
 FORUM_REGISTRY = get_forum_registry()
@@ -870,8 +870,7 @@ class PostService:
             post: 帖子对象
             content: 帖子内容
         """
-        # 匹配@username格式
-        mentions = re.findall(r'@(\w+)', content)
+        mentions = extract_mentioned_usernames(content)
         if not mentions:
             return
 

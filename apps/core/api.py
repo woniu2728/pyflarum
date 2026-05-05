@@ -9,6 +9,7 @@ from apps.core.schemas import (
     SearchQuerySchema,
     SearchResultSchema,
     SearchSuggestionSchema,
+    SearchFilterCatalogSchema,
     DiscussionSearchResultSchema,
     PostSearchResultSchema,
     UserSearchResultSchema,
@@ -119,6 +120,17 @@ def serialize_post_search_result(post):
 
 def serialize_user_search_result(user):
     return serialize_user_payload(user, resource="search_user")
+
+
+def serialize_search_filter(definition):
+    return {
+        "code": definition.code,
+        "label": definition.label,
+        "module_id": definition.module_id,
+        "target": definition.target,
+        "syntax": definition.syntax,
+        "description": definition.description,
+    }
 
 
 @router.get("/search", response=SearchResultSchema, tags=["Search"])
@@ -251,3 +263,25 @@ def get_search_suggestions(request, q: str, limit: int = 5):
     user = get_optional_user(request)
     suggestions = SearchService.get_search_suggestions(q.strip(), limit, user=user)
     return {'suggestions': suggestions}
+
+
+@router.get("/search/filters", response=SearchFilterCatalogSchema, tags=["Search"])
+def get_search_filters(request, target: str = "all"):
+    target_map = {
+        "all": ("discussion", "post"),
+        "discussions": ("discussion",),
+        "discussion": ("discussion",),
+        "posts": ("post",),
+        "post": ("post",),
+    }
+    targets = target_map.get((target or "all").strip().lower())
+    if targets is None:
+        return JsonResponse({"error": "无效的搜索过滤目标"}, status=400)
+
+    return {
+        "target": target,
+        "filters": [
+            serialize_search_filter(item)
+            for item in SearchService.get_public_search_filters(targets=targets)
+        ]
+    }

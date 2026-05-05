@@ -95,6 +95,22 @@ class SearchSuggestionSchema(BaseModel):
     suggestions: List[str]
 
 
+class SearchFilterDefinitionSchema(BaseModel):
+    """公开搜索过滤定义"""
+    code: str
+    label: str
+    module_id: str
+    target: str
+    syntax: str = ""
+    description: str = ""
+
+
+class SearchFilterCatalogSchema(BaseModel):
+    """搜索过滤目录"""
+    target: str = "all"
+    filters: List[SearchFilterDefinitionSchema] = []
+
+
 class UploadFileOutSchema(BaseModel):
     """Composer 附件上传结果"""
     url: str

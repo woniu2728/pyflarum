@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Tuple
+from django.db import models
 
 from apps.core.version import APP_VERSION
 
@@ -569,6 +570,26 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     syntax="is:locked",
                     description="仅返回已锁定的讨论。",
                 ),
+                SearchFilterDefinition(
+                    code="is_following",
+                    label="仅关注讨论",
+                    module_id="discussions",
+                    target="discussion",
+                    parser=_parse_following_search_filter,
+                    applier=_apply_discussion_following_search_filter,
+                    syntax="is:following",
+                    description="仅返回当前用户已关注的讨论。",
+                ),
+                SearchFilterDefinition(
+                    code="is_unread",
+                    label="仅未读讨论",
+                    module_id="discussions",
+                    target="discussion",
+                    parser=_parse_unread_search_filter,
+                    applier=_apply_discussion_unread_search_filter,
+                    syntax="is:unread",
+                    description="仅返回当前用户还有未读回复的讨论。",
+                ),
             ),
         )
     )
@@ -1025,6 +1046,18 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             category="feature",
             dependencies=("discussions", "notifications", "users"),
             capabilities=("user-mentions",),
+            search_filters=(
+                SearchFilterDefinition(
+                    code="mentioned_me",
+                    label="提及我的回复",
+                    module_id="mentions",
+                    target="post",
+                    parser=_parse_mentioned_me_search_filter,
+                    applier=_apply_post_mentioned_me_search_filter,
+                    syntax="mentioned:me",
+                    description="仅返回提及当前用户的回复。",
+                ),
+            ),
             notification_types=(
                 NotificationTypeDefinition(
                     code="userMentioned",
@@ -1247,6 +1280,56 @@ def _parse_locked_search_filter(token: str) -> bool | None:
 
 def _apply_discussion_locked_search_filter(queryset, enabled: bool, context: dict):
     return queryset.filter(is_locked=enabled)
+
+
+def _parse_following_search_filter(token: str) -> bool | None:
+    return _parse_is_search_filter(token, expected="following")
+
+
+def _apply_discussion_following_search_filter(queryset, enabled: bool, context: dict):
+    user = context.get("user")
+    if not enabled:
+        return queryset
+    if not user or not getattr(user, "is_authenticated", False):
+        return queryset.none()
+    return queryset.filter(user_states__user=user, user_states__is_subscribed=True)
+
+
+def _parse_unread_search_filter(token: str) -> bool | None:
+    return _parse_is_search_filter(token, expected="unread")
+
+
+def _apply_discussion_unread_search_filter(queryset, enabled: bool, context: dict):
+    user = context.get("user")
+    if not enabled:
+        return queryset
+    if not user or not getattr(user, "is_authenticated", False):
+        return queryset.none()
+
+    return queryset.filter(last_post_number__gt=0).filter(
+        models.Q(user_states__user=user, last_post_number__gt=models.F("user_states__last_read_post_number"))
+        | models.Q(user_states__user__isnull=True)
+    )
+
+
+def _parse_mentioned_me_search_filter(token: str) -> bool | None:
+    if not token or ":" not in token:
+        return None
+
+    prefix, value = token.split(":", 1)
+    if prefix.lower() != "mentioned":
+        return None
+
+    return True if value.strip().lower() == "me" else None
+
+
+def _apply_post_mentioned_me_search_filter(queryset, enabled: bool, context: dict):
+    user = context.get("user")
+    if not enabled:
+        return queryset
+    if not user or not getattr(user, "is_authenticated", False):
+        return queryset.none()
+    return queryset.filter(mentions__mentions_user=user)
 
 
 def _parse_is_search_filter(token: str, expected: str) -> bool | None:

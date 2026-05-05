@@ -449,6 +449,126 @@ class ChineseSearchTests(TestCase):
         self.assertEqual(payload["post_total"], 1)
         self.assertEqual([item["id"] for item in payload["posts"]], [matched_post.id])
 
+    def test_search_api_supports_registered_following_and_unread_filters(self):
+        followed = DiscussionService.create_discussion(
+            title="关注过滤命中讨论",
+            content="关注过滤关键字",
+            user=self.user,
+        )
+        read_discussion = DiscussionService.create_discussion(
+            title="已读过滤讨论",
+            content="关注过滤关键字",
+            user=self.user,
+        )
+        unread_discussion = DiscussionService.create_discussion(
+            title="未读过滤讨论",
+            content="关注过滤关键字",
+            user=self.user,
+        )
+
+        from apps.discussions.models import DiscussionUser
+        DiscussionUser.objects.update_or_create(
+            discussion=followed,
+            user=self.user,
+            defaults={"is_subscribed": True, "last_read_post_number": 1},
+        )
+        DiscussionUser.objects.update_or_create(
+            discussion=read_discussion,
+            user=self.user,
+            defaults={"is_subscribed": False, "last_read_post_number": read_discussion.last_post_number or 1},
+        )
+        DiscussionUser.objects.update_or_create(
+            discussion=unread_discussion,
+            user=self.user,
+            defaults={"is_subscribed": False, "last_read_post_number": 0},
+        )
+
+        following_response = self.client.get(
+            "/api/search",
+            {"q": "关注过滤关键字 is:following", "type": "discussions"},
+            **self.auth_header(),
+        )
+        unread_response = self.client.get(
+            "/api/search",
+            {"q": "关注过滤关键字 is:unread", "type": "discussions"},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(following_response.status_code, 200, following_response.content)
+        self.assertEqual(unread_response.status_code, 200, unread_response.content)
+        self.assertEqual([item["id"] for item in following_response.json()["discussions"]], [followed.id])
+        self.assertEqual([item["id"] for item in unread_response.json()["discussions"]], [unread_discussion.id])
+
+    def test_search_api_supports_registered_mentioned_me_filter_syntax(self):
+        mentioned_user = User.objects.create_user(
+            username="mentioned-me-user",
+            email="mentioned-me-user@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        other_user = User.objects.create_user(
+            username="mentioned-other-user",
+            email="mentioned-other-user@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        discussion = DiscussionService.create_discussion(
+            title="提及过滤讨论",
+            content="首帖内容",
+            user=self.user,
+        )
+        matched_post = PostService.create_post(
+            discussion_id=discussion.id,
+            content=f"Hello @{mentioned_user.username} 提及过滤关键字",
+            user=self.user,
+        )
+        PostService.create_post(
+            discussion_id=discussion.id,
+            content=f"Hello @{other_user.username} 提及过滤关键字",
+            user=self.user,
+        )
+
+        response = self.client.get(
+            "/api/search",
+            {"q": "提及过滤关键字 mentioned:me", "type": "posts"},
+            **self.auth_header(mentioned_user),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["post_total"], 1)
+        self.assertEqual([item["id"] for item in payload["posts"]], [matched_post.id])
+
+    def test_search_filters_api_returns_registered_filter_catalog(self):
+        response = self.client.get("/api/search/filters")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["target"], "all")
+        syntaxes = {item["syntax"] for item in payload["filters"]}
+        self.assertIn("tag:<slug>", syntaxes)
+        self.assertIn("author:<username>", syntaxes)
+        self.assertIn("is:following", syntaxes)
+        self.assertIn("is:unread", syntaxes)
+        self.assertIn("mentioned:me", syntaxes)
+
+    def test_search_filters_api_supports_target_scoping(self):
+        discussions_response = self.client.get("/api/search/filters", {"target": "discussions"})
+        posts_response = self.client.get("/api/search/filters", {"target": "posts"})
+
+        self.assertEqual(discussions_response.status_code, 200, discussions_response.content)
+        self.assertEqual(posts_response.status_code, 200, posts_response.content)
+
+        discussions_payload = discussions_response.json()
+        posts_payload = posts_response.json()
+
+        self.assertEqual(discussions_payload["target"], "discussions")
+        self.assertEqual(posts_payload["target"], "posts")
+        self.assertTrue(all(item["target"] == "discussion" for item in discussions_payload["filters"]))
+        self.assertTrue(all(item["target"] == "post" for item in posts_payload["filters"]))
+        self.assertIn("is:following", {item["syntax"] for item in discussions_payload["filters"]})
+        self.assertIn("mentioned:me", {item["syntax"] for item in posts_payload["filters"]})
+
     def test_search_api_respects_discussion_approval_visibility(self):
         admin = User.objects.create_superuser(
             username="search-approval-admin",

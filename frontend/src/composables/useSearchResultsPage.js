@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import api from '@/api'
+import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { useResourceStore } from '@/stores/resource'
 import { unwrapList } from '@/utils/forum'
@@ -24,6 +25,12 @@ export function useSearchResultsPage({ route, router }) {
   const users = computed(() => resourceStore.list('users', userIds.value))
   const normalizedQuery = routeState.normalizedQuery
   const searchType = routeState.searchType
+  const searchFilterTarget = computed(() => {
+    if (searchType.value === 'posts') return 'post'
+    if (searchType.value === 'users') return ''
+    return 'discussion'
+  })
+  const searchFilterCatalog = useSearchFilterCatalog(searchFilterTarget)
   const page = routeState.page
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
   const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
@@ -51,6 +58,12 @@ export function useSearchResultsPage({ route, router }) {
       users: '用户'
     }
     return `当前显示 ${labelMap[searchType.value]}结果，共 ${total.value} 条。`
+  })
+  const syntaxItems = computed(() => {
+    if (searchType.value === 'users') {
+      return []
+    }
+    return searchFilterCatalog.filterSuggestions.value
   })
 
   watch(
@@ -149,6 +162,18 @@ export function useSearchResultsPage({ route, router }) {
     })
   }
 
+  function applySyntax(syntax) {
+    const nextQuery = searchFilterCatalog.appendFilter(normalizedQuery.value, syntax)
+    if (nextQuery === normalizedQuery.value) {
+      return
+    }
+
+    routeState.push({
+      normalizedQuery: nextQuery,
+      page: 1,
+    })
+  }
+
   function isCanceledRequest(error) {
     return error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
   }
@@ -183,6 +208,7 @@ export function useSearchResultsPage({ route, router }) {
     discussionTotal,
     discussions,
     filterItems,
+    applySyntax,
     getDiscussionExcerptHtml,
     getDiscussionTitleHtml,
     getPostExcerptHtml,
@@ -200,6 +226,7 @@ export function useSearchResultsPage({ route, router }) {
     showDiscussions,
     showPosts,
     showUsers,
+    syntaxItems,
     total,
     totalPages,
     userTotal,

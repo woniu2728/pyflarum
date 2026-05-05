@@ -51,7 +51,21 @@
         </div>
 
         <div v-if="!normalizedQuery" class="SearchModal-state">
-          输入关键词后即可开始搜索。你可以直接回车进入完整搜索结果页。
+          <div class="SearchModal-emptyState">
+            <p>输入关键词后即可开始搜索。你可以直接回车进入完整搜索结果页。</p>
+            <div v-if="filterSuggestions.length" class="SearchModal-syntaxPanel">
+              <button
+                v-for="item in filterSuggestions"
+                :key="item.key"
+                type="button"
+                class="SearchModal-syntaxChip"
+                @mousedown.prevent="applyFilterSyntax(item.syntax)"
+              >
+                <strong>{{ item.syntax }}</strong>
+                <span>{{ item.label }}</span>
+              </button>
+            </div>
+          </div>
         </div>
         <div v-else-if="loading" class="SearchModal-state">
           搜索中...
@@ -142,6 +156,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
@@ -179,6 +194,13 @@ const root = ref(null)
 const inputRef = ref(null)
 const query = ref(String(props.initialQuery || ''))
 const activeType = ref(['all', 'discussions', 'posts', 'users'].includes(props.initialType) ? props.initialType : 'all')
+const searchFilterTarget = computed(() => {
+  if (activeType.value === 'posts') return 'post'
+  if (activeType.value === 'users') return ''
+  if (activeType.value === 'discussions') return 'discussion'
+  return 'all'
+})
+const searchFilterCatalog = useSearchFilterCatalog(searchFilterTarget)
 const loading = ref(false)
 const discussionIds = ref([])
 const postIds = ref([])
@@ -251,6 +273,12 @@ const visibleSelectableItems = computed(() => {
 const fullPageActionIndex = computed(() => visibleSelectableItems.value.length)
 const isEmpty = computed(() => {
   return !searchResults.value.discussions.length && !searchResults.value.posts.length && !searchResults.value.users.length
+})
+const filterSuggestions = computed(() => {
+  if (activeType.value === 'users') {
+    return []
+  }
+  return searchFilterCatalog.filterSuggestions.value
 })
 
 watch(
@@ -413,6 +441,13 @@ function buildUserItems(items) {
 
 function clearQuery() {
   query.value = ''
+  nextTick(() => {
+    inputRef.value?.focus()
+  })
+}
+
+function applyFilterSyntax(syntax) {
+  query.value = searchFilterCatalog.appendFilter(normalizedQuery.value, syntax)
   nextTick(() => {
     inputRef.value?.focus()
   })
@@ -600,6 +635,48 @@ function scrollActiveOptionIntoView() {
   text-align: center;
   line-height: 1.7;
   padding: 24px;
+}
+
+.SearchModal-emptyState {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+}
+
+.SearchModal-emptyState p {
+  margin: 0;
+}
+
+.SearchModal-syntaxPanel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.SearchModal-syntaxChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d8e1e8;
+  border-radius: 999px;
+  background: #fff;
+  color: #4f6478;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.SearchModal-syntaxChip strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #31465b;
+}
+
+.SearchModal-syntaxChip:hover {
+  border-color: #4d698e;
+  background: #edf3f9;
 }
 
 .SearchModal-results {

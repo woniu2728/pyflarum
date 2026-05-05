@@ -8,6 +8,7 @@ import bleach
 from typing import Optional
 import re
 from apps.users.models import User
+from apps.core.mentions import MENTION_RE, extract_mentioned_usernames
 
 
 class MarkdownService:
@@ -115,8 +116,7 @@ class MarkdownService:
         Returns:
             str: 处理后的HTML
         """
-        pattern = r'@(\w+)'
-        mention_names = {name.strip() for name in re.findall(pattern, html) if name.strip()}
+        mention_names = set(extract_mentioned_usernames(html))
         mention_map = {
             item["username"]: item["id"]
             for item in User.objects.filter(username__in=mention_names).values("id", "username")
@@ -132,7 +132,7 @@ class MarkdownService:
         result = html
         # 只处理不在<a>标签内的@mentions
         parts = result.split('<a')
-        processed_parts = [re.sub(pattern, replace_mention, parts[0])]
+        processed_parts = [MENTION_RE.sub(replace_mention, parts[0])]
 
         for part in parts[1:]:
             # 找到</a>的位置
@@ -140,7 +140,7 @@ class MarkdownService:
             if end_tag != -1:
                 # 保留<a>标签内的内容不变，处理后面的内容
                 processed_parts.append('<a' + part[:end_tag+4])
-                processed_parts.append(re.sub(pattern, replace_mention, part[end_tag+4:]))
+                processed_parts.append(MENTION_RE.sub(replace_mention, part[end_tag+4:]))
             else:
                 processed_parts.append('<a' + part)
 

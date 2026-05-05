@@ -128,6 +128,14 @@ class SearchService:
         return " ".join(text_tokens).strip(), filters
 
     @staticmethod
+    def get_public_search_filters(targets: tuple[str, ...] | None = None):
+        definitions = FORUM_REGISTRY.get_search_filters()
+        if targets is not None:
+            allowed = set(targets)
+            definitions = [item for item in definitions if item.target in allowed]
+        return sorted(definitions, key=lambda item: (item.target, item.module_id, item.code, item.syntax))
+
+    @staticmethod
     def build_discussion_search_query(query: str) -> Q:
         return (
             SearchService.build_text_query(['title', 'slug'], query) |
