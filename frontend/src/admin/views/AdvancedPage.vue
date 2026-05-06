@@ -700,7 +700,7 @@
         </button>
       </div>
       <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
-      <AdminInlineMessage v-if="saveError" tone="danger">保存失败，请重试</AdminInlineMessage>
+      <AdminInlineMessage v-if="saveError" tone="danger">{{ saveErrorMessage || '保存失败，请重试' }}</AdminInlineMessage>
     </div>
   </AdminPage>
 </template>
@@ -768,7 +768,7 @@ const clearing = ref(false)
 const rebuildingSearchIndexes = ref(false)
 const loadedSettingsSnapshot = ref(null)
 const modalStore = useModalStore()
-const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
+const { saveSuccess, saveError, saveErrorMessage, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
 const turnstileMisconfigured = computed(() => (
   settings.value.auth_human_verification_provider === 'turnstile'
   && (!settings.value.auth_turnstile_site_key || !settings.value.auth_turnstile_secret_key)
@@ -811,7 +811,7 @@ async function saveSettings() {
     showSaveSuccess()
   } catch (error) {
     console.error('保存高级设置失败:', error)
-    showSaveError()
+    showSaveError(error.response?.data?.message || error.response?.data?.error || '')
   } finally {
     saving.value = false
   }

@@ -693,6 +693,30 @@ def build_runtime_risks(
     return risks
 
 
+def validate_advanced_runtime_settings(payload: Dict[str, Any]) -> list[str]:
+    cache_driver = str(payload.get("cache_driver") or "").strip().lower()
+    queue_driver = str(payload.get("queue_driver") or "").strip().lower()
+    queue_enabled = bool(payload.get("queue_enabled", False))
+    errors: list[str] = []
+
+    is_postgres = "postgresql" in detect_database_label().lower()
+    realtime_driver = detect_realtime_driver().lower()
+
+    if is_postgres and cache_driver == "file":
+        errors.append("PostgreSQL 生产形态下不允许将缓存驱动保存为文件缓存，请改用 Redis 或 Memcached。")
+
+    if is_postgres and cache_driver == "内存":
+        errors.append("PostgreSQL 生产形态下不允许继续使用内存缓存。")
+
+    if queue_enabled and queue_driver != "redis":
+        errors.append("启用队列处理时，当前仅允许使用 Redis 队列驱动。")
+
+    if is_postgres and realtime_driver == "in-memory" and queue_enabled:
+        errors.append("当前实时层仍是 In-memory，生产形态下启用队列前应先切换到 Redis Channel Layer。")
+
+    return errors
+
+
 # ==================== 统计数据 ====================
 
 @router.get("/stats", auth=AuthBearer(), tags=["Admin"])
@@ -950,6 +974,14 @@ def save_advanced_settings(request, payload: Dict[str, Any] = Body(...)):
     """保存高级设置"""
     runtime_payload = dict(payload)
     runtime_payload.pop("debug_mode", None)
+    validation_errors = validate_advanced_runtime_settings(runtime_payload)
+    if validation_errors:
+        return admin_error(
+            "；".join(validation_errors),
+            status=400,
+            code="invalid_runtime_configuration",
+            field_errors={"advanced": validation_errors},
+        )
 
     settings_data = save_setting_group("advanced", ADVANCED_SETTINGS_DEFAULTS, runtime_payload)
     settings_data["debug_mode"] = get_runtime_advanced_settings()["debug_mode"]

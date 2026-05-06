@@ -1231,6 +1231,45 @@ class AdminSettingsApiTests(TestCase):
         self.assertEqual(response.json()["settings"]["debug_mode"], settings.DEBUG)
         self.assertFalse(Setting.objects.filter(key="advanced.debug_mode").exists())
 
+    @override_settings(
+        DATABASES={"default": {"ENGINE": "django.db.backends.postgresql", "NAME": "bias", "HOST": "db"}},
+        CHANNEL_LAYERS={"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [("localhost", 6379)]}}},
+    )
+    def test_advanced_settings_rejects_file_cache_in_postgres_runtime(self):
+        response = self.client.post(
+            "/api/admin/advanced",
+            data=json.dumps({
+                "cache_driver": "file",
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        payload = response.json()
+        self.assertEqual(payload["code"], "invalid_runtime_configuration")
+        self.assertIn("PostgreSQL 生产形态下不允许将缓存驱动保存为文件缓存", payload["message"])
+
+    @override_settings(
+        DATABASES={"default": {"ENGINE": "django.db.backends.postgresql", "NAME": "bias", "HOST": "db"}},
+        CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}},
+    )
+    def test_advanced_settings_rejects_nonredis_queue_in_postgres_runtime(self):
+        response = self.client.post(
+            "/api/admin/advanced",
+            data=json.dumps({
+                "queue_enabled": True,
+                "queue_driver": "database",
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        payload = response.json()
+        self.assertEqual(payload["code"], "invalid_runtime_configuration")
+        self.assertIn("当前仅允许使用 Redis 队列驱动", payload["message"])
+
     @patch("apps.core.admin_api.SearchIndexService.rebuild_postgres_indexes")
     def test_admin_can_rebuild_search_indexes(self, rebuild_indexes):
         rebuild_indexes.return_value = {
@@ -1992,10 +2031,29 @@ class AdminDashboardStatsApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
         risk_codes = {item["code"] for item in payload["runtimeRisks"]}
-        self.assertIn("redis-disabled-production", risk_codes)
         self.assertIn("locmem-cache-production", risk_codes)
         self.assertIn("realtime-inmemory-production", risk_codes)
         self.assertIn("queue-worker-unavailable", risk_codes)
+
+    @override_settings(
+        DATABASES={"default": {"ENGINE": "django.db.backends.postgresql", "NAME": "bias", "HOST": "db"}},
+        CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "prod-risk-test"}},
+        CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}},
+        CELERY_BROKER_URL="memory://",
+    )
+    def test_admin_stats_reports_missing_redis_in_postgres_runtime(self):
+        Setting.objects.update_or_create(
+            key="advanced.queue_enabled",
+            defaults={"value": json.dumps(False)},
+        )
+        clear_runtime_setting_caches()
+
+        response = self.client.get("/api/admin/stats", **self.auth_header())
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        risk_codes = {item["code"] for item in payload["runtimeRisks"]}
+        self.assertIn("redis-disabled-production", risk_codes)
 
     @override_settings(
         CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "queue-reset-test"}},
