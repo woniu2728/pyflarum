@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
 const api = axios.create({
   baseURL: '/api',
@@ -12,8 +13,8 @@ const api = axios.create({
 let refreshRequest = null
 
 function clearStoredTokens() {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
+  const authStore = useAuthStore()
+  authStore.setAccessToken(null)
 }
 
 function isAuthEndpoint(url = '') {
@@ -62,7 +63,8 @@ function notifyAuthInvalidated(error) {
 // 请求拦截器
 api.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('access_token')
+    const authStore = useAuthStore()
+    const token = authStore.accessToken
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -92,8 +94,8 @@ api.interceptors.response.use(
 
       try {
         const data = await refreshAccessToken()
-        localStorage.setItem('access_token', data.access)
-        localStorage.removeItem('refresh_token')
+        const authStore = useAuthStore()
+        authStore.setAccessToken(data.access)
 
         originalRequest.headers = originalRequest.headers || {}
         originalRequest.headers.Authorization = `Bearer ${data.access}`

@@ -251,3 +251,43 @@ class MaintenanceModeMiddleware:
 
         response["Retry-After"] = "300"
         return response
+
+
+class SecurityHeadersMiddleware:
+    sync_capable = True
+    async_capable = True
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self._is_async = iscoroutinefunction(get_response)
+        if self._is_async:
+            markcoroutinefunction(self)
+
+    def __call__(self, request):
+        if self._is_async:
+            return self.__acall__(request)
+
+        response = self.get_response(request)
+        return self._apply_headers(response)
+
+    async def __acall__(self, request):
+        response = await self.get_response(request)
+        return self._apply_headers(response)
+
+    def _apply_headers(self, response):
+        response.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; "
+            "img-src 'self' data: blob:; "
+            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self'; "
+            "font-src 'self' data:; "
+            "connect-src 'self' ws: wss:; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "frame-ancestors 'none'",
+        )
+        response.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.setdefault("X-Content-Type-Options", "nosniff")
+        response.setdefault("X-Frame-Options", "DENY")
+        return response

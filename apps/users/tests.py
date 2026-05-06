@@ -434,6 +434,22 @@ class TokenCookieAuthTests(TestCase):
         self.assertEqual(cookie["samesite"], "Lax")
         self.assertEqual(cookie["path"], "/api/users")
 
+    def test_login_uses_shorter_default_access_token_lifetime(self):
+        response = self.client.post(
+            "/api/users/login",
+            data=json.dumps({
+                "identification": "token-cookie-user",
+                "password": "password123",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        access = RefreshToken(response.cookies["bias_refresh_token"].value).access_token
+        lifetime_seconds = int((access["exp"] - access["iat"]))
+        self.assertEqual(lifetime_seconds, 900)
+
     def test_refresh_access_token_uses_cookie(self):
         login_response = self.client.post(
             "/api/users/login",
@@ -477,6 +493,17 @@ class TokenCookieAuthTests(TestCase):
         self.assertIsNotNone(cookie)
         self.assertEqual(cookie.value, "")
         self.assertEqual(cookie["path"], "/api/users")
+
+
+class SecurityHeadersTests(TestCase):
+    def test_api_responses_include_security_headers(self):
+        response = self.client.get("/api/system/status")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIn("Content-Security-Policy", response)
+        self.assertEqual(response["Referrer-Policy"], "strict-origin-when-cross-origin")
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(response["X-Frame-Options"], "DENY")
 
 
 class HumanVerificationAuthTests(TestCase):

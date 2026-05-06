@@ -85,8 +85,19 @@ class AuthBearer(HttpBearer):
             return None
 
 
-def admin_error(message: str, status: int = 400):
-    return api_error(message, status=status)
+def admin_error(
+    message: str,
+    status: int = 400,
+    *,
+    code: str | None = None,
+    field_errors: dict[str, Any] | None = None,
+):
+    return api_error(
+        message,
+        status=status,
+        code=code,
+        field_errors=field_errors,
+    )
 
 
 def serialize_audit_log(log: AuditLog) -> Dict[str, Any]:

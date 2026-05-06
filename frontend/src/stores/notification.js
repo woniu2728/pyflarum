@@ -47,7 +47,8 @@ export const useNotificationStore = defineStore('notification', () => {
 
   // 连接WebSocket
   function connect() {
-    const token = localStorage.getItem('access_token')
+    const authStore = useAuthStore()
+    const token = authStore.accessToken
     if (!token || websocketDisabled.value) return
 
     if (ws.value && [WebSocket.OPEN, WebSocket.CONNECTING].includes(ws.value.readyState)) {

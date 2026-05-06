@@ -4,6 +4,7 @@ Django settings for bias project.
 
 from pathlib import Path
 import os
+from datetime import timedelta
 
 from apps.core.bootstrap_config import load_site_bootstrap
 
@@ -56,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'apps.core.middleware.QueryLoggingMiddleware',
     'apps.core.middleware.MaintenanceModeMiddleware',
+    'apps.core.middleware.SecurityHeadersMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -221,11 +223,15 @@ DEFAULT_FROM_EMAIL = BOOTSTRAP.default_from_email or 'noreply@bias.local'
 
 # JWT Settings
 NINJA_JWT = {
-    'ACCESS_TOKEN_LIFETIME': int(BOOTSTRAP.jwt_access_token_lifetime or 3600),
-    'REFRESH_TOKEN_LIFETIME': int(BOOTSTRAP.jwt_refresh_token_lifetime or 86400),
+    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=int(BOOTSTRAP.jwt_access_token_lifetime or 900)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(seconds=int(BOOTSTRAP.jwt_refresh_token_lifetime or 86400)),
     'ALGORITHM': BOOTSTRAP.jwt_algorithm or 'HS256',
     'SIGNING_KEY': BOOTSTRAP.jwt_secret_key or SECRET_KEY,
 }
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+X_FRAME_OPTIONS = "DENY"
 
 # Logging Configuration
 LOGGING = {
