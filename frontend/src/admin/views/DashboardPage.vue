@@ -6,6 +6,14 @@
     description="查看论坛概况和系统状态"
   >
     <div class="DashboardPage-widgets">
+      <AdminInlineMessage
+        v-if="!loading && !loadError && runtimeRisks.length"
+        :tone="runtimeRiskTone"
+      >
+        <strong>运行时风险提示：</strong>
+        {{ runtimeRiskSummary }}
+      </AdminInlineMessage>
+
       <!-- 状态小部件 -->
       <div class="Widget StatusWidget">
         <div class="Widget-header">
@@ -218,6 +226,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
@@ -246,6 +255,7 @@ const stats = ref({
   },
   realtimeDriver: null,
   redisEnabled: false,
+  runtimeRisks: [],
   debugMode: false,
   maintenanceMode: false,
   totalUsers: 0,
@@ -260,6 +270,11 @@ const resettingQueueMetrics = ref(false)
 const queueMetricsMessage = ref('')
 const queueMetricsMessageTone = ref('success')
 const modalStore = useModalStore()
+const runtimeRisks = computed(() => Array.isArray(stats.value.runtimeRisks) ? stats.value.runtimeRisks : [])
+const runtimeRiskTone = computed(() => (
+  runtimeRisks.value.some(item => item?.level === 'danger') ? 'danger' : 'warning'
+))
+const runtimeRiskSummary = computed(() => runtimeRisks.value.map(item => item.title).join('；'))
 const queueWorkerBadgeClass = computed(() => {
   if (!stats.value.queueEnabled || ['disabled', 'sync'].includes(stats.value.queueWorkerStatus)) {
     return 'StatusBadge--neutral'

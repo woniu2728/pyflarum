@@ -602,6 +602,97 @@ def is_redis_enabled(queue_enabled: bool = False, queue_driver: str = "") -> boo
     return cache_uses_redis or realtime_uses_redis or queue_uses_redis
 
 
+def build_runtime_risks(
+    *,
+    debug_mode: bool,
+    database_label: str,
+    cache_driver: str,
+    realtime_driver: str,
+    queue_enabled: bool,
+    queue_driver: str,
+    queue_worker_status: dict,
+    redis_enabled: bool,
+) -> list[dict[str, Any]]:
+    risks: list[dict[str, Any]] = []
+    normalized_database_label = str(database_label or "").lower()
+    normalized_cache_driver = str(cache_driver or "").lower()
+    normalized_realtime_driver = str(realtime_driver or "").lower()
+    normalized_queue_driver = str(queue_driver or "").lower()
+
+    if debug_mode:
+        risks.append(
+            {
+                "code": "debug-enabled",
+                "level": "warning",
+                "title": "DEBUG 模式仍处于开启状态",
+                "message": "生产环境应关闭 DEBUG，避免泄露调试信息并影响缓存与异常处理行为。",
+            }
+        )
+
+    is_production_like = "postgresql" in normalized_database_label
+    if is_production_like and not redis_enabled:
+        risks.append(
+            {
+                "code": "redis-disabled-production",
+                "level": "danger",
+                "title": "生产形态下未启用 Redis",
+                "message": "当前使用 PostgreSQL，但缓存、实时层与队列未形成 Redis 底座，不符合路线图中的生产约束要求。",
+            }
+        )
+
+    if is_production_like and "内存" in cache_driver:
+        risks.append(
+            {
+                "code": "locmem-cache-production",
+                "level": "danger",
+                "title": "生产形态下仍在使用内存缓存",
+                "message": "LocMemCache 只适合开发环境，多进程部署下会导致缓存割裂与状态不一致。",
+            }
+        )
+
+    if queue_enabled and normalized_queue_driver == "redis" and not queue_worker_status.get("available"):
+        risks.append(
+            {
+                "code": "queue-worker-unavailable",
+                "level": "danger",
+                "title": "队列已启用但没有可用 worker",
+                "message": queue_worker_status.get("message") or "当前队列会持续回退到同步执行，后台异步任务无法稳定处理。",
+            }
+        )
+
+    if queue_enabled and normalized_queue_driver != "redis":
+        risks.append(
+            {
+                "code": "queue-driver-nonredis",
+                "level": "warning",
+                "title": "队列已启用但未使用 Redis 驱动",
+                "message": "当前 worker 健康检测与稳定异步链路主要围绕 Redis/Celery 设计，其他驱动暂未形成完整生产闭环。",
+            }
+        )
+
+    if is_production_like and normalized_realtime_driver == "in-memory":
+        risks.append(
+            {
+                "code": "realtime-inmemory-production",
+                "level": "warning",
+                "title": "实时层仍使用内存通道",
+                "message": "In-memory Channel Layer 不适合多实例部署，WebSocket 消息无法跨进程共享。",
+            }
+        )
+
+    if is_production_like and normalized_cache_driver not in {"redis", "memcached"}:
+        risks.append(
+            {
+                "code": "cache-driver-nonshared",
+                "level": "warning",
+                "title": "缓存驱动不是共享缓存",
+                "message": "当前缓存驱动缺少跨实例共享能力，生产环境下容易出现配置和统计状态不一致。",
+            }
+        )
+
+    return risks
+
+
 # ==================== 统计数据 ====================
 
 @router.get("/stats", auth=AuthBearer(), tags=["Admin"])
@@ -613,13 +704,27 @@ def get_stats(request):
     queue_enabled = bool(advanced_settings.get("queue_enabled", False))
     queue_worker_status = QueueService.get_worker_status()
     queue_metrics = QueueService.get_metrics()
+    database_label = detect_database_label()
+    cache_driver = detect_cache_driver()
+    realtime_driver = detect_realtime_driver()
+    redis_enabled = is_redis_enabled(queue_enabled=queue_enabled, queue_driver=queue_driver)
+    runtime_risks = build_runtime_risks(
+        debug_mode=settings.DEBUG,
+        database_label=database_label,
+        cache_driver=cache_driver,
+        realtime_driver=realtime_driver,
+        queue_enabled=queue_enabled,
+        queue_driver=queue_driver,
+        queue_worker_status=queue_worker_status,
+        redis_enabled=redis_enabled,
+    )
 
     return {
         "runtimeName": "Python",
         "pythonVersion": sys.version.split()[0],
         "djangoVersion": django.get_version(),
-        "databaseLabel": detect_database_label(),
-        "cacheDriver": detect_cache_driver(),
+        "databaseLabel": database_label,
+        "cacheDriver": cache_driver,
         "queueDriver": queue_driver,
         "queueEnabled": queue_enabled,
         "queueLabel": detect_queue_driver_label(queue_enabled, queue_driver),
@@ -629,8 +734,9 @@ def get_stats(request):
         "queueWorkerCount": queue_worker_status["worker_count"],
         "queueWorkerMessage": queue_worker_status["message"],
         "queueMetrics": queue_metrics,
-        "realtimeDriver": detect_realtime_driver(),
-        "redisEnabled": is_redis_enabled(queue_enabled=queue_enabled, queue_driver=queue_driver),
+        "realtimeDriver": realtime_driver,
+        "redisEnabled": redis_enabled,
+        "runtimeRisks": runtime_risks,
         "debugMode": settings.DEBUG,
         "maintenanceMode": bool(advanced_settings.get("maintenance_mode", False)),
         "totalUsers": User.objects.count(),

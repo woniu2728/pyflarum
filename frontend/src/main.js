@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { useForumStore } from './stores/forum'
+import '@fortawesome/fontawesome-free/css/all.min.css'
 import './assets/main.css'
 
 const app = createApp(App)

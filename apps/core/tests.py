@@ -1902,6 +1902,7 @@ class AdminDashboardStatsApiTests(TestCase):
         self.assertEqual(payload["queueMetrics"]["sync_count"], 0)
         self.assertEqual(payload["queueMetrics"]["fallback_count"], 0)
         self.assertFalse(payload["redisEnabled"])
+        self.assertEqual(payload["runtimeRisks"], [])
 
     @override_settings(
         CACHES={"default": {"BACKEND": "django_redis.cache.RedisCache", "LOCATION": "redis://localhost:6379/0"}},
@@ -1937,6 +1938,7 @@ class AdminDashboardStatsApiTests(TestCase):
         self.assertTrue(payload["queueWorkerAvailable"])
         self.assertEqual(payload["queueWorkerCount"], 2)
         self.assertTrue(payload["redisEnabled"])
+        self.assertEqual(payload["runtimeRisks"], [])
 
     @override_settings(
         CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "dashboard-test"}},
@@ -1966,6 +1968,34 @@ class AdminDashboardStatsApiTests(TestCase):
         self.assertEqual(payload["queueWorkerStatus"], "disabled")
         self.assertFalse(payload["queueWorkerAvailable"])
         self.assertFalse(payload["redisEnabled"])
+        self.assertEqual(payload["runtimeRisks"], [])
+
+    @override_settings(
+        CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "prod-risk-test"}},
+        CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}},
+        DATABASES={"default": {"ENGINE": "django.db.backends.postgresql", "NAME": "bias", "HOST": "db"}},
+        CELERY_BROKER_URL="redis://localhost:6379/1",
+    )
+    def test_admin_stats_reports_production_runtime_risks(self):
+        Setting.objects.update_or_create(
+            key="advanced.queue_enabled",
+            defaults={"value": json.dumps(True)},
+        )
+        Setting.objects.update_or_create(
+            key="advanced.queue_driver",
+            defaults={"value": json.dumps("redis")},
+        )
+        clear_runtime_setting_caches()
+
+        response = self.client.get("/api/admin/stats", **self.auth_header())
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        risk_codes = {item["code"] for item in payload["runtimeRisks"]}
+        self.assertIn("redis-disabled-production", risk_codes)
+        self.assertIn("locmem-cache-production", risk_codes)
+        self.assertIn("realtime-inmemory-production", risk_codes)
+        self.assertIn("queue-worker-unavailable", risk_codes)
 
     @override_settings(
         CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "queue-reset-test"}},
