@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="MailPage"
+    class-name="MailPage"
     icon="fas fa-envelope"
     title="邮件设置"
     description="配置 Gmail 或其他 SMTP 服务的发信参数。"

@@ -618,10 +618,6 @@ function resetComposerState() {
   replyContent.value = ''
 }
 
-function hasUnsavedChanges() {
-  return dirtyState.value
-}
-
 function getComposerDraftKey() {
   if (!discussionId.value || isEditing.value) return null
   return `bias:discussion:${discussionId.value}:draft:${authStore.user?.id || 'guest'}`

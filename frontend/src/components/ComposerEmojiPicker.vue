@@ -86,7 +86,8 @@ const allItems = computed(() => {
   const uniqueItems = new Map()
 
   props.groups.forEach(group => {
-    ;(group.emojis || []).forEach(item => {
+    const emojis = group.emojis || []
+    emojis.forEach(item => {
       if (!item?.emoji || uniqueItems.has(item.emoji)) return
       uniqueItems.set(item.emoji, {
         ...item,

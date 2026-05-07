@@ -33,6 +33,9 @@
               v-if="activePanel?.component"
               v-bind="activePanel.componentProps || {}"
               v-on="activePanel.componentEvents || {}"
+              @update-edit-form="handleEditFormUpdate"
+              @update-password-form="handlePasswordFormUpdate"
+              @update-preference="handlePreferenceUpdate"
             />
           </main>
         </div>
@@ -175,6 +178,33 @@ watch(
   },
   { immediate: true }
 )
+
+function handleEditFormUpdate({ key, value }) {
+  if (!editForm.value || !key) return
+  editForm.value = {
+    ...editForm.value,
+    [key]: value,
+  }
+}
+
+function handlePasswordFormUpdate({ key, value }) {
+  if (!passwordForm.value || !key) return
+  passwordForm.value = {
+    ...passwordForm.value,
+    [key]: value,
+  }
+}
+
+function handlePreferenceUpdate({ key, value }) {
+  if (!preferences.value || !key) return
+  preferences.value = {
+    ...preferences.value,
+    values: {
+      ...(preferences.value.values || {}),
+      [key]: Boolean(value),
+    },
+  }
+}
 
 </script>
 

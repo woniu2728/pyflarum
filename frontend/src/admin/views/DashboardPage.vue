@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="DashboardPage"
+    class-name="DashboardPage"
     icon="fas fa-chart-bar"
     title="仪表盘"
     description="查看论坛概况和系统状态"

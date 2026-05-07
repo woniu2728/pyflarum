@@ -149,7 +149,6 @@
         />
       </div>
     </div>
-
   </div>
 </template>
 
@@ -298,8 +297,7 @@ const {
   getPostMenuOptions,
   handleDiscussionMenuSelection,
   handlePostMenuSelection,
-  hasPostControls,
-  handleOpenReportModal
+  hasPostControls
 } = useDiscussionDetailMenus({
   activePostMenuId,
   authStore,

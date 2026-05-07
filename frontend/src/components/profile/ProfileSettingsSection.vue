@@ -15,11 +15,12 @@
         <label for="profile-display-name">显示名称</label>
         <input
           id="profile-display-name"
-          v-model="editForm.display_name"
-          name="display_name"
-          type="text"
           class="profile-form-control"
+          :value="editForm.display_name"
+          name="display_name"
           placeholder="显示名称"
+          type="text"
+          @input="$emit('update-edit-form', { key: 'display_name', value: $event.target.value })"
         />
       </div>
 
@@ -27,11 +28,12 @@
         <label for="profile-email">邮箱</label>
         <input
           id="profile-email"
-          v-model="editForm.email"
-          name="email"
-          type="email"
           class="profile-form-control"
+          :value="editForm.email"
+          name="email"
           placeholder="name@example.com"
+          type="email"
+          @input="$emit('update-edit-form', { key: 'email', value: $event.target.value })"
         />
         <small class="profile-form-help">
           {{ user.is_email_confirmed ? '当前邮箱已完成验证。' : '修改邮箱后会重新进入未验证状态。' }}
@@ -42,11 +44,12 @@
         <label for="profile-bio">个人简介</label>
         <textarea
           id="profile-bio"
-          v-model="editForm.bio"
-          name="bio"
           class="profile-form-control"
-          rows="5"
+          :value="editForm.bio"
+          name="bio"
           placeholder="介绍一下自己..."
+          rows="5"
+          @input="$emit('update-edit-form', { key: 'bio', value: $event.target.value })"
         ></textarea>
       </div>
 
@@ -101,8 +104,11 @@
                 :checked="Boolean(preferences.values?.[item.key])"
                 :name="item.key"
                 type="checkbox"
-                @change="setPreferenceValue(item.key, $event.target.checked)"
-              >
+                @change="$emit('update-preference', {
+                  key: item.key,
+                  value: $event.target.checked
+                })"
+              />
             </label>
           </div>
         </section>
@@ -181,14 +187,7 @@ const groupedPreferences = computed(() => {
   return Array.from(groups.values())
 })
 
-function setPreferenceValue(key, checked) {
-  props.preferences.values = {
-    ...(props.preferences.values || {}),
-    [key]: Boolean(checked)
-  }
-}
-
-defineEmits(['save-profile', 'save-preferences'])
+defineEmits(['save-profile', 'save-preferences', 'update-edit-form', 'update-preference'])
 </script>
 
 <style scoped>

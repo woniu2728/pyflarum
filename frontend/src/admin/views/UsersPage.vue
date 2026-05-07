@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="UsersPage"
+    class-name="UsersPage"
     icon="fas fa-users"
     title="用户管理"
     description="管理论坛用户"
@@ -48,7 +48,7 @@
                   <AdminStateBlock>暂无用户</AdminStateBlock>
                 </td>
               </tr>
-              <tr v-else v-for="user in users" :key="user.id">
+              <tr v-for="user in users" v-else :key="user.id">
                 <td data-label="ID">{{ user.id }}</td>
                 <td data-label="用户名">
                   <strong>{{ user.username }}</strong>
@@ -79,7 +79,7 @@
                   </span>
                 </td>
                 <td data-label="操作">
-                  <button type="button" @click="editUser(user)" class="Button Button--small" :disabled="savingDetails">
+                  <button type="button" class="Button Button--small" :disabled="savingDetails" @click="editUser(user)">
                     编辑
                   </button>
                 </td>
@@ -91,7 +91,7 @@
         <div class="UserMobileList">
           <AdminStateBlock v-if="loading" class="UserMobileState" tone="subtle">加载中...</AdminStateBlock>
           <AdminStateBlock v-else-if="users.length === 0" class="UserMobileState">暂无用户</AdminStateBlock>
-          <article v-else v-for="user in users" :key="`mobile-${user.id}`" class="UserMobileCard">
+          <article v-for="user in users" v-else :key="`mobile-${user.id}`" class="UserMobileCard">
             <div class="UserMobileCard-header">
               <div class="UserMobileCard-identity">
                 <div class="UserMobileCard-nameRow">
@@ -120,7 +120,7 @@
                 </div>
               </div>
 
-              <button type="button" @click="editUser(user)" class="Button Button--small UserMobileCard-edit" :disabled="savingDetails">
+              <button type="button" class="Button Button--small UserMobileCard-edit" :disabled="savingDetails" @click="editUser(user)">
                 编辑
               </button>
             </div>
@@ -164,7 +164,7 @@
       <div class="Modal-content Modal-content--user">
         <div class="Modal-header">
           <h3>编辑用户</h3>
-          <button type="button" @click="closeModal" class="Modal-close">
+          <button type="button" class="Modal-close" @click="closeModal">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -290,20 +290,20 @@
 
         <div class="Modal-footer Modal-footer--split">
           <button
-            type="button"
             v-if="canDeleteCurrentUser"
-            @click="deleteUser"
+            type="button"
             class="Button Button--danger"
             :disabled="saving || deleting"
+            @click="deleteUser"
           >
             {{ deleting ? '删除中...' : '删除用户' }}
           </button>
           <span v-else class="Modal-footerNote">当前登录管理员账号不允许删除</span>
           <div class="Modal-footerActions">
-            <button type="button" @click="closeModal" class="Button">
+            <button type="button" class="Button" @click="closeModal">
               取消
             </button>
-            <button type="button" @click="saveUser" class="Button Button--primary" :disabled="saving || deleting">
+            <button type="button" class="Button Button--primary" :disabled="saving || deleting" @click="saveUser">
               {{ saving ? '保存中...' : '保存' }}
             </button>
           </div>

@@ -1,6 +1,6 @@
 <template>
   <div class="AdminStateBlock" :class="`AdminStateBlock--${tone}`">
-    <slot />
+    <slot></slot>
   </div>
 </template>
 

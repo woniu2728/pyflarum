@@ -11,13 +11,11 @@ export function useDiscussionDetailInteractions({
   discussion,
   hasActiveComposer,
   modalStore,
-  posts,
   patchDiscussion,
   refreshDiscussion,
   removePost,
   route,
   router,
-  scrollToPost,
   totalPosts,
   upsertPost
 }) {

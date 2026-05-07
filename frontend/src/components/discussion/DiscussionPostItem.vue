@@ -58,7 +58,6 @@
               {{ post.open_flag_count }} 条举报待处理
             </span>
           </div>
-
         </header>
 
         <div class="post-body" v-html="post.content_html"></div>
@@ -187,7 +186,7 @@
 <script setup>
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
 
-const props = defineProps({
+defineProps({
   post: { type: Object, required: true },
   discussion: { type: Object, required: true },
   authStore: { type: Object, required: true },

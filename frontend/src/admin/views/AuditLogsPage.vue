@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="AuditLogsPage"
+    class-name="AuditLogsPage"
     icon="fas fa-clipboard-list"
     title="审计日志"
     description="查看管理员关键操作记录"

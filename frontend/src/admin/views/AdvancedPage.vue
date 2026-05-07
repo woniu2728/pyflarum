@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="AdvancedPage"
+    class-name="AdvancedPage"
     icon="fas fa-cog"
     title="高级设置"
     description="配置缓存、队列、维护模式与文件存储"
@@ -52,7 +52,7 @@
         </div>
 
         <div class="Form-actions">
-          <button type="button" @click="clearCache" class="Button" :disabled="clearing">
+          <button type="button" class="Button" :disabled="clearing" @click="clearCache">
             {{ clearing ? '清除中...' : '清除缓存' }}
           </button>
         </div>
@@ -69,9 +69,9 @@
         <div class="Form-actions">
           <button
             type="button"
-            @click="rebuildSearchIndexes"
             class="Button"
             :disabled="rebuildingSearchIndexes"
+            @click="rebuildSearchIndexes"
           >
             {{ rebuildingSearchIndexes ? '重建中...' : '重建搜索索引' }}
           </button>
@@ -608,7 +608,7 @@
               name="storage_imagebed_headers"
               class="FormControl"
               rows="4"
-              placeholder='{"Authorization":"Bearer token"}'
+              placeholder="{&quot;Authorization&quot;:&quot;Bearer token&quot;}"
             ></textarea>
           </div>
 
@@ -620,7 +620,7 @@
               name="storage_imagebed_form_data"
               class="FormControl"
               rows="4"
-              placeholder='{"album":"forum"}'
+              placeholder="{&quot;album&quot;:&quot;forum&quot;}"
             ></textarea>
           </div>
         </template>
@@ -692,9 +692,9 @@
       <div class="Form-actions">
         <button
           type="button"
-          @click="saveSettings"
           class="Button Button--primary"
           :disabled="saving"
+          @click="saveSettings"
         >
           {{ saving ? '保存中...' : '保存设置' }}
         </button>

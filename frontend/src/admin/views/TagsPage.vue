@@ -1,17 +1,17 @@
 <template>
   <AdminPage
-    className="TagsPage"
+    class-name="TagsPage"
     icon="fas fa-tags"
     title="标签管理"
     description="管理讨论标签和分类"
   >
     <div class="TagsPage-content">
       <AdminToolbar align="end">
-        <button type="button" @click="openCreateModal" class="Button Button--primary">
+        <button type="button" class="Button Button--primary" @click="openCreateModal">
           <i class="fas fa-plus"></i>
           创建标签
         </button>
-        <button type="button" @click="refreshTagStats" class="Button" :disabled="refreshingStats">
+        <button type="button" class="Button" :disabled="refreshingStats" @click="refreshTagStats">
           <i class="fas fa-sync-alt" :class="{ 'fa-spin': refreshingStats }"></i>
           {{ refreshingStats ? '刷新中...' : '刷新统计' }}
         </button>
@@ -80,26 +80,26 @@
               </td>
               <td data-label="讨论数">{{ row.tag.discussion_count }}</td>
               <td data-label="操作">
-                <button type="button" @click="editTag(row.tag)" class="Button Button--small">
+                <button type="button" class="Button Button--small" @click="editTag(row.tag)">
                   编辑
                 </button>
                 <button
                   type="button"
-                  @click="moveTag(row.tag, 'up')"
                   class="Button Button--small"
                   :disabled="!canMoveTag(row.tag, 'up') || movingTagId === row.tag.id"
+                  @click="moveTag(row.tag, 'up')"
                 >
                   上移
                 </button>
                 <button
                   type="button"
-                  @click="moveTag(row.tag, 'down')"
                   class="Button Button--small"
                   :disabled="!canMoveTag(row.tag, 'down') || movingTagId === row.tag.id"
+                  @click="moveTag(row.tag, 'down')"
                 >
                   下移
                 </button>
-                <button type="button" @click="deleteTag(row.tag)" class="Button Button--small Button--danger">
+                <button type="button" class="Button Button--small Button--danger" @click="deleteTag(row.tag)">
                   删除
                 </button>
               </td>
@@ -116,7 +116,7 @@
             <h3>{{ showEditModal ? '编辑标签' : '创建标签' }}</h3>
             <p class="Modal-subtitle">参考 Flarum 的标签编辑流程，并补齐父子层级、排序和显示状态配置。</p>
           </div>
-          <button type="button" @click="closeModal" class="Modal-close">
+          <button type="button" class="Modal-close" @click="closeModal">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -376,10 +376,10 @@
         </div>
 
         <div class="Modal-footer">
-          <button type="button" @click="closeModal" class="Button">
+          <button type="button" class="Button" @click="closeModal">
             取消
           </button>
-          <button type="button" @click="saveTag" class="Button Button--primary" :disabled="saving">
+          <button type="button" class="Button Button--primary" :disabled="saving" @click="saveTag">
             {{ saving ? '保存中...' : '保存' }}
           </button>
         </div>

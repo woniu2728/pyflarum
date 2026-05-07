@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="ModulesPage"
+    class-name="ModulesPage"
     icon="fas fa-cubes"
     title="模块中心"
     description="围绕注册中心查看模块边界、依赖健康、扩展注入面与后台入口。"

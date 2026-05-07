@@ -57,11 +57,12 @@
           <label for="profile-old-password">当前密码</label>
           <input
             id="profile-old-password"
-            v-model="passwordForm.old_password"
-            name="old_password"
-            type="password"
             class="profile-form-control"
+            :value="passwordForm.old_password"
+            name="old_password"
             placeholder="请输入当前密码"
+            type="password"
+            @input="$emit('update-password-form', { key: 'old_password', value: $event.target.value })"
           />
         </div>
 
@@ -69,11 +70,12 @@
           <label for="profile-new-password">新密码</label>
           <input
             id="profile-new-password"
-            v-model="passwordForm.new_password"
-            name="new_password"
-            type="password"
             class="profile-form-control"
+            :value="passwordForm.new_password"
+            name="new_password"
             placeholder="请输入新密码"
+            type="password"
+            @input="$emit('update-password-form', { key: 'new_password', value: $event.target.value })"
           />
         </div>
 
@@ -81,11 +83,12 @@
           <label for="profile-confirm-password">确认新密码</label>
           <input
             id="profile-confirm-password"
-            v-model="passwordForm.confirm_password"
-            name="confirm_password"
-            type="password"
             class="profile-form-control"
+            :value="passwordForm.confirm_password"
+            name="confirm_password"
             placeholder="请再次输入新密码"
+            type="password"
+            @input="$emit('update-password-form', { key: 'confirm_password', value: $event.target.value })"
           />
         </div>
 
@@ -137,7 +140,7 @@ defineProps({
   }
 })
 
-defineEmits(['resend-verification', 'change-password'])
+defineEmits(['resend-verification', 'change-password', 'update-password-form'])
 </script>
 
 <style scoped>

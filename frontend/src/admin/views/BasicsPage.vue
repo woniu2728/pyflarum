@@ -1,11 +1,11 @@
 <template>
   <AdminPage
-    className="BasicsPage"
+    class-name="BasicsPage"
     icon="fas fa-pencil-alt"
     title="基础设置"
     description="配置论坛的基本信息"
   >
-    <form @submit.prevent="handleSubmit" class="Form">
+    <form class="Form" @submit.prevent="handleSubmit">
       <div class="Form-group">
         <label for="basics-forum-title">论坛名称</label>
         <input

@@ -453,21 +453,6 @@ const emojiAutocompleteStyle = computed(() => {
     transform: openAbove ? 'translateY(-100%)' : 'none'
   }
 })
-const suspensionNotice = computed(() => {
-  if (!isSuspended.value) return ''
-
-  const user = authStore.user || {}
-  if (user.suspend_message) {
-    return user.suspended_until
-      ? `账号已被封禁至 ${formatDateTime(user.suspended_until)}。${user.suspend_message}`
-      : `账号当前已被封禁。${user.suspend_message}`
-  }
-
-  return user.suspended_until
-    ? `账号已被封禁至 ${formatDateTime(user.suspended_until)}，暂时无法发布讨论。`
-    : '账号当前已被封禁，暂时无法发布讨论。'
-})
-
 watch(
   () => composerStore.current.requestId,
   async () => {
@@ -1350,12 +1335,6 @@ function formatDraftTime(value) {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-function formatDateTime(value) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '未知时间'
-  return date.toLocaleString('zh-CN')
 }
 
 function loadComposerHeight() {

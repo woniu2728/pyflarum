@@ -10,7 +10,7 @@
       </div>
       <div class="event-post-content">
         <div class="event-post-line">
-          <slot name="line" />
+          <slot name="line"></slot>
         </div>
         <div class="event-post-meta">
           <button

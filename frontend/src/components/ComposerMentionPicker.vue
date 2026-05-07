@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
     <div
+      ref="pickerRef"
       class="composer-mention-picker"
       :style="styleObject"
       role="listbox"
       aria-label="提及用户"
-      ref="pickerRef"
       @mousedown.stop
       @click.stop
     >

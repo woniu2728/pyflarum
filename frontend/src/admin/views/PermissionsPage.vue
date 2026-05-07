@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="PermissionsPage"
+    class-name="PermissionsPage"
     icon="fas fa-key"
     title="权限管理"
     description="配置用户组和权限，并检查权限来源与依赖关系"
@@ -24,14 +24,14 @@
             <span class="GroupBar-name">{{ group.name }}</span>
             <button
               type="button"
-              @click="editGroup(group)"
               class="GroupBar-edit"
               title="编辑用户组"
+              @click="editGroup(group)"
             >
               <i class="fas fa-edit"></i>
             </button>
           </div>
-          <button type="button" @click="createGroup" class="GroupBar-add">
+          <button type="button" class="GroupBar-add" @click="createGroup">
             <i class="fas fa-plus"></i>
             添加用户组
           </button>
@@ -152,9 +152,9 @@
       <div class="PermissionsPage-actions">
         <button
           type="button"
-          @click="savePermissions"
           class="Button Button--primary"
           :disabled="saving"
+          @click="savePermissions"
         >
           {{ saving ? '保存中...' : '保存权限' }}
         </button>
@@ -166,7 +166,7 @@
         <div class="Modal-content Modal-content--group">
           <div class="Modal-header">
             <h3>{{ editingGroup ? '编辑用户组' : '创建用户组' }}</h3>
-            <button type="button" @click="closeGroupModal" class="Modal-close">
+            <button type="button" class="Modal-close" @click="closeGroupModal">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -232,21 +232,21 @@
 
           <div class="Modal-footer Modal-footer--split">
             <button
-              type="button"
               v-if="editingGroup && canDeleteGroup(editingGroup)"
-              @click="deleteGroup"
+              type="button"
               class="Button Button--danger"
               :disabled="groupSaving || deletingGroup"
+              @click="deleteGroup"
             >
               {{ deletingGroup ? '删除中...' : '删除用户组' }}
             </button>
             <span v-else-if="editingGroup" class="Modal-footerNote">系统默认用户组不允许删除</span>
             <span v-else class="Modal-footerNote"></span>
             <div class="Modal-footerActions">
-              <button type="button" @click="closeGroupModal" class="Button Button--secondary">
+              <button type="button" class="Button Button--secondary" @click="closeGroupModal">
                 取消
               </button>
-              <button type="button" @click="saveGroup" class="Button Button--primary" :disabled="groupSaving || deletingGroup">
+              <button type="button" class="Button Button--primary" :disabled="groupSaving || deletingGroup" @click="saveGroup">
                 {{ groupSaving ? '保存中...' : '保存' }}
               </button>
             </div>

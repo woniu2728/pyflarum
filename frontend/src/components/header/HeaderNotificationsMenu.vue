@@ -93,10 +93,10 @@
                 :src="notification.from_user.avatar_url"
                 :alt="notification.from_user.display_name || notification.from_user.username"
               />
-              <i v-else :class="getNotificationPresentation(notification).iconClass || getNotificationIconClass(notification.type)"></i>
+              <i v-else :class="resolveNotificationPresentation(notification).iconClass || getNotificationIconClass(notification.type)"></i>
             </span>
             <span class="notification-entry-main">
-              <span class="notification-entry-message" v-html="getNotificationPresentation(notification).messageHtml || getNotificationTextHtml(notification)"></span>
+              <span class="notification-entry-message" v-html="resolveNotificationPresentation(notification).messageHtml || getNotificationTextHtml(notification)"></span>
               <span class="notification-entry-time">{{ formatRelativeTime(notification.created_at) }}</span>
             </span>
             <span v-if="!notification.is_read" class="notification-entry-unread"></span>
@@ -183,7 +183,7 @@ defineEmits([
   'open-page'
 ])
 
-function getNotificationPresentation(notification) {
+function resolveNotificationPresentation(notification) {
   if (typeof props.getNotificationPresentation === 'function') {
     return props.getNotificationPresentation(notification) || {}
   }

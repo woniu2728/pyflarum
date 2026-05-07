@@ -1,10 +1,10 @@
 <template>
   <div class="forum-page-shell">
     <aside class="forum-page-shell__sidebar">
-      <slot name="sidebar" />
+      <slot name="sidebar"></slot>
     </aside>
     <div class="forum-page-shell__content">
-      <slot />
+      <slot></slot>
     </div>
   </div>
 </template>

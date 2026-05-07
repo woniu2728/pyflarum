@@ -270,8 +270,7 @@ const showAuthenticatedUi = computed(() => authStore.isAuthenticated && Boolean(
 const showSessionPlaceholder = computed(() => authStore.isRestoringSession && authStore.isAuthenticated && !authStore.user)
 const {
   showUserMenu,
-  toggleUserMenu,
-  logoutFromDrawer
+  toggleUserMenu
 } = useHeaderUiState({
   authStore,
   closeMobileDrawer,

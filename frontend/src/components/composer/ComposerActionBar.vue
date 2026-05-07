@@ -11,11 +11,11 @@
     </button>
 
     <div class="composer-formatting" aria-label="格式化工具栏">
-      <slot name="formatting" />
+      <slot name="formatting"></slot>
     </div>
 
     <div class="composer-secondary-actions">
-      <slot name="secondary" :items="secondaryActions" />
+      <slot name="secondary" :items="secondaryActions"></slot>
     </div>
   </div>
 </template>

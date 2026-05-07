@@ -24,7 +24,7 @@
 
         <div class="AdminHeader-user">
           <span>{{ authStore.user?.username }}</span>
-          <button type="button" @click="handleLogout" class="Button Button--link">登出</button>
+          <button type="button" class="Button Button--link" @click="handleLogout">登出</button>
         </div>
       </div>
 

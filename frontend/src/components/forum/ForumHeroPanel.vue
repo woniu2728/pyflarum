@@ -4,7 +4,7 @@
     <h1>{{ title }}</h1>
     <p v-if="description">{{ description }}</p>
     <div v-if="$slots.meta" class="forum-hero-meta">
-      <slot name="meta" />
+      <slot name="meta"></slot>
     </div>
   </section>
 </template>

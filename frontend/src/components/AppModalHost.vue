@@ -8,8 +8,8 @@
     >
       <div class="ModalManager" :data-modal-key="current.key">
         <component
-          v-if="current.kind === 'custom'"
           :is="current.component"
+          v-if="current.kind === 'custom'"
           v-bind="current.props"
           :showing="showing"
           @click.stop

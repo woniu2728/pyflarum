@@ -12,7 +12,7 @@
       </button>
     </div>
     <div class="result-list">
-      <slot />
+      <slot></slot>
     </div>
   </section>
 </template>

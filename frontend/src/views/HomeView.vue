@@ -15,7 +15,7 @@
           <span class="icon">✏️</span>
           <span>发起讨论</span>
         </button>
-        <router-link to="/register" v-else class="action-btn">
+        <router-link v-else to="/register" class="action-btn">
           <span class="icon">👤</span>
           <span>注册账号</span>
         </router-link>

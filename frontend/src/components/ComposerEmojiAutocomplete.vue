@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
     <div
+      ref="pickerRef"
       class="composer-emoji-autocomplete"
       :style="styleObject"
       role="listbox"
       aria-label="表情建议"
-      ref="pickerRef"
       @mousedown.stop
       @click.stop
     >

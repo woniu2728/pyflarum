@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="FlagsPage"
+    class-name="FlagsPage"
     icon="fas fa-flag"
     title="举报管理"
     description="处理用户提交的帖子举报"
@@ -46,8 +46,8 @@
           </div>
 
           <div v-if="flag.status === 'open'" class="FlagCard-actions">
-            <button type="button" @click="openResolve(flag, 'resolved')" class="Button Button--primary">标记已处理</button>
-            <button type="button" @click="openResolve(flag, 'ignored')" class="Button Button--secondary">忽略举报</button>
+            <button type="button" class="Button Button--primary" @click="openResolve(flag, 'resolved')">标记已处理</button>
+            <button type="button" class="Button Button--secondary" @click="openResolve(flag, 'ignored')">忽略举报</button>
           </div>
           <div v-else class="FlagCard-footer">
             处理人：{{ flag.resolved_by?.display_name || flag.resolved_by?.username || '未知' }}
@@ -58,11 +58,11 @@
     </div>
 
     <AdminActionNoteModal
+      v-model:note="resolutionNote"
       :show="showResolveModal"
       :title="pendingStatus === 'resolved' ? '标记举报已处理' : '忽略举报'"
       :description="pendingStatus === 'resolved' ? '标记后这条举报会从待处理列表移出。' : '忽略后举报会进入已忽略列表，便于后续追溯。'"
       note-label="处理备注"
-      v-model:note="resolutionNote"
       :placeholder="pendingStatus === 'resolved' ? '例如：已隐藏帖子并警告用户' : '例如：举报理由不足，暂不处理'"
       :confirm-text="pendingStatus === 'resolved' ? '标记已处理' : '忽略举报'"
       :saving="saving"

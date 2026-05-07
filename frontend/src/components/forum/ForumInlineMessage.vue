@@ -1,6 +1,6 @@
 <template>
   <div class="inline-message" :class="`inline-message--${tone}`">
-    <slot />
+    <slot></slot>
   </div>
 </template>
 

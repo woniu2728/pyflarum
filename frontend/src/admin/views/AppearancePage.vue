@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="AppearancePage"
+    class-name="AppearancePage"
     icon="fas fa-paint-brush"
     title="外观设置"
     description="自定义论坛的外观和主题"
@@ -186,9 +186,9 @@
       <div class="Form-actions">
         <button
           type="button"
-          @click="saveSettings"
           class="Button Button--primary"
           :disabled="saving"
+          @click="saveSettings"
         >
           {{ saving ? '保存中...' : '保存设置' }}
         </button>

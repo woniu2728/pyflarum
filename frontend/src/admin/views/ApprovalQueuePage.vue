@@ -1,6 +1,6 @@
 <template>
   <AdminPage
-    className="ApprovalQueuePage"
+    class-name="ApprovalQueuePage"
     icon="fas fa-user-check"
     title="审核队列"
     description="审核未验证邮箱用户提交的讨论和回复"
@@ -37,19 +37,19 @@
           </div>
 
           <div class="ApprovalCard-actions">
-            <button type="button" @click="openAction(item, 'approve')" class="Button Button--primary">审核通过</button>
-            <button type="button" @click="openAction(item, 'reject')" class="Button Button--secondary">拒绝并隐藏</button>
+            <button type="button" class="Button Button--primary" @click="openAction(item, 'approve')">审核通过</button>
+            <button type="button" class="Button Button--secondary" @click="openAction(item, 'reject')">拒绝并隐藏</button>
           </div>
         </article>
       </div>
     </div>
 
     <AdminActionNoteModal
+      v-model:note="actionNote"
       :show="showModal"
       :title="pendingAction === 'approve' ? '审核通过' : '拒绝内容'"
       :description="pendingAction === 'approve' ? '通过后内容会对有权限的用户可见。' : '拒绝后作者仍可看到审核反馈。'"
       note-label="审核备注"
-      v-model:note="actionNote"
       :placeholder="pendingAction === 'approve' ? '例如：内容符合社区规范，已放行' : '例如：内容质量不足，已拒绝'"
       :confirm-text="pendingAction === 'approve' ? '通过审核' : '拒绝并隐藏'"
       :confirm-tone="pendingAction === 'approve' ? 'primary' : 'danger'"

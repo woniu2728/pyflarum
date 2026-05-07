@@ -103,7 +103,7 @@ export function detectEmojiQuery(content, cursorPosition) {
   const safeContent = String(content || '')
   const safeCursor = Math.max(0, Math.min(cursorPosition ?? safeContent.length, safeContent.length))
   const beforeCursor = safeContent.slice(0, safeCursor)
-  const match = beforeCursor.match(/(^|[\s(\[{"'“‘]):([A-Za-z0-9_+\-\u4e00-\u9fa5]{0,32})$/u)
+  const match = beforeCursor.match(/(^|[\s([{"'“‘]):([A-Za-z0-9_+\-\u4e00-\u9fa5]{0,32})$/u)
   if (!match) return null
 
   const query = match[2] || ''
@@ -243,7 +243,7 @@ function defaultToolText(tool) {
 
 function sanitizeMarkdownLabel(value, fallback) {
   const sanitized = String(value || '')
-    .replace(/[\[\]\r\n]/g, ' ')
+    .replace(/[[\]\r\n]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 

@@ -16,15 +16,15 @@
     <div class="notification-main">
       <div class="notification-title-row">
         <div class="notification-title">
-          <i :class="getPresentation(notification).iconClass || getIconClass(notification.type)"></i>
-          <span v-html="getPresentation(notification).messageHtml || getMessageHtml(notification)"></span>
+          <i :class="resolvePresentation(notification).iconClass || getIconClass(notification.type)"></i>
+          <span v-html="resolvePresentation(notification).messageHtml || getMessageHtml(notification)"></span>
         </div>
         <span v-if="!notification.is_read" class="notification-unread-dot"></span>
       </div>
 
       <div class="notification-meta">
         <span>{{ formatDate(notification.created_at) }}</span>
-        <span v-if="getPresentation(notification).metaText">{{ getPresentation(notification).metaText }}</span>
+        <span v-if="resolvePresentation(notification).metaText">{{ resolvePresentation(notification).metaText }}</span>
       </div>
     </div>
 
@@ -88,7 +88,7 @@ const props = defineProps({
 
 defineEmits(['click', 'mark-read', 'delete'])
 
-function getPresentation(notification) {
+function resolvePresentation(notification) {
   if (typeof props.getPresentation === 'function') {
     return props.getPresentation(notification) || {}
   }
