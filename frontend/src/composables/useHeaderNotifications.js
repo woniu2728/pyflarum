@@ -4,7 +4,7 @@ import {
   resolveNotificationPath,
   useNotificationGroups
 } from '@/composables/useNotificationPresentation'
-import { getRegisteredNotificationTypes } from '@/forum/notificationTypes'
+import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 
 export function useHeaderNotifications({
   modalStore,
@@ -21,7 +21,7 @@ export function useHeaderNotifications({
   const hasReadNotifications = computed(() => notificationStore.readCount > 0)
   const notificationGroups = useNotificationGroups(notificationItems, forumTitle || '论坛')
   const notificationTypeSummaries = computed(() => {
-    return getRegisteredNotificationTypes()
+    return getResolvedNotificationTypes()
       .map(item => ({
         type: item.type,
         label: item.label,

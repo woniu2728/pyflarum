@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import { getRegisteredNotificationTypes } from '@/forum/notificationTypes'
+import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
 import { resolveNotificationPath, useNotificationGroups } from '@/composables/useNotificationPresentation'
 
@@ -26,7 +26,7 @@ export function useNotificationPage({
   const hasActiveFilter = computed(() => unreadOnly.value || Boolean(activeType.value))
 
   const notificationTypeItems = computed(() => {
-    const registeredItems = getRegisteredNotificationTypes().map(item => ({
+    const registeredItems = getResolvedNotificationTypes().map(item => ({
       value: item.type,
       label: item.label,
       count: formatTypeCount(item.type),

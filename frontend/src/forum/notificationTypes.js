@@ -93,6 +93,12 @@ function getResolvedNotificationDefinitions() {
     .filter(item => item.type)
 }
 
+export function getResolvedNotificationTypes() {
+  return getResolvedNotificationDefinitions().sort((left, right) => {
+    return Number(left.order || 999) - Number(right.order || 999)
+  })
+}
+
 export function registerNotificationType(definition) {
   const normalizedType = normalizeType(definition?.type || definition?.code)
   if (!normalizedType) {
@@ -134,9 +140,7 @@ export function getNotificationTypeDefinition(type) {
 }
 
 export function getRegisteredNotificationTypes() {
-  return getResolvedNotificationDefinitions().sort((left, right) => {
-    return Number(left.order || 999) - Number(right.order || 999)
-  })
+  return getResolvedNotificationTypes()
 }
 
 export function getNotificationIcon(type) {
