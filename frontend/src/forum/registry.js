@@ -12,10 +12,12 @@ import {
   getSearchSources,
   getDiscussionBadges,
   getDiscussionStateBadges,
+  getDiscussionReplyState,
   getPostStateBadges,
   getUserBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
+  registerDiscussionReplyState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerComposerNotice,
@@ -46,9 +48,11 @@ export {
   getNotificationRenderers,
   getDiscussionBadges,
   getDiscussionStateBadges,
+  getDiscussionReplyState,
   getPostStateBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
+  registerDiscussionReplyState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerComposerNotice,
@@ -700,6 +704,91 @@ registerPostStateBadge({
   resolve: ({ post }) => ({
     label: `${post.open_flag_count} 条举报待处理`,
     tone: 'soft-warning',
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'suspended',
+  order: 10,
+  surfaces: ['discussion-reply'],
+  isVisible: ({ authStore, isSuspended }) => Boolean(authStore?.isAuthenticated && isSuspended),
+  resolve: ({ suspensionNotice }) => ({
+    kind: 'notice',
+    tone: 'warning',
+    message: suspensionNotice,
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'composer',
+  order: 20,
+  surfaces: ['discussion-reply'],
+  isVisible: ({ authStore, discussion }) => Boolean(authStore?.isAuthenticated && discussion?.can_reply),
+  resolve: ({ hasActiveComposer }) => ({
+    kind: 'composer',
+    actionLabel: hasActiveComposer ? '继续编辑回复' : '发表回复',
+    hint: hasActiveComposer ? '已有未发布内容' : '',
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'locked',
+  order: 30,
+  surfaces: ['discussion-reply'],
+  isVisible: ({ discussion }) => Boolean(discussion?.is_locked),
+  resolve: () => ({
+    kind: 'notice',
+    tone: 'warning',
+    message: '此讨论已被锁定，无法回复',
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'pending',
+  order: 40,
+  surfaces: ['discussion-reply'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'pending',
+  resolve: () => ({
+    kind: 'notice',
+    tone: 'warning',
+    message: '讨论正在审核中，暂时无法继续回复',
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'rejected',
+  order: 50,
+  surfaces: ['discussion-reply'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'rejected',
+  resolve: () => ({
+    kind: 'notice',
+    tone: 'warning',
+    message: '讨论未通过审核，需调整后重新发布',
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'no-permission',
+  order: 60,
+  surfaces: ['discussion-reply'],
+  isVisible: ({ authStore }) => Boolean(authStore?.isAuthenticated),
+  resolve: () => ({
+    kind: 'notice',
+    tone: 'warning',
+    message: '当前没有在此讨论下回复的权限',
+  }),
+})
+
+registerDiscussionReplyState({
+  key: 'guest',
+  order: 70,
+  surfaces: ['discussion-reply'],
+  resolve: () => ({
+    kind: 'login',
+    tone: 'warning',
+    message: '后才能回复',
+    linkLabel: '登录',
+    to: '/login',
   }),
 })
 
