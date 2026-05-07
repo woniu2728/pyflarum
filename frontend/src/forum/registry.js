@@ -14,6 +14,7 @@ import {
   registerComposerStatusItem,
   registerComposerSubmitGuard,
   registerComposerTool,
+  registerHeaderItem,
   registerForumNavItem,
   registerForumNavSection,
   registerProfilePanel,
@@ -34,6 +35,7 @@ export {
   registerComposerStatusItem,
   registerComposerSubmitGuard,
   registerComposerTool,
+  registerHeaderItem,
   registerForumNavItem,
   registerForumNavSection,
   registerProfilePanel,
@@ -113,6 +115,107 @@ registerForumNavItem({
   order: 50,
   surfaces: ['discussion-sidebar', 'mobile-drawer'],
   isVisible: ({ authStore }) => Boolean(authStore?.user)
+})
+
+function isOwnProfileRoute(route, user) {
+  if (!route || !user) return false
+  return route.name === 'profile'
+    || (route.name === 'user-profile' && String(route.params.id) === String(user.id))
+}
+
+registerHeaderItem({
+  key: 'user-profile-menu',
+  placement: 'user-menu',
+  order: 10,
+  icon: 'fas fa-user',
+  label: '个人资料',
+  to: ({ authStore }) => buildUserPath(authStore.user),
+  isVisible: ({ authStore }) => Boolean(authStore?.user),
+  isActive: ({ route, authStore }) => isOwnProfileRoute(route, authStore?.user),
+})
+
+registerHeaderItem({
+  key: 'user-notifications-menu',
+  placement: 'user-menu',
+  order: 20,
+  icon: 'fas fa-bell',
+  label: '通知',
+  to: '/notifications',
+  badge: ({ notificationStore }) => {
+    const count = Number(notificationStore?.unreadCount || 0)
+    return count > 0 ? count : ''
+  },
+  isVisible: ({ authStore }) => Boolean(authStore?.user),
+  isActive: ({ route }) => route?.name === 'notifications',
+})
+
+registerHeaderItem({
+  key: 'user-admin-menu',
+  placement: 'user-menu',
+  order: 30,
+  icon: 'fas fa-cog',
+  label: '管理后台',
+  href: '/admin.html',
+  isVisible: ({ authStore }) => Boolean(authStore?.user?.is_staff),
+})
+
+registerHeaderItem({
+  key: 'user-logout-menu',
+  placement: 'user-menu',
+  order: 40,
+  icon: 'fas fa-sign-out-alt',
+  label: '登出',
+  tone: 'danger',
+  separated: true,
+  isVisible: ({ authStore }) => Boolean(authStore?.user),
+  onClick: ({ handleLogout }) => handleLogout?.(),
+})
+
+registerHeaderItem({
+  key: 'mobile-notifications',
+  placement: 'mobile-drawer-personal',
+  order: 10,
+  icon: 'fas fa-inbox',
+  label: '通知',
+  to: '/notifications',
+  badge: ({ notificationStore }) => {
+    const count = Number(notificationStore?.unreadCount || 0)
+    return count > 0 ? count : ''
+  },
+  isVisible: ({ authStore }) => Boolean(authStore?.user),
+  isActive: ({ route }) => route?.name === 'notifications',
+})
+
+registerHeaderItem({
+  key: 'mobile-profile',
+  placement: 'mobile-drawer-personal',
+  order: 20,
+  icon: 'fas fa-user',
+  label: '我的主页',
+  to: ({ authStore }) => buildUserPath(authStore.user),
+  isVisible: ({ authStore }) => Boolean(authStore?.user),
+  isActive: ({ route, authStore }) => isOwnProfileRoute(route, authStore?.user),
+})
+
+registerHeaderItem({
+  key: 'mobile-admin',
+  placement: 'mobile-drawer-user',
+  order: 10,
+  icon: 'fas fa-cog',
+  label: '管理后台',
+  href: '/admin.html',
+  isVisible: ({ authStore }) => Boolean(authStore?.user?.is_staff),
+})
+
+registerHeaderItem({
+  key: 'mobile-logout',
+  placement: 'mobile-drawer-user',
+  order: 20,
+  icon: 'fas fa-sign-out-alt',
+  label: '登出',
+  tone: 'danger',
+  isVisible: ({ authStore }) => Boolean(authStore?.user),
+  onClick: ({ handleLogout }) => handleLogout?.(),
 })
 
 const ProfileDiscussionSection = defineAsyncComponent(() => import('@/components/profile/ProfileDiscussionSection.vue'))

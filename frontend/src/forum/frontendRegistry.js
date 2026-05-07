@@ -57,6 +57,11 @@ function resolveRegisteredItem(item, context = {}) {
     to: typeof resolvedItem.to === 'function' ? resolvedItem.to(context) : resolvedItem.to,
     href: typeof resolvedItem.href === 'function' ? resolvedItem.href(context) : resolvedItem.href,
     badge: typeof resolvedItem.badge === 'function' ? resolvedItem.badge(context) : resolvedItem.badge,
+    active: Boolean(
+      typeof resolvedItem.isActive === 'function'
+        ? resolvedItem.isActive(context)
+        : resolvedItem.active
+    ),
     description: typeof resolvedItem.description === 'function' ? resolvedItem.description(context) : resolvedItem.description,
     disabledReason: typeof resolvedItem.disabledReason === 'function' ? resolvedItem.disabledReason(context) : resolvedItem.disabledReason,
     confirm: typeof resolvedItem.confirm === 'function' ? resolvedItem.confirm(context) : resolvedItem.confirm,

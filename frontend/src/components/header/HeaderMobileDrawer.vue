@@ -83,27 +83,21 @@
 
       <div v-if="authStore.isAuthenticated && authStore.user" class="mobile-drawer-nav-section">
         <h4 class="mobile-drawer-title">个人</h4>
-        <router-link
-          to="/notifications"
+        <component
+          :is="item.to ? 'router-link' : item.href ? 'a' : 'button'"
+          v-for="item in personalItems"
+          :key="item.key"
+          v-bind="item.to ? { to: item.to } : item.href ? { href: item.href } : { type: 'button' }"
           class="mobile-drawer-link"
-          :class="{ active: isMobileNavActive('notifications') }"
-          @click="$emit('close')"
+          :class="{ active: item.active, 'mobile-drawer-link--danger': item.tone === 'danger' }"
+          @click="$emit('item-click', item, $event)"
         >
-          <i class="fas fa-inbox"></i>
-          <span>通知</span>
-          <span v-if="notificationStore.unreadCount > 0" class="mobile-drawer-badge">
-            {{ notificationStore.unreadCount }}
+          <i v-if="item.icon" :class="item.icon"></i>
+          <span>{{ item.label }}</span>
+          <span v-if="item.badge" class="mobile-drawer-badge">
+            {{ item.badge }}
           </span>
-        </router-link>
-        <router-link
-          :to="profilePath()"
-          class="mobile-drawer-link"
-          :class="{ active: isMobileNavActive('profile') }"
-          @click="$emit('close')"
-        >
-          <i class="fas fa-user"></i>
-          <span>我的主页</span>
-        </router-link>
+        </component>
       </div>
     </nav>
 
@@ -123,19 +117,18 @@
           <span>@{{ authStore.user?.username }}</span>
         </div>
       </div>
-      <a
-        v-if="authStore.user?.is_staff"
-        href="/admin.html"
+      <component
+        :is="item.to ? 'router-link' : item.href ? 'a' : 'button'"
+        v-for="item in userItems"
+        :key="item.key"
+        v-bind="item.to ? { to: item.to } : item.href ? { href: item.href } : { type: 'button' }"
         class="mobile-drawer-link"
-        @click="$emit('close')"
+        :class="{ active: item.active, 'mobile-drawer-link--danger': item.tone === 'danger' }"
+        @click="$emit('item-click', item, $event)"
       >
-        <i class="fas fa-cog"></i>
-        <span>管理后台</span>
-      </a>
-      <button type="button" class="mobile-drawer-link mobile-drawer-link--danger" @click="$emit('logout')">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>登出</span>
-      </button>
+        <i v-if="item.icon" :class="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </component>
     </div>
 
     <div v-else class="mobile-drawer-auth">
@@ -175,6 +168,14 @@ defineProps({
     type: Function,
     required: true
   },
+  personalItems: {
+    type: Array,
+    default: () => []
+  },
+  userItems: {
+    type: Array,
+    default: () => []
+  },
   getUserAvatarColor: {
     type: Function,
     required: true
@@ -189,7 +190,7 @@ defineEmits([
   'close',
   'open-search',
   'start-discussion',
-  'logout',
+  'item-click',
   'open-login',
   'open-register'
 ])

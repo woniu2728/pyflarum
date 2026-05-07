@@ -12,28 +12,24 @@
     <span class="username">{{ authStore.user?.username }}</span>
     <i class="fas fa-caret-down"></i>
 
-    <div v-if="showUserMenu" class="dropdown-menu">
-      <router-link :to="profilePath()" class="dropdown-item">
-        <i class="fas fa-user"></i>
-        <span>个人资料</span>
-      </router-link>
-      <router-link to="/notifications" class="dropdown-item">
-        <i class="fas fa-bell"></i>
-        <span>通知</span>
-      </router-link>
-      <a
-        v-if="authStore.user?.is_staff"
-        href="/admin.html"
-        class="dropdown-item admin-link"
-      >
-        <i class="fas fa-cog"></i>
-        <span>管理后台</span>
-      </a>
-      <div class="dropdown-divider"></div>
-      <a class="dropdown-item" @click.prevent="$emit('logout')">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>登出</span>
-      </a>
+    <div v-if="showUserMenu" class="dropdown-menu" @click.stop>
+      <template v-for="item in items" :key="item.key">
+        <div v-if="item.separated" class="dropdown-divider"></div>
+        <component
+          :is="item.to ? 'router-link' : item.href ? 'a' : 'button'"
+          v-bind="item.to ? { to: item.to } : item.href ? { href: item.href } : { type: 'button' }"
+          class="dropdown-item"
+          :class="{
+            'dropdown-item--danger': item.tone === 'danger',
+            'dropdown-item--active': item.active
+          }"
+          @click="$emit('item-click', item, $event)"
+        >
+          <i v-if="item.icon" :class="item.icon"></i>
+          <span>{{ item.label }}</span>
+          <strong v-if="item.badge" class="dropdown-badge">{{ item.badge }}</strong>
+        </component>
+      </template>
     </div>
   </div>
 </template>
@@ -48,9 +44,9 @@ defineProps({
     type: Boolean,
     default: false
   },
-  profilePath: {
-    type: Function,
-    required: true
+  items: {
+    type: Array,
+    default: () => []
   },
   getUserAvatarColor: {
     type: Function,
@@ -62,7 +58,7 @@ defineProps({
   }
 })
 
-defineEmits(['toggle', 'logout'])
+defineEmits(['toggle', 'item-click'])
 </script>
 
 <style scoped>
@@ -142,18 +138,34 @@ defineEmits(['toggle', 'logout'])
   text-decoration: none;
 }
 
+.dropdown-item--active {
+  background: #f5f8fa;
+  color: #31465d;
+}
+
 .dropdown-item i {
   width: 16px;
   font-size: 14px;
   color: #999;
 }
 
-.dropdown-item.admin-link {
+.dropdown-item--danger,
+.dropdown-item--danger i {
   color: #e74c3c;
 }
 
-.dropdown-item.admin-link i {
-  color: #e74c3c;
+.dropdown-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(77, 105, 142, 0.12);
+  color: var(--forum-primary-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
 }
 
 .dropdown-divider {

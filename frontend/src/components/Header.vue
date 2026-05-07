@@ -99,11 +99,11 @@
             <HeaderUserMenu
               :auth-store="authStore"
               :show-user-menu="showUserMenu"
-              :profile-path="profilePath"
+              :items="userMenuItems"
               :get-user-avatar-color="getUserAvatarColor"
               :get-user-initial="getUserInitial"
               @toggle="toggleUserMenu"
-              @logout="handleLogout"
+              @item-click="handleUserMenuItemClick"
             />
           </template>
         </div>
@@ -127,12 +127,14 @@
       :current-search-query="currentSearchQuery"
       :is-mobile-nav-active="isMobileNavActive"
       :profile-path="profilePath"
+      :personal-items="mobileDrawerPersonalItems"
+      :user-items="mobileDrawerUserItems"
       :get-user-avatar-color="getUserAvatarColor"
       :get-user-initial="getUserInitial"
       @close="closeMobileDrawer"
       @open-search="openSearchFromDrawer"
       @start-discussion="startDiscussionFromDrawer"
-      @logout="logoutFromDrawer"
+      @item-click="handleMobileDrawerItemClick"
       @open-login="openLoginFromDrawer"
       @open-register="openRegisterFromDrawer"
     />
@@ -242,13 +244,22 @@ const {
 })
 const currentSearchQuery = computed(() => String(route.query.q ?? route.query.search ?? '').trim())
 const searchPreviewText = computed(() => currentSearchQuery.value || '')
-const headerActionItems = computed(() => getHeaderItems({
-  authStore,
-  forumStore,
-  notificationStore,
-  route,
-  router,
-}, 'after-search'))
+function buildHeaderExtensionContext() {
+  return {
+    authStore,
+    forumStore,
+    notificationStore,
+    route,
+    router,
+    handleLogout,
+    profilePath,
+  }
+}
+
+const headerActionItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'after-search'))
+const userMenuItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'user-menu'))
+const mobileDrawerPersonalItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'mobile-drawer-personal'))
+const mobileDrawerUserItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'mobile-drawer-user'))
 const showAuthenticatedUi = computed(() => authStore.isAuthenticated && Boolean(authStore.user) && !authStore.isRestoringSession)
 const showSessionPlaceholder = computed(() => authStore.isRestoringSession && authStore.isAuthenticated && !authStore.user)
 const {
@@ -308,22 +319,35 @@ function handleMobileRightAction() {
   }
 }
 
-function handleHeaderItemClick(item, event) {
+async function invokeHeaderItem(item, event, { closeUser = false, closeDrawer = false } = {}) {
   if (item.disabled) {
     event?.preventDefault?.()
     return
   }
 
+  if (closeUser) {
+    showUserMenu.value = false
+  }
+  if (closeDrawer) {
+    closeMobileDrawer()
+  }
+
   if (typeof item.onClick === 'function') {
     event?.preventDefault?.()
-    item.onClick({
-      authStore,
-      forumStore,
-      notificationStore,
-      route,
-      router,
-    })
+    await item.onClick(buildHeaderExtensionContext())
   }
+}
+
+function handleHeaderItemClick(item, event) {
+  return invokeHeaderItem(item, event)
+}
+
+function handleUserMenuItemClick(item, event) {
+  return invokeHeaderItem(item, event, { closeUser: true })
+}
+
+function handleMobileDrawerItemClick(item, event) {
+  return invokeHeaderItem(item, event, { closeDrawer: true })
 }
 
 function startDiscussionFromHeader() {
