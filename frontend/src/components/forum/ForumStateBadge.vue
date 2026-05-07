@@ -74,6 +74,16 @@ defineProps({
   color: var(--forum-primary-color);
 }
 
+.forum-state-badge--info {
+  background: var(--forum-info-bg);
+  color: var(--forum-info-color);
+}
+
+.forum-state-badge--soft-warning {
+  background: #fff1df;
+  color: #9a5520;
+}
+
 .forum-state-badge--muted {
   background: var(--forum-bg-elevated-strong);
   color: var(--forum-text-soft);

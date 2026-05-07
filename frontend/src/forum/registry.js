@@ -662,7 +662,7 @@ registerDiscussionStateBadge({
 registerPostStateBadge({
   key: 'pending',
   order: 10,
-  surfaces: ['profile-post'],
+  surfaces: ['profile-post', 'discussion-post'],
   isVisible: ({ post }) => post?.approval_status === 'pending',
   resolve: () => ({
     label: '待审核',
@@ -673,11 +673,33 @@ registerPostStateBadge({
 registerPostStateBadge({
   key: 'rejected',
   order: 20,
-  surfaces: ['profile-post'],
+  surfaces: ['profile-post', 'discussion-post'],
   isVisible: ({ post }) => post?.approval_status === 'rejected',
   resolve: () => ({
     label: '已拒绝',
     tone: 'danger',
+  }),
+})
+
+registerPostStateBadge({
+  key: 'viewer-open-flag',
+  order: 30,
+  surfaces: ['discussion-post'],
+  isVisible: ({ post }) => Boolean(post?.viewer_has_open_flag && !post?.can_moderate_flags),
+  resolve: () => ({
+    label: '已举报',
+    tone: 'info',
+  }),
+})
+
+registerPostStateBadge({
+  key: 'open-flags',
+  order: 40,
+  surfaces: ['discussion-post'],
+  isVisible: ({ post }) => Boolean(Number(post?.open_flag_count || 0) > 0 && post?.can_moderate_flags),
+  resolve: ({ post }) => ({
+    label: `${post.open_flag_count} 条举报待处理`,
+    tone: 'soft-warning',
   }),
 })
 

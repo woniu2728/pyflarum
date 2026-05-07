@@ -51,12 +51,15 @@
               {{ formatDate(post.created_at) }}
             </time>
             <span v-if="post.edited_at" class="post-edited" :title="formatAbsoluteDate(post.edited_at)">已编辑</span>
-            <span v-if="post.approval_status === 'pending'" class="post-status">待审核</span>
-            <span v-else-if="post.approval_status === 'rejected'" class="post-status post-status--rejected">已拒绝</span>
-            <span v-if="post.viewer_has_open_flag && !post.can_moderate_flags" class="post-status post-status--info">已举报</span>
-            <span v-if="post.open_flag_count > 0 && post.can_moderate_flags" class="post-status post-status--warning">
-              {{ post.open_flag_count }} 条举报待处理
-            </span>
+            <ForumStateBadge
+              v-for="badge in postStateBadges"
+              :key="badge.key"
+              :label="badge.label"
+              :tone="badge.tone"
+              :size="badge.size || 'sm'"
+              :icon="badge.icon || ''"
+              :title="badge.title || ''"
+            />
           </div>
         </header>
 
@@ -184,9 +187,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
+import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
+import { getPostStateBadges } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   post: { type: Object, required: true },
   discussion: { type: Object, required: true },
   authStore: { type: Object, required: true },
@@ -213,6 +219,11 @@ defineProps({
   formatLikeSummary: { type: Function, required: true },
   postMenuItems: { type: Array, default: () => [] },
 })
+
+const postStateBadges = computed(() => getPostStateBadges({
+  post: props.post,
+  surface: 'discussion-post',
+}))
 
 const emit = defineEmits([
   'jump-to-post',
@@ -381,30 +392,6 @@ function handleMenuAction(eventName, payload) {
 
 .post-edited {
   cursor: default;
-}
-
-.post-status {
-  color: var(--forum-warning-color);
-  background: var(--forum-warning-bg-strong);
-  border-radius: var(--forum-radius-pill);
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.post-status--info {
-  color: var(--forum-info-color);
-  background: var(--forum-info-bg);
-}
-
-.post-status--warning {
-  color: #9a5520;
-  background: #fff1df;
-}
-
-.post-status--rejected {
-  color: var(--forum-danger-color);
-  background: var(--forum-danger-bg);
 }
 
 .post-body {
