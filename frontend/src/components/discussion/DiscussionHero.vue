@@ -1,10 +1,16 @@
 <template>
   <div class="discussion-header" :style="discussionHeaderStyle">
-    <div class="discussion-badges">
-      <span v-if="discussion.is_sticky" class="badge badge-pinned">置顶</span>
-      <span v-if="discussion.is_locked" class="badge badge-locked">锁定</span>
-      <span v-if="discussion.is_hidden" class="badge badge-hidden">隐藏</span>
-      <span v-if="discussion.approval_status === 'pending'" class="badge badge-pending">待审核</span>
+    <div v-if="discussionBadges.length" class="discussion-badges">
+      <span
+        v-for="badge in discussionBadges"
+        :key="badge.key"
+        class="badge"
+        :class="badge.className"
+        :title="badge.title || ''"
+      >
+        <i v-if="badge.icon" :class="badge.icon"></i>
+        <span v-if="badge.label">{{ badge.label }}</span>
+      </span>
     </div>
     <h1>{{ discussion.title }}</h1>
     <div v-if="discussion.tags && discussion.tags.length" class="discussion-tags">
@@ -67,6 +73,10 @@ defineProps({
   buildTagPath: {
     type: Function,
     required: true
+  },
+  discussionBadges: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -88,6 +98,9 @@ defineEmits(['moderate-discussion', 'edit-discussion'])
 }
 
 .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: var(--forum-space-1) var(--forum-space-3);
   border-radius: var(--forum-radius-sm);
   font-size: var(--forum-font-size-xs);

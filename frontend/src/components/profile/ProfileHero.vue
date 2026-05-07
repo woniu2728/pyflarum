@@ -30,18 +30,26 @@
               {{ user.username.charAt(0).toUpperCase() }}
             </div>
             <span
-              v-if="getUserPrimaryGroupIcon(user)"
+              v-if="primaryGroupBadge"
               class="avatar-group-badge"
-              :style="{ backgroundColor: getUserPrimaryGroupColor(user) }"
-              :title="getUserPrimaryGroupLabel(user)"
+              :style="{ backgroundColor: primaryGroupBadge.color || getUserPrimaryGroupColor(user) }"
+              :title="primaryGroupBadge.label || getUserPrimaryGroupLabel(user)"
             >
-              <i :class="getUserPrimaryGroupIcon(user)"></i>
+              <i :class="primaryGroupBadge.icon || getUserPrimaryGroupIcon(user)"></i>
             </span>
           </div>
           <div class="user-info-wrapper">
             <h1 class="user-identity">{{ user.display_name || user.username }}</h1>
-            <ul v-if="user.is_staff" class="user-badges">
-              <li class="badge badge-admin">管理员</li>
+            <ul v-if="inlineBadges.length" class="user-badges">
+              <li
+                v-for="badge in inlineBadges"
+                :key="badge.key"
+                class="badge"
+                :class="badge.className"
+              >
+                <i v-if="badge.icon" :class="badge.icon"></i>
+                {{ badge.label }}
+              </li>
             </ul>
             <ul class="user-info">
               <li class="user-last-seen">
@@ -67,7 +75,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   user: {
     type: Object,
     required: true
@@ -111,8 +121,16 @@ defineProps({
   getUserPrimaryGroupLabel: {
     type: Function,
     required: true
+  },
+  userBadges: {
+    type: Array,
+    default: () => []
   }
 })
+
+const userBadges = computed(() => Array.isArray(props.userBadges) ? props.userBadges : [])
+const primaryGroupBadge = computed(() => userBadges.value.find(item => item.variant === 'group') || null)
+const inlineBadges = computed(() => userBadges.value.filter(item => item.variant !== 'group'))
 
 defineEmits(['avatar-selected', 'open-settings'])
 </script>

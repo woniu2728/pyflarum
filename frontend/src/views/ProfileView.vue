@@ -5,6 +5,7 @@
     <div v-else>
       <ProfileHero
         :user="user"
+        :user-badges="userBadges"
         :is-own-profile="isOwnProfile"
         :is-online="isOnline"
         :avatar-uploading="avatarUploading"
@@ -53,7 +54,7 @@ import { useModalStore } from '@/stores/modal'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ProfileHero from '@/components/profile/ProfileHero.vue'
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue'
-import { getProfilePanels } from '@/forum/registry'
+import { getProfilePanels, getUserBadges } from '@/forum/registry'
 import { useProfilePage } from '@/composables/useProfilePage'
 import { useProfilePresentation } from '@/composables/useProfilePresentation'
 import {
@@ -112,6 +113,15 @@ const {
   formatJoinDate,
   formatLastSeen
 } = useProfilePresentation(user)
+
+const userBadges = computed(() => {
+  if (!user.value) return []
+
+  return getUserBadges({
+    user: user.value,
+    authStore,
+  })
+})
 
 const profilePanels = computed(() => {
   if (!user.value) return []

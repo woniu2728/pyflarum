@@ -12,12 +12,15 @@
       </div>
     </router-link>
 
-    <div class="discussion-list-item-badges">
-      <span v-if="discussion.is_sticky" class="badge badge-pinned" title="置顶">
-        <i class="fas fa-thumbtack"></i>
-      </span>
-      <span v-if="discussion.is_locked" class="badge badge-locked" title="锁定">
-        <i class="fas fa-lock"></i>
+    <div v-if="discussionBadges.length" class="discussion-list-item-badges">
+      <span
+        v-for="badge in discussionBadges"
+        :key="badge.key"
+        class="badge"
+        :class="badge.className"
+        :title="badge.title || ''"
+      >
+        <i v-if="badge.icon" :class="badge.icon"></i>
       </span>
     </div>
   </div>
@@ -28,6 +31,10 @@ defineProps({
   discussion: {
     type: Object,
     required: true
+  },
+  discussionBadges: {
+    type: Array,
+    default: () => []
   },
   buildUserPath: {
     type: Function,

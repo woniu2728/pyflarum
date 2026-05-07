@@ -11,6 +11,8 @@ const composerStatusItems = []
 const profilePanels = []
 const notificationRenderers = []
 const searchSources = []
+const userBadges = []
+const discussionBadges = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -252,6 +254,30 @@ export function registerSearchSource(item) {
 
 export function getSearchSources(context = {}) {
   return [...searchSources]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerUserBadge(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(userBadges, normalizedItem.key, normalizedItem)
+}
+
+export function getUserBadges(context = {}) {
+  return [...userBadges]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerDiscussionBadge(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(discussionBadges, normalizedItem.key, normalizedItem)
+}
+
+export function getDiscussionBadges(context = {}) {
+  return [...discussionBadges]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

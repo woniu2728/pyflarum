@@ -10,7 +10,10 @@ import {
   getNotificationRenderers,
   getProfilePanels,
   getSearchSources,
+  getDiscussionBadges,
+  getUserBadges,
   registerDiscussionAction,
+  registerDiscussionBadge,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -23,6 +26,7 @@ import {
   registerProfilePanel,
   registerPostAction,
   registerSearchSource,
+  registerUserBadge,
   runComposerSubmitGuards,
 } from '@/forum/frontendRegistry'
 import { highlightSearchText } from '@/utils/search'
@@ -36,7 +40,9 @@ export {
   getComposerStatusItems,
   getComposerTools,
   getNotificationRenderers,
+  getDiscussionBadges,
   registerDiscussionAction,
+  registerDiscussionBadge,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -49,9 +55,11 @@ export {
   registerProfilePanel,
   registerPostAction,
   registerSearchSource,
+  registerUserBadge,
   runComposerSubmitGuards,
   getProfilePanels,
   getSearchSources,
+  getUserBadges,
 }
 
 registerForumNavSection({
@@ -531,6 +539,72 @@ registerSearchSource({
       userLayout: true,
     }))
   },
+})
+
+registerUserBadge({
+  key: 'staff',
+  order: 10,
+  isVisible: ({ user }) => Boolean(user?.is_staff),
+  resolve: () => ({
+    label: '管理员',
+    className: 'badge-admin',
+  }),
+})
+
+registerUserBadge({
+  key: 'primary-group',
+  order: 20,
+  isVisible: ({ user }) => Boolean(user?.primary_group?.name),
+  resolve: ({ user }) => ({
+    label: user.primary_group.name,
+    icon: user.primary_group.icon || '',
+    color: user.primary_group.color || '#4d698e',
+    variant: 'group',
+  }),
+})
+
+registerDiscussionBadge({
+  key: 'sticky',
+  order: 10,
+  isVisible: ({ discussion }) => Boolean(discussion?.is_sticky),
+  resolve: () => ({
+    className: 'badge-pinned',
+    icon: 'fas fa-thumbtack',
+    title: '置顶',
+  }),
+})
+
+registerDiscussionBadge({
+  key: 'locked',
+  order: 20,
+  isVisible: ({ discussion }) => Boolean(discussion?.is_locked),
+  resolve: () => ({
+    className: 'badge-locked',
+    icon: 'fas fa-lock',
+    title: '锁定',
+  }),
+})
+
+registerDiscussionBadge({
+  key: 'hidden',
+  order: 30,
+  surfaces: ['hero'],
+  isVisible: ({ discussion }) => Boolean(discussion?.is_hidden),
+  resolve: () => ({
+    className: 'badge-hidden',
+    label: '隐藏',
+  }),
+})
+
+registerDiscussionBadge({
+  key: 'pending',
+  order: 40,
+  surfaces: ['hero'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'pending',
+  resolve: () => ({
+    className: 'badge-pending',
+    label: '待审核',
+  }),
 })
 
 const ProfileDiscussionSection = defineAsyncComponent(() => import('@/components/profile/ProfileDiscussionSection.vue'))

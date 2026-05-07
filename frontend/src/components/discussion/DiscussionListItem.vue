@@ -6,6 +6,7 @@
     <div class="discussion-list-item-content">
       <DiscussionListItemAvatar
         :discussion="discussion"
+        :discussion-badges="discussionBadges"
         :build-user-path="buildUserPath"
         :get-user-avatar-color="getUserAvatarColor"
         :get-user-display-name="getUserDisplayName"
@@ -25,11 +26,13 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import DiscussionListItemAvatar from '@/components/discussion/DiscussionListItemAvatar.vue'
 import DiscussionListItemMeta from '@/components/discussion/DiscussionListItemMeta.vue'
 import DiscussionListItemStats from '@/components/discussion/DiscussionListItemStats.vue'
+import { getDiscussionBadges } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   discussion: {
     type: Object,
     required: true
@@ -63,6 +66,10 @@ defineProps({
     required: true
   }
 })
+
+const discussionBadges = computed(() => getDiscussionBadges({
+  discussion: props.discussion,
+}))
 </script>
 
 <style scoped>

@@ -8,6 +8,7 @@
         <main class="main-content">
           <DiscussionHero
             :discussion="discussion"
+            :discussion-badges="discussionBadges"
             :discussion-header-style="discussionHeaderStyle"
             :can-moderate-pending-discussion="canModeratePendingDiscussion"
             :can-edit-discussion="canEditDiscussion"
@@ -153,7 +154,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ForumLoadMoreButton from '@/components/forum/ForumLoadMoreButton.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
@@ -165,6 +166,7 @@ import DiscussionHero from '@/components/discussion/DiscussionHero.vue'
 import DiscussionMobileActions from '@/components/discussion/DiscussionMobileActions.vue'
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
+import { getDiscussionBadges } from '@/forum/registry'
 import { getPostTypeDefinition } from '@/forum/postTypes'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
 import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
@@ -231,6 +233,15 @@ const {
   composerStore,
   route,
   router
+})
+
+const discussionBadges = computed(() => {
+  if (!discussion.value) return []
+
+  return getDiscussionBadges({
+    discussion: discussion.value,
+    surface: 'hero',
+  })
 })
 const {
   canDeletePost,
