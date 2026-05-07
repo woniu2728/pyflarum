@@ -109,11 +109,14 @@
         </div>
 
         <template v-else>
-          <button type="button" class="btn-login" @click="openLogin">
-            登录
-          </button>
-          <button type="button" class="btn-signup" @click="openRegister">
-            注册
+          <button
+            v-for="item in guestActionItems"
+            :key="item.key"
+            type="button"
+            :class="item.tone === 'primary' ? 'btn-signup' : 'btn-login'"
+            @click="handleGuestItemClick(item, $event)"
+          >
+            {{ item.label }}
           </button>
         </template>
       </div>
@@ -127,6 +130,7 @@
       :current-search-query="currentSearchQuery"
       :is-mobile-nav-active="isMobileNavActive"
       :profile-path="profilePath"
+      :guest-items="mobileDrawerGuestItems"
       :personal-items="mobileDrawerPersonalItems"
       :user-items="mobileDrawerUserItems"
       :get-user-avatar-color="getUserAvatarColor"
@@ -135,8 +139,6 @@
       @open-search="openSearchFromDrawer"
       @start-discussion="startDiscussionFromDrawer"
       @item-click="handleMobileDrawerItemClick"
-      @open-login="openLoginFromDrawer"
-      @open-register="openRegisterFromDrawer"
     />
   </header>
 </template>
@@ -252,12 +254,16 @@ function buildHeaderExtensionContext() {
     route,
     router,
     handleLogout,
+    openLogin,
+    openRegister,
     profilePath,
   }
 }
 
 const headerActionItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'after-search'))
+const guestActionItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'guest-actions'))
 const userMenuItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'user-menu'))
+const mobileDrawerGuestItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'mobile-drawer-auth'))
 const mobileDrawerPersonalItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'mobile-drawer-personal'))
 const mobileDrawerUserItems = computed(() => getHeaderItems(buildHeaderExtensionContext(), 'mobile-drawer-user'))
 const showAuthenticatedUi = computed(() => authStore.isAuthenticated && Boolean(authStore.user) && !authStore.isRestoringSession)
@@ -265,8 +271,6 @@ const showSessionPlaceholder = computed(() => authStore.isRestoringSession && au
 const {
   showUserMenu,
   toggleUserMenu,
-  openLoginFromDrawer,
-  openRegisterFromDrawer,
   logoutFromDrawer
 } = useHeaderUiState({
   authStore,
@@ -339,6 +343,10 @@ async function invokeHeaderItem(item, event, { closeUser = false, closeDrawer = 
 }
 
 function handleHeaderItemClick(item, event) {
+  return invokeHeaderItem(item, event)
+}
+
+function handleGuestItemClick(item, event) {
   return invokeHeaderItem(item, event)
 }
 

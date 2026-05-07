@@ -135,6 +135,25 @@ registerHeaderItem({
 })
 
 registerHeaderItem({
+  key: 'guest-login',
+  placement: 'guest-actions',
+  order: 10,
+  label: '登录',
+  isVisible: ({ authStore }) => !authStore?.user,
+  onClick: ({ openLogin }) => openLogin?.(),
+})
+
+registerHeaderItem({
+  key: 'guest-register',
+  placement: 'guest-actions',
+  order: 20,
+  label: '注册',
+  tone: 'primary',
+  isVisible: ({ authStore }) => !authStore?.user,
+  onClick: ({ openRegister }) => openRegister?.(),
+})
+
+registerHeaderItem({
   key: 'user-notifications-menu',
   placement: 'user-menu',
   order: 20,
@@ -216,6 +235,25 @@ registerHeaderItem({
   tone: 'danger',
   isVisible: ({ authStore }) => Boolean(authStore?.user),
   onClick: ({ handleLogout }) => handleLogout?.(),
+})
+
+registerHeaderItem({
+  key: 'mobile-guest-login',
+  placement: 'mobile-drawer-auth',
+  order: 10,
+  label: '登录',
+  isVisible: ({ authStore }) => !authStore?.user,
+  onClick: ({ openLogin }) => openLogin?.(),
+})
+
+registerHeaderItem({
+  key: 'mobile-guest-register',
+  placement: 'mobile-drawer-auth',
+  order: 20,
+  label: '注册',
+  tone: 'primary',
+  isVisible: ({ authStore }) => !authStore?.user,
+  onClick: ({ openRegister }) => openRegister?.(),
 })
 
 const ProfileDiscussionSection = defineAsyncComponent(() => import('@/components/profile/ProfileDiscussionSection.vue'))

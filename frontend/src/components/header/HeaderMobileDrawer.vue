@@ -132,8 +132,15 @@
     </div>
 
     <div v-else class="mobile-drawer-auth">
-      <button type="button" class="btn-login" @click="$emit('open-login')">登录</button>
-      <button type="button" class="btn-signup" @click="$emit('open-register')">注册</button>
+      <button
+        v-for="item in guestItems"
+        :key="item.key"
+        type="button"
+        :class="item.tone === 'primary' ? 'btn-signup' : 'btn-login'"
+        @click="$emit('item-click', item, $event)"
+      >
+        {{ item.label }}
+      </button>
     </div>
   </aside>
 </template>
@@ -168,6 +175,10 @@ defineProps({
     type: Function,
     required: true
   },
+  guestItems: {
+    type: Array,
+    default: () => []
+  },
   personalItems: {
     type: Array,
     default: () => []
@@ -191,8 +202,6 @@ defineEmits([
   'open-search',
   'start-discussion',
   'item-click',
-  'open-login',
-  'open-register'
 ])
 </script>
 
