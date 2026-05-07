@@ -155,6 +155,8 @@ CORS_ALLOWED_ORIGINS = BOOTSTRAP.resolved_cors_origins()
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = BOOTSTRAP.resolved_csrf_origins()
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax"
 
 # Redis Configuration
 REDIS_HOST = BOOTSTRAP.redis_host or 'localhost'

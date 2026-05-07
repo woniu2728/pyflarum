@@ -1,6 +1,10 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
+const CSRF_COOKIE_NAME = 'csrftoken'
+const CSRF_HEADER_NAME = 'X-CSRFToken'
+const SAFE_HTTP_METHODS = new Set(['get', 'head', 'options', 'trace'])
+
 const api = axios.create({
   baseURL: '/api',
   timeout: 10000,
@@ -11,6 +15,49 @@ const api = axios.create({
 })
 
 let refreshRequest = null
+let csrfBootstrapRequest = null
+
+function readCookie(name) {
+  if (typeof document === 'undefined') return ''
+
+  const prefix = `${name}=`
+  const match = document.cookie
+    .split(';')
+    .map(item => item.trim())
+    .find(item => item.startsWith(prefix))
+
+  return match ? decodeURIComponent(match.slice(prefix.length)) : ''
+}
+
+function getCsrfToken() {
+  return readCookie(CSRF_COOKIE_NAME)
+}
+
+function isSafeMethod(method = 'get') {
+  return SAFE_HTTP_METHODS.has(String(method || 'get').toLowerCase())
+}
+
+async function ensureCsrfCookie() {
+  const existingToken = getCsrfToken()
+  if (existingToken) return existingToken
+
+  if (!csrfBootstrapRequest) {
+    csrfBootstrapRequest = api.get('/csrf', {
+      skipAuthRefresh: true,
+      skipAuthInvalidation: true,
+      skipCsrfBootstrap: true
+    }).finally(() => {
+      csrfBootstrapRequest = null
+    })
+  }
+
+  await csrfBootstrapRequest
+  return getCsrfToken()
+}
+
+export function primeCsrfProtection() {
+  return ensureCsrfCookie()
+}
 
 function clearStoredTokens() {
   const authStore = useAuthStore()
@@ -62,7 +109,17 @@ function notifyAuthInvalidated(error) {
 
 // 请求拦截器
 api.interceptors.request.use(
-  config => {
+  async config => {
+    const method = String(config.method || 'get').toLowerCase()
+
+    if (!isSafeMethod(method) && !config.skipCsrfBootstrap) {
+      const csrfToken = await ensureCsrfCookie()
+      if (csrfToken) {
+        config.headers = config.headers || {}
+        config.headers[CSRF_HEADER_NAME] = csrfToken
+      }
+    }
+
     const authStore = useAuthStore()
     const token = authStore.accessToken
     if (token) {

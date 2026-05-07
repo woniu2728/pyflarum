@@ -16,6 +16,7 @@ api = NinjaAPI(
     version=APP_VERSION,
     description="Flarum 风格论坛的 Python RESTful API",
     docs_url="/docs",
+    csrf=True,
 )
 
 # 导入路由

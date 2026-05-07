@@ -3,6 +3,7 @@
 """
 import os
 from typing import Optional
+from django.middleware.csrf import get_token
 from ninja import Router
 from apps.core.api_errors import api_error
 from apps.core.schemas import (
@@ -48,6 +49,12 @@ def get_system_status(request):
         "current_version": status.current_version,
         "installed_version": status.installed_version,
     }
+
+
+@router.get("/csrf", tags=["Auth"])
+def get_csrf_token(request):
+    """初始化 SPA 所需的 CSRF cookie。"""
+    return {"csrfToken": get_token(request)}
 
 
 @router.get("/uploads/policy", auth=AuthBearer(), tags=["Uploads"])

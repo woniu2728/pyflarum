@@ -4,7 +4,7 @@ import httpx
 from unittest.mock import patch
 
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from datetime import timedelta
@@ -402,7 +402,7 @@ class SuspendedUserAuthTests(TestCase):
         self.assertIn("请联系管理员申诉", response.json()["error"])
 
 
-@override_settings(DEBUG=False)
+@override_settings(DEBUG=False, CSRF_COOKIE_SECURE=True)
 class TokenCookieAuthTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -410,6 +410,13 @@ class TokenCookieAuthTests(TestCase):
             email="token-cookie@example.com",
             password="password123",
         )
+
+    def _bootstrap_csrf(self, client: Client):
+        response = client.get("/api/csrf", secure=True)
+        self.assertEqual(response.status_code, 200, response.content)
+        token = response.cookies["csrftoken"].value
+        self.assertTrue(token)
+        return token, response.cookies["csrftoken"]
 
     def test_login_sets_refresh_token_cookie_without_exposing_refresh_body(self):
         response = self.client.post(
@@ -493,6 +500,102 @@ class TokenCookieAuthTests(TestCase):
         self.assertIsNotNone(cookie)
         self.assertEqual(cookie.value, "")
         self.assertEqual(cookie["path"], "/api/users")
+
+    def test_csrf_bootstrap_sets_secure_cookie(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        token, response_cookie = self._bootstrap_csrf(csrf_client)
+
+        self.assertEqual(token, csrf_client.cookies["csrftoken"].value)
+        self.assertTrue(response_cookie["secure"])
+        self.assertEqual(response_cookie["samesite"], "Lax")
+
+    def test_login_requires_csrf_when_checks_enabled(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        response = csrf_client.post(
+            "/api/users/login",
+            data=json.dumps({
+                "identification": "token-cookie-user",
+                "password": "password123",
+            }),
+            content_type="application/json",
+            secure=True,
+            HTTP_REFERER="https://testserver/",
+        )
+
+        self.assertEqual(response.status_code, 403, response.content)
+
+    def test_login_accepts_csrf_when_checks_enabled(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_token, _ = self._bootstrap_csrf(csrf_client)
+
+        response = csrf_client.post(
+            "/api/users/login",
+            data=json.dumps({
+                "identification": "token-cookie-user",
+                "password": "password123",
+            }),
+            content_type="application/json",
+            secure=True,
+            HTTP_REFERER="https://testserver/",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()["access"])
+
+    def test_refresh_access_token_requires_csrf_when_checks_enabled(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_token, _ = self._bootstrap_csrf(csrf_client)
+
+        login_response = csrf_client.post(
+            "/api/users/login",
+            data=json.dumps({
+                "identification": "token-cookie-user",
+                "password": "password123",
+            }),
+            content_type="application/json",
+            secure=True,
+            HTTP_REFERER="https://testserver/",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(login_response.status_code, 200, login_response.content)
+
+        response = csrf_client.post(
+            "/api/users/token/refresh",
+            secure=True,
+            HTTP_REFERER="https://testserver/",
+        )
+
+        self.assertEqual(response.status_code, 403, response.content)
+
+    def test_refresh_access_token_accepts_csrf_when_checks_enabled(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_token, _ = self._bootstrap_csrf(csrf_client)
+
+        login_response = csrf_client.post(
+            "/api/users/login",
+            data=json.dumps({
+                "identification": "token-cookie-user",
+                "password": "password123",
+            }),
+            content_type="application/json",
+            secure=True,
+            HTTP_REFERER="https://testserver/",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(login_response.status_code, 200, login_response.content)
+
+        response = csrf_client.post(
+            "/api/users/token/refresh",
+            secure=True,
+            HTTP_REFERER="https://testserver/",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()["access"])
 
 
 class SecurityHeadersTests(TestCase):

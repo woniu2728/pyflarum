@@ -167,6 +167,7 @@ class MaintenanceModeMiddleware:
     sync_capable = True
     async_capable = True
     allowed_public_paths = {
+        "/api/csrf",
         "/api/forum",
         "/api/health",
         "/api/users/login",
