@@ -1,7 +1,7 @@
 import api from '@/api'
 import { buildDiscussionPath } from '@/utils/forum'
+import { getNotificationRenderers, registerNotificationRenderer } from '@/forum/registry'
 
-const notificationTypeDefinitions = []
 const postPathCache = new Map()
 
 function normalizeType(type) {
@@ -74,6 +74,7 @@ function getFallbackDefinition(type) {
   const normalizedType = normalizeType(type)
   return {
     type: normalizedType,
+    key: normalizedType,
     label: normalizedType || '通知',
     icon: 'fas fa-bell',
     navigationScope: 'notifications',
@@ -82,46 +83,28 @@ function getFallbackDefinition(type) {
   }
 }
 
-function describeNotificationActor(notification) {
-  return notification?.from_user?.display_name || notification?.from_user?.username || '有人'
-}
-
-function describeDiscussionTitle(notification) {
-  return notification?.data?.discussion_title || ''
-}
-
-function describeApprovalNote(notification) {
-  return notification?.data?.approval_note ? `：${notification.data.approval_note}` : ''
-}
-
-function describeSuspendMessage(notification) {
-  return notification?.data?.suspend_message ? `：${notification.data.suspend_message}` : ''
+function getResolvedNotificationDefinitions() {
+  return getNotificationRenderers()
+    .map(item => ({
+      ...item,
+      type: normalizeType(item.type || item.key),
+      key: item.key || item.type,
+    }))
+    .filter(item => item.type)
 }
 
 export function registerNotificationType(definition) {
-  const normalizedType = normalizeType(definition?.type)
+  const normalizedType = normalizeType(definition?.type || definition?.code)
   if (!normalizedType) {
     return null
   }
 
-  const existing = notificationTypeDefinitions.find(item => item.type === normalizedType)
-  const normalizedDefinition = {
-    ...existing,
-    order: 100,
-    icon: 'fas fa-bell',
-    navigationScope: 'notifications',
+  return registerNotificationRenderer({
     ...definition,
+    key: definition?.key || normalizedType,
     type: normalizedType,
-  }
-
-  const existingIndex = notificationTypeDefinitions.findIndex(item => item.type === normalizedType)
-  if (existingIndex >= 0) {
-    notificationTypeDefinitions.splice(existingIndex, 1, normalizedDefinition)
-    return normalizedDefinition
-  }
-
-  notificationTypeDefinitions.push(normalizedDefinition)
-  return normalizedDefinition
+    navigationScope: definition?.navigation_scope || definition?.navigationScope,
+  })
 }
 
 export function syncNotificationTypes(definitions = []) {
@@ -145,13 +128,13 @@ export function syncNotificationTypes(definitions = []) {
 export function getNotificationTypeDefinition(type) {
   const normalizedType = normalizeType(type)
   return (
-    notificationTypeDefinitions.find(item => item.type === normalizedType)
+    getResolvedNotificationDefinitions().find(item => item.type === normalizedType)
     || getFallbackDefinition(normalizedType)
   )
 }
 
 export function getRegisteredNotificationTypes() {
-  return [...notificationTypeDefinitions].sort((left, right) => {
+  return getResolvedNotificationDefinitions().sort((left, right) => {
     return Number(left.order || 999) - Number(right.order || 999)
   })
 }
@@ -176,7 +159,7 @@ export function getNotificationText(notification, fallbackMessage = '') {
 export function getNotificationPresentation(notification, fallbackMessage = '') {
   const definition = getNotificationTypeDefinition(notification?.type)
   const messageText = getNotificationText(notification, fallbackMessage)
-  const discussionTitle = describeDiscussionTitle(notification)
+  const discussionTitle = notification?.data?.discussion_title || ''
   const metaText = typeof definition.getMeta === 'function'
     ? definition.getMeta(notification)
     : (discussionTitle || definition.groupLabel || definition.label || '')
@@ -219,7 +202,7 @@ export function resolveNotificationGroup(notification, fallbackTitle = '论坛')
     return {
       discussionId,
       key: `discussion-${discussionId}`,
-      title: describeDiscussionTitle(notification) || definition.label || fallbackTitle,
+      title: notification?.data?.discussion_title || definition.label || fallbackTitle,
     }
   }
 
@@ -258,156 +241,3 @@ export async function resolveNotificationPath(notification) {
       return '/notifications'
   }
 }
-
-syncNotificationTypes([
-  {
-    code: 'discussionReply',
-    label: '讨论新回复',
-    icon: 'fas fa-reply',
-    navigation_scope: 'post',
-    groupLabel: '讨论互动',
-    order: 10,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      const discussionTitle = describeDiscussionTitle(notification)
-      return `${fromUser} 回复了你的讨论 "${discussionTitle}"`
-    },
-  },
-  {
-    code: 'postLiked',
-    label: '回复被点赞',
-    icon: 'fas fa-thumbs-up',
-    navigation_scope: 'post',
-    groupLabel: '互动反馈',
-    order: 20,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      return `${fromUser} 点赞了你的回复`
-    },
-  },
-  {
-    code: 'userMentioned',
-    label: '@提及通知',
-    icon: 'fas fa-at',
-    navigation_scope: 'post',
-    groupLabel: '互动反馈',
-    order: 30,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      return `${fromUser} 在回复中提到了你`
-    },
-  },
-  {
-    code: 'postReply',
-    label: '回复被回应',
-    icon: 'fas fa-comment-dots',
-    navigation_scope: 'post',
-    groupLabel: '互动反馈',
-    order: 40,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      return `${fromUser} 回复了你的帖子`
-    },
-  },
-  {
-    code: 'discussionApproved',
-    label: '讨论审核通过',
-    icon: 'fas fa-circle-check',
-    navigation_scope: 'discussion',
-    groupLabel: '审核结果',
-    order: 50,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      const discussionTitle = describeDiscussionTitle(notification)
-      return `${fromUser} 通过了你的讨论 "${discussionTitle}"`
-    },
-  },
-  {
-    code: 'discussionRejected',
-    label: '讨论审核拒绝',
-    icon: 'fas fa-circle-xmark',
-    navigation_scope: 'discussion',
-    groupLabel: '审核结果',
-    order: 60,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      const discussionTitle = describeDiscussionTitle(notification)
-      return `${fromUser} 拒绝了你的讨论 "${discussionTitle}"${describeApprovalNote(notification)}`
-    },
-  },
-  {
-    code: 'postApproved',
-    label: '回复审核通过',
-    icon: 'fas fa-check',
-    navigation_scope: 'post',
-    groupLabel: '审核结果',
-    order: 70,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      const discussionTitle = describeDiscussionTitle(notification)
-      return `${fromUser} 通过了你在 "${discussionTitle}" 中的回复`
-    },
-  },
-  {
-    code: 'postRejected',
-    label: '回复审核拒绝',
-    icon: 'fas fa-xmark',
-    navigation_scope: 'post',
-    groupLabel: '审核结果',
-    order: 80,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      const discussionTitle = describeDiscussionTitle(notification)
-      return `${fromUser} 拒绝了你在 "${discussionTitle}" 中的回复${describeApprovalNote(notification)}`
-    },
-  },
-  {
-    code: 'userSuspended',
-    label: '账号封禁通知',
-    icon: 'fas fa-user-lock',
-    navigation_scope: 'profile',
-    groupLabel: '账号状态',
-    order: 90,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      return `${fromUser} 已封禁你的账号${describeSuspendMessage(notification)}`
-    },
-  },
-  {
-    code: 'userUnsuspended',
-    label: '账号解除封禁',
-    icon: 'fas fa-user-check',
-    navigation_scope: 'profile',
-    groupLabel: '账号状态',
-    order: 100,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      return `${fromUser} 已解除你的账号封禁`
-    },
-  },
-  {
-    code: 'discussionCreated',
-    label: '发起讨论',
-    icon: 'fas fa-pen',
-    navigation_scope: 'discussion',
-    groupLabel: '讨论动态',
-    order: 110,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      const discussionTitle = describeDiscussionTitle(notification)
-      return `${fromUser} 发起了新讨论 "${discussionTitle}"`
-    },
-  },
-  {
-    code: 'postCreated',
-    label: '发表回复',
-    icon: 'fas fa-message',
-    navigation_scope: 'post',
-    groupLabel: '讨论动态',
-    order: 120,
-    getText(notification) {
-      const fromUser = describeNotificationActor(notification)
-      return `${fromUser} 发表了新回复`
-    },
-  },
-])

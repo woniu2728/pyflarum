@@ -9,6 +9,7 @@ const composerSubmitGuards = []
 const composerSecondaryActions = []
 const composerStatusItems = []
 const profilePanels = []
+const notificationRenderers = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -221,6 +222,21 @@ export function registerProfilePanel(item) {
 
 export function getProfilePanels(context = {}) {
   return [...profilePanels]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerNotificationRenderer(item) {
+  const normalizedItem = normalizeRegisteredItem(item, {
+    icon: 'fas fa-bell',
+    navigationScope: 'notifications',
+  })
+  return upsertByKey(notificationRenderers, normalizedItem.key, normalizedItem)
+}
+
+export function getNotificationRenderers(context = {}) {
+  return [...notificationRenderers]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

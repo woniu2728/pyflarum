@@ -7,6 +7,7 @@ import {
   getComposerTools,
   getForumNavItems,
   getForumNavSections,
+  getNotificationRenderers,
   getProfilePanels,
   registerDiscussionAction,
   registerComposerNotice,
@@ -17,6 +18,7 @@ import {
   registerHeaderItem,
   registerForumNavItem,
   registerForumNavSection,
+  registerNotificationRenderer,
   registerProfilePanel,
   registerPostAction,
   runComposerSubmitGuards,
@@ -29,6 +31,7 @@ export {
   getComposerSecondaryActions,
   getComposerStatusItems,
   getComposerTools,
+  getNotificationRenderers,
   registerDiscussionAction,
   registerComposerNotice,
   registerComposerSecondaryAction,
@@ -38,6 +41,7 @@ export {
   registerHeaderItem,
   registerForumNavItem,
   registerForumNavSection,
+  registerNotificationRenderer,
   registerProfilePanel,
   registerPostAction,
   runComposerSubmitGuards,
@@ -254,6 +258,178 @@ registerHeaderItem({
   tone: 'primary',
   isVisible: ({ authStore }) => !authStore?.user,
   onClick: ({ openRegister }) => openRegister?.(),
+})
+
+function registerDefaultNotificationRenderer(definition) {
+  return registerNotificationRenderer({
+    ...definition,
+    key: definition.key || definition.type,
+  })
+}
+
+registerDefaultNotificationRenderer({
+  type: 'discussionReply',
+  label: '讨论新回复',
+  icon: 'fas fa-reply',
+  navigationScope: 'post',
+  groupLabel: '讨论互动',
+  order: 10,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const discussionTitle = notification?.data?.discussion_title || ''
+    return `${fromUser} 回复了你的讨论 "${discussionTitle}"`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'postLiked',
+  label: '回复被点赞',
+  icon: 'fas fa-thumbs-up',
+  navigationScope: 'post',
+  groupLabel: '互动反馈',
+  order: 20,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    return `${fromUser} 点赞了你的回复`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'userMentioned',
+  label: '@提及通知',
+  icon: 'fas fa-at',
+  navigationScope: 'post',
+  groupLabel: '互动反馈',
+  order: 30,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    return `${fromUser} 在回复中提到了你`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'postReply',
+  label: '回复被回应',
+  icon: 'fas fa-comment-dots',
+  navigationScope: 'post',
+  groupLabel: '互动反馈',
+  order: 40,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    return `${fromUser} 回复了你的帖子`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'discussionApproved',
+  label: '讨论审核通过',
+  icon: 'fas fa-circle-check',
+  navigationScope: 'discussion',
+  groupLabel: '审核结果',
+  order: 50,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const discussionTitle = notification?.data?.discussion_title || ''
+    return `${fromUser} 通过了你的讨论 "${discussionTitle}"`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'discussionRejected',
+  label: '讨论审核拒绝',
+  icon: 'fas fa-circle-xmark',
+  navigationScope: 'discussion',
+  groupLabel: '审核结果',
+  order: 60,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const discussionTitle = notification?.data?.discussion_title || ''
+    const note = notification?.data?.approval_note ? `：${notification.data.approval_note}` : ''
+    return `${fromUser} 拒绝了你的讨论 "${discussionTitle}"${note}`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'postApproved',
+  label: '回复审核通过',
+  icon: 'fas fa-check',
+  navigationScope: 'post',
+  groupLabel: '审核结果',
+  order: 70,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const discussionTitle = notification?.data?.discussion_title || ''
+    return `${fromUser} 通过了你在 "${discussionTitle}" 中的回复`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'postRejected',
+  label: '回复审核拒绝',
+  icon: 'fas fa-xmark',
+  navigationScope: 'post',
+  groupLabel: '审核结果',
+  order: 80,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const discussionTitle = notification?.data?.discussion_title || ''
+    const note = notification?.data?.approval_note ? `：${notification.data.approval_note}` : ''
+    return `${fromUser} 拒绝了你在 "${discussionTitle}" 中的回复${note}`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'userSuspended',
+  label: '账号封禁通知',
+  icon: 'fas fa-user-lock',
+  navigationScope: 'profile',
+  groupLabel: '账号状态',
+  order: 90,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const message = notification?.data?.suspend_message ? `：${notification.data.suspend_message}` : ''
+    return `${fromUser} 已封禁你的账号${message}`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'userUnsuspended',
+  label: '账号解除封禁',
+  icon: 'fas fa-user-check',
+  navigationScope: 'profile',
+  groupLabel: '账号状态',
+  order: 100,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    return `${fromUser} 已解除你的账号封禁`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'discussionCreated',
+  label: '发起讨论',
+  icon: 'fas fa-pen',
+  navigationScope: 'discussion',
+  groupLabel: '讨论动态',
+  order: 110,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    const discussionTitle = notification?.data?.discussion_title || ''
+    return `${fromUser} 发起了新讨论 "${discussionTitle}"`
+  },
+})
+
+registerDefaultNotificationRenderer({
+  type: 'postCreated',
+  label: '发表回复',
+  icon: 'fas fa-message',
+  navigationScope: 'post',
+  groupLabel: '讨论动态',
+  order: 120,
+  getText(notification) {
+    const fromUser = notification?.from_user?.display_name || notification?.from_user?.username || '有人'
+    return `${fromUser} 发表了新回复`
+  },
 })
 
 const ProfileDiscussionSection = defineAsyncComponent(() => import('@/components/profile/ProfileDiscussionSection.vue'))
