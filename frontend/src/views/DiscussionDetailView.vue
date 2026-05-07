@@ -128,6 +128,7 @@
           :show-discussion-menu="showDiscussionMenu"
           :toggling-subscription="togglingSubscription"
           :menu-items="discussionMenuItems"
+          :sidebar-action-items="discussionSidebarActionItems"
           :scrubber-scrollbar-style="scrubberScrollbarStyle"
           :scrubber-before-percent="scrubberBeforePercent"
           :scrubber-after-percent="scrubberAfterPercent"
@@ -139,9 +140,7 @@
           :scrubber-position-text="scrubberPositionText"
           :scrubber-description="scrubberDescription"
           :max-post-number="maxPostNumber"
-          @primary-action="openComposer"
-          @login-action="goToLoginForReply"
-          @toggle-subscription="toggleSubscription"
+          @sidebar-action="handleDiscussionMenuSelection"
           @toggle-menu="toggleDiscussionMenu"
           @menu-action="handleDiscussionMenuSelection"
           @jump-to-post="jumpToPost"
@@ -295,6 +294,7 @@ const {
 } = useDiscussionDetailPresentation(discussion)
 const {
   discussionMenuItems,
+  discussionSidebarActionItems,
   getPostMenuOptions,
   handleDiscussionMenuSelection,
   handlePostMenuSelection,

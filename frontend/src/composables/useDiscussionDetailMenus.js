@@ -75,6 +75,19 @@ export function useDiscussionDetailMenus({
     discussion: discussion.value || {},
     hasActiveComposer: hasActiveComposer.value,
     isSuspended: isSuspended.value,
+    surface: 'discussion-menu',
+    togglingSubscription: togglingSubscription.value
+  }))
+
+  const discussionSidebarActionItems = computed(() => getDiscussionMenuItems({
+    authStore,
+    canEditDiscussion: canEditDiscussion.value,
+    canModerateDiscussionSettings: canModerateDiscussionSettings.value,
+    canReplyFromMenu: canReplyFromMenu.value,
+    discussion: discussion.value || {},
+    hasActiveComposer: hasActiveComposer.value,
+    isSuspended: isSuspended.value,
+    surface: 'discussion-sidebar',
     togglingSubscription: togglingSubscription.value
   }))
 
@@ -119,6 +132,7 @@ export function useDiscussionDetailMenus({
 
   return {
     discussionMenuItems,
+    discussionSidebarActionItems,
     getPostMenuOptions,
     handleDiscussionMenuSelection,
     handlePostMenuSelection,

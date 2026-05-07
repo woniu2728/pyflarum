@@ -1,38 +1,31 @@
 <template>
   <div class="sidebar-section sidebar-section--actions discussion-actions-scope">
     <button
-      v-if="authStore.isAuthenticated"
+      v-if="primaryAction"
       type="button"
       class="discussion-primary-action"
-      :disabled="discussion.is_locked || isSuspended"
-      @click="$emit('primary-action')"
+      :disabled="primaryAction.disabled"
+      :title="primaryAction.disabledReason || primaryAction.description || ''"
+      @click="$emit('sidebar-action', primaryAction.key)"
     >
-      <i class="fas fa-reply"></i>
-      {{ hasActiveComposer ? '继续回复' : '回复' }}
-    </button>
-    <button
-      v-else
-      type="button"
-      class="discussion-primary-action"
-      @click="$emit('login-action')"
-    >
-      <i class="fas fa-sign-in-alt"></i>
-      登录后回复
+      <i v-if="primaryAction.icon" :class="primaryAction.icon"></i>
+      {{ primaryAction.label }}
     </button>
 
-    <div v-if="authStore.isAuthenticated && !isSuspended" class="discussion-secondary-row">
+    <div v-if="secondaryAction" class="discussion-secondary-row">
       <button
         type="button"
         class="discussion-follow-action"
         :class="{
-          'is-active': discussion.is_subscribed,
+          'is-active': discussion.is_subscribed || secondaryAction.active,
           'is-standalone': !canShowDiscussionMenu
         }"
-        :disabled="togglingSubscription"
-        @click="$emit('toggle-subscription')"
+        :disabled="secondaryAction.disabled"
+        :title="secondaryAction.disabledReason || secondaryAction.description || ''"
+        @click="$emit('sidebar-action', secondaryAction.key)"
       >
-        <i :class="discussion.is_subscribed ? 'fas fa-bell-slash' : 'far fa-star'"></i>
-        {{ togglingSubscription ? '提交中...' : (discussion.is_subscribed ? '取消关注' : '关注') }}
+        <i v-if="secondaryAction.icon" :class="secondaryAction.icon"></i>
+        {{ secondaryAction.label }}
       </button>
       <button
         v-if="canShowDiscussionMenu"
@@ -73,9 +66,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
 
-defineProps({
+const props = defineProps({
   discussion: {
     type: Object,
     required: true
@@ -119,16 +113,21 @@ defineProps({
   menuItems: {
     type: Array,
     default: () => []
+  },
+  sidebarActionItems: {
+    type: Array,
+    default: () => []
   }
 })
 
 defineEmits([
-  'primary-action',
-  'login-action',
-  'toggle-subscription',
+  'sidebar-action',
   'toggle-menu',
   'menu-action'
 ])
+
+const primaryAction = computed(() => props.sidebarActionItems[0] || null)
+const secondaryAction = computed(() => props.sidebarActionItems[1] || null)
 </script>
 
 <style scoped>

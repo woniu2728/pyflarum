@@ -36,6 +36,7 @@ export function getPostMenuItems(context) {
 registerDiscussionAction({
   key: 'reply',
   order: 10,
+  surfaces: ['discussion-sidebar', 'discussion-menu'],
   isVisible: ({ canReplyFromMenu }) => Boolean(canReplyFromMenu),
   resolve: ({ hasActiveComposer }) => ({
     key: 'reply',
@@ -49,6 +50,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'login',
   order: 10,
+  surfaces: ['discussion-sidebar', 'discussion-menu'],
   isVisible: ({ canReplyFromMenu }) => !canReplyFromMenu,
   resolve: () => ({
     key: 'login',
@@ -62,6 +64,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'toggle-subscription',
   order: 20,
+  surfaces: ['discussion-sidebar', 'discussion-menu'],
   isVisible: ({ authStore, isSuspended }) => Boolean(authStore?.isAuthenticated) && !isSuspended,
   resolve: ({ togglingSubscription, discussion }) => ({
     key: 'toggle-subscription',
@@ -77,6 +80,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'edit',
   order: 30,
+  surfaces: ['discussion-menu'],
   isVisible: ({ canEditDiscussion }) => Boolean(canEditDiscussion),
   resolve: () => ({
     key: 'edit',
@@ -90,6 +94,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'toggle-pin',
   order: 40,
+  surfaces: ['discussion-menu'],
   isVisible: ({ canModerateDiscussionSettings }) => Boolean(canModerateDiscussionSettings),
   resolve: ({ discussion }) => ({
     key: 'toggle-pin',
@@ -110,6 +115,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'toggle-lock',
   order: 50,
+  surfaces: ['discussion-menu'],
   isVisible: ({ canModerateDiscussionSettings }) => Boolean(canModerateDiscussionSettings),
   resolve: ({ discussion }) => ({
     key: 'toggle-lock',
@@ -130,6 +136,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'toggle-hide',
   order: 60,
+  surfaces: ['discussion-menu'],
   isVisible: ({ canModerateDiscussionSettings }) => Boolean(canModerateDiscussionSettings),
   resolve: ({ discussion }) => ({
     key: 'toggle-hide',
@@ -150,6 +157,7 @@ registerDiscussionAction({
 registerDiscussionAction({
   key: 'delete',
   order: 70,
+  surfaces: ['discussion-menu'],
   isVisible: ({ canModerateDiscussionSettings }) => Boolean(canModerateDiscussionSettings),
   resolve: () => ({
     key: 'delete',

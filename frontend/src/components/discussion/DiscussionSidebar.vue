@@ -12,9 +12,8 @@
       :show-discussion-menu="showDiscussionMenu"
       :toggling-subscription="togglingSubscription"
       :menu-items="menuItems"
-      @primary-action="$emit('primary-action')"
-      @login-action="$emit('login-action')"
-      @toggle-subscription="$emit('toggle-subscription')"
+      :sidebar-action-items="sidebarActionItems"
+      @sidebar-action="$emit('sidebar-action', $event)"
       @toggle-menu="$emit('toggle-menu')"
       @menu-action="$emit('menu-action', $event)"
     />
@@ -94,6 +93,10 @@ defineProps({
     type: Array,
     default: () => []
   },
+  sidebarActionItems: {
+    type: Array,
+    default: () => []
+  },
   scrubberScrollbarStyle: {
     type: Object,
     default: () => ({})
@@ -141,9 +144,7 @@ defineProps({
 })
 
 defineEmits([
-  'primary-action',
-  'login-action',
-  'toggle-subscription',
+  'sidebar-action',
   'toggle-menu',
   'menu-action',
   'jump-to-post',
