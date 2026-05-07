@@ -37,7 +37,12 @@ from apps.core.search_index_service import SEARCH_INDEX_DEFINITIONS
 from apps.core.settings_service import clear_runtime_setting_caches, get_setting_group
 from apps.core.services import PaginationService, SearchService
 from apps.core.test_runner import BiasDiscoverRunner
-from apps.core.websocket_auth import get_user_from_token
+from apps.core.websocket_auth import (
+    REFRESH_TOKEN_COOKIE_NAME,
+    _parse_cookie_header,
+    resolve_user_from_refresh_token,
+    resolve_user_from_token,
+)
 from apps.discussions.services import DiscussionService
 from apps.notifications.models import Notification
 from apps.posts.models import PostFlag
@@ -1046,17 +1051,35 @@ class WebSocketJwtAuthTests(TestCase):
             password="password123",
         )
 
-    async def test_valid_token_resolves_user_for_websocket(self):
+    def test_valid_token_resolves_user_for_websocket(self):
         token = str(RefreshToken.for_user(self.user).access_token)
 
-        resolved_user = await get_user_from_token(token)
+        resolved_user = resolve_user_from_token(token)
 
         self.assertEqual(resolved_user.id, self.user.id)
 
-    async def test_invalid_token_returns_anonymous_user(self):
-        resolved_user = await get_user_from_token("invalid-token")
+    def test_invalid_token_returns_anonymous_user(self):
+        resolved_user = resolve_user_from_token("invalid-token")
 
         self.assertIsInstance(resolved_user, AnonymousUser)
+
+    def test_valid_refresh_cookie_resolves_user_for_websocket(self):
+        refresh = str(RefreshToken.for_user(self.user))
+
+        resolved_user = resolve_user_from_refresh_token(refresh)
+
+        self.assertEqual(resolved_user.id, self.user.id)
+
+    def test_cookie_parser_extracts_refresh_token(self):
+        scope = {
+            "headers": [
+                (b"cookie", f"theme=light; {REFRESH_TOKEN_COOKIE_NAME}=refresh-token-value".encode()),
+            ]
+        }
+
+        cookies = _parse_cookie_header(scope)
+
+        self.assertEqual(cookies[REFRESH_TOKEN_COOKIE_NAME], "refresh-token-value")
 
 
 class AdminSettingsApiTests(TestCase):

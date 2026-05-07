@@ -48,15 +48,14 @@ export const useNotificationStore = defineStore('notification', () => {
   // 连接WebSocket
   function connect() {
     const authStore = useAuthStore()
-    const token = authStore.accessToken
-    if (!token || websocketDisabled.value) return
+    if (!authStore.isAuthenticated || websocketDisabled.value) return
 
     if (ws.value && [WebSocket.OPEN, WebSocket.CONNECTING].includes(ws.value.readyState)) {
       return
     }
 
     const baseUrl = resolveWsBaseUrl()
-    ws.value = new WebSocket(`${baseUrl}/ws/notifications/?token=${encodeURIComponent(token)}`)
+    ws.value = new WebSocket(`${baseUrl}/ws/notifications/`)
     let didOpen = false
 
     ws.value.onopen = () => {
