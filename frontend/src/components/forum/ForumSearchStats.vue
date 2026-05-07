@@ -1,33 +1,21 @@
 <template>
   <div class="search-stats">
-    <span class="search-stat">
-      <strong>{{ discussionTotal }}</strong>
-      <span>讨论</span>
-    </span>
-    <span class="search-stat">
-      <strong>{{ postTotal }}</strong>
-      <span>帖子</span>
-    </span>
-    <span class="search-stat">
-      <strong>{{ userTotal }}</strong>
-      <span>用户</span>
+    <span
+      v-for="item in items"
+      :key="item.key"
+      class="search-stat"
+    >
+      <strong>{{ item.count }}</strong>
+      <span>{{ item.label }}</span>
     </span>
   </div>
 </template>
 
 <script setup>
 defineProps({
-  discussionTotal: {
-    type: Number,
-    required: true
-  },
-  postTotal: {
-    type: Number,
-    required: true
-  },
-  userTotal: {
-    type: Number,
-    required: true
+  items: {
+    type: Array,
+    default: () => []
   }
 })
 </script>

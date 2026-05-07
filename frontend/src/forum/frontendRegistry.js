@@ -10,6 +10,7 @@ const composerSecondaryActions = []
 const composerStatusItems = []
 const profilePanels = []
 const notificationRenderers = []
+const searchSources = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -237,6 +238,20 @@ export function registerNotificationRenderer(item) {
 
 export function getNotificationRenderers(context = {}) {
   return [...notificationRenderers]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerSearchSource(item) {
+  const normalizedItem = normalizeRegisteredItem(item, {
+    filterTarget: '',
+  })
+  return upsertByKey(searchSources, normalizedItem.key, normalizedItem)
+}
+
+export function getSearchSources(context = {}) {
+  return [...searchSources]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

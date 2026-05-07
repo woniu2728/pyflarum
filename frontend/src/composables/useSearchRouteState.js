@@ -1,4 +1,5 @@
 import { useRouteListState } from '@/composables/useRouteListState'
+import { getSearchSources } from '@/forum/registry'
 
 function normalizePage(value) {
   const parsed = Number(value)
@@ -7,7 +8,8 @@ function normalizePage(value) {
 
 function normalizeSearchType(value) {
   const normalized = String(value || 'all').trim()
-  return ['all', 'discussions', 'posts', 'users'].includes(normalized) ? normalized : 'all'
+  const allowedTypes = ['all', ...getSearchSources().map(item => item.routeType || item.type)]
+  return allowedTypes.includes(normalized) ? normalized : 'all'
 }
 
 export function useSearchRouteState({ route, router }) {

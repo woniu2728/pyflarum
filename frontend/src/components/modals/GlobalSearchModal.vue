@@ -157,20 +157,16 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
+import { getSearchSources } from '@/forum/registry'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
 import {
-  buildDiscussionPath,
-  buildUserPath,
-  formatRelativeTime,
   normalizeDiscussion,
   normalizePost,
   normalizeUser,
   unwrapList
 } from '@/utils/forum'
-import { highlightSearchText } from '@/utils/search'
-import { renderTwemojiHtml } from '@/utils/twemoji'
 
 const props = defineProps({
   showing: {
@@ -190,15 +186,16 @@ const props = defineProps({
 const router = useRouter()
 const modalStore = useModalStore()
 const resourceStore = useResourceStore()
+const searchSources = getSearchSources()
+const searchSourceMap = Object.fromEntries(searchSources.map(item => [item.type, item]))
 const root = ref(null)
 const inputRef = ref(null)
 const query = ref(String(props.initialQuery || ''))
-const activeType = ref(['all', 'discussions', 'posts', 'users'].includes(props.initialType) ? props.initialType : 'all')
+const allowedTypes = ['all', ...searchSources.map(item => item.type)]
+const activeType = ref(allowedTypes.includes(props.initialType) ? props.initialType : 'all')
 const searchFilterTarget = computed(() => {
-  if (activeType.value === 'posts') return 'post'
-  if (activeType.value === 'users') return ''
-  if (activeType.value === 'discussions') return 'discussion'
-  return 'all'
+  if (activeType.value === 'all') return 'all'
+  return searchSourceMap[activeType.value]?.filterTarget || ''
 })
 const searchFilterCatalog = useSearchFilterCatalog(searchFilterTarget)
 const loading = ref(false)
@@ -222,24 +219,39 @@ const searchResults = computed(() => ({
 }))
 const tabs = computed(() => [
   { value: 'all', label: '全部', count: totals.value.discussions + totals.value.posts + totals.value.users },
-  { value: 'discussions', label: '讨论', count: totals.value.discussions },
-  { value: 'posts', label: '帖子', count: totals.value.posts },
-  { value: 'users', label: '用户', count: totals.value.users },
+  ...searchSources.map(item => ({
+    value: item.type,
+    label: item.label,
+    count: Number(totals.value[item.type] || 0),
+  })),
 ])
 const activeTabLabel = computed(() => tabs.value.find(tab => tab.value === activeType.value)?.label || '全部')
+const modalSourceSections = computed(() => {
+  const sourceItems = {
+    discussions: searchResults.value.discussions,
+    posts: searchResults.value.posts,
+    users: searchResults.value.users,
+  }
 
-const allDiscussionItems = computed(() => buildDiscussionItems(searchResults.value.discussions))
-const allPostItems = computed(() => buildPostItems(searchResults.value.posts))
-const allUserItems = computed(() => buildUserItems(searchResults.value.users))
+  return searchSources.map(source => {
+    const sourceKey = source.type
+    const items = sourceItems[sourceKey] || []
+    const resultItems = typeof source.buildResultItems === 'function'
+      ? source.buildResultItems(items, { query: normalizedQuery.value })
+      : []
+
+    return {
+      ...source,
+      key: sourceKey,
+      items: resultItems,
+    }
+  })
+})
 
 const groupedSections = computed(() => {
   let selectIndex = 0
 
-  return [
-    { key: 'discussions', label: '讨论', items: allDiscussionItems.value },
-    { key: 'posts', label: '帖子', items: allPostItems.value },
-    { key: 'users', label: '用户', items: allUserItems.value },
-  ]
+  return modalSourceSections.value
     .filter(section => section.items.length)
     .map(section => ({
       ...section,
@@ -251,12 +263,8 @@ const groupedSections = computed(() => {
 })
 
 const activeItems = computed(() => {
-  const sourceMap = {
-    discussions: allDiscussionItems.value,
-    posts: allPostItems.value,
-    users: allUserItems.value,
-  }
-  const items = sourceMap[activeType.value] || []
+  const activeSection = modalSourceSections.value.find(section => section.key === activeType.value)
+  const items = activeSection?.items || []
   return items.map((item, index) => ({
     ...item,
     selectIndex: index,
@@ -271,11 +279,9 @@ const visibleSelectableItems = computed(() => {
 })
 
 const fullPageActionIndex = computed(() => visibleSelectableItems.value.length)
-const isEmpty = computed(() => {
-  return !searchResults.value.discussions.length && !searchResults.value.posts.length && !searchResults.value.users.length
-})
+const isEmpty = computed(() => modalSourceSections.value.every(section => section.items.length === 0))
 const filterSuggestions = computed(() => {
-  if (activeType.value === 'users') {
+  if (!searchFilterTarget.value || activeType.value === 'all') {
     return []
   }
   return searchFilterCatalog.filterSuggestions.value
@@ -361,13 +367,13 @@ async function fetchResults() {
   const currentRequestId = ++requestId
 
   try {
-    const data = await api.get('/search', {
-      params: {
-        q: normalizedQuery.value,
-        type: activeType.value,
-        limit: activeType.value === 'all' ? 4 : 8,
-      }
-    })
+      const data = await api.get('/search', {
+        params: {
+          q: normalizedQuery.value,
+          type: searchSourceMap[activeType.value]?.apiType || activeType.value,
+          limit: activeType.value === 'all' ? 4 : 8,
+        }
+      })
 
     if (currentRequestId !== requestId) return
 
@@ -398,45 +404,6 @@ async function fetchResults() {
       loading.value = false
     }
   }
-}
-
-function buildDiscussionItems(items) {
-  return items.map(discussion => ({
-    key: `discussion-${discussion.id}`,
-    icon: 'far fa-comments',
-    avatarUrl: discussion.user?.avatar_url || '',
-    titleText: discussion.title || '讨论',
-    titleHtml: renderTwemojiHtml(highlightSearchText(discussion.title || '讨论', normalizedQuery.value, 80)),
-    subtitleHtml: renderTwemojiHtml(highlightSearchText(discussion.excerpt || '这个讨论没有更多摘要。', normalizedQuery.value, 120)),
-    metaText: `${discussion.comment_count || 0} 回复 · ${formatRelativeTime(discussion.last_posted_at || discussion.created_at)}`,
-    path: buildDiscussionPath(discussion),
-  }))
-}
-
-function buildPostItems(items) {
-  return items.map(post => ({
-    key: `post-${post.id}`,
-    icon: 'far fa-comment',
-    avatarUrl: post.user?.avatar_url || '',
-    titleText: post.discussion_title || '帖子',
-    titleHtml: renderTwemojiHtml(highlightSearchText(post.discussion_title || '帖子', normalizedQuery.value, 80)),
-    subtitleHtml: renderTwemojiHtml(highlightSearchText(post.excerpt || post.content || '', normalizedQuery.value, 140)),
-    metaText: `#${post.number} · ${post.user?.display_name || post.user?.username || '未知用户'} · ${formatRelativeTime(post.created_at)}`,
-    path: `/d/${post.discussion_id}?near=${post.number}`,
-  }))
-}
-
-function buildUserItems(items) {
-  return items.map(user => ({
-    key: `user-${user.id}`,
-    icon: 'far fa-user',
-    avatarUrl: user.avatar_url || '',
-    titleText: user.display_name || user.username || '用户',
-    titleHtml: renderTwemojiHtml(highlightSearchText(user.display_name || user.username || '用户', normalizedQuery.value, 60)),
-    subtitleHtml: renderTwemojiHtml(highlightSearchText(user.bio || `@${user.username}`, normalizedQuery.value, 100)),
-    metaText: `${user.discussion_count || 0} 讨论 · ${user.comment_count || 0} 回复`,
-    path: buildUserPath(user),
-  }))
 }
 
 function clearQuery() {

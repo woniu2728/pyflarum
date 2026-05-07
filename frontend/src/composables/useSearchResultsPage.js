@@ -2,14 +2,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import api from '@/api'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
+import { getSearchSources } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
 import { unwrapList } from '@/utils/forum'
-import { highlightSearchText } from '@/utils/search'
-import { renderTwemojiHtml } from '@/utils/twemoji'
 
 export function useSearchResultsPage({ route, router }) {
   const routeState = useSearchRouteState({ route, router })
   const resourceStore = useResourceStore()
+  const searchSources = getSearchSources()
+  const sourceMap = Object.fromEntries(searchSources.map(item => [item.routeType || item.type, item]))
   const loading = ref(false)
   const total = ref(0)
   const discussionTotal = ref(0)
@@ -25,10 +26,9 @@ export function useSearchResultsPage({ route, router }) {
   const users = computed(() => resourceStore.list('users', userIds.value))
   const normalizedQuery = routeState.normalizedQuery
   const searchType = routeState.searchType
+  const activeSource = computed(() => sourceMap[searchType.value] || null)
   const searchFilterTarget = computed(() => {
-    if (searchType.value === 'posts') return 'post'
-    if (searchType.value === 'users') return ''
-    return 'discussion'
+    return activeSource.value?.filterTarget || (searchType.value === 'all' ? 'discussion' : '')
   })
   const searchFilterCatalog = useSearchFilterCatalog(searchFilterTarget)
   const page = routeState.page
@@ -37,12 +37,22 @@ export function useSearchResultsPage({ route, router }) {
   const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
   const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
   const showUsers = computed(() => searchType.value === 'all' || searchType.value === 'users')
-  const filterItems = computed(() => [
-    { value: 'all', label: '全部', count: discussionTotal.value + postTotal.value + userTotal.value },
-    { value: 'discussions', label: '讨论', count: discussionTotal.value },
-    { value: 'posts', label: '帖子', count: postTotal.value },
-    { value: 'users', label: '用户', count: userTotal.value }
-  ])
+  const filterItems = computed(() => {
+    const counts = {
+      discussions: discussionTotal.value,
+      posts: postTotal.value,
+      users: userTotal.value,
+    }
+
+    return [
+      { value: 'all', label: '全部', count: discussionTotal.value + postTotal.value + userTotal.value },
+      ...searchSources.map(item => ({
+        value: item.routeType || item.type,
+        label: item.label,
+        count: Number(counts[item.routeType || item.type] || 0),
+      })),
+    ]
+  })
   const heroText = computed(() => {
     if (!normalizedQuery.value) {
       return '支持在讨论、帖子和用户之间进行全局搜索。'
@@ -52,18 +62,43 @@ export function useSearchResultsPage({ route, router }) {
       return `共找到 ${discussionTotal.value + postTotal.value + userTotal.value} 条结果，已按讨论、帖子和用户分组展示。`
     }
 
-    const labelMap = {
-      discussions: '讨论',
-      posts: '帖子',
-      users: '用户'
-    }
-    return `当前显示 ${labelMap[searchType.value]}结果，共 ${total.value} 条。`
+    const label = activeSource.value?.label || '结果'
+    return `当前显示 ${label}结果，共 ${total.value} 条。`
   })
   const syntaxItems = computed(() => {
-    if (searchType.value === 'users') {
+    if (!searchFilterTarget.value) {
       return []
     }
     return searchFilterCatalog.filterSuggestions.value
+  })
+  const searchSourceSections = computed(() => {
+    const sourceItems = {
+      discussions: discussions.value,
+      posts: posts.value,
+      users: users.value,
+    }
+    const sourceTotals = {
+      discussions: discussionTotal.value,
+      posts: postTotal.value,
+      users: userTotal.value,
+    }
+
+    return searchSources.map(source => {
+      const sourceKey = source.routeType || source.type
+      const items = sourceItems[sourceKey] || []
+      const totalForSource = Number(sourceTotals[sourceKey] || 0)
+      const resultItems = typeof source.buildResultItems === 'function'
+        ? source.buildResultItems(items, { query: normalizedQuery.value })
+        : []
+
+      return {
+        ...source,
+        key: sourceKey,
+        resultItems,
+        showMore: searchType.value === 'all' && totalForSource > items.length,
+        visible: searchType.value === 'all' || searchType.value === sourceKey,
+      }
+    })
   })
 
   watch(
@@ -95,7 +130,7 @@ export function useSearchResultsPage({ route, router }) {
       const data = await api.get('/search', {
         params: {
           q: normalizedQuery.value,
-          type: searchType.value,
+          type: activeSource.value?.apiType || searchType.value,
           page: page.value,
           limit: 20
         },
@@ -141,7 +176,7 @@ export function useSearchResultsPage({ route, router }) {
   }
 
   function changeType(type) {
-    const nextType = ['all', 'discussions', 'posts', 'users'].includes(type) ? type : 'all'
+    const nextType = ['all', ...searchSources.map(item => item.routeType || item.type)].includes(type) ? type : 'all'
     if (nextType === searchType.value) {
       return
     }
@@ -178,30 +213,6 @@ export function useSearchResultsPage({ route, router }) {
     return error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
   }
 
-  function getDiscussionTitleHtml(discussion) {
-    return renderTwemojiHtml(highlightSearchText(discussion.title || '讨论', normalizedQuery.value, 90))
-  }
-
-  function getDiscussionExcerptHtml(discussion) {
-    return renderTwemojiHtml(highlightSearchText(discussion.excerpt || '这个讨论没有更多摘要。', normalizedQuery.value, 180))
-  }
-
-  function getPostTitleHtml(post) {
-    return renderTwemojiHtml(highlightSearchText(post.discussion_title || '帖子结果', normalizedQuery.value, 90))
-  }
-
-  function getPostExcerptHtml(post) {
-    return renderTwemojiHtml(highlightSearchText(post.excerpt || post.content || '', normalizedQuery.value, 200))
-  }
-
-  function getUserTitleHtml(user) {
-    return renderTwemojiHtml(highlightSearchText(user.display_name || user.username || '用户', normalizedQuery.value, 80))
-  }
-
-  function getUserSubtitleHtml(user) {
-    return renderTwemojiHtml(highlightSearchText(user.bio || `@${user.username}`, normalizedQuery.value, 150))
-  }
-
   return {
     changePage,
     changeType,
@@ -209,12 +220,6 @@ export function useSearchResultsPage({ route, router }) {
     discussions,
     filterItems,
     applySyntax,
-    getDiscussionExcerptHtml,
-    getDiscussionTitleHtml,
-    getPostExcerptHtml,
-    getPostTitleHtml,
-    getUserSubtitleHtml,
-    getUserTitleHtml,
     heroText,
     isEmpty,
     loading,
@@ -226,6 +231,7 @@ export function useSearchResultsPage({ route, router }) {
     showDiscussions,
     showPosts,
     showUsers,
+    searchSourceSections,
     syntaxItems,
     total,
     totalPages,

@@ -28,9 +28,7 @@
           <template #meta>
             <ForumSearchStats
               v-if="normalizedQuery"
-              :discussion-total="discussionTotal"
-              :post-total="postTotal"
-              :user-total="userTotal"
+              :items="searchStatsItems"
             />
             <div v-if="syntaxItems.length" class="search-syntax-row">
               <button
@@ -57,34 +55,28 @@
           没有找到相关讨论、帖子或用户。
         </ForumStateBlock>
         <template v-else>
-          <ForumSearchDiscussionSection
-            v-if="showDiscussions"
-            :discussions="discussions"
-            :get-title-html="getDiscussionTitleHtml"
-            :get-excerpt-html="getDiscussionExcerptHtml"
-            :format-relative-time="formatRelativeTime"
-            :show-more="searchType === 'all' && discussionTotal > discussions.length"
-            @show-more="changeType('discussions')"
-          />
-
-          <ForumSearchPostSection
-            v-if="showPosts"
-            :posts="posts"
-            :get-title-html="getPostTitleHtml"
-            :get-excerpt-html="getPostExcerptHtml"
-            :format-relative-time="formatRelativeTime"
-            :show-more="searchType === 'all' && postTotal > posts.length"
-            @show-more="changeType('posts')"
-          />
-
-          <ForumSearchUserSection
-            v-if="showUsers"
-            :users="users"
-            :get-title-html="getUserTitleHtml"
-            :get-subtitle-html="getUserSubtitleHtml"
-            :show-more="searchType === 'all' && userTotal > users.length"
-            @show-more="changeType('users')"
-          />
+          <ForumSearchResultSection
+            v-for="section in visibleSearchSections"
+            :key="section.key"
+            :title="section.label"
+            :show-more="section.showMore"
+            @show-more="changeType(section.key)"
+          >
+            <ForumSearchResultCard
+              v-for="item in section.resultItems"
+              :key="item.key"
+              :avatar-alt="item.avatarAlt || ''"
+              :avatar-mode="Boolean(item.avatarMode)"
+              :avatar-text="item.avatarText || ''"
+              :avatar-url="item.avatarUrl || ''"
+              :excerpt-html="item.excerptHtml"
+              :icon-class="item.iconClass || section.icon"
+              :meta-items="item.metaItems || []"
+              :title-html="item.titleHtml"
+              :user-layout="Boolean(item.userLayout)"
+              @click="openSearchResult(item.path)"
+            />
+          </ForumSearchResultSection>
 
           <ForumPagination
             v-if="searchType !== 'all' && totalPages > 1"
@@ -99,7 +91,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
@@ -107,16 +99,14 @@ import { useForumStore } from '@/stores/forum'
 import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
 import ForumPagination from '@/components/forum/ForumPagination.vue'
 import ForumPageWithSidebar from '@/components/forum/ForumPageWithSidebar.vue'
-import ForumSearchDiscussionSection from '@/components/forum/ForumSearchDiscussionSection.vue'
 import ForumSearchFilterNav from '@/components/forum/ForumSearchFilterNav.vue'
-import ForumSearchPostSection from '@/components/forum/ForumSearchPostSection.vue'
+import ForumSearchResultCard from '@/components/forum/ForumSearchResultCard.vue'
+import ForumSearchResultSection from '@/components/forum/ForumSearchResultSection.vue'
 import ForumSearchStats from '@/components/forum/ForumSearchStats.vue'
-import ForumSearchUserSection from '@/components/forum/ForumSearchUserSection.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
 import { useSearchResultsPage } from '@/composables/useSearchResultsPage'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
-import { formatRelativeTime } from '@/utils/forum'
 
 const route = useRoute()
 const router = useRouter()
@@ -132,34 +122,30 @@ const {
   changePage,
   changeType,
   discussionTotal,
-  discussions,
   filterItems,
   applySyntax,
-  getDiscussionExcerptHtml,
-  getDiscussionTitleHtml,
-  getPostExcerptHtml,
-  getPostTitleHtml,
-  getUserSubtitleHtml,
-  getUserTitleHtml,
   heroText,
   isEmpty,
   loading,
   normalizedQuery,
   page,
   postTotal,
-  posts,
   searchType,
-  showDiscussions,
-  showPosts,
-  showUsers,
+  searchSourceSections,
   syntaxItems,
   totalPages,
   userTotal,
-  users
 } = useSearchResultsPage({
   route,
   router
 })
+
+const visibleSearchSections = computed(() => searchSourceSections.value.filter(section => section.visible && section.resultItems.length))
+const searchStatsItems = computed(() => [
+  { key: 'discussions', label: '讨论', count: discussionTotal.value },
+  { key: 'posts', label: '帖子', count: postTotal.value },
+  { key: 'users', label: '用户', count: userTotal.value },
+])
 
 watch(
   () => [normalizedQuery.value, searchType.value, discussionTotal.value, postTotal.value, userTotal.value],
@@ -182,6 +168,11 @@ function handleStartDiscussion() {
   startDiscussion({
     source: 'search'
   })
+}
+
+function openSearchResult(path) {
+  if (!path) return
+  router.push(path)
 }
 
 </script>
