@@ -9,14 +9,14 @@
         {{ tag.description || '这个标签还没有填写描述。' }}
       </p>
       <div v-if="tag.children.length" class="tag-children">
-        <router-link
+        <ForumTagBadge
           v-for="child in tag.children"
           :key="child.id"
+          :tag="child"
           :to="buildTagPath(child)"
-          class="tag-chip"
-        >
-          {{ child.name }}
-        </router-link>
+          variant="soft"
+          show-dot
+        />
       </div>
     </router-link>
 
@@ -35,6 +35,7 @@
 </template>
 
 <script setup>
+import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
 import {
   buildDiscussionPath,
   buildTagPath,
@@ -100,21 +101,6 @@ defineProps({
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 14px;
-}
-
-.tag-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--tag-color) 25%, white);
-  color: #314150;
-  background: color-mix(in srgb, var(--tag-color) 10%, white);
-}
-
-.tag-chip:hover {
-  text-decoration: none;
-  background: color-mix(in srgb, var(--tag-color) 18%, white);
 }
 
 .tag-last-discussion {

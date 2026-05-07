@@ -20,15 +20,14 @@
 
     <ul class="discussion-list-item-info">
       <li v-if="discussion.tags.length" class="item-tags">
-        <router-link
+        <ForumTagBadge
           v-for="tag in discussion.tags"
           :key="tag.id"
+          :tag="tag"
           :to="buildTagPath(tag)"
-          class="tag-label"
-          :style="{ backgroundColor: tag.color }"
-        >
-          {{ tag.name }}
-        </router-link>
+          size="sm"
+          max-width="160px"
+        />
       </li>
       <li class="item-author">
         <router-link :to="buildUserPath(discussion.user)" class="username">
@@ -45,6 +44,8 @@
 </template>
 
 <script setup>
+import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
+
 defineProps({
   discussion: {
     type: Object,
@@ -136,20 +137,6 @@ defineProps({
   gap: 6px;
   min-width: 0;
   max-width: 100%;
-}
-
-.tag-label {
-  display: inline-flex;
-  min-width: 0;
-  max-width: 160px;
-  padding: 2px 8px;
-  border-radius: 3px;
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .subscription-pill {

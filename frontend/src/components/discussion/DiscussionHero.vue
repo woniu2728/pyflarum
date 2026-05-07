@@ -14,15 +14,13 @@
     </div>
     <h1>{{ discussion.title }}</h1>
     <div v-if="discussion.tags && discussion.tags.length" class="discussion-tags">
-      <router-link
+      <ForumTagBadge
         v-for="tag in discussion.tags"
         :key="tag.id"
-        class="tag"
+        :tag="tag"
         :to="buildTagPath(tag)"
-        :style="{ backgroundColor: tag.color }"
-      >
-        {{ tag.name }}
-      </router-link>
+        max-width="220px"
+      />
     </div>
     <div
       v-if="discussion.approval_status === 'pending' || discussion.approval_status === 'rejected'"
@@ -53,6 +51,8 @@
 </template>
 
 <script setup>
+import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
+
 defineProps({
   discussion: {
     type: Object,
@@ -194,24 +194,6 @@ defineEmits(['moderate-discussion', 'edit-discussion'])
   border-color: var(--forum-danger-border);
   background: var(--forum-danger-bg);
   color: var(--forum-danger-color);
-}
-
-.tag {
-  display: inline-flex;
-  min-width: 0;
-  max-width: 220px;
-  padding: var(--forum-space-1) var(--forum-space-3);
-  border-radius: var(--forum-radius-sm);
-  color: var(--forum-text-inverse);
-  font-size: var(--forum-font-size-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tag:hover {
-  text-decoration: none;
-  filter: brightness(0.96);
 }
 
 @media (max-width: 768px) {
