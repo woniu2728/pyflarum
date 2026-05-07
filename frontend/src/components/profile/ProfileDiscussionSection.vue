@@ -15,8 +15,15 @@
             <router-link :to="buildDiscussionPath(discussion)" class="discussion-title">
               {{ discussion.title }}
             </router-link>
-            <span v-if="discussion.approval_status === 'pending'" class="approval-pill">待审核</span>
-            <span v-else-if="discussion.approval_status === 'rejected'" class="approval-pill approval-pill--rejected">已拒绝</span>
+            <ForumStateBadge
+              v-for="badge in getStateBadges(discussion)"
+              :key="badge.key"
+              :label="badge.label"
+              :tone="badge.tone"
+              :size="badge.size || 'sm'"
+              :icon="badge.icon || ''"
+              :title="badge.title || ''"
+            />
           </div>
           <p v-if="discussion.approval_status === 'rejected' && discussion.approval_note" class="approval-note">
             审核反馈：{{ discussion.approval_note }}
@@ -38,6 +45,8 @@
 
 <script setup>
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
+import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
+import { getDiscussionStateBadges } from '@/forum/registry'
 
 defineProps({
   discussions: {
@@ -61,6 +70,13 @@ defineProps({
     required: true
   }
 })
+
+function getStateBadges(discussion) {
+  return getDiscussionStateBadges({
+    discussion,
+    surface: 'profile-discussion',
+  })
+}
 </script>
 
 <style scoped>
@@ -144,23 +160,6 @@ defineProps({
 
 .stat i {
   font-size: 14px;
-}
-
-.approval-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #fff3cd;
-  color: #856404;
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.approval-pill--rejected {
-  background: #fdeeee;
-  color: #b14545;
 }
 
 .approval-note {

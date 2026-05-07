@@ -69,6 +69,7 @@ const props = defineProps({
 
 const discussionBadges = computed(() => getDiscussionBadges({
   discussion: props.discussion,
+  surface: 'discussion-list-item',
 }))
 </script>
 

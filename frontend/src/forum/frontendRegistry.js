@@ -13,6 +13,7 @@ const notificationRenderers = []
 const searchSources = []
 const userBadges = []
 const discussionBadges = []
+const discussionStateBadges = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -37,7 +38,7 @@ function normalizeRegisteredItem(item, defaults = {}) {
 function resolveRegisteredItem(item, context = {}) {
   if (Array.isArray(item.surfaces) && item.surfaces.length > 0) {
     const currentSurface = String(context.surface || '').trim()
-    if (currentSurface && !item.surfaces.includes(currentSurface)) {
+    if (!currentSurface || !item.surfaces.includes(currentSurface)) {
       return null
     }
   }
@@ -278,6 +279,18 @@ export function registerDiscussionBadge(item) {
 
 export function getDiscussionBadges(context = {}) {
   return [...discussionBadges]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerDiscussionStateBadge(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(discussionStateBadges, normalizedItem.key, normalizedItem)
+}
+
+export function getDiscussionStateBadges(context = {}) {
+  return [...discussionStateBadges]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

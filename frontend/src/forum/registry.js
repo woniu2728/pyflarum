@@ -11,9 +11,11 @@ import {
   getProfilePanels,
   getSearchSources,
   getDiscussionBadges,
+  getDiscussionStateBadges,
   getUserBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
+  registerDiscussionStateBadge,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -41,8 +43,10 @@ export {
   getComposerTools,
   getNotificationRenderers,
   getDiscussionBadges,
+  getDiscussionStateBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
+  registerDiscussionStateBadge,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -604,6 +608,50 @@ registerDiscussionBadge({
   resolve: () => ({
     className: 'badge-pending',
     label: '待审核',
+  }),
+})
+
+registerDiscussionStateBadge({
+  key: 'pending',
+  order: 10,
+  surfaces: ['discussion-list-item', 'profile-discussion'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'pending',
+  resolve: () => ({
+    label: '待审核',
+    tone: 'warning',
+  }),
+})
+
+registerDiscussionStateBadge({
+  key: 'rejected',
+  order: 20,
+  surfaces: ['discussion-list-item', 'profile-discussion'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'rejected',
+  resolve: () => ({
+    label: '已拒绝',
+    tone: 'danger',
+  }),
+})
+
+registerDiscussionStateBadge({
+  key: 'unread',
+  order: 30,
+  surfaces: ['discussion-list-item'],
+  isVisible: ({ discussion }) => Boolean(discussion?.is_unread && Number(discussion?.unread_count || 0) > 0),
+  resolve: ({ discussion }) => ({
+    label: `${discussion.unread_count} 条未读`,
+    tone: 'primary',
+  }),
+})
+
+registerDiscussionStateBadge({
+  key: 'subscribed',
+  order: 40,
+  surfaces: ['discussion-list-item'],
+  isVisible: ({ discussion }) => Boolean(discussion?.is_subscribed),
+  resolve: () => ({
+    label: '已关注',
+    tone: 'soft-primary',
   }),
 })
 

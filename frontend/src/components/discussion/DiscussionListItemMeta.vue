@@ -8,10 +8,15 @@
       >
         {{ discussion.title }}
       </router-link>
-      <span v-if="discussion.approval_status === 'pending'" class="approval-pill">待审核</span>
-      <span v-else-if="discussion.approval_status === 'rejected'" class="approval-pill approval-pill--rejected">已拒绝</span>
-      <span v-if="discussion.is_unread" class="unread-pill">{{ discussion.unread_count }} 条未读</span>
-      <span v-if="discussion.is_subscribed" class="subscription-pill">已关注</span>
+      <ForumStateBadge
+        v-for="badge in discussionStateBadges"
+        :key="badge.key"
+        :label="badge.label"
+        :tone="badge.tone"
+        :size="badge.size || 'sm'"
+        :icon="badge.icon || ''"
+        :title="badge.title || ''"
+      />
     </div>
 
     <p v-if="discussion.approval_status === 'rejected' && discussion.approval_note" class="approval-note">
@@ -44,9 +49,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
+import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
+import { getDiscussionStateBadges } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   discussion: {
     type: Object,
     required: true
@@ -72,6 +80,11 @@ defineProps({
     required: true
   }
 })
+
+const discussionStateBadges = computed(() => getDiscussionStateBadges({
+  discussion: props.discussion,
+  surface: 'discussion-list-item',
+}))
 </script>
 
 <style scoped>
@@ -139,52 +152,11 @@ defineProps({
   max-width: 100%;
 }
 
-.subscription-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--forum-radius-pill);
-  background: #edf4fb;
-  color: var(--forum-primary-color);
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.approval-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--forum-radius-pill);
-  background: #fff3cd;
-  color: #856404;
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.approval-pill--rejected {
-  background: #fdeeee;
-  color: #b14545;
-}
-
 .approval-note {
   margin: 0 0 6px;
   color: #9a5050;
   font-size: 12px;
   line-height: 1.6;
-}
-
-.unread-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--forum-radius-pill);
-  background: var(--forum-primary-color);
-  color: var(--forum-text-inverse);
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
 }
 
 .username {
@@ -251,14 +223,11 @@ defineProps({
     max-width: min(58vw, 220px);
   }
 
-  .tag-label {
+  :deep(.forum-tag-badge) {
     max-width: min(52vw, 180px);
   }
 
-  .tag-label,
-  .subscription-pill,
-  .approval-pill,
-  .unread-pill {
+  :deep(.forum-state-badge) {
     font-size: 10px;
   }
 }

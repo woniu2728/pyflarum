@@ -39,6 +39,7 @@ const navSections = computed(() => getForumNavSections({
   authStore: props.authStore,
   showNotifications: props.showNotifications,
   notificationStore: props.notificationStore,
+  surface: 'primary-nav',
 }).map(section => ({
   ...section,
   items: section.items.map(item => ({
