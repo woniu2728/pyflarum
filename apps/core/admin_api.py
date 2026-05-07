@@ -8,7 +8,6 @@ from pathlib import Path
 
 import django
 from ninja import Router, Body
-from ninja.security import HttpBearer
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.conf import settings
@@ -37,6 +36,7 @@ from apps.core.search_index_service import SearchIndexService
 from apps.core.file_service import FileUploadService
 from apps.core.domain_events import get_forum_event_bus
 from apps.core.forum_events import UserSuspendedEvent, UserUnsuspendedEvent
+from apps.core.jwt_auth import AccessTokenAuth
 from apps.core.settings_service import (
     ADVANCED_SETTINGS_DEFAULTS,
     APPEARANCE_SETTINGS_DEFAULTS,
@@ -72,17 +72,6 @@ BUILTIN_GROUPS = {
     3: "Member",
     4: "Moderator",
 }
-
-
-class AuthBearer(HttpBearer):
-    """JWT认证"""
-    def authenticate(self, request, token):
-        try:
-            from ninja_jwt.authentication import JWTAuth
-            jwt_auth = JWTAuth()
-            return jwt_auth.authenticate(request, token)
-        except Exception:
-            return None
 
 
 def admin_error(
@@ -730,7 +719,7 @@ def validate_advanced_runtime_settings(payload: Dict[str, Any]) -> list[str]:
 
 # ==================== 统计数据 ====================
 
-@router.get("/stats", auth=AuthBearer(), tags=["Admin"])
+@router.get("/stats", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_stats(request):
     """获取系统统计数据"""
@@ -789,7 +778,7 @@ def get_stats(request):
     }
 
 
-@router.post("/queue/metrics/reset", auth=AuthBearer(), tags=["Admin"])
+@router.post("/queue/metrics/reset", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def reset_queue_metrics(request):
     """重置队列运行指标"""
@@ -803,14 +792,14 @@ def reset_queue_metrics(request):
 
 # ==================== 设置管理 ====================
 
-@router.get("/settings", auth=AuthBearer(), tags=["Admin"])
+@router.get("/settings", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_settings(request):
     """获取论坛设置"""
     return get_setting_group("basic", BASIC_SETTINGS_DEFAULTS)
 
 
-@router.post("/settings", auth=AuthBearer(), tags=["Admin"])
+@router.post("/settings", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def save_settings(request, payload: Dict[str, Any] = Body(...)):
     """保存论坛设置"""
@@ -824,14 +813,14 @@ def save_settings(request, payload: Dict[str, Any] = Body(...)):
     return {"message": "设置保存成功", "settings": settings_data}
 
 
-@router.get("/appearance", auth=AuthBearer(), tags=["Admin"])
+@router.get("/appearance", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_appearance_settings(request):
     """获取外观设置"""
     return get_setting_group("appearance", APPEARANCE_SETTINGS_DEFAULTS)
 
 
-@router.post("/appearance", auth=AuthBearer(), tags=["Admin"])
+@router.post("/appearance", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def save_appearance_settings(request, payload: Dict[str, Any] = Body(...)):
     """保存外观设置"""
@@ -845,7 +834,7 @@ def save_appearance_settings(request, payload: Dict[str, Any] = Body(...)):
     return {"message": "外观设置保存成功", "settings": settings_data}
 
 
-@router.post("/appearance/upload", auth=AuthBearer(), tags=["Admin"])
+@router.post("/appearance/upload", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def upload_appearance_asset(request, target: str):
     """上传站点 Logo 或 Favicon"""
@@ -881,14 +870,14 @@ def upload_appearance_asset(request, target: str):
     }
 
 
-@router.get("/mail", auth=AuthBearer(), tags=["Admin"])
+@router.get("/mail", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_mail_settings(request):
     """获取邮件设置"""
     return build_mail_settings_response(request.auth.email if request.auth else "")
 
 
-@router.post("/mail", auth=AuthBearer(), tags=["Admin"])
+@router.post("/mail", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def save_mail_settings(request, payload: Dict[str, Any] = Body(...)):
     """保存邮件设置"""
@@ -927,7 +916,7 @@ def save_mail_settings(request, payload: Dict[str, Any] = Body(...)):
     return response
 
 
-@router.post("/mail/test", auth=AuthBearer(), tags=["Admin"])
+@router.post("/mail/test", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def send_test_email(request):
     """发送测试邮件"""
@@ -972,14 +961,14 @@ def send_test_email(request):
     return {"message": "测试邮件已发送", "sent_count": sent_count, "to_email": to_email}
 
 
-@router.get("/advanced", auth=AuthBearer(), tags=["Admin"])
+@router.get("/advanced", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_advanced_settings(request):
     """获取高级设置"""
     return get_runtime_advanced_settings()
 
 
-@router.post("/advanced", auth=AuthBearer(), tags=["Admin"])
+@router.post("/advanced", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def save_advanced_settings(request, payload: Dict[str, Any] = Body(...)):
     """保存高级设置"""
@@ -1005,7 +994,7 @@ def save_advanced_settings(request, payload: Dict[str, Any] = Body(...)):
     return {"message": "高级设置保存成功", "settings": settings_data}
 
 
-@router.post("/cache/clear", auth=AuthBearer(), tags=["Admin"])
+@router.post("/cache/clear", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def clear_cache(request):
     """清除 Django 缓存"""
@@ -1019,7 +1008,7 @@ def clear_cache(request):
     return {"message": "缓存已清除"}
 
 
-@router.post("/search-indexes/rebuild", auth=AuthBearer(), tags=["Admin"])
+@router.post("/search-indexes/rebuild", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def rebuild_search_indexes(request):
     """后台手动重建 PostgreSQL 全文搜索索引"""
@@ -1044,7 +1033,7 @@ def rebuild_search_indexes(request):
 
 # ==================== 用户组管理 ====================
 
-@router.get("/groups", auth=AuthBearer(), tags=["Admin"])
+@router.get("/groups", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_groups(request):
     """获取用户组列表"""
@@ -1052,7 +1041,7 @@ def list_groups(request):
     return [serialize_group(group) for group in groups]
 
 
-@router.post("/groups", auth=AuthBearer(), tags=["Admin"])
+@router.post("/groups", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def create_group(request, payload: Dict[str, Any] = Body(...)):
     """创建用户组"""
@@ -1071,7 +1060,7 @@ def create_group(request, payload: Dict[str, Any] = Body(...)):
         return admin_error(str(e), status=400)
 
 
-@router.put("/groups/{group_id}", auth=AuthBearer(), tags=["Admin"])
+@router.put("/groups/{group_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def update_group(request, group_id: int, payload: Dict[str, Any] = Body(...)):
     """更新用户组"""
@@ -1096,7 +1085,7 @@ def update_group(request, group_id: int, payload: Dict[str, Any] = Body(...)):
     return serialize_group(group)
 
 
-@router.delete("/groups/{group_id}", auth=AuthBearer(), tags=["Admin"])
+@router.delete("/groups/{group_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def delete_group(request, group_id: int):
     """删除用户组"""
@@ -1203,7 +1192,7 @@ def serialize_approval_item(content_type: str, item) -> Dict[str, Any]:
 
 # ==================== 权限管理 ====================
 
-@router.get("/modules", auth=AuthBearer(), tags=["Admin"])
+@router.get("/modules", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_admin_modules(request):
     """获取内置模块注册信息"""
@@ -1367,7 +1356,7 @@ def list_admin_modules(request):
     }
 
 
-@router.get("/permissions/meta", auth=AuthBearer(), tags=["Admin"])
+@router.get("/permissions/meta", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_permissions_meta(request):
     """获取注册化权限元数据"""
@@ -1386,7 +1375,7 @@ def get_permissions_meta(request):
     }
 
 
-@router.get("/permissions", auth=AuthBearer(), tags=["Admin"])
+@router.get("/permissions", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_permissions(request):
     """获取权限配置"""
@@ -1405,7 +1394,7 @@ def get_permissions(request):
     return result
 
 
-@router.post("/permissions", auth=AuthBearer(), tags=["Admin"])
+@router.post("/permissions", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def save_permissions(request, payload: Dict[int, List[str]] = Body(...)):
     """保存权限配置"""
@@ -1461,7 +1450,7 @@ def save_permissions(request, payload: Dict[int, List[str]] = Body(...)):
 
 # ==================== 用户管理 ====================
 
-@router.get("/users", auth=AuthBearer(), tags=["Admin"])
+@router.get("/users", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_admin_users(request, page: int = 1, limit: int = 20, q: str = None):
     """获取用户列表（管理后台）"""
@@ -1487,7 +1476,7 @@ def list_admin_users(request, page: int = 1, limit: int = 20, q: str = None):
     }
 
 
-@router.get("/users/{user_id}", auth=AuthBearer(), tags=["Admin"])
+@router.get("/users/{user_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def get_admin_user(request, user_id: int):
     """获取单个用户详情（管理后台）"""
@@ -1495,7 +1484,7 @@ def get_admin_user(request, user_id: int):
     return serialize_admin_user(user, include_details=True)
 
 
-@router.put("/users/{user_id}", auth=AuthBearer(), tags=["Admin"])
+@router.put("/users/{user_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def update_admin_user(request, user_id: int, payload: Dict[str, Any] = Body(...)):
     """更新用户信息（管理后台）"""
@@ -1593,7 +1582,7 @@ def update_admin_user(request, user_id: int, payload: Dict[str, Any] = Body(...)
     return serialize_admin_user(user, include_details=True)
 
 
-@router.delete("/users/{user_id}", auth=AuthBearer(), tags=["Admin"])
+@router.delete("/users/{user_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def delete_admin_user(request, user_id: int):
     """删除用户"""
@@ -1621,7 +1610,7 @@ def delete_admin_user(request, user_id: int):
     return {"message": "用户删除成功"}
 
 
-@router.get("/flags", auth=AuthBearer(), tags=["Admin"])
+@router.get("/flags", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_post_flags(request, page: int = 1, limit: int = 20, status: str = PostFlag.STATUS_OPEN):
     """获取帖子举报列表"""
@@ -1635,7 +1624,7 @@ def list_post_flags(request, page: int = 1, limit: int = 20, status: str = PostF
     }
 
 
-@router.get("/approval-queue", auth=AuthBearer(), tags=["Admin"])
+@router.get("/approval-queue", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_approval_queue(request, page: int = 1, limit: int = 20, content_type: str = "all"):
     page, limit = PaginationService.normalize(page, limit)
@@ -1669,7 +1658,7 @@ def list_approval_queue(request, page: int = 1, limit: int = 20, content_type: s
     }
 
 
-@router.post("/approval-queue/{content_type}/{content_id}/approve", auth=AuthBearer(), tags=["Admin"])
+@router.post("/approval-queue/{content_type}/{content_id}/approve", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def approve_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
     note = payload.get("note", "")
@@ -1701,7 +1690,7 @@ def approve_content(request, content_type: str, content_id: int, payload: Dict[s
     return admin_error("无效的审核内容类型", status=400)
 
 
-@router.post("/approval-queue/{content_type}/{content_id}/reject", auth=AuthBearer(), tags=["Admin"])
+@router.post("/approval-queue/{content_type}/{content_id}/reject", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def reject_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
     note = payload.get("note", "")
@@ -1733,7 +1722,7 @@ def reject_content(request, content_type: str, content_id: int, payload: Dict[st
     return admin_error("无效的审核内容类型", status=400)
 
 
-@router.post("/flags/{flag_id}/resolve", auth=AuthBearer(), tags=["Admin"])
+@router.post("/flags/{flag_id}/resolve", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def resolve_post_flag(request, flag_id: int, payload: Dict[str, Any] = Body(...)):
     """处理帖子举报"""
@@ -1764,7 +1753,7 @@ def resolve_post_flag(request, flag_id: int, payload: Dict[str, Any] = Body(...)
 
 # ==================== 标签管理 ====================
 
-@router.get("/tags", auth=AuthBearer(), tags=["Admin"])
+@router.get("/tags", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_admin_tags(request):
     """获取标签列表（管理后台）"""
@@ -1772,7 +1761,7 @@ def list_admin_tags(request):
     return [serialize_admin_tag(tag) for tag in tags]
 
 
-@router.post("/tags", auth=AuthBearer(), tags=["Admin"])
+@router.post("/tags", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def create_admin_tag(request, payload: Dict[str, Any] = Body(...)):
     """创建标签"""
@@ -1812,7 +1801,7 @@ def create_admin_tag(request, payload: Dict[str, Any] = Body(...)):
         return admin_error(str(e), status=400)
 
 
-@router.put("/tags/{tag_id}", auth=AuthBearer(), tags=["Admin"])
+@router.put("/tags/{tag_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def update_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
     """更新标签"""
@@ -1881,7 +1870,7 @@ def update_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
         return admin_error(str(e), status=400)
 
 
-@router.post("/tags/{tag_id}/move", auth=AuthBearer(), tags=["Admin"])
+@router.post("/tags/{tag_id}/move", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def move_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
     try:
@@ -1909,7 +1898,7 @@ def move_admin_tag(request, tag_id: int, payload: Dict[str, Any] = Body(...)):
         return admin_error("标签不存在", status=404)
 
 
-@router.delete("/tags/{tag_id}", auth=AuthBearer(), tags=["Admin"])
+@router.delete("/tags/{tag_id}", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def delete_admin_tag(request, tag_id: int):
     """删除标签"""
@@ -1929,7 +1918,7 @@ def delete_admin_tag(request, tag_id: int):
         return admin_error(str(e), status=400)
 
 
-@router.post("/tags/stats/refresh", auth=AuthBearer(), tags=["Admin"])
+@router.post("/tags/stats/refresh", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def refresh_admin_tag_stats(request):
     """手动刷新标签统计"""
@@ -1948,7 +1937,7 @@ def refresh_admin_tag_stats(request):
 
 # ==================== 审计日志 ====================
 
-@router.get("/audit-logs", auth=AuthBearer(), tags=["Admin"])
+@router.get("/audit-logs", auth=AccessTokenAuth(), tags=["Admin"])
 @require_staff
 def list_audit_logs(
     request,

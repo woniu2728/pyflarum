@@ -12,6 +12,7 @@ from PIL import Image
 from ninja_jwt.tokens import RefreshToken
 
 from apps.core.models import Setting
+from apps.core.jwt_auth import ACCESS_TOKEN_COOKIE_NAME
 from apps.core.settings_service import clear_runtime_setting_caches
 from apps.users.models import Group
 from apps.users.models import EmailToken, PasswordToken, Permission, User
@@ -434,7 +435,13 @@ class TokenCookieAuthTests(TestCase):
         self.assertTrue(payload["access"])
         self.assertNotIn("refresh", payload)
 
+        access_cookie = response.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
         cookie = response.cookies.get("bias_refresh_token")
+        self.assertIsNotNone(access_cookie)
+        self.assertTrue(access_cookie["httponly"])
+        self.assertTrue(access_cookie["secure"])
+        self.assertEqual(access_cookie["samesite"], "Lax")
+        self.assertEqual(access_cookie["path"], "/")
         self.assertIsNotNone(cookie)
         self.assertTrue(cookie["httponly"])
         self.assertTrue(cookie["secure"])
@@ -474,6 +481,7 @@ class TokenCookieAuthTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertTrue(response.json()["access"])
         self.assertNotIn("refresh", response.json())
+        self.assertIsNotNone(response.cookies.get(ACCESS_TOKEN_COOKIE_NAME))
 
     def test_refresh_access_token_requires_cookie(self):
         response = self.client.post("/api/users/token/refresh", secure=True)
@@ -496,10 +504,31 @@ class TokenCookieAuthTests(TestCase):
         response = self.client.post("/api/users/logout", secure=True)
 
         self.assertEqual(response.status_code, 200, response.content)
+        access_cookie = response.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
         cookie = response.cookies.get("bias_refresh_token")
+        self.assertIsNotNone(access_cookie)
+        self.assertEqual(access_cookie.value, "")
+        self.assertEqual(access_cookie["path"], "/")
         self.assertIsNotNone(cookie)
         self.assertEqual(cookie.value, "")
         self.assertEqual(cookie["path"], "/api/users")
+
+    def test_current_user_accepts_access_cookie_without_authorization_header(self):
+        login_response = self.client.post(
+            "/api/users/login",
+            data=json.dumps({
+                "identification": "token-cookie-user",
+                "password": "password123",
+            }),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(login_response.status_code, 200, login_response.content)
+
+        response = self.client.get("/api/users/me", secure=True)
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["username"], "token-cookie-user")
 
     def test_csrf_bootstrap_sets_secure_cookie(self):
         csrf_client = Client(enforce_csrf_checks=True)

@@ -2,7 +2,6 @@
 User API endpoints
 """
 from ninja import Router
-from ninja.security import HttpBearer
 from ninja_jwt.controller import NinjaJWTDefaultController
 from ninja_jwt.exceptions import TokenError
 from ninja_jwt.tokens import RefreshToken
@@ -16,6 +15,15 @@ from apps.core.auth import get_optional_user
 from apps.core.api_errors import api_error
 from apps.core.forum_resources import serialize_user_payload
 from apps.core.human_verification import HumanVerificationError, verify_human_verification
+from apps.core.jwt_auth import (
+    ACCESS_TOKEN_COOKIE_NAME,
+    ACCESS_TOKEN_COOKIE_PATH,
+    AccessTokenAuth,
+    REFRESH_TOKEN_COOKIE_NAME,
+    REFRESH_TOKEN_COOKIE_PATH,
+    access_token_max_age,
+    refresh_token_max_age,
+)
 from apps.core.services import PaginationService
 from .models import User
 from .preferences import normalize_user_preferences, serialize_user_preferences
@@ -38,23 +46,38 @@ from .schemas import (
 from .services import UserService
 
 router = Router()
-REFRESH_TOKEN_COOKIE_NAME = "bias_refresh_token"
-REFRESH_TOKEN_COOKIE_PATH = "/api/users"
-
-
-def _refresh_token_max_age() -> int:
-    lifetime = settings.NINJA_JWT.get("REFRESH_TOKEN_LIFETIME", 86400)
-    return int(lifetime.total_seconds() if hasattr(lifetime, "total_seconds") else lifetime)
 
 
 def _set_refresh_token_cookie(response: JsonResponse, refresh: RefreshToken) -> JsonResponse:
     response.set_cookie(
         REFRESH_TOKEN_COOKIE_NAME,
         str(refresh),
-        max_age=_refresh_token_max_age(),
+        max_age=refresh_token_max_age(),
         path=REFRESH_TOKEN_COOKIE_PATH,
         secure=not settings.DEBUG,
         httponly=True,
+        samesite="Lax",
+    )
+    return response
+
+
+def _set_access_token_cookie(response: JsonResponse, access_token: str) -> JsonResponse:
+    response.set_cookie(
+        ACCESS_TOKEN_COOKIE_NAME,
+        access_token,
+        max_age=access_token_max_age(),
+        path=ACCESS_TOKEN_COOKIE_PATH,
+        secure=not settings.DEBUG,
+        httponly=True,
+        samesite="Lax",
+    )
+    return response
+
+
+def _clear_access_token_cookie(response: JsonResponse) -> JsonResponse:
+    response.delete_cookie(
+        ACCESS_TOKEN_COOKIE_NAME,
+        path=ACCESS_TOKEN_COOKIE_PATH,
         samesite="Lax",
     )
     return response
@@ -106,17 +129,6 @@ def _serialize_user_out_payload(user):
     return payload
 
 
-class AuthBearer(HttpBearer):
-    """JWT认证"""
-    def authenticate(self, request, token):
-        try:
-            from ninja_jwt.authentication import JWTAuth
-            jwt_auth = JWTAuth()
-            return jwt_auth.authenticate(request, token)
-        except Exception:
-            return None
-
-
 # ==================== 认证相关 ====================
 
 @router.post("/register", response=UserOutSchema, tags=["Auth"])
@@ -148,7 +160,9 @@ def login(request, payload: UserLoginSchema):
 
         # 生成JWT Token
         refresh = RefreshToken.for_user(user)
-        response = JsonResponse({"access": str(refresh.access_token)})
+        access_token = str(refresh.access_token)
+        response = JsonResponse({"access": access_token})
+        response = _set_access_token_cookie(response, access_token)
         return _set_refresh_token_cookie(response, refresh)
     except HumanVerificationError as e:
         return api_error(str(e), status=e.status_code)
@@ -165,9 +179,12 @@ def refresh_access_token(request):
 
     try:
         refresh = RefreshToken(refresh_token)
-        return {"access": str(refresh.access_token)}
+        access_token = str(refresh.access_token)
+        response = JsonResponse({"access": access_token})
+        return _set_access_token_cookie(response, access_token)
     except TokenError:
         response = api_error("登录状态已过期，请重新登录", status=401)
+        response = _clear_access_token_cookie(response)
         return _clear_refresh_token_cookie(response)
 
 
@@ -175,6 +192,7 @@ def refresh_access_token(request):
 def logout(request):
     """用户登出"""
     response = JsonResponse({"message": "登出成功"})
+    response = _clear_access_token_cookie(response)
     return _clear_refresh_token_cookie(response)
 
 
@@ -188,7 +206,7 @@ def verify_email(request, payload: EmailVerifySchema):
         return api_error(str(e), status=400)
 
 
-@router.post("/me/resend-email-verification", auth=AuthBearer(), tags=["Users"])
+@router.post("/me/resend-email-verification", auth=AccessTokenAuth(), tags=["Users"])
 def resend_email_verification(request):
     """重新发送邮箱验证邮件"""
     try:
@@ -232,19 +250,19 @@ def reset_password(request, payload: PasswordResetSchema):
 
 # ==================== 用户信息 ====================
 
-@router.get("/me", response=CurrentUserSchema, auth=AuthBearer(), tags=["Users"])
+@router.get("/me", response=CurrentUserSchema, auth=AccessTokenAuth(), tags=["Users"])
 def get_current_user(request):
     """获取当前用户信息"""
     user = _attach_current_user_context(request.auth)
     return _serialize_user_detail_payload(user, include_forum_permissions=True)
 
 
-@router.get("/me/preferences", response=UserPreferencesSchema, auth=AuthBearer(), tags=["Users"])
+@router.get("/me/preferences", response=UserPreferencesSchema, auth=AccessTokenAuth(), tags=["Users"])
 def get_preferences(request):
     return serialize_user_preferences(request.auth)
 
 
-@router.patch("/me/preferences", response=UserPreferencesSchema, auth=AuthBearer(), tags=["Users"])
+@router.patch("/me/preferences", response=UserPreferencesSchema, auth=AccessTokenAuth(), tags=["Users"])
 def update_preferences(request, payload: UserPreferencesUpdateSchema):
     request.auth.preferences = {
         **(request.auth.preferences or {}),
@@ -296,7 +314,7 @@ def get_user(request, user_id: int):
     return _serialize_user_detail_payload(user)
 
 
-@router.patch("/{user_id}", response=UserOutSchema, auth=AuthBearer(), tags=["Users"])
+@router.patch("/{user_id}", response=UserOutSchema, auth=AccessTokenAuth(), tags=["Users"])
 def update_user(request, user_id: int, payload: UserUpdateSchema):
     """更新用户信息"""
     user = get_object_or_404(User, id=user_id)
@@ -318,7 +336,7 @@ def update_user(request, user_id: int, payload: UserUpdateSchema):
         return api_error(str(e), status=400)
 
 
-@router.post("/{user_id}/password", auth=AuthBearer(), tags=["Users"])
+@router.post("/{user_id}/password", auth=AccessTokenAuth(), tags=["Users"])
 def change_password(request, user_id: int, payload: PasswordChangeSchema):
     """修改密码"""
     user = get_object_or_404(User, id=user_id)
@@ -334,7 +352,7 @@ def change_password(request, user_id: int, payload: PasswordChangeSchema):
         return api_error(str(e), status=400)
 
 
-@router.post("/{user_id}/avatar", response=UserOutSchema, auth=AuthBearer(), tags=["Users"])
+@router.post("/{user_id}/avatar", response=UserOutSchema, auth=AccessTokenAuth(), tags=["Users"])
 def upload_avatar(request, user_id: int):
     """上传头像"""
     user = get_object_or_404(User, id=user_id)

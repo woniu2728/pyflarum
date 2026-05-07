@@ -3,9 +3,9 @@ from urllib.parse import parse_qs
 from asgiref.sync import sync_to_async
 from channels.auth import AuthMiddlewareStack
 from django.contrib.auth.models import AnonymousUser
-from ninja_jwt.authentication import JWTBaseAuthentication
 from ninja_jwt.tokens import RefreshToken
 
+from apps.core.jwt_auth import ACCESS_TOKEN_COOKIE_NAME, resolve_user_from_access_token
 from apps.users.models import User
 
 
@@ -13,15 +13,7 @@ REFRESH_TOKEN_COOKIE_NAME = "bias_refresh_token"
 
 
 def resolve_user_from_token(token: str):
-    if not token:
-        return AnonymousUser()
-
-    try:
-        auth = JWTBaseAuthentication()
-        validated_token = auth.get_validated_token(token)
-        return auth.get_user(validated_token)
-    except Exception:
-        return AnonymousUser()
+    return resolve_user_from_access_token(token) or AnonymousUser()
 
 
 def resolve_user_from_refresh_token(token: str):
@@ -66,6 +58,12 @@ class JWTQueryAuthMiddleware:
 
     async def __call__(self, scope, receive, send):
         cookies = _parse_cookie_header(scope)
+        access_token = cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+        if access_token:
+            scope["user"] = await get_user_from_token(access_token)
+            if not isinstance(scope["user"], AnonymousUser):
+                return await self.inner(scope, receive, send)
+
         refresh_token = cookies.get(REFRESH_TOKEN_COOKIE_NAME)
         if refresh_token:
             scope["user"] = await get_user_from_refresh_token(refresh_token)

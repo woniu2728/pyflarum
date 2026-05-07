@@ -4,28 +4,21 @@ import api from '@/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
-  const accessToken = ref(null)
   const isRestoringSession = ref(true)
 
-  const isAuthenticated = computed(() => !!accessToken.value)
+  const isAuthenticated = computed(() => !!user.value)
   const forumPermissions = computed(() => Array.isArray(user.value?.forum_permissions) ? user.value.forum_permissions : [])
   const canStartDiscussion = computed(() => hasPermission('startDiscussion'))
-
-  function setAccessToken(token) {
-    accessToken.value = token ? String(token) : null
-  }
 
   // 登录
   async function login(identification, password, humanVerificationToken = '') {
     try {
       isRestoringSession.value = true
-      const data = await api.post('/users/login', {
+      await api.post('/users/login', {
         identification,
         password,
         human_verification_token: humanVerificationToken || undefined
       })
-
-      setAccessToken(data.access)
 
       await fetchUser()
 
@@ -66,7 +59,6 @@ export const useAuthStore = defineStore('auth', () => {
     }).catch(() => {})
 
     user.value = null
-    setAccessToken(null)
     isRestoringSession.value = false
   }
 
@@ -96,15 +88,13 @@ export const useAuthStore = defineStore('auth', () => {
     isRestoringSession.value = true
 
     try {
-      const data = await api.post('/users/token/refresh', null, {
+      await api.post('/users/token/refresh', null, {
         skipAuthRefresh: true,
         skipAuthInvalidation: true
       })
-      setAccessToken(data.access)
       return await fetchUser()
     } catch (_error) {
       user.value = null
-      setAccessToken(null)
       isRestoringSession.value = false
       return null
     }
@@ -118,13 +108,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
-    accessToken,
     isAuthenticated,
     isRestoringSession,
     forumPermissions,
     canStartDiscussion,
     hasPermission,
-    setAccessToken,
     login,
     register,
     logout,

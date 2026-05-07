@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
 
 const CSRF_COOKIE_NAME = 'csrftoken'
 const CSRF_HEADER_NAME = 'X-CSRFToken'
@@ -60,8 +59,7 @@ export function primeCsrfProtection() {
 }
 
 function clearStoredTokens() {
-  const authStore = useAuthStore()
-  authStore.setAccessToken(null)
+  return undefined
 }
 
 function isAuthEndpoint(url = '') {
@@ -119,12 +117,6 @@ api.interceptors.request.use(
         config.headers[CSRF_HEADER_NAME] = csrfToken
       }
     }
-
-    const authStore = useAuthStore()
-    const token = authStore.accessToken
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
     return config
   },
   error => {
@@ -150,12 +142,7 @@ api.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        const data = await refreshAccessToken()
-        const authStore = useAuthStore()
-        authStore.setAccessToken(data.access)
-
-        originalRequest.headers = originalRequest.headers || {}
-        originalRequest.headers.Authorization = `Bearer ${data.access}`
+        await refreshAccessToken()
         return api(originalRequest)
       } catch (refreshError) {
         clearStoredTokens()

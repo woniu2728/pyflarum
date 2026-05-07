@@ -4,8 +4,7 @@ from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_asy
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.utils.html import escape
-from ninja_jwt.authentication import JWTAuth
-
+from apps.core.jwt_auth import resolve_authenticated_user
 from apps.core.runtime_state import get_runtime_status
 from apps.core.settings_service import (
     get_maintenance_message,
@@ -220,19 +219,7 @@ class MaintenanceModeMiddleware:
         if getattr(user, "is_authenticated", False) and getattr(user, "is_staff", False):
             return True
 
-        header = request.headers.get("Authorization", "")
-        if not header.startswith("Bearer "):
-            return False
-
-        token = header.split(" ", 1)[1].strip()
-        if not token:
-            return False
-
-        try:
-            auth_user = JWTAuth().authenticate(request, token)
-        except Exception:
-            return False
-
+        auth_user = resolve_authenticated_user(request)
         return bool(getattr(auth_user, "is_staff", False))
 
     def _maintenance_response(self, request):

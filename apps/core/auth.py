@@ -1,16 +1,7 @@
-from ninja.security import HttpBearer
+from apps.core.jwt_auth import AccessTokenAuth
 
 
-class AuthBearer(HttpBearer):
-    """JWT bearer auth shared by public and protected API routers."""
-
-    def authenticate(self, request, token):
-        try:
-            from ninja_jwt.authentication import JWTAuth
-
-            return JWTAuth().authenticate(request, token)
-        except Exception:
-            return None
+AuthBearer = AccessTokenAuth
 
 
 def get_optional_user(request):
@@ -20,7 +11,7 @@ def get_optional_user(request):
     if getattr(request, "user", None) and request.user.is_authenticated:
         return request.user
 
-    user = AuthBearer()(request)
+    user = AccessTokenAuth()(request)
     if user and user.is_authenticated:
         return user
 

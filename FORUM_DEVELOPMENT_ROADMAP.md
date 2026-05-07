@@ -837,8 +837,9 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：前端 access token 不再持久化到 `localStorage`，页面刷新时改为依赖 HttpOnly refresh cookie 恢复会话。
 - 已完成：通知 WebSocket 新增 refresh cookie 认证回退，前端通知连接不再把 access token 暴露在 URL 查询串。
 - 已完成：API 开启 CSRF 校验，前端写请求会先初始化 `csrftoken` 并自动附带 `X-CSRFToken`。
+- 已完成：前后端认证主链路切换到 HttpOnly access/refresh cookie，前端不再手动拼接 Bearer access token。
 - 当前阶段状态更新：
-  - 阶段 0：图标资源本地化已完成；并发回帖修复、分页限制已存在；后台已开始显式暴露并阻止部分 Redis/队列危险配置；认证安全已完成短期 token 收紧、基础安全头、access token 去本地持久化、WebSocket 去 URL token 以及 API CSRF 收口，剩余重点转向更完整的 access/refresh Cookie 化。
+  - 阶段 0：图标资源本地化已完成；并发回帖修复、分页限制已存在；后台已开始显式暴露并阻止部分 Redis/队列危险配置；认证安全已完成短期 token 收紧、基础安全头、access/refresh Cookie 化、access token 去本地持久化、WebSocket 去 URL token 以及 API CSRF 收口，阶段 0 认证主线已基本闭合。
   - 阶段 1：模块注册中心、权限注册化、后台模块中心基础页、前端基础注入点已落地，后续重点是继续把内置能力从“已注册”推进到“完全按模块接入”。
   - 阶段 2：领域事件、事件帖、资源字段注册层已落地，但统一 Resource 协议和更多事件驱动迁移仍需继续推进。
   - 阶段 3：前端 Resource Store 已投入使用，但 Composer 公共内核和统一列表状态层仍未收口。
