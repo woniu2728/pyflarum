@@ -15,8 +15,15 @@
               <i class="fas fa-arrow-right"></i>
               {{ post.discussion?.title || '讨论' }}
             </router-link>
-            <span v-if="post.approval_status === 'pending'" class="approval-pill">待审核</span>
-            <span v-else-if="post.approval_status === 'rejected'" class="approval-pill approval-pill--rejected">已拒绝</span>
+            <ForumStateBadge
+              v-for="badge in getStateBadges(post)"
+              :key="badge.key"
+              :label="badge.label"
+              :tone="badge.tone"
+              :size="badge.size || 'sm'"
+              :icon="badge.icon || ''"
+              :title="badge.title || ''"
+            />
           </div>
           <span class="post-time">{{ formatDate(post.created_at) }}</span>
         </div>
@@ -31,6 +38,8 @@
 
 <script setup>
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
+import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
+import { getPostStateBadges } from '@/forum/registry'
 
 defineProps({
   posts: {
@@ -54,6 +63,13 @@ defineProps({
     required: true
   }
 })
+
+function getStateBadges(post) {
+  return getPostStateBadges({
+    post,
+    surface: 'profile-post',
+  })
+}
 </script>
 
 <style scoped>
@@ -161,23 +177,6 @@ defineProps({
 
 .post-content :deep(a) {
   overflow-wrap: anywhere;
-}
-
-.approval-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #fff3cd;
-  color: #856404;
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.approval-pill--rejected {
-  background: #fdeeee;
-  color: #b14545;
 }
 
 .approval-note {

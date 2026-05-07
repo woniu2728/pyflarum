@@ -12,10 +12,12 @@ import {
   getSearchSources,
   getDiscussionBadges,
   getDiscussionStateBadges,
+  getPostStateBadges,
   getUserBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionStateBadge,
+  registerPostStateBadge,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -44,9 +46,11 @@ export {
   getNotificationRenderers,
   getDiscussionBadges,
   getDiscussionStateBadges,
+  getPostStateBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionStateBadge,
+  registerPostStateBadge,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -652,6 +656,28 @@ registerDiscussionStateBadge({
   resolve: () => ({
     label: '已关注',
     tone: 'soft-primary',
+  }),
+})
+
+registerPostStateBadge({
+  key: 'pending',
+  order: 10,
+  surfaces: ['profile-post'],
+  isVisible: ({ post }) => post?.approval_status === 'pending',
+  resolve: () => ({
+    label: '待审核',
+    tone: 'warning',
+  }),
+})
+
+registerPostStateBadge({
+  key: 'rejected',
+  order: 20,
+  surfaces: ['profile-post'],
+  isVisible: ({ post }) => post?.approval_status === 'rejected',
+  resolve: () => ({
+    label: '已拒绝',
+    tone: 'danger',
   }),
 })
 

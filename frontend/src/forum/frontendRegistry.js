@@ -14,6 +14,7 @@ const searchSources = []
 const userBadges = []
 const discussionBadges = []
 const discussionStateBadges = []
+const postStateBadges = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -291,6 +292,18 @@ export function registerDiscussionStateBadge(item) {
 
 export function getDiscussionStateBadges(context = {}) {
   return [...discussionStateBadges]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerPostStateBadge(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(postStateBadges, normalizedItem.key, normalizedItem)
+}
+
+export function getPostStateBadges(context = {}) {
+  return [...postStateBadges]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)
