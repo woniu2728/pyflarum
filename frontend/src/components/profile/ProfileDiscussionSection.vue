@@ -25,8 +25,8 @@
               :title="badge.title || ''"
             />
           </div>
-          <p v-if="discussion.approval_status === 'rejected' && discussion.approval_note" class="approval-note">
-            审核反馈：{{ discussion.approval_note }}
+          <p v-if="getApprovalNoteText(discussion)" class="approval-note">
+            {{ getApprovalNoteText(discussion) }}
           </p>
           <div class="discussion-meta">
             <span>{{ formatDate(discussion.created_at) }}</span>
@@ -46,7 +46,7 @@
 <script setup>
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getDiscussionStateBadges } from '@/forum/registry'
+import { getApprovalNote, getDiscussionStateBadges } from '@/forum/registry'
 
 defineProps({
   discussions: {
@@ -76,6 +76,13 @@ function getStateBadges(discussion) {
     discussion,
     surface: 'profile-discussion',
   })
+}
+
+function getApprovalNoteText(discussion) {
+  return getApprovalNote({
+    discussion,
+    surface: 'profile-discussion',
+  })?.text || ''
 }
 </script>
 

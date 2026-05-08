@@ -1,11 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  getApprovalNote,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
+  registerApprovalNote,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
   registerPostFlagPanel,
@@ -235,4 +237,42 @@ test('post flag panel prefers matching surface-specific item', () => {
   assert.equal(surfaceResult.actions[0].label, '2 actions')
   assert.equal(fallbackResult.key, fallbackKey)
   assert.equal(fallbackResult.description, 'fallback description')
+})
+
+test('approval note prefers matching surface-specific item', () => {
+  const fallbackKey = uniqueKey('approval-note-fallback')
+  const scopedKey = uniqueKey('approval-note-scoped')
+
+  registerApprovalNote({
+    key: fallbackKey,
+    order: 30,
+    isVisible: () => true,
+    resolve: () => ({
+      text: 'fallback note',
+    }),
+  })
+
+  registerApprovalNote({
+    key: scopedKey,
+    order: 40,
+    surfaces: ['profile-post'],
+    isVisible: ({ post }) => Boolean(post?.approval_note),
+    resolve: ({ post }) => ({
+      text: `scoped note: ${post.approval_note}`,
+    }),
+  })
+
+  const surfaceResult = getApprovalNote({
+    post: { approval_note: 'detail' },
+    surface: 'profile-post',
+  })
+  const fallbackResult = getApprovalNote({
+    post: { approval_note: 'detail' },
+    surface: 'other-surface',
+  })
+
+  assert.equal(surfaceResult.key, scopedKey)
+  assert.equal(surfaceResult.text, 'scoped note: detail')
+  assert.equal(fallbackResult.key, fallbackKey)
+  assert.equal(fallbackResult.text, 'fallback note')
 })

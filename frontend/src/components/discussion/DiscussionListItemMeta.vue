@@ -19,8 +19,8 @@
       />
     </div>
 
-    <p v-if="discussion.approval_status === 'rejected' && discussion.approval_note" class="approval-note">
-      审核反馈：{{ discussion.approval_note }}
+    <p v-if="approvalNote" class="approval-note">
+      {{ approvalNote.text }}
     </p>
 
     <ul class="discussion-list-item-info">
@@ -52,7 +52,7 @@
 import { computed } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getDiscussionStateBadges } from '@/forum/registry'
+import { getApprovalNote, getDiscussionStateBadges } from '@/forum/registry'
 
 const props = defineProps({
   discussion: {
@@ -82,6 +82,11 @@ const props = defineProps({
 })
 
 const discussionStateBadges = computed(() => getDiscussionStateBadges({
+  discussion: props.discussion,
+  surface: 'discussion-list-item',
+}))
+
+const approvalNote = computed(() => getApprovalNote({
   discussion: props.discussion,
   surface: 'discussion-list-item',
 }))

@@ -15,6 +15,7 @@ import {
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getPostFlagPanel,
+  getApprovalNote,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
@@ -23,6 +24,7 @@ import {
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
   registerPostFlagPanel,
+  registerApprovalNote,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -57,6 +59,7 @@ export {
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getPostFlagPanel,
+  getApprovalNote,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
@@ -64,6 +67,7 @@ export {
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
   registerPostFlagPanel,
+  registerApprovalNote,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -872,6 +876,26 @@ registerPostFlagPanel({
         disabled: Boolean(flagPending),
       },
     ],
+  }),
+})
+
+registerApprovalNote({
+  key: 'rejected-discussion-list',
+  order: 10,
+  surfaces: ['discussion-list-item', 'profile-discussion'],
+  isVisible: ({ discussion }) => Boolean(discussion?.approval_status === 'rejected' && discussion?.approval_note),
+  resolve: ({ discussion }) => ({
+    text: `审核反馈：${discussion.approval_note}`,
+  }),
+})
+
+registerApprovalNote({
+  key: 'rejected-profile-post',
+  order: 20,
+  surfaces: ['profile-post'],
+  isVisible: ({ post }) => Boolean(post?.approval_status === 'rejected' && post?.approval_note),
+  resolve: ({ post }) => ({
+    text: `审核反馈：${post.approval_note}`,
   }),
 })
 

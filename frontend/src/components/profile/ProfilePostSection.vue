@@ -27,8 +27,8 @@
           </div>
           <span class="post-time">{{ formatDate(post.created_at) }}</span>
         </div>
-        <p v-if="post.approval_status === 'rejected' && post.approval_note" class="approval-note">
-          审核反馈：{{ post.approval_note }}
+        <p v-if="getApprovalNoteText(post)" class="approval-note">
+          {{ getApprovalNoteText(post) }}
         </p>
         <div class="post-content" v-html="post.content_html || post.content"></div>
       </div>
@@ -39,7 +39,7 @@
 <script setup>
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getPostStateBadges } from '@/forum/registry'
+import { getApprovalNote, getPostStateBadges } from '@/forum/registry'
 
 defineProps({
   posts: {
@@ -69,6 +69,13 @@ function getStateBadges(post) {
     post,
     surface: 'profile-post',
   })
+}
+
+function getApprovalNoteText(post) {
+  return getApprovalNote({
+    post,
+    surface: 'profile-post',
+  })?.text || ''
 }
 </script>
 

@@ -19,6 +19,7 @@ const discussionReplyStates = []
 const postReviewBanners = []
 const discussionReviewBanners = []
 const postFlagPanels = []
+const approvalNotes = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -392,6 +393,30 @@ export function registerPostFlagPanel(item) {
 
 export function getPostFlagPanel(context = {}) {
   const resolvedItems = [...postFlagPanels]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+
+  if (!resolvedItems.length) {
+    return null
+  }
+
+  const currentSurface = String(context.surface || '').trim()
+  if (!currentSurface) {
+    return resolvedItems[0]
+  }
+
+  const surfaceSpecificItem = resolvedItems.find(item => Array.isArray(item.surfaces) && item.surfaces.includes(currentSurface))
+  return surfaceSpecificItem || resolvedItems[0]
+}
+
+export function registerApprovalNote(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(approvalNotes, normalizedItem.key, normalizedItem)
+}
+
+export function getApprovalNote(context = {}) {
+  const resolvedItems = [...approvalNotes]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)
