@@ -105,24 +105,21 @@
           </div>
         </aside>
         <div
-          v-if="post.approval_status === 'pending' || post.approval_status === 'rejected'"
+          v-if="postReviewBanner"
           class="post-review-banner"
-          :class="{ 'post-review-banner--rejected': post.approval_status === 'rejected' }"
+          :class="{ 'post-review-banner--rejected': postReviewBanner.tone === 'danger' }"
         >
-          {{ post.approval_status === 'pending'
-            ? '这条回复正在审核中，目前仅你和管理员可见。'
-            : (post.approval_note || '这条回复未通过审核，请根据管理员反馈调整内容。') }}
-          <div v-if="canModeratePendingPost(post)" class="review-action-row">
-            <button type="button" class="review-action review-action--approve" @click="$emit('moderate-post', { post, action: 'approve' })">
-              审核通过
-            </button>
-            <button type="button" class="review-action review-action--reject" @click="$emit('moderate-post', { post, action: 'reject' })">
-              拒绝回复
-            </button>
-          </div>
-          <div v-else-if="post.approval_status === 'rejected' && canEditPost(post)" class="review-action-row">
-            <button type="button" class="review-action review-action--approve" @click="$emit('edit-post', post)">
-              修改后重新提交
+          {{ postReviewBanner.message }}
+          <div v-if="postReviewBanner.actions?.length" class="review-action-row">
+            <button
+              v-for="actionItem in postReviewBanner.actions"
+              :key="actionItem.key"
+              type="button"
+              class="review-action"
+              :class="actionItem.tone === 'reject' ? 'review-action--reject' : 'review-action--approve'"
+              @click="handleReviewAction(actionItem.action)"
+            >
+              {{ actionItem.label }}
             </button>
           </div>
         </div>
@@ -190,7 +187,7 @@
 import { computed } from 'vue'
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getPostStateBadges } from '@/forum/registry'
+import { getPostReviewBanner, getPostStateBadges } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -225,6 +222,13 @@ const postStateBadges = computed(() => getPostStateBadges({
   surface: 'discussion-post',
 }))
 
+const postReviewBanner = computed(() => getPostReviewBanner({
+  post: props.post,
+  canModeratePendingPost: props.canModeratePendingPost,
+  canEditPost: props.canEditPost,
+  surface: 'discussion-post',
+}))
+
 const emit = defineEmits([
   'jump-to-post',
   'toggle-like',
@@ -241,6 +245,15 @@ const emit = defineEmits([
 function handleMenuAction(eventName, payload) {
   emit(eventName, payload)
   emit('close-post-menu')
+}
+
+function handleReviewAction(action) {
+  if (action === 'edit') {
+    emit('edit-post', props.post)
+    return
+  }
+
+  emit('moderate-post', { post: props.post, action })
 }
 </script>
 

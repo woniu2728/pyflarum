@@ -14,12 +14,14 @@ import {
   getDiscussionStateBadges,
   getDiscussionReplyState,
   getPostStateBadges,
+  getPostReviewBanner,
   getUserBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionReplyState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
+  registerPostReviewBanner,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -50,11 +52,13 @@ export {
   getDiscussionStateBadges,
   getDiscussionReplyState,
   getPostStateBadges,
+  getPostReviewBanner,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionReplyState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
+  registerPostReviewBanner,
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerStatusItem,
@@ -789,6 +793,42 @@ registerDiscussionReplyState({
     message: '后才能回复',
     linkLabel: '登录',
     to: '/login',
+  }),
+})
+
+registerPostReviewBanner({
+  key: 'pending',
+  order: 10,
+  surfaces: ['discussion-post'],
+  isVisible: ({ post }) => post?.approval_status === 'pending',
+  resolve: ({ post, canModeratePendingPost }) => ({
+    tone: 'warning',
+    message: '这条回复正在审核中，目前仅你和管理员可见。',
+    actions: canModeratePendingPost(post)
+      ? [
+          { key: 'approve', label: '审核通过', tone: 'approve', action: 'approve' },
+          { key: 'reject', label: '拒绝回复', tone: 'reject', action: 'reject' },
+        ]
+      : [],
+  }),
+})
+
+registerPostReviewBanner({
+  key: 'rejected',
+  order: 20,
+  surfaces: ['discussion-post'],
+  isVisible: ({ post }) => post?.approval_status === 'rejected',
+  resolve: ({ post, canModeratePendingPost, canEditPost }) => ({
+    tone: 'danger',
+    message: post.approval_note || '这条回复未通过审核，请根据管理员反馈调整内容。',
+    actions: canModeratePendingPost(post)
+      ? [
+          { key: 'approve', label: '审核通过', tone: 'approve', action: 'approve' },
+          { key: 'reject', label: '拒绝回复', tone: 'reject', action: 'reject' },
+        ]
+      : (canEditPost(post)
+          ? [{ key: 'edit', label: '修改后重新提交', tone: 'approve', action: 'edit' }]
+          : []),
   }),
 })
 
