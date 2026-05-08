@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { getEmptyState } from '@/forum/registry'
 import {
   getNotificationPresentationModel,
   resolveNotificationPath,
@@ -30,6 +31,14 @@ export function useHeaderNotifications({
       }))
       .filter(item => item.total > 0 || item.unread > 0)
       .slice(0, 4)
+  })
+  const emptyStateText = computed(() => {
+    const emptyState = getEmptyState({
+      surface: 'notifications-menu-empty',
+      notifications: notificationItems.value,
+    })
+
+    return emptyState?.text || '暂无通知'
   })
 
   function getNotificationPresentation(notification) {
@@ -150,6 +159,7 @@ export function useHeaderNotifications({
     hasReadNotifications,
     notificationGroups,
     notificationTypeSummaries,
+    emptyStateText,
     actionMessage,
     actionTone,
     markingAllRead,

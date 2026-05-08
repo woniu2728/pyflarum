@@ -88,7 +88,7 @@
         </ForumStateBlock>
 
         <ForumStateBlock v-else-if="notifications.length === 0" class="notification-state">
-          暂无通知
+          {{ emptyStateText }}
         </ForumStateBlock>
 
         <ForumNotificationList
@@ -218,6 +218,7 @@ const { startDiscussion } = useStartDiscussionAction({
 })
 const {
   notifications,
+  emptyStateText,
   loading,
   loadError,
   marking,

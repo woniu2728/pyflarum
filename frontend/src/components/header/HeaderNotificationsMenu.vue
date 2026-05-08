@@ -63,7 +63,7 @@
         加载中...
       </div>
       <div v-else-if="!notificationItems.length" class="notifications-menu-state notifications-menu-state--empty">
-        暂无通知
+        {{ emptyStateText }}
       </div>
       <div v-else class="notifications-menu-list">
         <section
@@ -134,6 +134,10 @@ const props = defineProps({
   notificationTypeSummaries: {
     type: Array,
     default: () => []
+  },
+  emptyStateText: {
+    type: String,
+    default: '暂无通知'
   },
   hasReadNotifications: {
     type: Boolean,

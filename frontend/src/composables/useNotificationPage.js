@@ -1,4 +1,5 @@
 import { computed, ref, watch } from 'vue'
+import { getEmptyState } from '@/forum/registry'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
 import { resolveNotificationPath, useNotificationGroups } from '@/composables/useNotificationPresentation'
@@ -24,6 +25,16 @@ export function useNotificationPage({
   const filteredUnreadCount = computed(() => notifications.value.filter(item => !item.is_read).length)
   const filteredReadCount = computed(() => notifications.value.length - filteredUnreadCount.value)
   const hasActiveFilter = computed(() => unreadOnly.value || Boolean(activeType.value))
+  const emptyStateText = computed(() => {
+    const emptyState = getEmptyState({
+      surface: 'notifications-page-empty',
+      notifications: notifications.value,
+      unreadOnly: unreadOnly.value,
+      activeType: activeType.value,
+    })
+
+    return emptyState?.text || '暂无通知'
+  })
 
   const notificationTypeItems = computed(() => {
     const registeredItems = getResolvedNotificationTypes().map(item => ({
@@ -335,6 +346,7 @@ export function useNotificationPage({
 
   return {
     notifications,
+    emptyStateText,
     loading,
     loadError,
     marking,

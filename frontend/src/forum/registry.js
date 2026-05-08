@@ -973,6 +973,46 @@ registerEmptyState({
   }),
 })
 
+registerEmptyState({
+  key: 'notifications-page-unread-empty',
+  order: 10,
+  surfaces: ['notifications-page-empty'],
+  isVisible: ({ notifications, unreadOnly }) => Array.isArray(notifications) && notifications.length === 0 && Boolean(unreadOnly),
+  resolve: () => ({
+    text: '当前没有未读通知',
+  }),
+})
+
+registerEmptyState({
+  key: 'notifications-page-filter-empty',
+  order: 20,
+  surfaces: ['notifications-page-empty'],
+  isVisible: ({ notifications, activeType }) => Array.isArray(notifications) && notifications.length === 0 && Boolean(activeType),
+  resolve: () => ({
+    text: '当前筛选下暂无通知',
+  }),
+})
+
+registerEmptyState({
+  key: 'notifications-page-default-empty',
+  order: 30,
+  surfaces: ['notifications-page-empty'],
+  isVisible: ({ notifications }) => Array.isArray(notifications) && notifications.length === 0,
+  resolve: () => ({
+    text: '暂无通知',
+  }),
+})
+
+registerEmptyState({
+  key: 'notifications-menu-empty',
+  order: 40,
+  surfaces: ['notifications-menu-empty'],
+  isVisible: ({ notifications }) => Array.isArray(notifications) && notifications.length === 0,
+  resolve: () => ({
+    text: '暂无通知',
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,

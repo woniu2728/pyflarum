@@ -361,3 +361,46 @@ test('empty state resolves discussion list entries by list context', () => {
   assert.equal(defaultResult.key, defaultKey)
   assert.equal(defaultResult.text, 'discussion default empty')
 })
+
+test('empty state resolves notification entries by filter context', () => {
+  const unreadKey = uniqueKey('notifications-unread-empty')
+  const defaultKey = uniqueKey('notifications-default-empty')
+
+  registerEmptyState({
+    key: unreadKey,
+    order: 10,
+    surfaces: ['notifications-page-empty'],
+    isVisible: ({ notifications, unreadOnly }) => Array.isArray(notifications) && notifications.length === 0 && Boolean(unreadOnly),
+    resolve: () => ({
+      text: 'unread empty',
+    }),
+  })
+
+  registerEmptyState({
+    key: defaultKey,
+    order: 20,
+    surfaces: ['notifications-page-empty'],
+    isVisible: ({ notifications }) => Array.isArray(notifications) && notifications.length === 0,
+    resolve: () => ({
+      text: 'notifications default empty',
+    }),
+  })
+
+  const unreadResult = getEmptyState({
+    surface: 'notifications-page-empty',
+    notifications: [],
+    unreadOnly: true,
+    activeType: '',
+  })
+  const defaultResult = getEmptyState({
+    surface: 'notifications-page-empty',
+    notifications: [],
+    unreadOnly: false,
+    activeType: '',
+  })
+
+  assert.equal(unreadResult.key, unreadKey)
+  assert.equal(unreadResult.text, 'unread empty')
+  assert.equal(defaultResult.key, defaultKey)
+  assert.equal(defaultResult.text, 'notifications default empty')
+})
