@@ -123,36 +123,31 @@
             </button>
           </div>
         </div>
-        <div v-if="post.can_moderate_flags && post.open_flag_count > 0" class="post-flag-panel">
+        <div v-if="postFlagPanel" class="post-flag-panel">
           <div class="post-flag-panel-header">
-            <strong>前台举报处理</strong>
-            <span>版主可直接在这里查看原因并关闭举报。</span>
+            <strong>{{ postFlagPanel.title }}</strong>
+            <span>{{ postFlagPanel.description }}</span>
           </div>
           <div class="post-flag-list">
-            <article v-for="flag in post.open_flags" :key="flag.id" class="post-flag-item">
+            <article v-for="flag in postFlagPanel.items" :key="flag.key" class="post-flag-item">
               <div class="post-flag-item-header">
                 <span class="post-flag-reason">{{ flag.reason }}</span>
-                <span class="post-flag-user">{{ flag.user?.display_name || flag.user?.username || '匿名用户' }}</span>
+                <span class="post-flag-user">{{ flag.userLabel }}</span>
               </div>
-              <p>{{ flag.message || '举报人未填写补充说明。' }}</p>
+              <p>{{ flag.message }}</p>
             </article>
           </div>
           <div class="post-flag-actions">
             <button
-              type="button"
-              class="post-flag-button post-flag-button--primary"
-              :disabled="flagPending"
-              @click="$emit('resolve-post-flags', { post, status: 'resolved' })"
-            >
-              {{ flagPending ? '处理中...' : '标记已处理' }}
-            </button>
-            <button
+              v-for="actionItem in postFlagPanel.actions"
+              :key="actionItem.key"
               type="button"
               class="post-flag-button"
-              :disabled="flagPending"
-              @click="$emit('resolve-post-flags', { post, status: 'ignored' })"
+              :class="{ 'post-flag-button--primary': actionItem.tone === 'primary' }"
+              :disabled="actionItem.disabled"
+              @click="handleFlagPanelAction(actionItem.status)"
             >
-              忽略举报
+              {{ actionItem.label }}
             </button>
           </div>
         </div>
@@ -187,7 +182,7 @@
 import { computed } from 'vue'
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getPostReviewBanner, getPostStateBadges } from '@/forum/registry'
+import { getPostFlagPanel, getPostReviewBanner, getPostStateBadges } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -229,6 +224,12 @@ const postReviewBanner = computed(() => getPostReviewBanner({
   surface: 'discussion-post',
 }))
 
+const postFlagPanel = computed(() => getPostFlagPanel({
+  post: props.post,
+  flagPending: props.flagPending,
+  surface: 'discussion-post',
+}))
+
 const emit = defineEmits([
   'jump-to-post',
   'toggle-like',
@@ -254,6 +255,10 @@ function handleReviewAction(action) {
   }
 
   emit('moderate-post', { post: props.post, action })
+}
+
+function handleFlagPanelAction(status) {
+  emit('resolve-post-flags', { post: props.post, status })
 }
 </script>
 

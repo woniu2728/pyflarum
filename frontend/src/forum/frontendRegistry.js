@@ -18,6 +18,7 @@ const postStateBadges = []
 const discussionReplyStates = []
 const postReviewBanners = []
 const discussionReviewBanners = []
+const postFlagPanels = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -367,6 +368,30 @@ export function registerDiscussionReviewBanner(item) {
 
 export function getDiscussionReviewBanner(context = {}) {
   const resolvedItems = [...discussionReviewBanners]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+
+  if (!resolvedItems.length) {
+    return null
+  }
+
+  const currentSurface = String(context.surface || '').trim()
+  if (!currentSurface) {
+    return resolvedItems[0]
+  }
+
+  const surfaceSpecificItem = resolvedItems.find(item => Array.isArray(item.surfaces) && item.surfaces.includes(currentSurface))
+  return surfaceSpecificItem || resolvedItems[0]
+}
+
+export function registerPostFlagPanel(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(postFlagPanels, normalizedItem.key, normalizedItem)
+}
+
+export function getPostFlagPanel(context = {}) {
+  const resolvedItems = [...postFlagPanels]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

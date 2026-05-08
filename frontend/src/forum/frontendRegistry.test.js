@@ -3,10 +3,12 @@ import assert from 'node:assert/strict'
 import {
   getDiscussionReplyState,
   getDiscussionReviewBanner,
+  getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
+  registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
 } from './frontendRegistry.js'
@@ -187,4 +189,50 @@ test('discussion review banner prefers matching surface-specific item', () => {
   assert.equal(surfaceResult.actions.length, 1)
   assert.equal(fallbackResult.key, fallbackKey)
   assert.equal(fallbackResult.message, 'fallback message')
+})
+
+test('post flag panel prefers matching surface-specific item', () => {
+  const fallbackKey = uniqueKey('post-flag-fallback')
+  const scopedKey = uniqueKey('post-flag-scoped')
+
+  registerPostFlagPanel({
+    key: fallbackKey,
+    order: 30,
+    isVisible: () => true,
+    resolve: () => ({
+      title: 'fallback',
+      description: 'fallback description',
+      items: [],
+      actions: [],
+    }),
+  })
+
+  registerPostFlagPanel({
+    key: scopedKey,
+    order: 40,
+    surfaces: ['discussion-post'],
+    isVisible: ({ post }) => Boolean(post?.open_flag_count > 0),
+    resolve: ({ post }) => ({
+      title: 'scoped',
+      description: 'scoped description',
+      items: [{ key: 1, reason: 'spam', userLabel: 'mod', message: 'details' }],
+      actions: [{ key: 'resolved', label: `${post.open_flag_count} actions`, status: 'resolved' }],
+    }),
+  })
+
+  const surfaceResult = getPostFlagPanel({
+    post: { open_flag_count: 2 },
+    surface: 'discussion-post',
+  })
+  const fallbackResult = getPostFlagPanel({
+    post: { open_flag_count: 2 },
+    surface: 'other-surface',
+  })
+
+  assert.equal(surfaceResult.key, scopedKey)
+  assert.equal(surfaceResult.title, 'scoped')
+  assert.equal(surfaceResult.items.length, 1)
+  assert.equal(surfaceResult.actions[0].label, '2 actions')
+  assert.equal(fallbackResult.key, fallbackKey)
+  assert.equal(fallbackResult.description, 'fallback description')
 })

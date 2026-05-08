@@ -14,6 +14,7 @@ import {
   getDiscussionStateBadges,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
+  getPostFlagPanel,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
@@ -21,6 +22,7 @@ import {
   registerDiscussionBadge,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
+  registerPostFlagPanel,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -54,12 +56,14 @@ export {
   getDiscussionStateBadges,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
+  getPostFlagPanel,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
+  registerPostFlagPanel,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -835,6 +839,39 @@ registerDiscussionReviewBanner({
       : (canEditDiscussion
           ? [{ key: 'edit', label: '修改后重新提交', tone: 'approve', action: 'edit' }]
           : []),
+  }),
+})
+
+registerPostFlagPanel({
+  key: 'moderation-flags',
+  order: 10,
+  surfaces: ['discussion-post'],
+  isVisible: ({ post }) => Boolean(post?.can_moderate_flags && Number(post?.open_flag_count || 0) > 0),
+  resolve: ({ post, flagPending }) => ({
+    title: '前台举报处理',
+    description: '版主可直接在这里查看原因并关闭举报。',
+    items: (post.open_flags || []).map(flag => ({
+      key: flag.id,
+      reason: flag.reason,
+      userLabel: flag.user?.display_name || flag.user?.username || '匿名用户',
+      message: flag.message || '举报人未填写补充说明。',
+    })),
+    actions: [
+      {
+        key: 'resolved',
+        label: flagPending ? '处理中...' : '标记已处理',
+        tone: 'primary',
+        status: 'resolved',
+        disabled: Boolean(flagPending),
+      },
+      {
+        key: 'ignored',
+        label: '忽略举报',
+        tone: 'secondary',
+        status: 'ignored',
+        disabled: Boolean(flagPending),
+      },
+    ],
   }),
 })
 
