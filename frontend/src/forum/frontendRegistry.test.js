@@ -404,3 +404,42 @@ test('empty state resolves notification entries by filter context', () => {
   assert.equal(defaultResult.key, defaultKey)
   assert.equal(defaultResult.text, 'notifications default empty')
 })
+
+test('empty state resolves tag surface entries', () => {
+  const tagsPageKey = uniqueKey('tags-page-empty')
+  const lastDiscussionKey = uniqueKey('tag-last-discussion-empty')
+
+  registerEmptyState({
+    key: tagsPageKey,
+    order: 10,
+    surfaces: ['tags-page-empty'],
+    isVisible: ({ tags }) => Array.isArray(tags) && tags.length === 0,
+    resolve: () => ({
+      text: 'tags empty',
+    }),
+  })
+
+  registerEmptyState({
+    key: lastDiscussionKey,
+    order: 20,
+    surfaces: ['tag-last-discussion-empty'],
+    isVisible: ({ tag }) => !tag?.last_posted_discussion,
+    resolve: ({ tag }) => ({
+      text: `${tag?.name || 'tag'} no discussion`,
+    }),
+  })
+
+  const tagsPageResult = getEmptyState({
+    surface: 'tags-page-empty',
+    tags: [],
+  })
+  const lastDiscussionResult = getEmptyState({
+    surface: 'tag-last-discussion-empty',
+    tag: { name: 'Alpha', last_posted_discussion: null },
+  })
+
+  assert.equal(tagsPageResult.key, tagsPageKey)
+  assert.equal(tagsPageResult.text, 'tags empty')
+  assert.equal(lastDiscussionResult.key, lastDiscussionKey)
+  assert.equal(lastDiscussionResult.text, 'Alpha no discussion')
+})

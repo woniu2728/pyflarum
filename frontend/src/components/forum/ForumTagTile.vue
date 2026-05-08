@@ -29,24 +29,35 @@
       <span class="tag-last-time">{{ formatRelativeTime(tag.last_posted_discussion.last_posted_at) }}</span>
     </router-link>
     <div v-else class="tag-last-discussion tag-last-discussion-empty">
-      暂无讨论
+      {{ lastDiscussionEmptyText }}
     </div>
   </article>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
+import { getEmptyState } from '@/forum/registry'
 import {
   buildDiscussionPath,
   buildTagPath,
   formatRelativeTime
 } from '@/utils/forum'
 
-defineProps({
+const props = defineProps({
   tag: {
     type: Object,
     required: true
   }
+})
+
+const lastDiscussionEmptyText = computed(() => {
+  const emptyState = getEmptyState({
+    surface: 'tag-last-discussion-empty',
+    tag: props.tag,
+  })
+
+  return emptyState?.text || '暂无讨论'
 })
 </script>
 

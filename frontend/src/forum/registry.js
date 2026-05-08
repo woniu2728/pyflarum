@@ -1013,6 +1013,26 @@ registerEmptyState({
   }),
 })
 
+registerEmptyState({
+  key: 'tags-page-empty',
+  order: 50,
+  surfaces: ['tags-page-empty'],
+  isVisible: ({ tags }) => Array.isArray(tags) && tags.length === 0,
+  resolve: () => ({
+    text: '暂无标签',
+  }),
+})
+
+registerEmptyState({
+  key: 'tag-last-discussion-empty',
+  order: 60,
+  surfaces: ['tag-last-discussion-empty'],
+  isVisible: ({ tag }) => !tag?.last_posted_discussion,
+  resolve: () => ({
+    text: '暂无讨论',
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,

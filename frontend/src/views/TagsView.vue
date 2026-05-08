@@ -16,7 +16,7 @@
         <ForumHeroPanel title="全部标签" variant="default" />
 
         <ForumStateBlock v-if="loading">加载中...</ForumStateBlock>
-        <ForumStateBlock v-else-if="tags.length === 0">暂无标签</ForumStateBlock>
+        <ForumStateBlock v-else-if="tags.length === 0">{{ emptyStateText }}</ForumStateBlock>
 
         <template v-else>
           <div class="tag-grid">
@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useForumStore } from '@/stores/forum'
@@ -47,6 +47,7 @@ import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumTagCloud from '@/components/forum/ForumTagCloud.vue'
 import ForumTagTile from '@/components/forum/ForumTagTile.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
+import { getEmptyState } from '@/forum/registry'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useTagsPage } from '@/composables/useTagsPage'
 
@@ -61,6 +62,14 @@ const { startDiscussion } = useStartDiscussionAction({
 })
 
 const { cloudTags, loading, tags } = useTagsPage()
+const emptyStateText = computed(() => {
+  const emptyState = getEmptyState({
+    surface: 'tags-page-empty',
+    tags: tags.value,
+  })
+
+  return emptyState?.text || '暂无标签'
+})
 
 watch(
   tags,
