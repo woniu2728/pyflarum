@@ -2,9 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   getDiscussionReplyState,
+  getDiscussionReviewBanner,
   getPostReviewBanner,
   getPostStateBadges,
   registerDiscussionReplyState,
+  registerDiscussionReviewBanner,
   registerPostReviewBanner,
   registerPostStateBadge,
 } from './frontendRegistry.js'
@@ -140,4 +142,49 @@ test('post review banner prefers matching surface-specific item', () => {
   assert.equal(surfaceResult.actions.length, 1)
   assert.equal(fallbackResult.key, fallbackKey)
   assert.equal(fallbackResult.message, 'fallback')
+})
+
+test('discussion review banner prefers matching surface-specific item', () => {
+  const fallbackKey = uniqueKey('discussion-review-fallback')
+  const scopedKey = uniqueKey('discussion-review-scoped')
+
+  registerDiscussionReviewBanner({
+    key: fallbackKey,
+    order: 30,
+    isVisible: () => true,
+    resolve: () => ({
+      title: 'fallback',
+      message: 'fallback message',
+      tone: 'warning',
+      actions: [],
+    }),
+  })
+
+  registerDiscussionReviewBanner({
+    key: scopedKey,
+    order: 40,
+    surfaces: ['discussion-hero'],
+    isVisible: ({ discussion }) => discussion?.approval_status === 'pending',
+    resolve: () => ({
+      title: 'scoped',
+      message: 'scoped message',
+      tone: 'warning',
+      actions: [{ key: 'approve', label: '审核通过', action: 'approve' }],
+    }),
+  })
+
+  const surfaceResult = getDiscussionReviewBanner({
+    discussion: { approval_status: 'pending' },
+    surface: 'discussion-hero',
+  })
+  const fallbackResult = getDiscussionReviewBanner({
+    discussion: { approval_status: 'pending' },
+    surface: 'other-surface',
+  })
+
+  assert.equal(surfaceResult.key, scopedKey)
+  assert.equal(surfaceResult.title, 'scoped')
+  assert.equal(surfaceResult.actions.length, 1)
+  assert.equal(fallbackResult.key, fallbackKey)
+  assert.equal(fallbackResult.message, 'fallback message')
 })

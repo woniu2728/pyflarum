@@ -23,27 +23,24 @@
       />
     </div>
     <div
-      v-if="discussion.approval_status === 'pending' || discussion.approval_status === 'rejected'"
+      v-if="discussionReviewBanner"
       class="discussion-review-banner"
-      :class="{ 'discussion-review-banner--rejected': discussion.approval_status === 'rejected' }"
+      :class="{ 'discussion-review-banner--rejected': discussionReviewBanner.tone === 'danger' }"
     >
-      <strong>{{ discussion.approval_status === 'pending' ? '讨论正在审核中' : '讨论审核未通过' }}</strong>
+      <strong>{{ discussionReviewBanner.title }}</strong>
       <p>
-        {{ discussion.approval_status === 'pending'
-          ? '这条讨论当前仅你和管理员可见，审核通过后才会出现在论坛列表中。'
-          : (discussion.approval_note || '管理员拒绝了这条讨论，请根据反馈调整后重新发布。') }}
+        {{ discussionReviewBanner.message }}
       </p>
-      <div v-if="canModeratePendingDiscussion" class="review-action-row">
-        <button type="button" class="review-action review-action--approve" @click="$emit('moderate-discussion', 'approve')">
-          审核通过
-        </button>
-        <button type="button" class="review-action review-action--reject" @click="$emit('moderate-discussion', 'reject')">
-          拒绝讨论
-        </button>
-      </div>
-      <div v-else-if="discussion.approval_status === 'rejected' && canEditDiscussion" class="review-action-row">
-        <button type="button" class="review-action review-action--approve" @click="$emit('edit-discussion')">
-          修改后重新提交
+      <div v-if="discussionReviewBanner.actions?.length" class="review-action-row">
+        <button
+          v-for="actionItem in discussionReviewBanner.actions"
+          :key="actionItem.key"
+          type="button"
+          class="review-action"
+          :class="actionItem.tone === 'reject' ? 'review-action--reject' : 'review-action--approve'"
+          @click="handleReviewAction(actionItem.action)"
+        >
+          {{ actionItem.label }}
         </button>
       </div>
     </div>
@@ -51,9 +48,11 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
+import { getDiscussionReviewBanner } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   discussion: {
     type: Object,
     required: true
@@ -80,7 +79,23 @@ defineProps({
   }
 })
 
-defineEmits(['moderate-discussion', 'edit-discussion'])
+const discussionReviewBanner = computed(() => getDiscussionReviewBanner({
+  discussion: props.discussion,
+  canModeratePendingDiscussion: props.canModeratePendingDiscussion,
+  canEditDiscussion: props.canEditDiscussion,
+  surface: 'discussion-hero',
+}))
+
+const emit = defineEmits(['moderate-discussion', 'edit-discussion'])
+
+function handleReviewAction(action) {
+  if (action === 'edit') {
+    emit('edit-discussion')
+    return
+  }
+
+  emit('moderate-discussion', action)
+}
 </script>
 
 <style scoped>

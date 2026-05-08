@@ -13,12 +13,14 @@ import {
   getDiscussionBadges,
   getDiscussionStateBadges,
   getDiscussionReplyState,
+  getDiscussionReviewBanner,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionReplyState,
+  registerDiscussionReviewBanner,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -51,11 +53,13 @@ export {
   getDiscussionBadges,
   getDiscussionStateBadges,
   getDiscussionReplyState,
+  getDiscussionReviewBanner,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
   registerDiscussionBadge,
   registerDiscussionReplyState,
+  registerDiscussionReviewBanner,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -793,6 +797,44 @@ registerDiscussionReplyState({
     message: '后才能回复',
     linkLabel: '登录',
     to: '/login',
+  }),
+})
+
+registerDiscussionReviewBanner({
+  key: 'pending',
+  order: 10,
+  surfaces: ['discussion-hero'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'pending',
+  resolve: ({ canModeratePendingDiscussion }) => ({
+    title: '讨论正在审核中',
+    tone: 'warning',
+    message: '这条讨论当前仅你和管理员可见，审核通过后才会出现在论坛列表中。',
+    actions: canModeratePendingDiscussion
+      ? [
+          { key: 'approve', label: '审核通过', tone: 'approve', action: 'approve' },
+          { key: 'reject', label: '拒绝讨论', tone: 'reject', action: 'reject' },
+        ]
+      : [],
+  }),
+})
+
+registerDiscussionReviewBanner({
+  key: 'rejected',
+  order: 20,
+  surfaces: ['discussion-hero'],
+  isVisible: ({ discussion }) => discussion?.approval_status === 'rejected',
+  resolve: ({ discussion, canModeratePendingDiscussion, canEditDiscussion }) => ({
+    title: '讨论审核未通过',
+    tone: 'danger',
+    message: discussion.approval_note || '管理员拒绝了这条讨论，请根据反馈调整后重新发布。',
+    actions: canModeratePendingDiscussion
+      ? [
+          { key: 'approve', label: '审核通过', tone: 'approve', action: 'approve' },
+          { key: 'reject', label: '拒绝讨论', tone: 'reject', action: 'reject' },
+        ]
+      : (canEditDiscussion
+          ? [{ key: 'edit', label: '修改后重新提交', tone: 'approve', action: 'edit' }]
+          : []),
   }),
 })
 
