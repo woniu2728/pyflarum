@@ -2,7 +2,7 @@
   <div class="profile-section">
     <ForumStateBlock v-if="loading" class="section-state-block">加载中...</ForumStateBlock>
     <ForumStateBlock v-else-if="discussions.length === 0" class="section-state-block">
-      {{ isOwnProfile ? '你还没有发起过讨论' : '该用户还没有发起过讨论' }}
+      {{ emptyStateText }}
     </ForumStateBlock>
     <div v-else class="discussion-list">
       <div
@@ -46,9 +46,9 @@
 <script setup>
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getApprovalNote, getDiscussionStateBadges } from '@/forum/registry'
+import { getApprovalNote, getDiscussionStateBadges, getEmptyState } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   discussions: {
     type: Array,
     default: () => []
@@ -70,6 +70,12 @@ defineProps({
     required: true
   }
 })
+
+const emptyStateText = getEmptyState({
+  discussions: props.discussions,
+  isOwnProfile: props.isOwnProfile,
+  surface: 'profile-discussion-empty',
+})?.text || '暂无讨论'
 
 function getStateBadges(discussion) {
   return getDiscussionStateBadges({

@@ -16,6 +16,7 @@ import {
   getDiscussionReviewBanner,
   getPostFlagPanel,
   getApprovalNote,
+  getEmptyState,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
@@ -25,6 +26,7 @@ import {
   registerDiscussionReviewBanner,
   registerPostFlagPanel,
   registerApprovalNote,
+  registerEmptyState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -60,6 +62,7 @@ export {
   getDiscussionReviewBanner,
   getPostFlagPanel,
   getApprovalNote,
+  getEmptyState,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
@@ -68,6 +71,7 @@ export {
   registerDiscussionReviewBanner,
   registerPostFlagPanel,
   registerApprovalNote,
+  registerEmptyState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -896,6 +900,26 @@ registerApprovalNote({
   isVisible: ({ post }) => Boolean(post?.approval_status === 'rejected' && post?.approval_note),
   resolve: ({ post }) => ({
     text: `审核反馈：${post.approval_note}`,
+  }),
+})
+
+registerEmptyState({
+  key: 'profile-discussions-empty',
+  order: 10,
+  surfaces: ['profile-discussion-empty'],
+  isVisible: ({ discussions }) => Array.isArray(discussions) && discussions.length === 0,
+  resolve: ({ isOwnProfile }) => ({
+    text: isOwnProfile ? '你还没有发起过讨论' : '该用户还没有发起过讨论',
+  }),
+})
+
+registerEmptyState({
+  key: 'profile-posts-empty',
+  order: 20,
+  surfaces: ['profile-post-empty'],
+  isVisible: ({ posts }) => Array.isArray(posts) && posts.length === 0,
+  resolve: ({ isOwnProfile }) => ({
+    text: isOwnProfile ? '你还没有发表过回复' : '该用户还没有发表过回复',
   }),
 })
 

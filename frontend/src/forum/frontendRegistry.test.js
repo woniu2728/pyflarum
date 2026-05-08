@@ -4,12 +4,14 @@ import {
   getApprovalNote,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
+  getEmptyState,
   getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
   registerApprovalNote,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
+  registerEmptyState,
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
@@ -275,4 +277,44 @@ test('approval note prefers matching surface-specific item', () => {
   assert.equal(surfaceResult.text, 'scoped note: detail')
   assert.equal(fallbackResult.key, fallbackKey)
   assert.equal(fallbackResult.text, 'fallback note')
+})
+
+test('empty state prefers matching surface-specific item', () => {
+  const fallbackKey = uniqueKey('empty-fallback')
+  const scopedKey = uniqueKey('empty-scoped')
+
+  registerEmptyState({
+    key: fallbackKey,
+    order: 30,
+    isVisible: () => true,
+    resolve: () => ({
+      text: 'fallback empty',
+    }),
+  })
+
+  registerEmptyState({
+    key: scopedKey,
+    order: 40,
+    surfaces: ['profile-post-empty'],
+    isVisible: ({ posts }) => Array.isArray(posts) && posts.length === 0,
+    resolve: ({ isOwnProfile }) => ({
+      text: isOwnProfile ? 'my empty' : 'other empty',
+    }),
+  })
+
+  const surfaceResult = getEmptyState({
+    posts: [],
+    isOwnProfile: true,
+    surface: 'profile-post-empty',
+  })
+  const fallbackResult = getEmptyState({
+    posts: [],
+    isOwnProfile: true,
+    surface: 'other-surface',
+  })
+
+  assert.equal(surfaceResult.key, scopedKey)
+  assert.equal(surfaceResult.text, 'my empty')
+  assert.equal(fallbackResult.key, fallbackKey)
+  assert.equal(fallbackResult.text, 'fallback empty')
 })

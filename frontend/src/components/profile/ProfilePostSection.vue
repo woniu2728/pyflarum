@@ -2,7 +2,7 @@
   <div class="profile-section">
     <ForumStateBlock v-if="loading" class="section-state-block">加载中...</ForumStateBlock>
     <ForumStateBlock v-else-if="posts.length === 0" class="section-state-block">
-      {{ isOwnProfile ? '你还没有发表过回复' : '该用户还没有发表过回复' }}
+      {{ emptyStateText }}
     </ForumStateBlock>
     <div v-else class="post-list">
       <div v-for="post in posts" :key="post.id" class="post-item">
@@ -39,9 +39,9 @@
 <script setup>
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getApprovalNote, getPostStateBadges } from '@/forum/registry'
+import { getApprovalNote, getEmptyState, getPostStateBadges } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   posts: {
     type: Array,
     default: () => []
@@ -63,6 +63,12 @@ defineProps({
     required: true
   }
 })
+
+const emptyStateText = getEmptyState({
+  posts: props.posts,
+  isOwnProfile: props.isOwnProfile,
+  surface: 'profile-post-empty',
+})?.text || '暂无回复'
 
 function getStateBadges(post) {
   return getPostStateBadges({
