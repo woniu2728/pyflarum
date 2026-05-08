@@ -923,6 +923,56 @@ registerEmptyState({
   }),
 })
 
+registerEmptyState({
+  key: 'discussion-list-following-empty',
+  order: 10,
+  surfaces: ['discussion-list-empty'],
+  isVisible: ({ isFollowingPage }) => Boolean(isFollowingPage),
+  resolve: () => ({
+    text: '你还没有关注任何讨论。',
+  }),
+})
+
+registerEmptyState({
+  key: 'discussion-list-my-empty',
+  order: 20,
+  surfaces: ['discussion-list-empty'],
+  isVisible: ({ listFilter }) => listFilter === 'my',
+  resolve: () => ({
+    text: '你还没有发起任何讨论。',
+  }),
+})
+
+registerEmptyState({
+  key: 'discussion-list-unread-empty',
+  order: 30,
+  surfaces: ['discussion-list-empty'],
+  isVisible: ({ listFilter }) => listFilter === 'unread',
+  resolve: () => ({
+    text: '当前没有未读讨论。',
+  }),
+})
+
+registerEmptyState({
+  key: 'discussion-list-tag-empty',
+  order: 40,
+  surfaces: ['discussion-list-empty'],
+  isVisible: ({ currentTag }) => Boolean(currentTag),
+  resolve: () => ({
+    text: '这个标签下还没有讨论。',
+  }),
+})
+
+registerEmptyState({
+  key: 'discussion-list-default-empty',
+  order: 50,
+  surfaces: ['discussion-list-empty'],
+  isVisible: () => true,
+  resolve: () => ({
+    text: '暂无讨论。',
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,

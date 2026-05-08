@@ -318,3 +318,46 @@ test('empty state prefers matching surface-specific item', () => {
   assert.equal(fallbackResult.key, fallbackKey)
   assert.equal(fallbackResult.text, 'fallback empty')
 })
+
+test('empty state resolves discussion list entries by list context', () => {
+  const followingKey = uniqueKey('discussion-list-following-empty')
+  const defaultKey = uniqueKey('discussion-list-default-empty')
+
+  registerEmptyState({
+    key: followingKey,
+    order: 10,
+    surfaces: ['discussion-list-empty'],
+    isVisible: ({ isFollowingPage }) => Boolean(isFollowingPage),
+    resolve: () => ({
+      text: 'following empty',
+    }),
+  })
+
+  registerEmptyState({
+    key: defaultKey,
+    order: 20,
+    surfaces: ['discussion-list-empty'],
+    isVisible: () => true,
+    resolve: () => ({
+      text: 'discussion default empty',
+    }),
+  })
+
+  const followingResult = getEmptyState({
+    surface: 'discussion-list-empty',
+    isFollowingPage: true,
+    listFilter: 'all',
+    currentTag: null,
+  })
+  const defaultResult = getEmptyState({
+    surface: 'discussion-list-empty',
+    isFollowingPage: false,
+    listFilter: 'all',
+    currentTag: null,
+  })
+
+  assert.equal(followingResult.key, followingKey)
+  assert.equal(followingResult.text, 'following empty')
+  assert.equal(defaultResult.key, defaultKey)
+  assert.equal(defaultResult.text, 'discussion default empty')
+})

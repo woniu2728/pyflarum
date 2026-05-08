@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { getForumNavItems } from '@/forum/registry'
+import { getEmptyState, getForumNavItems } from '@/forum/registry'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 
 const DEFAULT_DISCUSSION_FILTERS = [
@@ -35,19 +35,14 @@ export function useDiscussionListNavigation({
   const showMoreTagsLink = computed(() => sidebarSecondaryTagItems.value.length > 0)
   const startDiscussionButtonStyle = computed(() => getStartDiscussionButtonStyle(currentTag.value))
   const emptyStateText = computed(() => {
-    if (isFollowingPage.value) {
-      return '你还没有关注任何讨论。'
-    }
-    if (listFilter.value === 'my') {
-      return '你还没有发起任何讨论。'
-    }
-    if (listFilter.value === 'unread') {
-      return '当前没有未读讨论。'
-    }
-    if (currentTag.value) {
-      return '这个标签下还没有讨论。'
-    }
-    return '暂无讨论。'
+    const emptyState = getEmptyState({
+      surface: 'discussion-list-empty',
+      isFollowingPage: isFollowingPage.value,
+      listFilter: listFilter.value,
+      currentTag: currentTag.value,
+    })
+
+    return emptyState?.text || '暂无讨论。'
   })
 
   function buildSidebarFilterItems() {
