@@ -6,6 +6,7 @@ import {
   getDiscussionReviewBanner,
   getEmptyState,
   getPageState,
+  getStateBlock,
   getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
@@ -14,6 +15,7 @@ import {
   registerDiscussionReviewBanner,
   registerEmptyState,
   registerPageState,
+  registerStateBlock,
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
@@ -526,4 +528,45 @@ test('page state resolves surface entries by loading and resource presence', () 
   assert.equal(loadingResult.text, 'detail loading')
   assert.equal(missingResult.key, missingKey)
   assert.equal(missingResult.text, 'profile missing')
+})
+
+test('state block resolves surface entries by loading and item state', () => {
+  const loadingKey = uniqueKey('state-loading')
+  const emptyKey = uniqueKey('state-empty')
+
+  registerStateBlock({
+    key: loadingKey,
+    order: 10,
+    surfaces: ['search-page-loading'],
+    isVisible: ({ loading, hasQuery }) => Boolean(loading) && Boolean(hasQuery),
+    resolve: () => ({
+      text: 'search loading',
+    }),
+  })
+
+  registerStateBlock({
+    key: emptyKey,
+    order: 20,
+    surfaces: ['composer-mention-empty'],
+    isVisible: ({ loading, itemCount }) => !loading && Number(itemCount || 0) === 0,
+    resolve: () => ({
+      text: 'mention empty',
+    }),
+  })
+
+  const loadingResult = getStateBlock({
+    surface: 'search-page-loading',
+    loading: true,
+    hasQuery: true,
+  })
+  const emptyResult = getStateBlock({
+    surface: 'composer-mention-empty',
+    loading: false,
+    itemCount: 0,
+  })
+
+  assert.equal(loadingResult.key, loadingKey)
+  assert.equal(loadingResult.text, 'search loading')
+  assert.equal(emptyResult.key, emptyKey)
+  assert.equal(emptyResult.text, 'mention empty')
 })

@@ -60,7 +60,7 @@
       </div>
 
       <div v-if="notificationStore.loading" class="notifications-menu-state">
-        加载中...
+        {{ loadingStateText }}
       </div>
       <div v-else-if="!notificationItems.length" class="notifications-menu-state notifications-menu-state--empty">
         {{ emptyStateText }}
@@ -138,6 +138,10 @@ const props = defineProps({
   emptyStateText: {
     type: String,
     default: '暂无通知'
+  },
+  loadingStateText: {
+    type: String,
+    default: '加载中...'
   },
   hasReadNotifications: {
     type: Boolean,

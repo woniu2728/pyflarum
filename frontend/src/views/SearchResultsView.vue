@@ -49,7 +49,7 @@
           {{ idleStateText }}
         </ForumStateBlock>
         <ForumStateBlock v-else-if="loading">
-          搜索中...
+          {{ loadingStateText }}
         </ForumStateBlock>
         <ForumStateBlock v-else-if="isEmpty">
           {{ emptyStateText }}
@@ -127,6 +127,7 @@ const {
   applySyntax,
   heroText,
   idleStateText,
+  loadingStateText,
   isEmpty,
   loading,
   normalizedQuery,

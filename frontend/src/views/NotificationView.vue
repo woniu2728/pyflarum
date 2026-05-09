@@ -83,9 +83,7 @@
           />
         </section>
 
-        <ForumStateBlock v-if="loading" class="notification-state">
-          正在加载通知...
-        </ForumStateBlock>
+        <ForumStateBlock v-if="loading" class="notification-state">{{ loadingStateText }}</ForumStateBlock>
 
         <ForumStateBlock v-else-if="notifications.length === 0" class="notification-state">
           {{ emptyStateText }}
@@ -219,6 +217,7 @@ const { startDiscussion } = useStartDiscussionAction({
 const {
   notifications,
   emptyStateText,
+  loadingStateText,
   loading,
   loadError,
   marking,

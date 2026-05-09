@@ -22,6 +22,7 @@ const postFlagPanels = []
 const approvalNotes = []
 const emptyStates = []
 const pageStates = []
+const stateBlocks = []
 
 function upsertByKey(target, key, value) {
   const existingIndex = target.findIndex(item => item.key === key)
@@ -467,6 +468,30 @@ export function registerPageState(item) {
 
 export function getPageState(context = {}) {
   const resolvedItems = [...pageStates]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+
+  if (!resolvedItems.length) {
+    return null
+  }
+
+  const currentSurface = String(context.surface || '').trim()
+  if (!currentSurface) {
+    return resolvedItems[0]
+  }
+
+  const surfaceSpecificItem = resolvedItems.find(item => Array.isArray(item.surfaces) && item.surfaces.includes(currentSurface))
+  return surfaceSpecificItem || resolvedItems[0]
+}
+
+export function registerStateBlock(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(stateBlocks, normalizedItem.key, normalizedItem)
+}
+
+export function getStateBlock(context = {}) {
+  const resolvedItems = [...stateBlocks]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

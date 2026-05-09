@@ -18,6 +18,7 @@ import {
   getApprovalNote,
   getEmptyState,
   getPageState,
+  getStateBlock,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
@@ -29,6 +30,7 @@ import {
   registerApprovalNote,
   registerEmptyState,
   registerPageState,
+  registerStateBlock,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -66,6 +68,7 @@ export {
   getApprovalNote,
   getEmptyState,
   getPageState,
+  getStateBlock,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
@@ -76,6 +79,7 @@ export {
   registerApprovalNote,
   registerEmptyState,
   registerPageState,
+  registerStateBlock,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -1114,6 +1118,116 @@ registerPageState({
   isVisible: ({ loading, user }) => !loading && !user,
   resolve: () => ({
     text: '用户不存在',
+  }),
+})
+
+registerStateBlock({
+  key: 'discussion-list-loading',
+  order: 10,
+  surfaces: ['discussion-list-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '正在加载讨论...',
+  }),
+})
+
+registerStateBlock({
+  key: 'notifications-page-loading',
+  order: 20,
+  surfaces: ['notifications-page-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '正在加载通知...',
+  }),
+})
+
+registerStateBlock({
+  key: 'notifications-menu-loading',
+  order: 30,
+  surfaces: ['notifications-menu-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'tags-page-loading',
+  order: 40,
+  surfaces: ['tags-page-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'search-page-loading',
+  order: 50,
+  surfaces: ['search-page-loading'],
+  isVisible: ({ loading, hasQuery }) => Boolean(loading) && Boolean(hasQuery),
+  resolve: () => ({
+    text: '搜索中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'search-modal-loading',
+  order: 60,
+  surfaces: ['search-modal-loading'],
+  isVisible: ({ loading, hasQuery }) => Boolean(loading) && Boolean(hasQuery),
+  resolve: () => ({
+    text: '搜索中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'profile-discussion-loading',
+  order: 70,
+  surfaces: ['profile-discussion-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'profile-post-loading',
+  order: 80,
+  surfaces: ['profile-post-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'profile-preferences-loading',
+  order: 90,
+  surfaces: ['profile-preferences-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载偏好中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'composer-mention-loading',
+  order: 100,
+  surfaces: ['composer-mention-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '搜索中...',
+  }),
+})
+
+registerStateBlock({
+  key: 'composer-mention-empty',
+  order: 110,
+  surfaces: ['composer-mention-empty'],
+  isVisible: ({ loading, itemCount }) => !loading && Number(itemCount || 0) === 0,
+  resolve: () => ({
+    text: '没有匹配的用户',
   }),
 })
 

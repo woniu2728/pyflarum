@@ -67,9 +67,7 @@
             </div>
           </div>
         </div>
-        <div v-else-if="loading" class="SearchModal-state">
-          搜索中...
-        </div>
+        <div v-else-if="loading" class="SearchModal-state">{{ loadingStateText }}</div>
         <div v-else-if="isEmpty" class="SearchModal-state">
           {{ emptyStateText }}
         </div>
@@ -157,7 +155,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
-import { getEmptyState, getSearchSources } from '@/forum/registry'
+import { getEmptyState, getSearchSources, getStateBlock } from '@/forum/registry'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
@@ -297,6 +295,16 @@ const emptyStateText = computed(() => {
   })
 
   return emptyState?.text || '没有找到相关结果，试试更短的关键词或切换分类。'
+})
+const loadingStateText = computed(() => {
+  const stateBlock = getStateBlock({
+    surface: 'search-modal-loading',
+    loading: loading.value,
+    hasQuery: Boolean(normalizedQuery.value),
+    searchType: activeType.value,
+  })
+
+  return stateBlock?.text || '搜索中...'
 })
 const filterSuggestions = computed(() => {
   if (!searchFilterTarget.value || activeType.value === 'all') {

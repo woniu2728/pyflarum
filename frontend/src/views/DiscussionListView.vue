@@ -33,6 +33,7 @@
         :refreshing="refreshing"
         :discussions="discussions"
         :empty-state-text="emptyStateText"
+        :loading-state-text="loadingStateText"
         :has-more="hasMore"
         :loading-more="loadingMore"
         :build-discussion-path="buildDiscussionPath"
@@ -99,6 +100,7 @@ const {
   showMoreTagsLink,
   startDiscussionButtonStyle,
   emptyStateText,
+  loadingStateText,
   refreshDiscussionList,
   changeSortBy,
   changeListFilter,

@@ -54,6 +54,7 @@ export function useDiscussionListPage({
     showMoreTagsLink,
     startDiscussionButtonStyle,
     emptyStateText,
+    loadingStateText,
     getSidebarTagStyle,
     isSidebarTagActive
   } = useDiscussionListNavigation({
@@ -98,6 +99,7 @@ export function useDiscussionListPage({
     showMoreTagsLink,
     startDiscussionButtonStyle,
     emptyStateText,
+    loadingStateText,
     refreshPageData,
     refreshDiscussionList,
     changeSortBy,

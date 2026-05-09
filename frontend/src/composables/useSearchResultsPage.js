@@ -2,7 +2,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import api from '@/api'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
-import { getEmptyState, getSearchSources } from '@/forum/registry'
+import { getEmptyState, getSearchSources, getStateBlock } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
 import { unwrapList } from '@/utils/forum'
 
@@ -51,6 +51,16 @@ export function useSearchResultsPage({ route, router }) {
     })
 
     return emptyState?.text || '请输入关键词后再搜索。'
+  })
+  const loadingStateText = computed(() => {
+    const stateBlock = getStateBlock({
+      surface: 'search-page-loading',
+      loading: loading.value,
+      hasQuery: Boolean(normalizedQuery.value),
+      searchType: searchType.value,
+    })
+
+    return stateBlock?.text || '搜索中...'
   })
   const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
   const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
@@ -241,6 +251,7 @@ export function useSearchResultsPage({ route, router }) {
     applySyntax,
     heroText,
     idleStateText,
+    loadingStateText,
     isEmpty,
     loading,
     normalizedQuery,

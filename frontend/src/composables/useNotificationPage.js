@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import { getEmptyState } from '@/forum/registry'
+import { getEmptyState, getStateBlock } from '@/forum/registry'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
 import { resolveNotificationPath, useNotificationGroups } from '@/composables/useNotificationPresentation'
@@ -34,6 +34,16 @@ export function useNotificationPage({
     })
 
     return emptyState?.text || '暂无通知'
+  })
+  const loadingStateText = computed(() => {
+    const stateBlock = getStateBlock({
+      surface: 'notifications-page-loading',
+      loading: loading.value,
+      activeType: activeType.value,
+      unreadOnly: unreadOnly.value,
+    })
+
+    return stateBlock?.text || '正在加载通知...'
   })
 
   const notificationTypeItems = computed(() => {
@@ -347,6 +357,7 @@ export function useNotificationPage({
   return {
     notifications,
     emptyStateText,
+    loadingStateText,
     loading,
     loadError,
     marking,

@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { getEmptyState, getForumNavItems } from '@/forum/registry'
+import { getEmptyState, getForumNavItems, getStateBlock } from '@/forum/registry'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 
 const DEFAULT_DISCUSSION_FILTERS = [
@@ -43,6 +43,16 @@ export function useDiscussionListNavigation({
     })
 
     return emptyState?.text || '暂无讨论。'
+  })
+  const loadingStateText = computed(() => {
+    const stateBlock = getStateBlock({
+      surface: 'discussion-list-loading',
+      loading: true,
+      listFilter: listFilter.value,
+      currentTag: currentTag.value,
+    })
+
+    return stateBlock?.text || '正在加载讨论...'
   })
 
   function buildSidebarFilterItems() {
@@ -232,6 +242,7 @@ export function useDiscussionListNavigation({
 
   return {
     emptyStateText,
+    loadingStateText,
     getSidebarTagStyle,
     hasSidebarTagNavigation,
     isAllDiscussionsPage,

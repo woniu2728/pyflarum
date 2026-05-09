@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { getEmptyState } from '@/forum/registry'
+import { getEmptyState, getStateBlock } from '@/forum/registry'
 import {
   getNotificationPresentationModel,
   resolveNotificationPath,
@@ -39,6 +39,15 @@ export function useHeaderNotifications({
     })
 
     return emptyState?.text || '暂无通知'
+  })
+  const loadingStateText = computed(() => {
+    const stateBlock = getStateBlock({
+      surface: 'notifications-menu-loading',
+      loading: notificationStore.loading,
+      notifications: notificationItems.value,
+    })
+
+    return stateBlock?.text || '加载中...'
   })
 
   function getNotificationPresentation(notification) {
@@ -160,6 +169,7 @@ export function useHeaderNotifications({
     notificationGroups,
     notificationTypeSummaries,
     emptyStateText,
+    loadingStateText,
     actionMessage,
     actionTone,
     markingAllRead,

@@ -78,7 +78,7 @@
 
       <ForumInlineMessage v-if="preferencesSuccess" tone="success">{{ preferencesSuccess }}</ForumInlineMessage>
       <ForumInlineMessage v-if="preferencesError" tone="danger">{{ preferencesError }}</ForumInlineMessage>
-      <ForumStateBlock v-if="loadingPreferences" class="section-state-block section-state-block--compact">加载偏好中...</ForumStateBlock>
+      <ForumStateBlock v-if="loadingPreferences" class="section-state-block section-state-block--compact">{{ preferencesLoadingStateText }}</ForumStateBlock>
       <div v-else class="preferences-groups">
         <section
           v-for="group in groupedPreferences"
@@ -121,6 +121,7 @@
 import { computed } from 'vue'
 import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
+import { getStateBlock } from '@/forum/registry'
 
 const props = defineProps({
   user: {
@@ -185,6 +186,15 @@ const groupedPreferences = computed(() => {
   })
 
   return Array.from(groups.values())
+})
+const preferencesLoadingStateText = computed(() => {
+  const stateBlock = getStateBlock({
+    surface: 'profile-preferences-loading',
+    loading: props.loadingPreferences,
+    preferences: props.preferences,
+  })
+
+  return stateBlock?.text || '加载偏好中...'
 })
 
 defineEmits(['save-profile', 'save-preferences', 'update-edit-form', 'update-preference'])

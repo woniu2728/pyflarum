@@ -19,7 +19,7 @@
     />
 
     <ForumStateBlock v-if="loading" class="discussion-list-state">
-      正在加载讨论...
+      {{ loadingStateText }}
     </ForumStateBlock>
 
     <template v-else>
@@ -118,6 +118,10 @@ defineProps({
   emptyStateText: {
     type: String,
     default: '暂无讨论'
+  },
+  loadingStateText: {
+    type: String,
+    default: '正在加载讨论...'
   },
   hasMore: {
     type: Boolean,

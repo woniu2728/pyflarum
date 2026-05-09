@@ -1,6 +1,6 @@
 <template>
   <div class="profile-section">
-    <ForumStateBlock v-if="loading" class="section-state-block">加载中...</ForumStateBlock>
+    <ForumStateBlock v-if="loading" class="section-state-block">{{ loadingStateText }}</ForumStateBlock>
     <ForumStateBlock v-else-if="posts.length === 0" class="section-state-block">
       {{ emptyStateText }}
     </ForumStateBlock>
@@ -37,9 +37,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getApprovalNote, getEmptyState, getPostStateBadges } from '@/forum/registry'
+import { getApprovalNote, getEmptyState, getPostStateBadges, getStateBlock } from '@/forum/registry'
 
 const props = defineProps({
   posts: {
@@ -64,11 +65,25 @@ const props = defineProps({
   }
 })
 
-const emptyStateText = getEmptyState({
-  posts: props.posts,
-  isOwnProfile: props.isOwnProfile,
-  surface: 'profile-post-empty',
-})?.text || '暂无回复'
+const loadingStateText = computed(() => {
+  const stateBlock = getStateBlock({
+    surface: 'profile-post-loading',
+    loading: props.loading,
+    posts: props.posts,
+    isOwnProfile: props.isOwnProfile,
+  })
+
+  return stateBlock?.text || '加载中...'
+})
+const emptyStateText = computed(() => {
+  const emptyState = getEmptyState({
+    posts: props.posts,
+    isOwnProfile: props.isOwnProfile,
+    surface: 'profile-post-empty',
+  })
+
+  return emptyState?.text || '暂无回复'
+})
 
 function getStateBadges(post) {
   return getPostStateBadges({

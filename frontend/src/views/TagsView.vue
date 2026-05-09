@@ -15,7 +15,7 @@
       <main class="tags-content">
         <ForumHeroPanel title="全部标签" variant="default" />
 
-        <ForumStateBlock v-if="loading">加载中...</ForumStateBlock>
+        <ForumStateBlock v-if="loading">{{ loadingStateText }}</ForumStateBlock>
         <ForumStateBlock v-else-if="tags.length === 0">{{ emptyStateText }}</ForumStateBlock>
 
         <template v-else>
@@ -47,7 +47,7 @@ import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumTagCloud from '@/components/forum/ForumTagCloud.vue'
 import ForumTagTile from '@/components/forum/ForumTagTile.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
-import { getEmptyState } from '@/forum/registry'
+import { getEmptyState, getStateBlock } from '@/forum/registry'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useTagsPage } from '@/composables/useTagsPage'
 
@@ -69,6 +69,15 @@ const emptyStateText = computed(() => {
   })
 
   return emptyState?.text || '暂无标签'
+})
+const loadingStateText = computed(() => {
+  const stateBlock = getStateBlock({
+    surface: 'tags-page-loading',
+    loading: loading.value,
+    tags: tags.value,
+  })
+
+  return stateBlock?.text || '加载中...'
 })
 
 watch(

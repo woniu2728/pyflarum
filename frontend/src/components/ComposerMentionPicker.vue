@@ -9,8 +9,8 @@
       @mousedown.stop
       @click.stop
     >
-      <div v-if="loading" class="composer-mention-state">搜索中...</div>
-      <div v-else-if="!items.length" class="composer-mention-state">没有匹配的用户</div>
+      <div v-if="loading" class="composer-mention-state">{{ loadingStateText }}</div>
+      <div v-else-if="!items.length" class="composer-mention-state">{{ emptyStateText }}</div>
       <button
         v-for="(item, index) in items"
         v-else
@@ -36,7 +36,8 @@
 </template>
 
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { getStateBlock } from '@/forum/registry'
 
 const props = defineProps({
   items: {
@@ -61,6 +62,24 @@ defineEmits(['select', 'highlight'])
 
 const pickerRef = ref(null)
 const itemRefs = ref([])
+const loadingStateText = computed(() => {
+  const stateBlock = getStateBlock({
+    surface: 'composer-mention-loading',
+    loading: props.loading,
+    itemCount: props.items.length,
+  })
+
+  return stateBlock?.text || '搜索中...'
+})
+const emptyStateText = computed(() => {
+  const stateBlock = getStateBlock({
+    surface: 'composer-mention-empty',
+    loading: props.loading,
+    itemCount: props.items.length,
+  })
+
+  return stateBlock?.text || '没有匹配的用户'
+})
 
 watch(
   () => [props.activeIndex, props.items.length],

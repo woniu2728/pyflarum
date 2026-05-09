@@ -65,6 +65,7 @@
               :notification-groups="notificationGroups"
               :notification-type-summaries="notificationTypeSummaries"
               :empty-state-text="notificationEmptyStateText"
+              :loading-state-text="notificationLoadingStateText"
               :has-read-notifications="hasReadNotifications"
               :action-message="actionMessage"
               :action-tone="actionTone"
@@ -212,6 +213,7 @@ const {
   notificationGroups,
   notificationTypeSummaries,
   emptyStateText: notificationEmptyStateText,
+  loadingStateText: notificationLoadingStateText,
   actionMessage,
   actionTone,
   markingAllRead,
