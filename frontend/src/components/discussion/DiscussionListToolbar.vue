@@ -21,7 +21,7 @@
           type="button"
           class="btn-mark-read"
           :disabled="markingAllRead"
-          title="全部标记为已读"
+          :title="markAllReadTitleText"
           @click="$emit('mark-all-read')"
         >
           <i class="fas fa-check-double"></i>
@@ -31,7 +31,7 @@
         <button
           type="button"
           class="btn-refresh"
-          title="刷新"
+          :title="refreshTitleText"
           :disabled="refreshing"
           @click="$emit('refresh')"
         >
@@ -44,6 +44,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   authStore: {
@@ -81,6 +82,16 @@ const normalizedSortOptions = computed(() => {
     { code: 'top', label: '热门', icon: 'fas fa-fire' },
   ]
 })
+
+const markAllReadTitleText = computed(() => getUiCopy({
+  surface: 'discussion-list-toolbar-mark-read',
+  markingAllRead: props.markingAllRead,
+})?.text || '全部标记为已读')
+
+const refreshTitleText = computed(() => getUiCopy({
+  surface: 'discussion-list-toolbar-refresh',
+  refreshing: props.refreshing,
+})?.text || '刷新')
 </script>
 
 <style scoped>

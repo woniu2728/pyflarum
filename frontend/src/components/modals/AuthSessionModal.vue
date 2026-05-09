@@ -5,7 +5,7 @@
         <button
           type="button"
           class="Button Button--icon Button--link"
-          aria-label="关闭"
+          :aria-label="closeLabelText"
           @click="modalStore.dismiss()"
         >
           <i class="fas fa-times"></i>
@@ -59,10 +59,10 @@
                 type="checkbox"
                 :disabled="loading"
               />
-              <span>记住我</span>
+              <span>{{ rememberMeText }}</span>
             </label>
             <button type="button" class="AuthSessionLink" :disabled="loading" @click="switchToForgotPassword()">
-              忘记密码？
+              {{ forgotPasswordLinkText }}
             </button>
           </div>
 
@@ -83,14 +83,14 @@
           </button>
 
           <p class="AuthSessionFooter">
-            还没有账号？
+            {{ noAccountText }}
             <button
               type="button"
               class="AuthSessionLink"
               :disabled="loading"
               @click="switchToRegister()"
             >
-              立即注册
+              {{ switchToRegisterText }}
             </button>
           </p>
         </form>
@@ -178,14 +178,14 @@
           </button>
 
           <p class="AuthSessionFooter">
-            已有账号？
+            {{ hasAccountText }}
             <button
               type="button"
               class="AuthSessionLink"
               :disabled="loading"
               @click="switchToLogin()"
             >
-              立即登录
+              {{ switchToLoginText }}
             </button>
           </p>
         </form>
@@ -228,7 +228,7 @@
             class="Button Button--primary Button--block"
             @click="switchToLogin({ identification: forgotPasswordEmail })"
           >
-            返回登录
+            {{ backToLoginText }}
           </button>
 
           <p v-if="!forgotPasswordSuccess" class="AuthSessionFooter">
@@ -238,7 +238,7 @@
               :disabled="loading"
               @click="switchToLogin({ identification: forgotPasswordEmail })"
             >
-              返回登录
+              {{ backToLoginText }}
             </button>
           </p>
         </form>
@@ -396,6 +396,30 @@ const forgotSubmitText = computed(() => getUiCopy({
   surface: 'auth-forgot-submit',
   loading: loading.value,
 })?.text || (loading.value ? '发送中...' : '发送重置链接'))
+const closeLabelText = computed(() => getUiCopy({
+  surface: 'auth-session-close',
+})?.text || '关闭')
+const rememberMeText = computed(() => getUiCopy({
+  surface: 'auth-session-remember-me',
+})?.text || '记住我')
+const forgotPasswordLinkText = computed(() => getUiCopy({
+  surface: 'auth-session-forgot-link',
+})?.text || '忘记密码？')
+const noAccountText = computed(() => getUiCopy({
+  surface: 'auth-session-no-account',
+})?.text || '还没有账号？')
+const switchToRegisterText = computed(() => getUiCopy({
+  surface: 'auth-session-switch-register',
+})?.text || '立即注册')
+const hasAccountText = computed(() => getUiCopy({
+  surface: 'auth-session-has-account',
+})?.text || '已有账号？')
+const switchToLoginText = computed(() => getUiCopy({
+  surface: 'auth-session-switch-login',
+})?.text || '立即登录')
+const backToLoginText = computed(() => getUiCopy({
+  surface: 'auth-session-back-login',
+})?.text || '返回登录')
 
 const titleText = computed(() => {
   if (activeMode.value === 'register') return '加入讨论'

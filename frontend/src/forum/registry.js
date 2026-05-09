@@ -1738,6 +1738,65 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-modal-section-link',
+  order: 475,
+  surfaces: ['search-modal-section-link'],
+  resolve: () => ({
+    text: '只看{label}',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-page-hero-pill',
+  order: 478,
+  surfaces: ['search-page-hero-pill'],
+  resolve: () => ({
+    text: '全局搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-page-hero-title',
+  order: 479,
+  surfaces: ['search-page-hero-title'],
+  resolve: ({ query }) => ({
+    text: `“${query || '未输入关键词'}”`,
+  }),
+})
+
+registerUiCopy({
+  key: 'search-page-hero-description',
+  order: 479,
+  surfaces: ['search-page-hero-description'],
+  resolve: ({ hasQuery, searchType, total, discussionTotal, postTotal, userTotal, activeLabel }) => {
+    if (!hasQuery) {
+      return {
+        text: '支持在讨论、帖子和用户之间进行全局搜索。',
+      }
+    }
+
+    if (searchType === 'all') {
+      return {
+        text: `共找到 ${discussionTotal + postTotal + userTotal} 条结果，已按讨论、帖子和用户分组展示。`,
+      }
+    }
+
+    return {
+      text: `当前显示 ${activeLabel || '结果'}结果，共 ${total || 0} 条。`,
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'search-result-section-show-more',
+  order: 479,
+  surfaces: ['search-result-section-show-more'],
+  resolve: () => ({
+    text: '查看全部',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],
@@ -2377,6 +2436,186 @@ registerUiCopy({
   surfaces: ['profile-hero-settings-button'],
   resolve: () => ({
     text: '设置',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-toolbar-mark-read',
+  order: 1190,
+  surfaces: ['discussion-list-toolbar-mark-read'],
+  resolve: ({ markingAllRead }) => ({
+    text: markingAllRead ? '正在标记已读...' : '全部标记为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-toolbar-refresh',
+  order: 1200,
+  surfaces: ['discussion-list-toolbar-refresh'],
+  resolve: ({ refreshing }) => ({
+    text: refreshing ? '正在刷新...' : '刷新',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-title',
+  order: 1210,
+  surfaces: ['notifications-menu-title'],
+  resolve: () => ({
+    text: '通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-mark-all',
+  order: 1220,
+  surfaces: ['notifications-menu-mark-all'],
+  resolve: ({ markingAllRead }) => ({
+    text: markingAllRead ? '正在标记已读...' : '全部标记为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-clear-read',
+  order: 1230,
+  surfaces: ['notifications-menu-clear-read'],
+  resolve: ({ clearingRead }) => ({
+    text: clearingRead ? '正在清除已读...' : '清除已读通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-open-page',
+  order: 1240,
+  surfaces: ['notifications-menu-open-page'],
+  resolve: () => ({
+    text: '查看全部通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-card-mark-read',
+  order: 1250,
+  surfaces: ['notification-card-mark-read'],
+  resolve: () => ({
+    text: '标记为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-card-delete',
+  order: 1260,
+  surfaces: ['notification-card-delete'],
+  resolve: () => ({
+    text: '删除通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-header-save-draft',
+  order: 1270,
+  surfaces: ['composer-header-save-draft'],
+  resolve: ({ submitting }) => ({
+    text: submitting ? '提交中，暂不可保存草稿' : '保存草稿',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-header-toggle-minimized',
+  order: 1280,
+  surfaces: ['composer-header-toggle-minimized'],
+  resolve: ({ minimized }) => ({
+    text: minimized ? '展开' : '最小化',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-header-toggle-expanded',
+  order: 1290,
+  surfaces: ['composer-header-toggle-expanded'],
+  resolve: ({ expanded }) => ({
+    text: expanded ? '退出全屏' : '全屏',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-header-close',
+  order: 1300,
+  surfaces: ['composer-header-close'],
+  resolve: () => ({
+    text: '关闭',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-close',
+  order: 1310,
+  surfaces: ['auth-session-close'],
+  resolve: () => ({
+    text: '关闭',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-remember-me',
+  order: 1320,
+  surfaces: ['auth-session-remember-me'],
+  resolve: () => ({
+    text: '记住我',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-forgot-link',
+  order: 1330,
+  surfaces: ['auth-session-forgot-link'],
+  resolve: () => ({
+    text: '忘记密码？',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-no-account',
+  order: 1340,
+  surfaces: ['auth-session-no-account'],
+  resolve: () => ({
+    text: '还没有账号？',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-switch-register',
+  order: 1350,
+  surfaces: ['auth-session-switch-register'],
+  resolve: () => ({
+    text: '立即注册',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-has-account',
+  order: 1360,
+  surfaces: ['auth-session-has-account'],
+  resolve: () => ({
+    text: '已有账号？',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-switch-login',
+  order: 1370,
+  surfaces: ['auth-session-switch-login'],
+  resolve: () => ({
+    text: '立即登录',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-back-login',
+  order: 1380,
+  surfaces: ['auth-session-back-login'],
+  resolve: () => ({
+    text: '返回登录',
   }),
 })
 

@@ -81,7 +81,7 @@
               <div class="SearchModal-sectionHeader">
                 <h4>{{ section.label }}</h4>
                 <button type="button" class="SearchModal-sectionLink" @click="activeType = section.key">
-                  只看{{ section.label }}
+                  {{ buildSectionLinkText(section.label) }}
                 </button>
               </div>
 
@@ -240,6 +240,9 @@ const fullResultsText = computed(() => getUiCopy({
   surface: 'search-modal-full-results',
   activeTabLabel: activeTabLabel.value,
 })?.text || `查看${activeTabLabel.value}完整结果`)
+const sectionLinkText = computed(() => getUiCopy({
+  surface: 'search-modal-section-link',
+})?.text || '只看{label}')
 const modalSourceSections = computed(() => {
   const sourceItems = {
     discussions: searchResults.value.discussions,
@@ -453,6 +456,10 @@ function clearQuery() {
   nextTick(() => {
     inputRef.value?.focus()
   })
+}
+
+function buildSectionLinkText(label) {
+  return sectionLinkText.value.replace('{label}', label || '')
 }
 
 function applyFilterSyntax(syntax) {

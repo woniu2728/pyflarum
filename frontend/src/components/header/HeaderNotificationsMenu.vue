@@ -15,12 +15,12 @@
 
     <div v-if="showNotifications" class="notifications-menu">
       <div class="notifications-menu-header">
-        <span>通知</span>
+        <span>{{ menuTitleText }}</span>
         <div class="notifications-menu-actions">
           <button
             type="button"
             class="notifications-menu-action"
-            title="全部标记为已读"
+            :title="markAllReadTitleText"
             :disabled="notificationStore.unreadCount === 0 || notificationStore.loading || markingAllRead || clearingRead"
             @click.stop="$emit('mark-all-read')"
           >
@@ -29,7 +29,7 @@
           <button
             type="button"
             class="notifications-menu-action"
-            title="清除已读通知"
+            :title="clearReadTitleText"
             :disabled="!hasReadNotifications || notificationStore.loading || markingAllRead || clearingRead"
             @click.stop="$emit('clear-read')"
           >
@@ -106,7 +106,7 @@
 
       <div v-if="notificationItems.length" class="notifications-menu-footer">
         <button type="button" class="notifications-footer-link" @click="$emit('open-page')">
-          查看全部通知
+          {{ openPageText }}
         </button>
       </div>
     </div>
@@ -114,6 +114,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
 const props = defineProps({
   showNotifications: {
     type: Boolean,
@@ -190,6 +193,24 @@ defineEmits([
   'notification-click',
   'open-page'
 ])
+
+const menuTitleText = computed(() => getUiCopy({
+  surface: 'notifications-menu-title',
+})?.text || '通知')
+
+const markAllReadTitleText = computed(() => getUiCopy({
+  surface: 'notifications-menu-mark-all',
+  markingAllRead: props.markingAllRead,
+})?.text || '全部标记为已读')
+
+const clearReadTitleText = computed(() => getUiCopy({
+  surface: 'notifications-menu-clear-read',
+  clearingRead: props.clearingRead,
+})?.text || '清除已读通知')
+
+const openPageText = computed(() => getUiCopy({
+  surface: 'notifications-menu-open-page',
+})?.text || '查看全部通知')
 
 function resolveNotificationPresentation(notification) {
   if (typeof props.getNotificationPresentation === 'function') {

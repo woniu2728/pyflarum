@@ -2,7 +2,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import api from '@/api'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
-import { getEmptyState, getSearchSources, getStateBlock } from '@/forum/registry'
+import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
 import { unwrapList } from '@/utils/forum'
 
@@ -82,6 +82,20 @@ export function useSearchResultsPage({ route, router }) {
     ]
   })
   const heroText = computed(() => {
+    const uiCopy = getUiCopy({
+      surface: 'search-page-hero-description',
+      hasQuery: Boolean(normalizedQuery.value),
+      searchType: searchType.value,
+      total: total.value,
+      discussionTotal: discussionTotal.value,
+      postTotal: postTotal.value,
+      userTotal: userTotal.value,
+      activeLabel: activeSource.value?.label || '结果',
+    })
+    if (uiCopy?.text) {
+      return uiCopy.text
+    }
+
     if (!normalizedQuery.value) {
       return '支持在讨论、帖子和用户之间进行全局搜索。'
     }

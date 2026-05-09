@@ -11,24 +11,24 @@
       </small>
     </div>
     <div class="composer-controls">
-      <button v-if="showSave" type="button" title="保存草稿" :disabled="submitting" @click="$emit('save')">
+      <button v-if="showSave" type="button" :title="saveDraftTitleText" :disabled="submitting" @click="$emit('save')">
         <i class="far fa-save"></i>
       </button>
       <button
         type="button"
-        :title="minimized ? '展开' : '最小化'"
+        :title="toggleMinimizedTitleText"
         @click="$emit('toggle-minimized')"
       >
         <i :class="minimized ? 'far fa-window-restore' : minimizeIcon"></i>
       </button>
       <button
         type="button"
-        :title="expanded ? '退出全屏' : '全屏'"
+        :title="toggleExpandedTitleText"
         @click="$emit('toggle-expanded')"
       >
         <i :class="expanded ? 'fas fa-compress' : 'fas fa-expand'"></i>
       </button>
-      <button type="button" title="关闭" @click="$emit('close')">
+      <button type="button" :title="closeTitleText" @click="$emit('close')">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -36,7 +36,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   expanded: {
     type: Boolean,
     default: false
@@ -72,6 +75,25 @@ defineProps({
 })
 
 defineEmits(['close', 'save', 'title-click', 'toggle-expanded', 'toggle-minimized'])
+
+const saveDraftTitleText = computed(() => getUiCopy({
+  surface: 'composer-header-save-draft',
+  submitting: props.submitting,
+})?.text || '保存草稿')
+
+const toggleMinimizedTitleText = computed(() => getUiCopy({
+  surface: 'composer-header-toggle-minimized',
+  minimized: props.minimized,
+})?.text || (props.minimized ? '展开' : '最小化'))
+
+const toggleExpandedTitleText = computed(() => getUiCopy({
+  surface: 'composer-header-toggle-expanded',
+  expanded: props.expanded,
+})?.text || (props.expanded ? '退出全屏' : '全屏'))
+
+const closeTitleText = computed(() => getUiCopy({
+  surface: 'composer-header-close',
+})?.text || '关闭')
 </script>
 
 <style scoped>

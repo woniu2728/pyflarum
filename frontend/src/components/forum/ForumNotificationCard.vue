@@ -33,7 +33,7 @@
         v-if="!notification.is_read"
         type="button"
         class="notification-action"
-        title="标记为已读"
+        :title="markReadTitleText"
         @click.stop="$emit('mark-read', notification.id)"
       >
         <i class="fas fa-check"></i>
@@ -41,7 +41,7 @@
       <button
         type="button"
         class="notification-action notification-action--danger"
-        title="删除通知"
+        :title="deleteTitleText"
         @click.stop="$emit('delete', notification.id)"
       >
         <i class="fas fa-xmark"></i>
@@ -51,6 +51,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
 const props = defineProps({
   formatDate: {
     type: Function,
@@ -87,6 +90,14 @@ const props = defineProps({
 })
 
 defineEmits(['click', 'mark-read', 'delete'])
+
+const markReadTitleText = computed(() => getUiCopy({
+  surface: 'notification-card-mark-read',
+})?.text || '标记为已读')
+
+const deleteTitleText = computed(() => getUiCopy({
+  surface: 'notification-card-delete',
+})?.text || '删除通知')
 
 function resolvePresentation(notification) {
   if (typeof props.getPresentation === 'function') {

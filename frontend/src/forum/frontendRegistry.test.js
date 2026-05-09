@@ -771,3 +771,76 @@ test('ui copy resolves modal and notification contextual copy', () => {
   assert.equal(notificationMarkResult.key, notificationMarkKey)
   assert.equal(notificationMarkResult.text, 'mark filtered')
 })
+
+test('ui copy resolves toolbar and composer header contextual copy', () => {
+  const refreshKey = uniqueKey('ui-toolbar-refresh')
+  const minimizeKey = uniqueKey('ui-composer-minimize')
+
+  registerUiCopy({
+    key: refreshKey,
+    order: 10,
+    surfaces: ['discussion-list-toolbar-refresh'],
+    resolve: ({ refreshing }) => ({
+      text: refreshing ? 'refreshing list' : 'refresh list',
+    }),
+  })
+
+  registerUiCopy({
+    key: minimizeKey,
+    order: 20,
+    surfaces: ['composer-header-toggle-minimized'],
+    resolve: ({ minimized }) => ({
+      text: minimized ? 'expand composer' : 'minimize composer',
+    }),
+  })
+
+  const refreshResult = getUiCopy({
+    surface: 'discussion-list-toolbar-refresh',
+    refreshing: true,
+  })
+  const minimizeResult = getUiCopy({
+    surface: 'composer-header-toggle-minimized',
+    minimized: false,
+  })
+
+  assert.equal(refreshResult.key, refreshKey)
+  assert.equal(refreshResult.text, 'refreshing list')
+  assert.equal(minimizeResult.key, minimizeKey)
+  assert.equal(minimizeResult.text, 'minimize composer')
+})
+
+test('ui copy resolves search modal and page contextual copy', () => {
+  const sectionKey = uniqueKey('ui-search-section')
+  const heroKey = uniqueKey('ui-search-hero')
+
+  registerUiCopy({
+    key: sectionKey,
+    order: 10,
+    surfaces: ['search-modal-section-link'],
+    resolve: () => ({
+      text: 'only {label}',
+    }),
+  })
+
+  registerUiCopy({
+    key: heroKey,
+    order: 20,
+    surfaces: ['search-page-hero-title'],
+    resolve: ({ query }) => ({
+      text: query ? `query:${query}` : 'query:none',
+    }),
+  })
+
+  const sectionResult = getUiCopy({
+    surface: 'search-modal-section-link',
+  })
+  const heroResult = getUiCopy({
+    surface: 'search-page-hero-title',
+    query: 'Vue',
+  })
+
+  assert.equal(sectionResult.key, sectionKey)
+  assert.equal(sectionResult.text, 'only {label}')
+  assert.equal(heroResult.key, heroKey)
+  assert.equal(heroResult.text, 'query:Vue')
+})

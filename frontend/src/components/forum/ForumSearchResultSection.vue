@@ -8,7 +8,7 @@
         class="section-link"
         @click="$emit('show-more')"
       >
-        查看全部
+        {{ showMoreText }}
       </button>
     </div>
     <div class="result-list">
@@ -18,7 +18,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   showMore: {
     type: Boolean,
     default: false
@@ -30,6 +33,11 @@ defineProps({
 })
 
 defineEmits(['show-more'])
+
+const showMoreText = computed(() => getUiCopy({
+  surface: 'search-result-section-show-more',
+  title: props.title,
+})?.text || '查看全部')
 </script>
 
 <style scoped>

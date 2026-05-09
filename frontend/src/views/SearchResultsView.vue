@@ -20,8 +20,8 @@
 
       <main class="search-content">
         <ForumHeroPanel
-          pill="全局搜索"
-          :title="`“${normalizedQuery || '未输入关键词'}”`"
+          :pill="heroPillText"
+          :title="heroTitleText"
           :description="heroText"
           variant="primary"
         >
@@ -105,6 +105,7 @@ import ForumSearchResultSection from '@/components/forum/ForumSearchResultSectio
 import ForumSearchStats from '@/components/forum/ForumSearchStats.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
+import { getUiCopy } from '@/forum/registry'
 import { useSearchResultsPage } from '@/composables/useSearchResultsPage'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 
@@ -144,6 +145,13 @@ const {
 })
 
 const visibleSearchSections = computed(() => searchSourceSections.value.filter(section => section.visible && section.resultItems.length))
+const heroPillText = computed(() => getUiCopy({
+  surface: 'search-page-hero-pill',
+})?.text || '全局搜索')
+const heroTitleText = computed(() => getUiCopy({
+  surface: 'search-page-hero-title',
+  query: normalizedQuery.value,
+})?.text || `“${normalizedQuery.value || '未输入关键词'}”`)
 const searchStatsItems = computed(() => [
   { key: 'discussions', label: '讨论', count: discussionTotal.value },
   { key: 'posts', label: '帖子', count: postTotal.value },
