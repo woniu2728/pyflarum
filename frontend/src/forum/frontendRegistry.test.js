@@ -1444,3 +1444,55 @@ test('ui copy resolves post composer and search post copy', () => {
   assert.equal(unknownUserResult.key, unknownUserKey)
   assert.equal(unknownUserResult.text, 'unknown search user')
 })
+
+test('ui copy resolves discussion composer copy', () => {
+  const headingKey = uniqueKey('ui-discussion-composer-heading')
+  const statusKey = uniqueKey('ui-discussion-composer-status')
+  const pendingKey = uniqueKey('ui-discussion-composer-pending')
+
+  registerUiCopy({
+    key: headingKey,
+    order: 10,
+    surfaces: ['discussion-composer-heading'],
+    resolve: ({ isEditingDiscussion }) => ({
+      text: isEditingDiscussion ? 'edit discussion' : 'create discussion',
+    }),
+  })
+
+  registerUiCopy({
+    key: statusKey,
+    order: 20,
+    surfaces: ['discussion-composer-status-text'],
+    resolve: ({ selectedTagName }) => ({
+      text: `status:${selectedTagName}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: pendingKey,
+    order: 30,
+    surfaces: ['discussion-composer-create-pending-title'],
+    resolve: () => ({
+      text: 'discussion pending',
+    }),
+  })
+
+  const headingResult = getUiCopy({
+    surface: 'discussion-composer-heading',
+    isEditingDiscussion: true,
+  })
+  const statusResult = getUiCopy({
+    surface: 'discussion-composer-status-text',
+    selectedTagName: '产品 / 发布',
+  })
+  const pendingResult = getUiCopy({
+    surface: 'discussion-composer-create-pending-title',
+  })
+
+  assert.equal(headingResult.key, headingKey)
+  assert.equal(headingResult.text, 'edit discussion')
+  assert.equal(statusResult.key, statusKey)
+  assert.equal(statusResult.text, 'status:产品 / 发布')
+  assert.equal(pendingResult.key, pendingKey)
+  assert.equal(pendingResult.text, 'discussion pending')
+})

@@ -333,18 +333,35 @@ const selectedTagName = computed(() => {
 const composerStatusText = computed(() => {
   if (composerStore.isMinimized) return minimizedSummary.value
   if (draftMessage.value) return draftMessage.value
-  if (draftSavedAt.value) return `草稿保存于 ${formatDraftTime(draftSavedAt.value)}`
-  if (isEditingDiscussion.value) return '修改后可重新提交审核或直接更新讨论。'
-  if (selectedTagName.value) return `将发布到 ${selectedTagName.value}`
-  return '支持 Markdown，可最小化继续编辑。'
+  return getUiCopy({
+    surface: 'discussion-composer-status-text',
+    hasDraftSavedAt: Boolean(draftSavedAt.value),
+    draftSavedAtText: draftSavedAt.value ? formatDraftTime(draftSavedAt.value) : '',
+    isEditingDiscussion: isEditingDiscussion.value,
+    selectedTagName: selectedTagName.value,
+  })?.text || (draftSavedAt.value
+    ? `草稿保存于 ${formatDraftTime(draftSavedAt.value)}`
+    : (isEditingDiscussion.value
+        ? '修改后可重新提交审核或直接更新讨论。'
+        : (selectedTagName.value
+            ? `将发布到 ${selectedTagName.value}`
+            : '支持 Markdown，可最小化继续编辑。')))
 })
 const minimizedSummary = computed(() => {
-  if (form.value.title.trim()) return form.value.title.trim()
-  if (isEditingDiscussion.value) return '编辑讨论'
-  if (selectedTagName.value) return `新讨论 · ${selectedTagName.value}`
-  return '发起讨论'
+  const title = form.value.title.trim()
+  if (title) return title
+  return getUiCopy({
+    surface: 'discussion-composer-minimized-summary',
+    isEditingDiscussion: isEditingDiscussion.value,
+    selectedTagName: selectedTagName.value,
+  })?.text || (isEditingDiscussion.value
+    ? '编辑讨论'
+    : (selectedTagName.value ? `新讨论 · ${selectedTagName.value}` : '发起讨论'))
 })
-const composerHeading = computed(() => (isEditingDiscussion.value ? '编辑讨论' : '发起讨论'))
+const composerHeading = computed(() => getUiCopy({
+  surface: 'discussion-composer-heading',
+  isEditingDiscussion: isEditingDiscussion.value,
+})?.text || (isEditingDiscussion.value ? '编辑讨论' : '发起讨论'))
 const composerSubmitText = computed(() => (isEditingDiscussion.value ? '保存讨论' : '发布讨论'))
 const composerSubmittingText = computed(() => (isEditingDiscussion.value ? '保存中...' : '发布中...'))
 const titlePlaceholderText = computed(() => getUiCopy({
@@ -744,10 +761,18 @@ function stopResize() {
 async function closeComposer() {
   if (hasDraftContent.value) {
     const confirmed = await modalStore.confirm({
-      title: '关闭发帖编辑器',
-      message: '确定要关闭发帖编辑器吗？当前内容会保留在本地草稿中。',
-      confirmText: '关闭',
-      cancelText: '继续编辑'
+      title: getUiCopy({
+        surface: 'discussion-composer-close-title',
+      })?.text || '关闭发帖编辑器',
+      message: getUiCopy({
+        surface: 'discussion-composer-close-message',
+      })?.text || '确定要关闭发帖编辑器吗？当前内容会保留在本地草稿中。',
+      confirmText: getUiCopy({
+        surface: 'discussion-composer-close-confirm',
+      })?.text || '关闭',
+      cancelText: getUiCopy({
+        surface: 'discussion-composer-close-cancel',
+      })?.text || '继续编辑'
     })
     if (!confirmed) return
   }
@@ -791,14 +816,20 @@ function restoreDraft() {
     }
     draftSavedAt.value = draft.updatedAt || ''
     draftNoticeTone.value = 'success'
-    draftMessage.value = draftSavedAt.value
+    draftMessage.value = getUiCopy({
+      surface: 'discussion-composer-draft-restored',
+      hasDraftSavedAt: Boolean(draftSavedAt.value),
+      draftSavedAtText: draftSavedAt.value ? formatDraftTime(draftSavedAt.value) : '',
+    })?.text || (draftSavedAt.value
       ? `已恢复你在 ${formatDraftTime(draftSavedAt.value)} 保存的讨论草稿。`
-      : '已恢复本地讨论草稿。'
+      : '已恢复本地讨论草稿。')
     return true
   } catch (error) {
     console.error('恢复讨论草稿失败:', error)
     draftNoticeTone.value = 'error'
-    draftMessage.value = '讨论草稿恢复失败，已保留当前编辑内容。'
+    draftMessage.value = getUiCopy({
+      surface: 'discussion-composer-draft-restore-error',
+    })?.text || '讨论草稿恢复失败，已保留当前编辑内容。'
     return false
   }
 }
@@ -817,7 +848,11 @@ function saveDraft(showMessage = true) {
   if (typeof window === 'undefined') return
 
   if (!hasDraftContent.value) {
-    clearDraftStorage(showMessage ? '草稿已清空' : '')
+    clearDraftStorage(showMessage
+      ? (getUiCopy({
+          surface: 'discussion-composer-draft-emptied',
+        })?.text || '草稿已清空')
+      : '')
     return
   }
 
@@ -834,16 +869,28 @@ function saveDraft(showMessage = true) {
   )
   draftSavedAt.value = updatedAt
   draftNoticeTone.value = 'success'
-  draftMessage.value = showMessage ? '讨论草稿已保存。' : ''
+  draftMessage.value = showMessage
+    ? (getUiCopy({
+        surface: 'discussion-composer-draft-saved',
+      })?.text || '讨论草稿已保存。')
+    : ''
 }
 
 async function clearDraft(options = {}) {
   if (hasDraftContent.value && !options.skipConfirm) {
     const confirmed = await modalStore.confirm({
-      title: '清除讨论草稿',
-      message: '确定要清除当前讨论草稿吗？',
-      confirmText: '清除',
-      cancelText: '取消',
+      title: getUiCopy({
+        surface: 'discussion-composer-clear-draft-title',
+      })?.text || '清除讨论草稿',
+      message: getUiCopy({
+        surface: 'discussion-composer-clear-draft-message',
+      })?.text || '确定要清除当前讨论草稿吗？',
+      confirmText: getUiCopy({
+        surface: 'discussion-composer-clear-draft-confirm',
+      })?.text || '清除',
+      cancelText: getUiCopy({
+        surface: 'discussion-composer-clear-draft-cancel',
+      })?.text || '取消',
       tone: 'danger'
     })
     if (!confirmed) return
@@ -855,7 +902,9 @@ async function clearDraft(options = {}) {
     primary_tag_id: '',
     secondary_tag_id: ''
   }
-  clearDraftStorage('已清除本地草稿。')
+  clearDraftStorage(getUiCopy({
+    surface: 'discussion-composer-draft-cleared-local',
+  })?.text || '已清除本地草稿。')
   focusPreferredField()
 }
 
@@ -913,13 +962,21 @@ async function submitDiscussion() {
 
       if (data.approval_status === 'pending') {
         await modalStore.alert({
-          title: '讨论已重新提交审核',
-          message: '请根据审核反馈继续完善内容，管理员通过后会重新公开显示。'
+          title: getUiCopy({
+            surface: 'discussion-composer-edit-pending-title',
+          })?.text || '讨论已重新提交审核',
+          message: getUiCopy({
+            surface: 'discussion-composer-edit-pending-message',
+          })?.text || '请根据审核反馈继续完善内容，管理员通过后会重新公开显示。'
         })
       } else {
         await modalStore.alert({
-          title: '讨论已更新',
-          message: '新的讨论内容已经保存。'
+          title: getUiCopy({
+            surface: 'discussion-composer-updated-title',
+          })?.text || '讨论已更新',
+          message: getUiCopy({
+            surface: 'discussion-composer-updated-message',
+          })?.text || '新的讨论内容已经保存。'
         })
       }
     } else {
@@ -931,8 +988,12 @@ async function submitDiscussion() {
 
       if (data.approval_status === 'pending') {
         await modalStore.alert({
-          title: '讨论已进入审核队列',
-          message: '管理员通过后，这条讨论才会显示在论坛列表中。'
+          title: getUiCopy({
+            surface: 'discussion-composer-create-pending-title',
+          })?.text || '讨论已进入审核队列',
+          message: getUiCopy({
+            surface: 'discussion-composer-create-pending-message',
+          })?.text || '管理员通过后，这条讨论才会显示在论坛列表中。'
         })
       }
     }

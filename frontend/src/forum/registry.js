@@ -3100,6 +3100,226 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-composer-status-text',
+  order: 611,
+  surfaces: ['discussion-composer-status-text'],
+  resolve: ({ hasDraftSavedAt, draftSavedAtText, isEditingDiscussion, selectedTagName }) => {
+    if (hasDraftSavedAt) {
+      return {
+        text: `草稿保存于 ${draftSavedAtText}`,
+      }
+    }
+
+    if (isEditingDiscussion) {
+      return {
+        text: '修改后可重新提交审核或直接更新讨论。',
+      }
+    }
+
+    if (selectedTagName) {
+      return {
+        text: `将发布到 ${selectedTagName}`,
+      }
+    }
+
+    return {
+      text: '支持 Markdown，可最小化继续编辑。',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-composer-minimized-summary',
+  order: 612,
+  surfaces: ['discussion-composer-minimized-summary'],
+  resolve: ({ isEditingDiscussion, selectedTagName }) => ({
+    text: isEditingDiscussion ? '编辑讨论' : (selectedTagName ? `新讨论 · ${selectedTagName}` : '发起讨论'),
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-heading',
+  order: 613,
+  surfaces: ['discussion-composer-heading'],
+  resolve: ({ isEditingDiscussion }) => ({
+    text: isEditingDiscussion ? '编辑讨论' : '发起讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-close-title',
+  order: 614,
+  surfaces: ['discussion-composer-close-title'],
+  resolve: () => ({
+    text: '关闭发帖编辑器',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-close-message',
+  order: 615,
+  surfaces: ['discussion-composer-close-message'],
+  resolve: () => ({
+    text: '确定要关闭发帖编辑器吗？当前内容会保留在本地草稿中。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-close-confirm',
+  order: 616,
+  surfaces: ['discussion-composer-close-confirm'],
+  resolve: () => ({
+    text: '关闭',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-close-cancel',
+  order: 617,
+  surfaces: ['discussion-composer-close-cancel'],
+  resolve: () => ({
+    text: '继续编辑',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-draft-restored',
+  order: 618,
+  surfaces: ['discussion-composer-draft-restored'],
+  resolve: ({ hasDraftSavedAt, draftSavedAtText }) => ({
+    text: hasDraftSavedAt
+      ? `已恢复你在 ${draftSavedAtText} 保存的讨论草稿。`
+      : '已恢复本地讨论草稿。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-draft-restore-error',
+  order: 619,
+  surfaces: ['discussion-composer-draft-restore-error'],
+  resolve: () => ({
+    text: '讨论草稿恢复失败，已保留当前编辑内容。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-draft-emptied',
+  order: 620,
+  surfaces: ['discussion-composer-draft-emptied'],
+  resolve: () => ({
+    text: '草稿已清空',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-draft-saved',
+  order: 621,
+  surfaces: ['discussion-composer-draft-saved'],
+  resolve: () => ({
+    text: '讨论草稿已保存。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-clear-draft-title',
+  order: 622,
+  surfaces: ['discussion-composer-clear-draft-title'],
+  resolve: () => ({
+    text: '清除讨论草稿',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-clear-draft-message',
+  order: 623,
+  surfaces: ['discussion-composer-clear-draft-message'],
+  resolve: () => ({
+    text: '确定要清除当前讨论草稿吗？',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-clear-draft-confirm',
+  order: 624,
+  surfaces: ['discussion-composer-clear-draft-confirm'],
+  resolve: () => ({
+    text: '清除',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-clear-draft-cancel',
+  order: 625,
+  surfaces: ['discussion-composer-clear-draft-cancel'],
+  resolve: () => ({
+    text: '取消',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-draft-cleared-local',
+  order: 626,
+  surfaces: ['discussion-composer-draft-cleared-local'],
+  resolve: () => ({
+    text: '已清除本地草稿。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-edit-pending-title',
+  order: 627,
+  surfaces: ['discussion-composer-edit-pending-title'],
+  resolve: () => ({
+    text: '讨论已重新提交审核',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-edit-pending-message',
+  order: 628,
+  surfaces: ['discussion-composer-edit-pending-message'],
+  resolve: () => ({
+    text: '请根据审核反馈继续完善内容，管理员通过后会重新公开显示。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-updated-title',
+  order: 629,
+  surfaces: ['discussion-composer-updated-title'],
+  resolve: () => ({
+    text: '讨论已更新',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-updated-message',
+  order: 630,
+  surfaces: ['discussion-composer-updated-message'],
+  resolve: () => ({
+    text: '新的讨论内容已经保存。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-create-pending-title',
+  order: 631,
+  surfaces: ['discussion-composer-create-pending-title'],
+  resolve: () => ({
+    text: '讨论已进入审核队列',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-create-pending-message',
+  order: 632,
+  surfaces: ['discussion-composer-create-pending-message'],
+  resolve: () => ({
+    text: '管理员通过后，这条讨论才会显示在论坛列表中。',
+  }),
+})
+
+registerUiCopy({
   key: 'post-composer-content-placeholder',
   order: 620,
   surfaces: ['post-composer-content-placeholder'],
