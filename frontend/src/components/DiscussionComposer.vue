@@ -37,7 +37,7 @@
           type="text"
           class="composer-field composer-title-input"
           maxlength="200"
-          placeholder="讨论标题"
+          :placeholder="titlePlaceholderText"
           :disabled="submitting || isSuspended"
           @keydown.enter.prevent="focusEditor"
           @keydown.esc.prevent="closeComposer"
@@ -75,7 +75,7 @@
           v-model="form.content"
           class="composer-editor"
           rows="8"
-          placeholder="输入讨论内容... 支持 Markdown、@用户名 和代码块"
+          :placeholder="contentPlaceholderText"
           :disabled="submitting || isSuspended || uploading"
           @input="handleEditorInteraction"
           @click="handleEditorInteraction"
@@ -109,14 +109,14 @@
 
         <ComposerActionBar
           :submit-disabled="!canSubmit"
-          :submit-text="submitting ? composerSubmittingText : (uploading ? '上传中...' : composerSubmitText)"
+          :submit-text="submitButtonText"
           :secondary-actions="composerSecondaryActions"
           @submit="submitDiscussion"
         >
           <template #formatting>
             <button
               type="button"
-              title="预览"
+              :title="previewButtonTitleText"
               :disabled="submitting || uploading"
               :class="{ 'is-active': showPreview }"
               @click="togglePreview"
@@ -347,6 +347,21 @@ const minimizedSummary = computed(() => {
 const composerHeading = computed(() => (isEditingDiscussion.value ? '编辑讨论' : '发起讨论'))
 const composerSubmitText = computed(() => (isEditingDiscussion.value ? '保存讨论' : '发布讨论'))
 const composerSubmittingText = computed(() => (isEditingDiscussion.value ? '保存中...' : '发布中...'))
+const titlePlaceholderText = computed(() => getUiCopy({
+  surface: 'discussion-composer-title-placeholder',
+})?.text || '讨论标题')
+const contentPlaceholderText = computed(() => getUiCopy({
+  surface: 'discussion-composer-content-placeholder',
+})?.text || '输入讨论内容... 支持 Markdown、@用户名 和代码块')
+const previewButtonTitleText = computed(() => getUiCopy({
+  surface: 'composer-preview-button-title',
+})?.text || '预览')
+const submitButtonText = computed(() => getUiCopy({
+  surface: 'discussion-composer-submit',
+  submitting: submitting.value,
+  uploading: uploading.value,
+  isEditingDiscussion: isEditingDiscussion.value,
+})?.text || (submitting.value ? composerSubmittingText.value : (uploading.value ? '上传中...' : composerSubmitText.value)))
 const unsavedExitMessage = '你有未发布的讨论内容。确定要离开当前页面吗？'
 const isPhoneViewport = computed(() => viewportWidth.value <= 768)
 const isPhoneOverlay = computed(() => isPhoneViewport.value && showComposer.value && !composerStore.isMinimized)

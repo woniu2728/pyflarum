@@ -40,7 +40,7 @@
           v-show="!showPreview"
           ref="composerTextarea"
           v-model="replyContent"
-          placeholder="输入你的回复... 支持 Markdown、@用户名 和代码块"
+          :placeholder="contentPlaceholderText"
           rows="7"
           :disabled="submitting || uploading || isSuspended"
           @input="handleEditorInteraction"
@@ -75,14 +75,14 @@
 
         <ComposerActionBar
           :submit-disabled="submitting || uploading || !replyContent.trim() || isSuspended"
-          :submit-text="submitting ? '提交中...' : (uploading ? '上传中...' : (isEditing ? '更新回复' : '发布回复'))"
+          :submit-text="submitButtonText"
           :secondary-actions="composerSecondaryActions"
           @submit="submitReply"
         >
           <template #formatting>
             <button
               type="button"
-              title="预览"
+              :title="previewButtonTitleText"
               :disabled="submitting || uploading"
               :class="{ 'is-active': showPreview }"
               @click="togglePreview"
@@ -304,6 +304,18 @@ const previewStatusText = computed(() => {
     hasContent: Boolean(replyContent.value.trim()),
   })?.text || '按论坛最终渲染效果预览'
 })
+const contentPlaceholderText = computed(() => getUiCopy({
+  surface: 'post-composer-content-placeholder',
+})?.text || '输入你的回复... 支持 Markdown、@用户名 和代码块')
+const previewButtonTitleText = computed(() => getUiCopy({
+  surface: 'composer-preview-button-title',
+})?.text || '预览')
+const submitButtonText = computed(() => getUiCopy({
+  surface: 'post-composer-submit',
+  submitting: submitting.value,
+  uploading: uploading.value,
+  isEditing: isEditing.value,
+})?.text || (submitting.value ? '提交中...' : (uploading.value ? '上传中...' : (isEditing.value ? '更新回复' : '发布回复'))))
 const composerTools = computed(() => {
   return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]
     .sort((left, right) => (left.order || 100) - (right.order || 100))

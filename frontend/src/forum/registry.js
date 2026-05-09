@@ -1618,6 +1618,199 @@ registerUiCopy({
   }),
 })
 
+registerUiCopy({
+  key: 'search-modal-close-label',
+  order: 430,
+  surfaces: ['search-modal-close-label'],
+  resolve: () => ({
+    text: '关闭搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-title',
+  order: 440,
+  surfaces: ['search-modal-title'],
+  resolve: () => ({
+    text: '搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-description',
+  order: 450,
+  surfaces: ['search-modal-description'],
+  resolve: () => ({
+    text: '按讨论、帖子、用户快速定位内容，交互参考 Flarum 的全局搜索流程。',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-input-placeholder',
+  order: 460,
+  surfaces: ['search-modal-input-placeholder'],
+  resolve: () => ({
+    text: '输入关键词搜索讨论、帖子和用户',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-full-results',
+  order: 470,
+  surfaces: ['search-modal-full-results'],
+  resolve: ({ activeTabLabel }) => ({
+    text: `查看${activeTabLabel || '全部'}完整结果`,
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-close-label',
+  order: 480,
+  surfaces: ['mobile-drawer-close-label'],
+  resolve: () => ({
+    text: '关闭导航菜单',
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-search-label',
+  order: 490,
+  surfaces: ['mobile-drawer-search-label'],
+  resolve: ({ currentSearchQuery }) => ({
+    text: currentSearchQuery ? `搜索：${currentSearchQuery}` : '搜索论坛',
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-start-discussion',
+  order: 500,
+  surfaces: ['mobile-drawer-start-discussion'],
+  resolve: () => ({
+    text: '发起讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-all-discussions',
+  order: 510,
+  surfaces: ['mobile-drawer-all-discussions'],
+  resolve: () => ({
+    text: '全部讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-following',
+  order: 520,
+  surfaces: ['mobile-drawer-following'],
+  resolve: () => ({
+    text: '关注中',
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-all-tags',
+  order: 530,
+  surfaces: ['mobile-drawer-all-tags'],
+  resolve: () => ({
+    text: '全部标签',
+  }),
+})
+
+registerUiCopy({
+  key: 'mobile-drawer-profile-section-title',
+  order: 540,
+  surfaces: ['mobile-drawer-profile-section-title'],
+  resolve: () => ({
+    text: '个人',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-emoji-picker-dialog-label',
+  order: 550,
+  surfaces: ['composer-emoji-picker-dialog-label'],
+  resolve: () => ({
+    text: '选择表情',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-emoji-picker-search-placeholder',
+  order: 560,
+  surfaces: ['composer-emoji-picker-search-placeholder'],
+  resolve: () => ({
+    text: '搜索表情，例如：开心 / heart / fire',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-emoji-picker-summary',
+  order: 570,
+  surfaces: ['composer-emoji-picker-summary'],
+  resolve: ({ query, itemCount, activeGroupLabel }) => ({
+    text: query
+      ? `搜索结果 ${Number(itemCount || 0)} 项`
+      : `${activeGroupLabel || '表情'} ${Number(itemCount || 0)} 项`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-title-placeholder',
+  order: 580,
+  surfaces: ['discussion-composer-title-placeholder'],
+  resolve: () => ({
+    text: '讨论标题',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-content-placeholder',
+  order: 590,
+  surfaces: ['discussion-composer-content-placeholder'],
+  resolve: () => ({
+    text: '输入讨论内容... 支持 Markdown、@用户名 和代码块',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-button-title',
+  order: 600,
+  surfaces: ['composer-preview-button-title'],
+  resolve: () => ({
+    text: '预览',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-submit',
+  order: 610,
+  surfaces: ['discussion-composer-submit'],
+  resolve: ({ submitting, uploading, isEditingDiscussion }) => ({
+    text: submitting
+      ? (isEditingDiscussion ? '保存中...' : '发布中...')
+      : (uploading ? '上传中...' : (isEditingDiscussion ? '保存讨论' : '发布讨论')),
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-content-placeholder',
+  order: 620,
+  surfaces: ['post-composer-content-placeholder'],
+  resolve: () => ({
+    text: '输入你的回复... 支持 Markdown、@用户名 和代码块',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-submit',
+  order: 630,
+  surfaces: ['post-composer-submit'],
+  resolve: ({ submitting, uploading, isEditing }) => ({
+    text: submitting ? '提交中...' : (uploading ? '上传中...' : (isEditing ? '更新回复' : '发布回复')),
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,

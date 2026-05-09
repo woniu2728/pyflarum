@@ -4,7 +4,7 @@
       class="composer-emoji-picker"
       :style="styleObject"
       role="dialog"
-      aria-label="选择表情"
+      :aria-label="dialogLabelText"
       @mousedown.stop
       @click.stop
     >
@@ -13,7 +13,7 @@
           v-model.trim="query"
           type="text"
           class="composer-emoji-search-input"
-          placeholder="搜索表情，例如：开心 / heart / fire"
+          :placeholder="searchPlaceholderText"
         />
       </div>
 
@@ -30,7 +30,7 @@
       </div>
 
       <div class="composer-emoji-summary">
-        {{ query ? `搜索结果 ${visibleItems.length} 项` : `${activeGroup.label || '表情'} ${visibleItems.length} 项` }}
+        {{ summaryText }}
       </div>
 
       <div v-if="visibleItems.length" class="composer-emoji-grid">
@@ -115,6 +115,12 @@ const visibleItems = computed(() => {
     .filter(item => item.score > 0)
     .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name, 'zh-CN'))
 })
+const dialogLabelText = computed(() => getUiCopy({
+  surface: 'composer-emoji-picker-dialog-label',
+})?.text || '选择表情')
+const searchPlaceholderText = computed(() => getUiCopy({
+  surface: 'composer-emoji-picker-search-placeholder',
+})?.text || '搜索表情，例如：开心 / heart / fire')
 const emptyStateText = computed(() => {
   return getUiCopy({
     surface: 'composer-emoji-picker-empty',
@@ -122,6 +128,12 @@ const emptyStateText = computed(() => {
     itemCount: visibleItems.value.length,
   })?.text || '没有匹配的表情'
 })
+const summaryText = computed(() => getUiCopy({
+  surface: 'composer-emoji-picker-summary',
+  query: query.value,
+  itemCount: visibleItems.value.length,
+  activeGroupLabel: activeGroup.value.label || '表情',
+})?.text || (query.value ? `搜索结果 ${visibleItems.value.length} 项` : `${activeGroup.value.label || '表情'} ${visibleItems.value.length} 项`))
 
 function buildEmojiTitle(item) {
   const suffix = (item.keywords || []).slice(0, 4).join(' / ')

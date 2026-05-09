@@ -25,7 +25,7 @@
       <button
         type="button"
         class="mobile-drawer-close"
-        aria-label="关闭导航菜单"
+        :aria-label="closeLabelText"
         @click="$emit('close')"
       >
         <i class="fas fa-times"></i>
@@ -35,7 +35,7 @@
     <div class="mobile-drawer-section">
       <button type="button" class="mobile-drawer-search" @click="$emit('open-search')">
         <i class="fas fa-search"></i>
-        <span>{{ currentSearchQuery ? `搜索：${currentSearchQuery}` : '搜索论坛' }}</span>
+        <span>{{ searchLabelText }}</span>
       </button>
 
       <button
@@ -45,7 +45,7 @@
         @click="$emit('start-discussion')"
       >
         <i class="fas fa-pen-to-square"></i>
-        <span>发起讨论</span>
+        <span>{{ startDiscussionText }}</span>
       </button>
     </div>
 
@@ -58,7 +58,7 @@
           @click="$emit('close')"
         >
           <i class="far fa-comments"></i>
-          <span>全部讨论</span>
+          <span>{{ allDiscussionsText }}</span>
         </router-link>
         <router-link
           v-if="authStore.isAuthenticated && authStore.user"
@@ -68,7 +68,7 @@
           @click="$emit('close')"
         >
           <i class="fas fa-bell"></i>
-          <span>关注中</span>
+          <span>{{ followingText }}</span>
         </router-link>
         <router-link
           to="/tags"
@@ -77,12 +77,12 @@
           @click="$emit('close')"
         >
           <i class="fas fa-tags"></i>
-          <span>全部标签</span>
+          <span>{{ allTagsText }}</span>
         </router-link>
       </div>
 
       <div v-if="authStore.isAuthenticated && authStore.user" class="mobile-drawer-nav-section">
-        <h4 class="mobile-drawer-title">个人</h4>
+        <h4 class="mobile-drawer-title">{{ profileSectionTitleText }}</h4>
         <component
           :is="item.to ? 'router-link' : item.href ? 'a' : 'button'"
           v-for="item in personalItems"
@@ -146,7 +146,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   showMobileDrawer: {
     type: Boolean,
     default: false
@@ -196,6 +199,29 @@ defineProps({
     required: true
   }
 })
+
+const closeLabelText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-close-label',
+})?.text || '关闭导航菜单')
+const searchLabelText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-search-label',
+  currentSearchQuery: props.currentSearchQuery,
+})?.text || (props.currentSearchQuery ? `搜索：${props.currentSearchQuery}` : '搜索论坛'))
+const startDiscussionText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-start-discussion',
+})?.text || '发起讨论')
+const allDiscussionsText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-all-discussions',
+})?.text || '全部讨论')
+const followingText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-following',
+})?.text || '关注中')
+const allTagsText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-all-tags',
+})?.text || '全部标签')
+const profileSectionTitleText = computed(() => getUiCopy({
+  surface: 'mobile-drawer-profile-section-title',
+})?.text || '个人')
 
 defineEmits([
   'close',

@@ -649,3 +649,44 @@ test('ui copy resolves button and placeholder variants by loading state', () => 
   assert.equal(placeholderResult.key, placeholderKey)
   assert.equal(placeholderResult.text, 'search site')
 })
+
+test('ui copy resolves contextual search and submit copy', () => {
+  const searchLabelKey = uniqueKey('ui-mobile-search')
+  const submitKey = uniqueKey('ui-composer-submit')
+
+  registerUiCopy({
+    key: searchLabelKey,
+    order: 10,
+    surfaces: ['mobile-drawer-search-label'],
+    resolve: ({ currentSearchQuery }) => ({
+      text: currentSearchQuery ? `lookup: ${currentSearchQuery}` : 'lookup forum',
+    }),
+  })
+
+  registerUiCopy({
+    key: submitKey,
+    order: 20,
+    surfaces: ['discussion-composer-submit'],
+    resolve: ({ submitting, uploading, isEditingDiscussion }) => ({
+      text: submitting
+        ? 'saving'
+        : (uploading ? 'uploading attachment' : (isEditingDiscussion ? 'update discussion' : 'publish discussion')),
+    }),
+  })
+
+  const searchLabelResult = getUiCopy({
+    surface: 'mobile-drawer-search-label',
+    currentSearchQuery: 'Vue',
+  })
+  const submitResult = getUiCopy({
+    surface: 'discussion-composer-submit',
+    submitting: false,
+    uploading: true,
+    isEditingDiscussion: true,
+  })
+
+  assert.equal(searchLabelResult.key, searchLabelKey)
+  assert.equal(searchLabelResult.text, 'lookup: Vue')
+  assert.equal(submitResult.key, submitKey)
+  assert.equal(submitResult.text, 'uploading attachment')
+})

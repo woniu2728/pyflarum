@@ -5,7 +5,7 @@
         <button
           type="button"
           class="Button Button--icon Button--link"
-          aria-label="关闭搜索"
+          :aria-label="closeLabelText"
           @click="modalStore.dismiss()"
         >
           <i class="fas fa-times"></i>
@@ -13,8 +13,8 @@
       </div>
 
       <div class="Modal-header SearchModal-header">
-        <h3>搜索</h3>
-        <p>按讨论、帖子、用户快速定位内容，交互参考 Flarum 的全局搜索流程。</p>
+        <h3>{{ titleText }}</h3>
+        <p>{{ descriptionText }}</p>
       </div>
 
       <div class="Modal-body SearchModal-body">
@@ -25,7 +25,7 @@
             v-model="query"
             type="search"
             class="SearchModal-input"
-            placeholder="输入关键词搜索讨论、帖子和用户"
+            :placeholder="inputPlaceholderText"
             @keydown.down.prevent="moveSelection(1)"
             @keydown.up.prevent="moveSelection(-1)"
             @keydown.enter.prevent="submitSelection"
@@ -142,7 +142,7 @@
               @mouseenter="activeResultIndex = fullPageActionIndex"
               @mousedown.prevent="openFullResults"
             >
-              查看{{ activeTabLabel }}完整结果
+              {{ fullResultsText }}
             </button>
           </div>
         </div>
@@ -155,7 +155,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
-import { getEmptyState, getSearchSources, getStateBlock } from '@/forum/registry'
+import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
@@ -224,6 +224,22 @@ const tabs = computed(() => [
   })),
 ])
 const activeTabLabel = computed(() => tabs.value.find(tab => tab.value === activeType.value)?.label || '全部')
+const closeLabelText = computed(() => getUiCopy({
+  surface: 'search-modal-close-label',
+})?.text || '关闭搜索')
+const titleText = computed(() => getUiCopy({
+  surface: 'search-modal-title',
+})?.text || '搜索')
+const descriptionText = computed(() => getUiCopy({
+  surface: 'search-modal-description',
+})?.text || '按讨论、帖子、用户快速定位内容，交互参考 Flarum 的全局搜索流程。')
+const inputPlaceholderText = computed(() => getUiCopy({
+  surface: 'search-modal-input-placeholder',
+})?.text || '输入关键词搜索讨论、帖子和用户')
+const fullResultsText = computed(() => getUiCopy({
+  surface: 'search-modal-full-results',
+  activeTabLabel: activeTabLabel.value,
+})?.text || `查看${activeTabLabel.value}完整结果`)
 const modalSourceSections = computed(() => {
   const sourceItems = {
     discussions: searchResults.value.discussions,
