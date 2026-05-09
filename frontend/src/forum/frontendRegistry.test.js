@@ -1167,3 +1167,71 @@ test('ui copy resolves discussion event post copy', () => {
   assert.equal(fallbackResult.key, fallbackKey)
   assert.equal(fallbackResult.text, 'generic event')
 })
+
+test('ui copy resolves discussion post item and list meta copy', () => {
+  const postTitleKey = uniqueKey('ui-post-title')
+  const replyKey = uniqueKey('ui-post-reply')
+  const createdKey = uniqueKey('ui-list-created')
+  const lastPostedKey = uniqueKey('ui-list-last-posted')
+
+  registerUiCopy({
+    key: postTitleKey,
+    order: 10,
+    surfaces: ['discussion-post-number-title'],
+    resolve: ({ postNumber }) => ({
+      text: `post:${postNumber}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: replyKey,
+    order: 20,
+    surfaces: ['discussion-post-reply-action'],
+    resolve: () => ({
+      text: 'reply action',
+    }),
+  })
+
+  registerUiCopy({
+    key: createdKey,
+    order: 30,
+    surfaces: ['discussion-list-item-created-at'],
+    resolve: ({ relativeTime }) => ({
+      text: `created:${relativeTime}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: lastPostedKey,
+    order: 40,
+    surfaces: ['discussion-list-item-last-posted-at'],
+    resolve: ({ relativeTime }) => ({
+      text: `last:${relativeTime}`,
+    }),
+  })
+
+  const postTitleResult = getUiCopy({
+    surface: 'discussion-post-number-title',
+    postNumber: 12,
+  })
+  const replyResult = getUiCopy({
+    surface: 'discussion-post-reply-action',
+  })
+  const createdResult = getUiCopy({
+    surface: 'discussion-list-item-created-at',
+    relativeTime: '1 小时前',
+  })
+  const lastPostedResult = getUiCopy({
+    surface: 'discussion-list-item-last-posted-at',
+    relativeTime: '2 分钟前',
+  })
+
+  assert.equal(postTitleResult.key, postTitleKey)
+  assert.equal(postTitleResult.text, 'post:12')
+  assert.equal(replyResult.key, replyKey)
+  assert.equal(replyResult.text, 'reply action')
+  assert.equal(createdResult.key, createdKey)
+  assert.equal(createdResult.text, 'created:1 小时前')
+  assert.equal(lastPostedResult.key, lastPostedKey)
+  assert.equal(lastPostedResult.text, 'last:2 分钟前')
+})

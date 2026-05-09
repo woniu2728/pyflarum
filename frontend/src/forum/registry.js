@@ -2817,6 +2817,60 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-post-number-title',
+  order: 479,
+  surfaces: ['discussion-post-number-title'],
+  resolve: ({ postNumber }) => ({
+    text: `跳转到第 ${postNumber} 楼`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-post-edited-label',
+  order: 479,
+  surfaces: ['discussion-post-edited-label'],
+  resolve: () => ({
+    text: '已编辑',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-post-like-action',
+  order: 479,
+  surfaces: ['discussion-post-like-action'],
+  resolve: () => ({
+    text: '赞',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-post-reply-action',
+  order: 479,
+  surfaces: ['discussion-post-reply-action'],
+  resolve: () => ({
+    text: '回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-item-created-at',
+  order: 479,
+  surfaces: ['discussion-list-item-created-at'],
+  resolve: ({ relativeTime }) => ({
+    text: `发起于 ${relativeTime}`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-item-last-posted-at',
+  order: 479,
+  surfaces: ['discussion-list-item-last-posted-at'],
+  resolve: ({ relativeTime }) => ({
+    text: `最后回复 ${relativeTime}`,
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],

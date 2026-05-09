@@ -42,7 +42,7 @@
             <button
               type="button"
               class="post-meta-link post-number"
-              :title="`跳转到第 ${post.number} 楼`"
+              :title="postNumberTitleText"
               @click="$emit('jump-to-post', post.number)"
             >
               #{{ post.number }}
@@ -50,7 +50,7 @@
             <time class="post-time" :datetime="post.created_at" :title="formatAbsoluteDate(post.created_at)">
               {{ formatDate(post.created_at) }}
             </time>
-            <span v-if="post.edited_at" class="post-edited" :title="formatAbsoluteDate(post.edited_at)">已编辑</span>
+            <span v-if="post.edited_at" class="post-edited" :title="formatAbsoluteDate(post.edited_at)">{{ postEditedLabelText }}</span>
             <ForumStateBadge
               v-for="badge in postStateBadges"
               :key="badge.key"
@@ -74,7 +74,7 @@
             @click="$emit('toggle-like', post)"
           >
             <i class="fas fa-thumbs-up"></i>
-            <span>赞</span>
+            <span>{{ postLikeActionText }}</span>
           </button>
           <button
             v-if="authStore.isAuthenticated && !discussion.is_locked && !isSuspended"
@@ -83,7 +83,7 @@
             @click="$emit('reply-to-post', post)"
           >
             <i class="fas fa-reply"></i>
-            <span>回复</span>
+            <span>{{ postReplyActionText }}</span>
           </button>
           <div v-if="hasPostControls(post)" class="post-controls" :class="{ 'is-open': isPostMenuOpen }">
             <button
@@ -182,7 +182,7 @@
 import { computed } from 'vue'
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getPostFlagPanel, getPostReviewBanner, getPostStateBadges } from '@/forum/registry'
+import { getPostFlagPanel, getPostReviewBanner, getPostStateBadges, getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -229,6 +229,23 @@ const postFlagPanel = computed(() => getPostFlagPanel({
   flagPending: props.flagPending,
   surface: 'discussion-post',
 }))
+
+const postNumberTitleText = computed(() => getUiCopy({
+  surface: 'discussion-post-number-title',
+  postNumber: props.post.number,
+})?.text || `跳转到第 ${props.post.number} 楼`)
+
+const postEditedLabelText = computed(() => getUiCopy({
+  surface: 'discussion-post-edited-label',
+})?.text || '已编辑')
+
+const postLikeActionText = computed(() => getUiCopy({
+  surface: 'discussion-post-like-action',
+})?.text || '赞')
+
+const postReplyActionText = computed(() => getUiCopy({
+  surface: 'discussion-post-reply-action',
+})?.text || '回复')
 
 const emit = defineEmits([
   'jump-to-post',

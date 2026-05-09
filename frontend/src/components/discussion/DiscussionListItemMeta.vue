@@ -38,11 +38,11 @@
         <router-link :to="buildUserPath(discussion.user)" class="username">
           {{ discussion.user?.display_name || discussion.user?.username }}
         </router-link>
-        发起于 {{ formatRelativeTime(discussion.created_at) }}
+        {{ createdAtText }}
       </li>
       <li v-if="discussion.last_posted_at" class="item-last-post">
         <i class="fas fa-reply"></i>
-        最后回复 {{ formatRelativeTime(discussion.last_posted_at) }}
+        {{ lastPostedAtText }}
       </li>
     </ul>
   </div>
@@ -52,7 +52,7 @@
 import { computed } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getApprovalNote, getDiscussionStateBadges } from '@/forum/registry'
+import { getApprovalNote, getDiscussionStateBadges, getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   discussion: {
@@ -90,6 +90,18 @@ const approvalNote = computed(() => getApprovalNote({
   discussion: props.discussion,
   surface: 'discussion-list-item',
 }))
+
+const createdAtText = computed(() => getUiCopy({
+  surface: 'discussion-list-item-created-at',
+  createdAt: props.discussion.created_at,
+  relativeTime: props.formatRelativeTime(props.discussion.created_at),
+})?.text || `发起于 ${props.formatRelativeTime(props.discussion.created_at)}`)
+
+const lastPostedAtText = computed(() => getUiCopy({
+  surface: 'discussion-list-item-last-posted-at',
+  lastPostedAt: props.discussion.last_posted_at,
+  relativeTime: props.formatRelativeTime(props.discussion.last_posted_at),
+})?.text || `最后回复 ${props.formatRelativeTime(props.discussion.last_posted_at)}`)
 </script>
 
 <style scoped>
