@@ -251,6 +251,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
+import { getUiCopy } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
@@ -347,8 +348,13 @@ const activeHumanVerificationRequired = computed(() => {
 })
 const turnstileStatusMessage = computed(() => {
   if (turnstileError.value) return turnstileError.value
-  if (turnstileLoading.value) return '真人验证加载中...'
-  if (activeHumanVerificationRequired.value && !turnstileToken.value) return '请完成真人验证后再继续。'
+  const uiCopy = getUiCopy({
+    surface: 'auth-turnstile-status',
+    turnstileLoading: turnstileLoading.value,
+    humanVerificationRequired: activeHumanVerificationRequired.value,
+    hasToken: Boolean(turnstileToken.value),
+  })
+  if (uiCopy?.text) return uiCopy.text
   return ''
 })
 

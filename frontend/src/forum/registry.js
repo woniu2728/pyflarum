@@ -19,6 +19,7 @@ import {
   getEmptyState,
   getPageState,
   getStateBlock,
+  getUiCopy,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
@@ -31,6 +32,7 @@ import {
   registerEmptyState,
   registerPageState,
   registerStateBlock,
+  registerUiCopy,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -69,6 +71,7 @@ export {
   getEmptyState,
   getPageState,
   getStateBlock,
+  getUiCopy,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
@@ -80,6 +83,7 @@ export {
   registerEmptyState,
   registerPageState,
   registerStateBlock,
+  registerUiCopy,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -1228,6 +1232,101 @@ registerStateBlock({
   isVisible: ({ loading, itemCount }) => !loading && Number(itemCount || 0) === 0,
   resolve: () => ({
     text: '没有匹配的用户',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-create-title',
+  order: 10,
+  surfaces: ['discussion-create-title'],
+  resolve: () => ({
+    text: '正在打开讨论编辑器...',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-create-description',
+  order: 20,
+  surfaces: ['discussion-create-description'],
+  resolve: () => ({
+    text: '系统会自动切换到浮层编辑器。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-primary-tag-placeholder',
+  order: 30,
+  surfaces: ['discussion-composer-primary-tag-placeholder'],
+  resolve: ({ loadingTags, hasStartableTags }) => ({
+    text: loadingTags ? '加载标签中...' : (hasStartableTags ? '选择主标签' : '暂无可发帖标签'),
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-composer-secondary-tag-placeholder',
+  order: 40,
+  surfaces: ['discussion-composer-secondary-tag-placeholder'],
+  resolve: ({ hasSecondaryOptions }) => ({
+    text: hasSecondaryOptions ? '选择次标签（可选）' : '无可用次标签',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-loading',
+  order: 50,
+  surfaces: ['discussion-composer-preview-status', 'post-composer-preview-status'],
+  isVisible: ({ previewLoading }) => Boolean(previewLoading),
+  resolve: () => ({
+    text: '同步中',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-empty',
+  order: 60,
+  surfaces: ['discussion-composer-preview-status', 'post-composer-preview-status'],
+  isVisible: ({ hasContent }) => !hasContent,
+  resolve: () => ({
+    text: '暂无内容',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-ready',
+  order: 70,
+  surfaces: ['discussion-composer-preview-status', 'post-composer-preview-status'],
+  isVisible: ({ previewLoading, hasContent }) => !previewLoading && Boolean(hasContent),
+  resolve: () => ({
+    text: '按论坛最终渲染效果预览',
+  }),
+})
+
+registerUiCopy({
+  key: 'emoji-picker-empty',
+  order: 80,
+  surfaces: ['composer-emoji-picker-empty'],
+  resolve: () => ({
+    text: '没有匹配的表情',
+  }),
+})
+
+registerUiCopy({
+  key: 'turnstile-loading',
+  order: 90,
+  surfaces: ['auth-turnstile-status'],
+  isVisible: ({ turnstileLoading }) => Boolean(turnstileLoading),
+  resolve: () => ({
+    text: '真人验证加载中...',
+  }),
+})
+
+registerUiCopy({
+  key: 'turnstile-required',
+  order: 100,
+  surfaces: ['auth-turnstile-status'],
+  isVisible: ({ humanVerificationRequired, hasToken }) => Boolean(humanVerificationRequired) && !hasToken,
+  resolve: () => ({
+    text: '请完成真人验证后再继续。',
   }),
 })
 

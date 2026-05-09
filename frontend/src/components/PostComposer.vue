@@ -167,7 +167,7 @@ import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue
 import ComposerStatusBar from '@/components/composer/ComposerStatusBar.vue'
 import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
 import { runComposerSecondaryAction } from '@/forum/composerRuntime'
-import { getComposerNotices, getComposerSecondaryActions, getComposerStatusItems, getComposerTools, runComposerSubmitGuards } from '@/forum/registry'
+import { getComposerNotices, getComposerSecondaryActions, getComposerStatusItems, getComposerTools, getUiCopy, runComposerSubmitGuards } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
@@ -298,9 +298,11 @@ const composerInlineStyle = computed(() => {
   return { height: `${composerHeight.value}px` }
 })
 const previewStatusText = computed(() => {
-  if (previewLoading.value) return '同步中'
-  if (!replyContent.value.trim()) return '暂无内容'
-  return '按论坛最终渲染效果预览'
+  return getUiCopy({
+    surface: 'post-composer-preview-status',
+    previewLoading: previewLoading.value,
+    hasContent: Boolean(replyContent.value.trim()),
+  })?.text || '按论坛最终渲染效果预览'
 })
 const composerTools = computed(() => {
   return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]

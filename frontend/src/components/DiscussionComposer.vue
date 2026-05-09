@@ -51,7 +51,7 @@
             @change="handlePrimaryTagChange"
             @keydown.esc.prevent="closeComposer"
           >
-            <option value="">{{ loadingTags ? '加载标签中...' : (hasStartableTags ? '选择主标签' : '暂无可发帖标签') }}</option>
+            <option value="">{{ primaryTagPlaceholderText }}</option>
             <option v-for="tag in primaryTags" :key="tag.id" :value="String(tag.id)">
               {{ tag.name }}
             </option>
@@ -62,7 +62,7 @@
             :disabled="submitting || loadingTags || isSuspended || !secondaryTagOptions.length"
             @keydown.esc.prevent="closeComposer"
           >
-            <option value="">{{ secondaryTagOptions.length ? '选择次标签（可选）' : '无可用次标签' }}</option>
+            <option value="">{{ secondaryTagPlaceholderText }}</option>
             <option v-for="tag in secondaryTagOptions" :key="tag.id" :value="String(tag.id)">
               {{ tag.name }}
             </option>
@@ -201,7 +201,7 @@ import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue
 import ComposerStatusBar from '@/components/composer/ComposerStatusBar.vue'
 import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
 import { runComposerSecondaryAction } from '@/forum/composerRuntime'
-import { getComposerNotices, getComposerSecondaryActions, getComposerStatusItems, getComposerTools, runComposerSubmitGuards } from '@/forum/registry'
+import { getComposerNotices, getComposerSecondaryActions, getComposerStatusItems, getComposerTools, getUiCopy, runComposerSubmitGuards } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
@@ -361,10 +361,25 @@ const composerInlineStyle = computed(() => {
   if (composerStore.isMinimized || composerStore.isExpanded || isPhoneOverlay.value) return {}
   return { height: `${composerHeight.value}px` }
 })
+const primaryTagPlaceholderText = computed(() => {
+  return getUiCopy({
+    surface: 'discussion-composer-primary-tag-placeholder',
+    loadingTags: loadingTags.value,
+    hasStartableTags: hasStartableTags.value,
+  })?.text || (loadingTags.value ? '加载标签中...' : (hasStartableTags.value ? '选择主标签' : '暂无可发帖标签'))
+})
+const secondaryTagPlaceholderText = computed(() => {
+  return getUiCopy({
+    surface: 'discussion-composer-secondary-tag-placeholder',
+    hasSecondaryOptions: secondaryTagOptions.value.length > 0,
+  })?.text || (secondaryTagOptions.value.length ? '选择次标签（可选）' : '无可用次标签')
+})
 const previewStatusText = computed(() => {
-  if (previewLoading.value) return '同步中'
-  if (!form.value.content.trim()) return '暂无内容'
-  return '按论坛最终渲染效果预览'
+  return getUiCopy({
+    surface: 'discussion-composer-preview-status',
+    previewLoading: previewLoading.value,
+    hasContent: Boolean(form.value.content.trim()),
+  })?.text || '按论坛最终渲染效果预览'
 })
 const composerTools = computed(() => {
   return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]

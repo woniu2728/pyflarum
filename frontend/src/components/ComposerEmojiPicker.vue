@@ -44,13 +44,14 @@
           {{ item.emoji }}
         </button>
       </div>
-      <div v-else class="composer-emoji-empty">没有匹配的表情</div>
+      <div v-else class="composer-emoji-empty">{{ emptyStateText }}</div>
     </div>
   </Teleport>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   groups: {
@@ -113,6 +114,13 @@ const visibleItems = computed(() => {
     }))
     .filter(item => item.score > 0)
     .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name, 'zh-CN'))
+})
+const emptyStateText = computed(() => {
+  return getUiCopy({
+    surface: 'composer-emoji-picker-empty',
+    query: query.value,
+    itemCount: visibleItems.value.length,
+  })?.text || '没有匹配的表情'
 })
 
 function buildEmojiTitle(item) {

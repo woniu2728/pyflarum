@@ -7,6 +7,7 @@ import {
   getEmptyState,
   getPageState,
   getStateBlock,
+  getUiCopy,
   getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
@@ -16,6 +17,7 @@ import {
   registerEmptyState,
   registerPageState,
   registerStateBlock,
+  registerUiCopy,
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
@@ -569,4 +571,44 @@ test('state block resolves surface entries by loading and item state', () => {
   assert.equal(loadingResult.text, 'search loading')
   assert.equal(emptyResult.key, emptyKey)
   assert.equal(emptyResult.text, 'mention empty')
+})
+
+test('ui copy resolves surface entries by context', () => {
+  const previewKey = uniqueKey('ui-preview')
+  const turnstileKey = uniqueKey('ui-turnstile')
+
+  registerUiCopy({
+    key: previewKey,
+    order: 10,
+    surfaces: ['post-composer-preview-status'],
+    isVisible: ({ previewLoading }) => Boolean(previewLoading),
+    resolve: () => ({
+      text: 'preview syncing',
+    }),
+  })
+
+  registerUiCopy({
+    key: turnstileKey,
+    order: 20,
+    surfaces: ['auth-turnstile-status'],
+    isVisible: ({ humanVerificationRequired, hasToken }) => Boolean(humanVerificationRequired) && !hasToken,
+    resolve: () => ({
+      text: 'complete verification',
+    }),
+  })
+
+  const previewResult = getUiCopy({
+    surface: 'post-composer-preview-status',
+    previewLoading: true,
+  })
+  const turnstileResult = getUiCopy({
+    surface: 'auth-turnstile-status',
+    humanVerificationRequired: true,
+    hasToken: false,
+  })
+
+  assert.equal(previewResult.key, previewKey)
+  assert.equal(previewResult.text, 'preview syncing')
+  assert.equal(turnstileResult.key, turnstileKey)
+  assert.equal(turnstileResult.text, 'complete verification')
 })
