@@ -1851,6 +1851,15 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-result-unknown-user',
+  order: 479,
+  surfaces: ['search-result-unknown-user'],
+  resolve: () => ({
+    text: '未知用户',
+  }),
+})
+
+registerUiCopy({
   key: 'search-section-users-title',
   order: 479,
   surfaces: ['search-section-users-title'],
@@ -3105,6 +3114,178 @@ registerUiCopy({
   surfaces: ['post-composer-submit'],
   resolve: ({ submitting, uploading, isEditing }) => ({
     text: submitting ? '提交中...' : (uploading ? '上传中...' : (isEditing ? '更新回复' : '发布回复')),
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-title',
+  order: 631,
+  surfaces: ['post-composer-title'],
+  resolve: ({ isEditing, postNumber, discussionTitle }) => ({
+    text: isEditing
+      ? `编辑 #${postNumber || ''}`.trim()
+      : (postNumber ? `回复 #${postNumber}` : `回复：${discussionTitle || '讨论'}`),
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-subtitle',
+  order: 632,
+  surfaces: ['post-composer-subtitle'],
+  resolve: ({ isEditing, discussionTitle, hasDraftSavedAt, draftSavedAtText, username }) => {
+    if (isEditing) {
+      return {
+        text: `${discussionTitle || '讨论'} · 编辑后会直接更新原帖`,
+      }
+    }
+
+    if (hasDraftSavedAt) {
+      return {
+        text: `草稿已保存于 ${draftSavedAtText}`,
+      }
+    }
+
+    if (username) {
+      return {
+        text: `${discussionTitle || '讨论'} · @${username}`,
+      }
+    }
+
+    return {
+      text: discussionTitle || '讨论',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'post-composer-minimized-summary',
+  order: 633,
+  surfaces: ['post-composer-minimized-summary'],
+  resolve: ({ isEditing, postNumber, discussionTitle }) => ({
+    text: isEditing
+      ? `编辑 #${postNumber || ''}`.trim()
+      : (postNumber ? `回复 #${postNumber}` : (discussionTitle || '回复讨论')),
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-close-title',
+  order: 634,
+  surfaces: ['post-composer-close-title'],
+  resolve: ({ isEditing }) => ({
+    text: isEditing ? '关闭编辑器' : '关闭回复框',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-close-message',
+  order: 635,
+  surfaces: ['post-composer-close-message'],
+  resolve: ({ isEditing }) => ({
+    text: isEditing
+      ? '确定要关闭编辑器吗？未保存修改将丢失。'
+      : '确定要关闭回复框吗？当前内容会保留在本地草稿中。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-close-confirm',
+  order: 636,
+  surfaces: ['post-composer-close-confirm'],
+  resolve: () => ({
+    text: '关闭',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-close-cancel',
+  order: 637,
+  surfaces: ['post-composer-close-cancel'],
+  resolve: () => ({
+    text: '继续编辑',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-draft-restored',
+  order: 638,
+  surfaces: ['post-composer-draft-restored'],
+  resolve: ({ hasDraftSavedAt, draftSavedAtText }) => ({
+    text: hasDraftSavedAt
+      ? `已恢复你在 ${draftSavedAtText} 保存的回复草稿。`
+      : '已恢复本地回复草稿。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-draft-restore-error',
+  order: 639,
+  surfaces: ['post-composer-draft-restore-error'],
+  resolve: () => ({
+    text: '回复草稿恢复失败。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-draft-emptied',
+  order: 640,
+  surfaces: ['post-composer-draft-emptied'],
+  resolve: () => ({
+    text: '回复草稿已清空。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-draft-saved',
+  order: 641,
+  surfaces: ['post-composer-draft-saved'],
+  resolve: () => ({
+    text: '回复草稿已保存。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-draft-cleared-local',
+  order: 642,
+  surfaces: ['post-composer-draft-cleared-local'],
+  resolve: () => ({
+    text: '已清除本地回复草稿。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-edit-pending-title',
+  order: 643,
+  surfaces: ['post-composer-edit-pending-title'],
+  resolve: () => ({
+    text: '回复已重新提交审核',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-edit-pending-message',
+  order: 644,
+  surfaces: ['post-composer-edit-pending-message'],
+  resolve: () => ({
+    text: '管理员通过后，这条回复才会重新显示给其他用户。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-create-pending-title',
+  order: 645,
+  surfaces: ['post-composer-create-pending-title'],
+  resolve: () => ({
+    text: '回复已进入审核队列',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-composer-create-pending-message',
+  order: 646,
+  surfaces: ['post-composer-create-pending-message'],
+  resolve: () => ({
+    text: '管理员通过后，这条回复才会显示给其他用户。',
   }),
 })
 

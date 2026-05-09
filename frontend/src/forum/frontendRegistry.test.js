@@ -1376,3 +1376,71 @@ test('ui copy resolves search stats and result count copy', () => {
   assert.equal(userDiscussionsResult.key, userDiscussionsKey)
   assert.equal(userDiscussionsResult.text, 'discussions:3')
 })
+
+test('ui copy resolves post composer and search post copy', () => {
+  const composerTitleKey = uniqueKey('ui-post-composer-title')
+  const draftKey = uniqueKey('ui-post-composer-draft')
+  const pendingKey = uniqueKey('ui-post-composer-pending')
+  const unknownUserKey = uniqueKey('ui-search-unknown-user')
+
+  registerUiCopy({
+    key: composerTitleKey,
+    order: 10,
+    surfaces: ['post-composer-title'],
+    resolve: ({ postNumber }) => ({
+      text: `title:${postNumber}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: draftKey,
+    order: 20,
+    surfaces: ['post-composer-draft-restored'],
+    resolve: ({ draftSavedAtText }) => ({
+      text: `draft:${draftSavedAtText}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: pendingKey,
+    order: 30,
+    surfaces: ['post-composer-create-pending-title'],
+    resolve: () => ({
+      text: 'pending create',
+    }),
+  })
+
+  registerUiCopy({
+    key: unknownUserKey,
+    order: 40,
+    surfaces: ['search-result-unknown-user'],
+    resolve: () => ({
+      text: 'unknown search user',
+    }),
+  })
+
+  const composerTitleResult = getUiCopy({
+    surface: 'post-composer-title',
+    postNumber: 7,
+  })
+  const draftResult = getUiCopy({
+    surface: 'post-composer-draft-restored',
+    hasDraftSavedAt: true,
+    draftSavedAtText: '昨天',
+  })
+  const pendingResult = getUiCopy({
+    surface: 'post-composer-create-pending-title',
+  })
+  const unknownUserResult = getUiCopy({
+    surface: 'search-result-unknown-user',
+  })
+
+  assert.equal(composerTitleResult.key, composerTitleKey)
+  assert.equal(composerTitleResult.text, 'title:7')
+  assert.equal(draftResult.key, draftKey)
+  assert.equal(draftResult.text, 'draft:昨天')
+  assert.equal(pendingResult.key, pendingKey)
+  assert.equal(pendingResult.text, 'pending create')
+  assert.equal(unknownUserResult.key, unknownUserKey)
+  assert.equal(unknownUserResult.text, 'unknown search user')
+})

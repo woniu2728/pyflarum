@@ -260,29 +260,49 @@ const discussionLink = computed(() => {
   return `/d/${discussionId.value}`
 })
 const composerTitle = computed(() => {
-  if (isEditing.value) return `编辑 #${composerStore.current.postNumber || ''}`.trim()
-  if (composerStore.current.postNumber) return `回复 #${composerStore.current.postNumber}`
-  return `回复：${composerStore.current.discussionTitle || '讨论'}`
+  return getUiCopy({
+    surface: 'post-composer-title',
+    isEditing: isEditing.value,
+    postNumber: composerStore.current.postNumber || '',
+    discussionTitle: composerStore.current.discussionTitle || '',
+  })?.text || (isEditing.value
+    ? `编辑 #${composerStore.current.postNumber || ''}`.trim()
+    : (composerStore.current.postNumber
+        ? `回复 #${composerStore.current.postNumber}`
+        : `回复：${composerStore.current.discussionTitle || '讨论'}`))
 })
 const composerSubtitle = computed(() => {
   if (composerStore.isMinimized) return minimizedSummary.value
-  if (isEditing.value) {
-    return `${composerStore.current.discussionTitle || '讨论'} · 编辑后会直接更新原帖`
-  }
-  if (composerDraftSavedAt.value) return `草稿已保存于 ${formatDraftTime(composerDraftSavedAt.value)}`
-  if (composerStore.current.username) {
-    return `${composerStore.current.discussionTitle || '讨论'} · @${composerStore.current.username}`
-  }
-  return composerStore.current.discussionTitle || '讨论'
+  return getUiCopy({
+    surface: 'post-composer-subtitle',
+    isEditing: isEditing.value,
+    discussionTitle: composerStore.current.discussionTitle || '',
+    hasDraftSavedAt: Boolean(composerDraftSavedAt.value),
+    draftSavedAtText: composerDraftSavedAt.value ? formatDraftTime(composerDraftSavedAt.value) : '',
+    username: composerStore.current.username || '',
+  })?.text || (isEditing.value
+    ? `${composerStore.current.discussionTitle || '讨论'} · 编辑后会直接更新原帖`
+    : (composerDraftSavedAt.value
+        ? `草稿已保存于 ${formatDraftTime(composerDraftSavedAt.value)}`
+        : (composerStore.current.username
+            ? `${composerStore.current.discussionTitle || '讨论'} · @${composerStore.current.username}`
+            : (composerStore.current.discussionTitle || '讨论'))))
 })
 const minimizedSummary = computed(() => {
   const content = replyContent.value.trim()
   if (content) {
     return content.length > 36 ? `${content.slice(0, 36)}...` : content
   }
-  if (isEditing.value) return `编辑 #${composerStore.current.postNumber || ''}`.trim()
-  if (composerStore.current.postNumber) return `回复 #${composerStore.current.postNumber}`
-  return composerStore.current.discussionTitle || '回复讨论'
+  return getUiCopy({
+    surface: 'post-composer-minimized-summary',
+    isEditing: isEditing.value,
+    postNumber: composerStore.current.postNumber || '',
+    discussionTitle: composerStore.current.discussionTitle || '',
+  })?.text || (isEditing.value
+    ? `编辑 #${composerStore.current.postNumber || ''}`.trim()
+    : (composerStore.current.postNumber
+        ? `回复 #${composerStore.current.postNumber}`
+        : (composerStore.current.discussionTitle || '回复讨论')))
 })
 const isPhoneViewport = computed(() => viewportWidth.value <= 768)
 const isPhoneOverlay = computed(() => isPhoneViewport.value && showComposer.value && !composerStore.isMinimized)
@@ -593,12 +613,22 @@ function togglePreview() {
 async function closeComposer(force = false) {
   if (!force && dirtyState.value) {
     const confirmed = await modalStore.confirm({
-      title: isEditing.value ? '关闭编辑器' : '关闭回复框',
-      message: isEditing.value
+      title: getUiCopy({
+        surface: 'post-composer-close-title',
+        isEditing: isEditing.value,
+      })?.text || (isEditing.value ? '关闭编辑器' : '关闭回复框'),
+      message: getUiCopy({
+        surface: 'post-composer-close-message',
+        isEditing: isEditing.value,
+      })?.text || (isEditing.value
         ? '确定要关闭编辑器吗？未保存修改将丢失。'
-        : '确定要关闭回复框吗？当前内容会保留在本地草稿中。',
-      confirmText: '关闭',
-      cancelText: '继续编辑'
+        : '确定要关闭回复框吗？当前内容会保留在本地草稿中。'),
+      confirmText: getUiCopy({
+        surface: 'post-composer-close-confirm',
+      })?.text || '关闭',
+      cancelText: getUiCopy({
+        surface: 'post-composer-close-cancel',
+      })?.text || '继续编辑'
     })
     if (!confirmed) return
   }
@@ -661,15 +691,21 @@ function restoreComposerDraft() {
     replyContent.value = draft.content
     composerDraftSavedAt.value = draft.updatedAt || ''
     draftNoticeTone.value = 'success'
-    draftNotice.value = composerDraftSavedAt.value
+    draftNotice.value = getUiCopy({
+      surface: 'post-composer-draft-restored',
+      hasDraftSavedAt: Boolean(composerDraftSavedAt.value),
+      draftSavedAtText: composerDraftSavedAt.value ? formatDraftTime(composerDraftSavedAt.value) : '',
+    })?.text || (composerDraftSavedAt.value
       ? `已恢复你在 ${formatDraftTime(composerDraftSavedAt.value)} 保存的回复草稿。`
-      : '已恢复本地回复草稿。'
+      : '已恢复本地回复草稿。')
     return true
   } catch (error) {
     console.error('恢复草稿失败:', error)
     replyContent.value = ''
     draftNoticeTone.value = 'error'
-    draftNotice.value = '回复草稿恢复失败。'
+    draftNotice.value = getUiCopy({
+      surface: 'post-composer-draft-restore-error',
+    })?.text || '回复草稿恢复失败。'
     return false
   }
 }
@@ -686,7 +722,9 @@ function saveComposerDraft(showMessage = true) {
     composerDraftSavedAt.value = ''
     if (showMessage) {
       draftNoticeTone.value = 'success'
-      draftNotice.value = '回复草稿已清空。'
+      draftNotice.value = getUiCopy({
+        surface: 'post-composer-draft-emptied',
+      })?.text || '回复草稿已清空。'
     }
     return
   }
@@ -702,7 +740,9 @@ function saveComposerDraft(showMessage = true) {
   composerDraftSavedAt.value = updatedAt
   if (showMessage) {
     draftNoticeTone.value = 'success'
-    draftNotice.value = '回复草稿已保存。'
+    draftNotice.value = getUiCopy({
+      surface: 'post-composer-draft-saved',
+    })?.text || '回复草稿已保存。'
   }
 }
 
@@ -715,7 +755,9 @@ function clearComposerDraft() {
   window.localStorage.removeItem(key)
   composerDraftSavedAt.value = ''
   draftNoticeTone.value = 'success'
-  draftNotice.value = '已清除本地回复草稿。'
+  draftNotice.value = getUiCopy({
+    surface: 'post-composer-draft-cleared-local',
+  })?.text || '已清除本地回复草稿。'
   replyContent.value = ''
   uploadNotice.value = ''
   submitNotice.value = ''
@@ -1152,8 +1194,12 @@ async function submitReply() {
 
       if (post.approval_status === 'pending') {
         await modalStore.alert({
-          title: '回复已重新提交审核',
-          message: '管理员通过后，这条回复才会重新显示给其他用户。'
+          title: getUiCopy({
+            surface: 'post-composer-edit-pending-title',
+          })?.text || '回复已重新提交审核',
+          message: getUiCopy({
+            surface: 'post-composer-edit-pending-message',
+          })?.text || '管理员通过后，这条回复才会重新显示给其他用户。'
         })
       }
 
@@ -1175,8 +1221,12 @@ async function submitReply() {
 
       if (post.approval_status === 'pending') {
         await modalStore.alert({
-          title: '回复已进入审核队列',
-          message: '管理员通过后，这条回复才会显示给其他用户。'
+          title: getUiCopy({
+            surface: 'post-composer-create-pending-title',
+          })?.text || '回复已进入审核队列',
+          message: getUiCopy({
+            surface: 'post-composer-create-pending-message',
+          })?.text || '管理员通过后，这条回复才会显示给其他用户。'
         })
       }
 

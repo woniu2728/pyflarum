@@ -64,7 +64,9 @@ const discussionResultItems = computed(() => props.discussions.map(discussion =>
   titleHtml: props.getTitleHtml(discussion),
   excerptHtml: props.getExcerptHtml(discussion),
   metaItems: [
-    discussion.user?.display_name || discussion.user?.username || '未知用户',
+    discussion.user?.display_name || discussion.user?.username || getUiCopy({
+      surface: 'search-result-unknown-user',
+    })?.text || '未知用户',
     getUiCopy({
       surface: 'search-discussion-result-replies',
       count: discussion.comment_count || 0,
