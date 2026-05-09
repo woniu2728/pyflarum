@@ -443,3 +443,44 @@ test('empty state resolves tag surface entries', () => {
   assert.equal(lastDiscussionResult.key, lastDiscussionKey)
   assert.equal(lastDiscussionResult.text, 'Alpha no discussion')
 })
+
+test('empty state resolves search page and modal entries by query state', () => {
+  const searchPageIdleKey = uniqueKey('search-page-idle')
+  const searchModalEmptyKey = uniqueKey('search-modal-empty')
+
+  registerEmptyState({
+    key: searchPageIdleKey,
+    order: 10,
+    surfaces: ['search-page-idle'],
+    isVisible: ({ hasQuery }) => !hasQuery,
+    resolve: () => ({
+      text: 'search idle',
+    }),
+  })
+
+  registerEmptyState({
+    key: searchModalEmptyKey,
+    order: 20,
+    surfaces: ['search-modal-empty'],
+    isVisible: ({ hasQuery }) => Boolean(hasQuery),
+    resolve: ({ searchType }) => ({
+      text: `search empty: ${searchType}`,
+    }),
+  })
+
+  const idleResult = getEmptyState({
+    surface: 'search-page-idle',
+    hasQuery: false,
+    searchType: 'all',
+  })
+  const emptyResult = getEmptyState({
+    surface: 'search-modal-empty',
+    hasQuery: true,
+    searchType: 'posts',
+  })
+
+  assert.equal(idleResult.key, searchPageIdleKey)
+  assert.equal(idleResult.text, 'search idle')
+  assert.equal(emptyResult.key, searchModalEmptyKey)
+  assert.equal(emptyResult.text, 'search empty: posts')
+})

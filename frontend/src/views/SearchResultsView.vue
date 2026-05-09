@@ -46,13 +46,13 @@
         </ForumHeroPanel>
 
         <ForumStateBlock v-if="!normalizedQuery">
-          请输入关键词后再搜索。
+          {{ idleStateText }}
         </ForumStateBlock>
         <ForumStateBlock v-else-if="loading">
           搜索中...
         </ForumStateBlock>
         <ForumStateBlock v-else-if="isEmpty">
-          没有找到相关讨论、帖子或用户。
+          {{ emptyStateText }}
         </ForumStateBlock>
         <template v-else>
           <ForumSearchResultSection
@@ -122,9 +122,11 @@ const {
   changePage,
   changeType,
   discussionTotal,
+  emptyStateText,
   filterItems,
   applySyntax,
   heroText,
+  idleStateText,
   isEmpty,
   loading,
   normalizedQuery,

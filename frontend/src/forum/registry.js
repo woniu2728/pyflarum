@@ -1033,6 +1033,46 @@ registerEmptyState({
   }),
 })
 
+registerEmptyState({
+  key: 'search-page-idle',
+  order: 70,
+  surfaces: ['search-page-idle'],
+  isVisible: ({ hasQuery }) => !hasQuery,
+  resolve: () => ({
+    text: '请输入关键词后再搜索。',
+  }),
+})
+
+registerEmptyState({
+  key: 'search-page-empty',
+  order: 80,
+  surfaces: ['search-page-empty'],
+  isVisible: ({ hasQuery }) => Boolean(hasQuery),
+  resolve: () => ({
+    text: '没有找到相关讨论、帖子或用户。',
+  }),
+})
+
+registerEmptyState({
+  key: 'search-modal-idle',
+  order: 90,
+  surfaces: ['search-modal-idle'],
+  isVisible: ({ hasQuery }) => !hasQuery,
+  resolve: () => ({
+    text: '输入关键词后即可开始搜索。你可以直接回车进入完整搜索结果页。',
+  }),
+})
+
+registerEmptyState({
+  key: 'search-modal-empty',
+  order: 100,
+  surfaces: ['search-modal-empty'],
+  isVisible: ({ hasQuery }) => Boolean(hasQuery),
+  resolve: () => ({
+    text: '没有找到相关结果，试试更短的关键词或切换分类。',
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,

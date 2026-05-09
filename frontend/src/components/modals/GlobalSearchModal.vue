@@ -52,7 +52,7 @@
 
         <div v-if="!normalizedQuery" class="SearchModal-state">
           <div class="SearchModal-emptyState">
-            <p>输入关键词后即可开始搜索。你可以直接回车进入完整搜索结果页。</p>
+            <p>{{ idleStateText }}</p>
             <div v-if="filterSuggestions.length" class="SearchModal-syntaxPanel">
               <button
                 v-for="item in filterSuggestions"
@@ -71,7 +71,7 @@
           搜索中...
         </div>
         <div v-else-if="isEmpty" class="SearchModal-state">
-          没有找到相关结果，试试更短的关键词或切换分类。
+          {{ emptyStateText }}
         </div>
         <div v-else class="SearchModal-results">
           <template v-if="activeType === 'all'">
@@ -157,7 +157,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
-import { getSearchSources } from '@/forum/registry'
+import { getEmptyState, getSearchSources } from '@/forum/registry'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
@@ -280,6 +280,24 @@ const visibleSelectableItems = computed(() => {
 
 const fullPageActionIndex = computed(() => visibleSelectableItems.value.length)
 const isEmpty = computed(() => modalSourceSections.value.every(section => section.items.length === 0))
+const idleStateText = computed(() => {
+  const emptyState = getEmptyState({
+    surface: 'search-modal-idle',
+    hasQuery: Boolean(normalizedQuery.value),
+    searchType: activeType.value,
+  })
+
+  return emptyState?.text || '输入关键词后即可开始搜索。你可以直接回车进入完整搜索结果页。'
+})
+const emptyStateText = computed(() => {
+  const emptyState = getEmptyState({
+    surface: 'search-modal-empty',
+    hasQuery: Boolean(normalizedQuery.value),
+    searchType: activeType.value,
+  })
+
+  return emptyState?.text || '没有找到相关结果，试试更短的关键词或切换分类。'
+})
 const filterSuggestions = computed(() => {
   if (!searchFilterTarget.value || activeType.value === 'all') {
     return []

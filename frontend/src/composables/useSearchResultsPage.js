@@ -2,7 +2,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import api from '@/api'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
-import { getSearchSources } from '@/forum/registry'
+import { getEmptyState, getSearchSources } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
 import { unwrapList } from '@/utils/forum'
 
@@ -34,6 +34,24 @@ export function useSearchResultsPage({ route, router }) {
   const page = routeState.page
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
   const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
+  const emptyStateText = computed(() => {
+    const emptyState = getEmptyState({
+      surface: 'search-page-empty',
+      hasQuery: Boolean(normalizedQuery.value),
+      searchType: searchType.value,
+    })
+
+    return emptyState?.text || '没有找到相关讨论、帖子或用户。'
+  })
+  const idleStateText = computed(() => {
+    const emptyState = getEmptyState({
+      surface: 'search-page-idle',
+      hasQuery: Boolean(normalizedQuery.value),
+      searchType: searchType.value,
+    })
+
+    return emptyState?.text || '请输入关键词后再搜索。'
+  })
   const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
   const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
   const showUsers = computed(() => searchType.value === 'all' || searchType.value === 'users')
@@ -218,9 +236,11 @@ export function useSearchResultsPage({ route, router }) {
     changeType,
     discussionTotal,
     discussions,
+    emptyStateText,
     filterItems,
     applySyntax,
     heroText,
+    idleStateText,
     isEmpty,
     loading,
     normalizedQuery,
