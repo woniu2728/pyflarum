@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 import { getDiscussionMenuItems, getPostMenuItems } from '@/forum/discussionActions'
 
 export function useDiscussionDetailMenus({
@@ -36,8 +37,12 @@ export function useDiscussionDetailMenus({
     }
 
     return modalStore.confirm({
-      cancelText: '取消',
-      confirmText: '继续',
+      cancelText: getUiCopy({
+        surface: 'discussion-action-confirm-cancel',
+      })?.text || '取消',
+      confirmText: getUiCopy({
+        surface: 'discussion-action-confirm-default',
+      })?.text || '继续',
       tone: item.tone === 'danger' ? 'danger' : 'primary',
       ...item.confirm,
     })

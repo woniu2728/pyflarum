@@ -957,3 +957,40 @@ test('ui copy resolves notification confirm and alert copy', () => {
   assert.equal(alertResult.key, alertKey)
   assert.equal(alertResult.text, 'alert:filtered')
 })
+
+test('ui copy resolves discussion and post action copy', () => {
+  const discussionKey = uniqueKey('ui-discussion-action')
+  const postKey = uniqueKey('ui-post-action')
+
+  registerUiCopy({
+    key: discussionKey,
+    order: 10,
+    surfaces: ['discussion-action-toggle-hide-confirm-message'],
+    resolve: ({ isHidden }) => ({
+      text: isHidden ? 'show discussion' : 'hide discussion',
+    }),
+  })
+
+  registerUiCopy({
+    key: postKey,
+    order: 20,
+    surfaces: ['post-action-toggle-hide-confirm-message'],
+    resolve: ({ postNumber }) => ({
+      text: `toggle post ${postNumber}`,
+    }),
+  })
+
+  const discussionResult = getUiCopy({
+    surface: 'discussion-action-toggle-hide-confirm-message',
+    isHidden: false,
+  })
+  const postResult = getUiCopy({
+    surface: 'post-action-toggle-hide-confirm-message',
+    postNumber: 9,
+  })
+
+  assert.equal(discussionResult.key, discussionKey)
+  assert.equal(discussionResult.text, 'hide discussion')
+  assert.equal(postResult.key, postKey)
+  assert.equal(postResult.text, 'toggle post 9')
+})

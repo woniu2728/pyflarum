@@ -2136,6 +2136,411 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-action-confirm-cancel',
+  order: 479,
+  surfaces: ['discussion-action-confirm-cancel'],
+  resolve: () => ({
+    text: '取消',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-confirm-default',
+  order: 479,
+  surfaces: ['discussion-action-confirm-default'],
+  resolve: () => ({
+    text: '继续',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-reply-label',
+  order: 479,
+  surfaces: ['discussion-action-reply-label'],
+  resolve: ({ hasActiveComposer }) => ({
+    text: hasActiveComposer ? '继续回复' : '回复讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-reply-description',
+  order: 479,
+  surfaces: ['discussion-action-reply-description'],
+  resolve: ({ hasActiveComposer }) => ({
+    text: hasActiveComposer ? '继续当前未发布的回复草稿。' : '在当前讨论中开始撰写回复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-login-label',
+  order: 479,
+  surfaces: ['discussion-action-login-label'],
+  resolve: () => ({
+    text: '登录后回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-login-description',
+  order: 479,
+  surfaces: ['discussion-action-login-description'],
+  resolve: () => ({
+    text: '登录后才可以参与当前讨论。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-subscription-label',
+  order: 479,
+  surfaces: ['discussion-action-toggle-subscription-label'],
+  resolve: ({ togglingSubscription, isSubscribed }) => ({
+    text: togglingSubscription ? '提交中...' : (isSubscribed ? '取消关注' : '关注讨论'),
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-subscription-description',
+  order: 479,
+  surfaces: ['discussion-action-toggle-subscription-description'],
+  resolve: ({ isSubscribed }) => ({
+    text: isSubscribed ? '停止接收这条讨论后续回复通知。' : '接收这条讨论后续回复通知。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-subscription-disabled',
+  order: 479,
+  surfaces: ['discussion-action-toggle-subscription-disabled'],
+  resolve: () => ({
+    text: '正在提交关注状态，请稍候。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-edit-label',
+  order: 479,
+  surfaces: ['discussion-action-edit-label'],
+  resolve: () => ({
+    text: '编辑讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-edit-description',
+  order: 479,
+  surfaces: ['discussion-action-edit-description'],
+  resolve: () => ({
+    text: '修改标题、正文和标签。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-pin-label',
+  order: 479,
+  surfaces: ['discussion-action-toggle-pin-label'],
+  resolve: ({ isSticky }) => ({
+    text: isSticky ? '取消置顶' : '置顶讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-pin-description',
+  order: 479,
+  surfaces: ['discussion-action-toggle-pin-description'],
+  resolve: ({ isSticky }) => ({
+    text: isSticky ? '把讨论恢复为普通排序。' : '把讨论固定到列表更靠前的位置。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-pin-confirm-title',
+  order: 479,
+  surfaces: ['discussion-action-toggle-pin-confirm-title'],
+  resolve: () => ({
+    text: '置顶讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-pin-confirm-message',
+  order: 479,
+  surfaces: ['discussion-action-toggle-pin-confirm-message'],
+  resolve: () => ({
+    text: '确定将这条讨论置顶吗？',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-pin-confirm-confirm',
+  order: 479,
+  surfaces: ['discussion-action-toggle-pin-confirm-confirm'],
+  resolve: () => ({
+    text: '置顶讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-lock-label',
+  order: 479,
+  surfaces: ['discussion-action-toggle-lock-label'],
+  resolve: ({ isLocked }) => ({
+    text: isLocked ? '解除锁定' : '锁定讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-lock-description',
+  order: 479,
+  surfaces: ['discussion-action-toggle-lock-description'],
+  resolve: ({ isLocked }) => ({
+    text: isLocked ? '恢复普通用户回复能力。' : '阻止普通用户继续回复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-lock-confirm-title',
+  order: 479,
+  surfaces: ['discussion-action-toggle-lock-confirm-title'],
+  resolve: () => ({
+    text: '锁定讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-lock-confirm-message',
+  order: 479,
+  surfaces: ['discussion-action-toggle-lock-confirm-message'],
+  resolve: () => ({
+    text: '确定锁定当前讨论并阻止普通用户继续回复吗？',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-lock-confirm-confirm',
+  order: 479,
+  surfaces: ['discussion-action-toggle-lock-confirm-confirm'],
+  resolve: () => ({
+    text: '锁定讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-hide-label',
+  order: 479,
+  surfaces: ['discussion-action-toggle-hide-label'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '恢复显示' : '隐藏讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-hide-description',
+  order: 479,
+  surfaces: ['discussion-action-toggle-hide-description'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '重新让讨论出现在前台列表。' : '临时从前台列表隐藏当前讨论。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-hide-confirm-title',
+  order: 479,
+  surfaces: ['discussion-action-toggle-hide-confirm-title'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '恢复显示' : '隐藏讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-hide-confirm-message',
+  order: 479,
+  surfaces: ['discussion-action-toggle-hide-confirm-message'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '确定恢复显示当前讨论吗？' : '确定从前台列表隐藏当前讨论吗？',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-toggle-hide-confirm-confirm',
+  order: 479,
+  surfaces: ['discussion-action-toggle-hide-confirm-confirm'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '恢复显示' : '隐藏讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-delete-label',
+  order: 479,
+  surfaces: ['discussion-action-delete-label'],
+  resolve: () => ({
+    text: '删除讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-delete-description',
+  order: 479,
+  surfaces: ['discussion-action-delete-description'],
+  resolve: () => ({
+    text: '永久删除当前讨论及其回复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-delete-confirm-title',
+  order: 479,
+  surfaces: ['discussion-action-delete-confirm-title'],
+  resolve: () => ({
+    text: '删除讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-delete-confirm-message',
+  order: 479,
+  surfaces: ['discussion-action-delete-confirm-message'],
+  resolve: () => ({
+    text: '确定要删除这个讨论吗？此操作不可恢复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-action-delete-confirm-confirm',
+  order: 479,
+  surfaces: ['discussion-action-delete-confirm-confirm'],
+  resolve: () => ({
+    text: '删除',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-edit-label',
+  order: 479,
+  surfaces: ['post-action-edit-label'],
+  resolve: () => ({
+    text: '编辑',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-edit-description',
+  order: 479,
+  surfaces: ['post-action-edit-description'],
+  resolve: () => ({
+    text: '修改这条回复内容。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-delete-label',
+  order: 479,
+  surfaces: ['post-action-delete-label'],
+  resolve: () => ({
+    text: '删除',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-delete-description',
+  order: 479,
+  surfaces: ['post-action-delete-description'],
+  resolve: () => ({
+    text: '永久删除这条回复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-delete-confirm-title',
+  order: 479,
+  surfaces: ['post-action-delete-confirm-title'],
+  resolve: () => ({
+    text: '删除回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-delete-confirm-message',
+  order: 479,
+  surfaces: ['post-action-delete-confirm-message'],
+  resolve: () => ({
+    text: '确定要删除这条回复吗？此操作不可恢复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-delete-confirm-confirm',
+  order: 479,
+  surfaces: ['post-action-delete-confirm-confirm'],
+  resolve: () => ({
+    text: '删除',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-toggle-hide-label',
+  order: 479,
+  surfaces: ['post-action-toggle-hide-label'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '恢复显示' : '隐藏回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-toggle-hide-description',
+  order: 479,
+  surfaces: ['post-action-toggle-hide-description'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '重新让这条回复在前台可见。' : '临时从前台隐藏这条回复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-toggle-hide-confirm-title',
+  order: 479,
+  surfaces: ['post-action-toggle-hide-confirm-title'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '恢复显示' : '隐藏回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-toggle-hide-confirm-message',
+  order: 479,
+  surfaces: ['post-action-toggle-hide-confirm-message'],
+  resolve: ({ isHidden, postNumber }) => ({
+    text: isHidden ? `确定恢复显示 #${postNumber} 吗？` : `确定隐藏 #${postNumber} 吗？`,
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-toggle-hide-confirm-confirm',
+  order: 479,
+  surfaces: ['post-action-toggle-hide-confirm-confirm'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '恢复显示' : '隐藏回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-report-label',
+  order: 479,
+  surfaces: ['post-action-report-label'],
+  resolve: () => ({
+    text: '举报',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-action-report-description',
+  order: 479,
+  surfaces: ['post-action-report-description'],
+  resolve: () => ({
+    text: '向版主提交这条回复的问题反馈。',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],
