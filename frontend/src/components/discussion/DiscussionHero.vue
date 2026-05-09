@@ -22,6 +22,24 @@
         max-width="220px"
       />
     </div>
+    <ul v-if="heroMetaItems.length" class="discussion-meta-list">
+      <li
+        v-for="item in heroMetaItems"
+        :key="item.key"
+        class="discussion-meta-item"
+      >
+        <i v-if="item.icon" :class="item.iconClassName || item.icon"></i>
+        <router-link
+          v-if="item.to"
+          :to="item.to"
+          class="discussion-meta-link"
+          :title="item.title || item.text || ''"
+        >
+          {{ item.text }}
+        </router-link>
+        <span v-else :title="item.title || item.text || ''">{{ item.text }}</span>
+      </li>
+    </ul>
     <div
       v-if="discussionReviewBanner"
       class="discussion-review-banner"
@@ -50,7 +68,7 @@
 <script setup>
 import { computed } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
-import { getDiscussionReviewBanner } from '@/forum/registry'
+import { getDiscussionReviewBanner, getHeroMetaItems } from '@/forum/registry'
 
 const props = defineProps({
   discussion: {
@@ -83,6 +101,11 @@ const discussionReviewBanner = computed(() => getDiscussionReviewBanner({
   discussion: props.discussion,
   canModeratePendingDiscussion: props.canModeratePendingDiscussion,
   canEditDiscussion: props.canEditDiscussion,
+  surface: 'discussion-hero',
+}))
+
+const heroMetaItems = computed(() => getHeroMetaItems({
+  discussion: props.discussion,
   surface: 'discussion-hero',
 }))
 
@@ -156,6 +179,39 @@ function handleReviewAction(action) {
   gap: 8px;
 }
 
+.discussion-meta-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 0;
+  margin: 16px 0 0;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
+}
+
+.discussion-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.discussion-meta-item i {
+  color: var(--forum-text-muted);
+}
+
+.discussion-meta-link {
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.discussion-meta-link:hover {
+  color: var(--forum-primary-color);
+}
+
 .discussion-review-banner {
   margin-top: 16px;
   padding: 14px 16px;
@@ -221,7 +277,8 @@ function handleReviewAction(action) {
   }
 
   .discussion-badges,
-  .discussion-tags {
+  .discussion-tags,
+  .discussion-meta-list {
     flex-wrap: wrap;
     justify-content: center;
   }
@@ -235,6 +292,17 @@ function handleReviewAction(action) {
     line-height: 1.24;
     margin-bottom: 10px;
     color: var(--discussion-hero-contrast);
+  }
+
+  .discussion-meta-list {
+    margin-top: 14px;
+    gap: 8px 14px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .discussion-meta-item i,
+  .discussion-meta-link {
+    color: inherit;
   }
 
   .tag {

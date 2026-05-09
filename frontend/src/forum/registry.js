@@ -12,6 +12,7 @@ import {
   getSearchSources,
   getDiscussionBadges,
   getDiscussionStateBadges,
+  getHeroMetaItems,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getPostFlagPanel,
@@ -27,6 +28,7 @@ import {
   registerDiscussionBadge,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
+  registerHeroMeta,
   registerPostFlagPanel,
   registerApprovalNote,
   registerEmptyState,
@@ -64,6 +66,7 @@ export {
   getNotificationRenderers,
   getDiscussionBadges,
   getDiscussionStateBadges,
+  getHeroMetaItems,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getPostFlagPanel,
@@ -78,6 +81,7 @@ export {
   registerDiscussionBadge,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
+  registerHeroMeta,
   registerPostFlagPanel,
   registerApprovalNote,
   registerEmptyState,
@@ -607,6 +611,29 @@ registerUserBadge({
   }),
 })
 
+registerHeroMeta({
+  key: 'profile-last-seen',
+  order: 10,
+  surfaces: ['profile-hero'],
+  resolve: ({ isOnline, formatLastSeen, user }) => ({
+    icon: 'fas fa-circle',
+    iconClassName: isOnline ? 'hero-meta-icon hero-meta-icon--online' : 'hero-meta-icon',
+    text: isOnline ? '在线' : formatLastSeen(user?.last_seen_at),
+  }),
+})
+
+registerHeroMeta({
+  key: 'profile-joined-at',
+  order: 20,
+  surfaces: ['profile-hero'],
+  isVisible: ({ user }) => Boolean(user?.joined_at),
+  resolve: ({ formatJoinDate, user }) => ({
+    icon: 'fas fa-clock',
+    text: `加入于 ${formatJoinDate(user.joined_at)}`,
+    title: user.joined_at,
+  }),
+})
+
 registerDiscussionBadge({
   key: 'sticky',
   order: 10,
@@ -648,6 +675,53 @@ registerDiscussionBadge({
   resolve: () => ({
     className: 'badge-pending',
     label: '待审核',
+  }),
+})
+
+registerHeroMeta({
+  key: 'discussion-author',
+  order: 10,
+  surfaces: ['discussion-hero'],
+  isVisible: ({ discussion }) => Boolean(discussion?.user),
+  resolve: ({ discussion }) => ({
+    icon: 'far fa-user',
+    text: discussion.user?.display_name || discussion.user?.username || '未知用户',
+    to: buildUserPath(discussion.user),
+  }),
+})
+
+registerHeroMeta({
+  key: 'discussion-created-at',
+  order: 20,
+  surfaces: ['discussion-hero'],
+  isVisible: ({ discussion }) => Boolean(discussion?.created_at),
+  resolve: ({ discussion }) => ({
+    icon: 'far fa-clock',
+    text: `发布于 ${formatRelativeTime(discussion.created_at)}`,
+    title: discussion.created_at,
+  }),
+})
+
+registerHeroMeta({
+  key: 'discussion-last-posted-at',
+  order: 30,
+  surfaces: ['discussion-hero'],
+  isVisible: ({ discussion }) => Boolean(discussion?.last_posted_at),
+  resolve: ({ discussion }) => ({
+    icon: 'fas fa-reply',
+    text: `最后回复 ${formatRelativeTime(discussion.last_posted_at)}`,
+    title: discussion.last_posted_at,
+  }),
+})
+
+registerHeroMeta({
+  key: 'discussion-comment-count',
+  order: 40,
+  surfaces: ['discussion-hero'],
+  isVisible: ({ discussion }) => Number(discussion?.comment_count || 0) > 0,
+  resolve: ({ discussion }) => ({
+    icon: 'far fa-comment',
+    text: `${discussion.comment_count} 条回复`,
   }),
 })
 
@@ -2249,6 +2323,60 @@ registerUiCopy({
   surfaces: ['composer-preview-panel-title'],
   resolve: () => ({
     text: '预览',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-load-previous',
+  order: 1130,
+  surfaces: ['discussion-detail-load-previous'],
+  resolve: () => ({
+    text: '加载前面的回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-load-more',
+  order: 1140,
+  surfaces: ['discussion-detail-load-more'],
+  resolve: () => ({
+    text: '加载更多回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-load-posts-loading',
+  order: 1150,
+  surfaces: ['discussion-detail-load-posts-loading'],
+  resolve: () => ({
+    text: '正在加载回复...',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-unread-divider',
+  order: 1160,
+  surfaces: ['discussion-detail-unread-divider'],
+  resolve: () => ({
+    text: '从这里开始是未读回复',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-hero-avatar-upload',
+  order: 1170,
+  surfaces: ['profile-hero-avatar-upload'],
+  resolve: ({ uploading }) => ({
+    text: uploading ? '上传中...' : '更换头像',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-hero-settings-button',
+  order: 1180,
+  surfaces: ['profile-hero-settings-button'],
+  resolve: () => ({
+    text: '设置',
   }),
 })
 

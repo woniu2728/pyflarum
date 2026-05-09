@@ -36,8 +36,8 @@
             <ForumLoadMoreButton
               compact
               :loading="loadingPrevious"
-              text="加载前面的回复"
-              loading-text="正在加载回复..."
+              :text="loadPreviousText"
+              :loading-text="loadingPostsText"
               @click="loadPreviousPosts"
             />
           </div>
@@ -49,7 +49,7 @@
                 v-if="showUnreadDivider(post)"
                 class="post-unread-divider"
               >
-                <span>从这里开始是未读回复</span>
+                <span>{{ unreadDividerText }}</span>
               </div>
 
               <component
@@ -99,8 +99,8 @@
             <ForumLoadMoreButton
               compact
               :loading="loadingMore"
-              text="加载更多回复"
-              loading-text="正在加载回复..."
+              :text="loadMoreText"
+              :loading-text="loadingPostsText"
               @click="loadMorePosts"
             />
           </div>
@@ -166,7 +166,7 @@ import DiscussionHero from '@/components/discussion/DiscussionHero.vue'
 import DiscussionMobileActions from '@/components/discussion/DiscussionMobileActions.vue'
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
-import { getDiscussionBadges, getPageState } from '@/forum/registry'
+import { getDiscussionBadges, getPageState, getUiCopy } from '@/forum/registry'
 import { getPostTypeDefinition } from '@/forum/postTypes'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
 import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
@@ -261,6 +261,18 @@ const missingStateText = computed(() => {
 
   return pageState?.text || '讨论不存在'
 })
+const loadPreviousText = computed(() => getUiCopy({
+  surface: 'discussion-detail-load-previous',
+})?.text || '加载前面的回复')
+const loadMoreText = computed(() => getUiCopy({
+  surface: 'discussion-detail-load-more',
+})?.text || '加载更多回复')
+const loadingPostsText = computed(() => getUiCopy({
+  surface: 'discussion-detail-load-posts-loading',
+})?.text || '正在加载回复...')
+const unreadDividerText = computed(() => getUiCopy({
+  surface: 'discussion-detail-unread-divider',
+})?.text || '从这里开始是未读回复')
 const {
   canDeletePost,
   canEditDiscussion,

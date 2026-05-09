@@ -15,6 +15,7 @@ const userBadges = []
 const discussionBadges = []
 const discussionStateBadges = []
 const postStateBadges = []
+const heroMetaItems = []
 const discussionReplyStates = []
 const postReviewBanners = []
 const discussionReviewBanners = []
@@ -313,6 +314,18 @@ export function registerPostStateBadge(item) {
 
 export function getPostStateBadges(context = {}) {
   return [...postStateBadges]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerHeroMeta(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(heroMetaItems, normalizedItem.key, normalizedItem)
+}
+
+export function getHeroMetaItems(context = {}) {
+  return [...heroMetaItems]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)

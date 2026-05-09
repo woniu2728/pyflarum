@@ -17,7 +17,7 @@
                 @change="$emit('avatar-selected', $event)"
               />
               <span class="avatar-upload-badge">
-                {{ avatarUploading ? '上传中...' : '更换头像' }}
+                {{ avatarUploadText }}
               </span>
             </label>
             <img
@@ -51,21 +51,22 @@
                 {{ badge.label }}
               </li>
             </ul>
-            <ul class="user-info">
-              <li class="user-last-seen">
-                <i class="fas fa-circle" :class="{ online: isOnline }"></i>
-                {{ isOnline ? '在线' : formatLastSeen(user.last_seen_at) }}
-              </li>
-              <li>
-                <i class="fas fa-clock"></i>
-                加入于 {{ formatJoinDate(user.joined_at) }}
+            <ul v-if="heroMetaItems.length" class="user-info">
+              <li
+                v-for="item in heroMetaItems"
+                :key="item.key"
+                class="user-info-item"
+                :class="item.className"
+              >
+                <i v-if="item.icon" :class="item.iconClassName || item.icon"></i>
+                <span :title="item.title || item.text || ''">{{ item.text }}</span>
               </li>
             </ul>
           </div>
           <div class="user-card-controls">
             <button v-if="isOwnProfile" type="button" class="btn-control" @click="$emit('open-settings')">
               <i class="fas fa-sliders-h"></i>
-              设置
+              {{ settingsButtonText }}
             </button>
           </div>
         </div>
@@ -76,6 +77,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getHeroMetaItems, getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   user: {
@@ -131,6 +133,20 @@ const props = defineProps({
 const userBadges = computed(() => Array.isArray(props.userBadges) ? props.userBadges : [])
 const primaryGroupBadge = computed(() => userBadges.value.find(item => item.variant === 'group') || null)
 const inlineBadges = computed(() => userBadges.value.filter(item => item.variant !== 'group'))
+const heroMetaItems = computed(() => getHeroMetaItems({
+  user: props.user,
+  isOnline: props.isOnline,
+  formatJoinDate: props.formatJoinDate,
+  formatLastSeen: props.formatLastSeen,
+  surface: 'profile-hero',
+}))
+const avatarUploadText = computed(() => getUiCopy({
+  surface: 'profile-hero-avatar-upload',
+  uploading: props.avatarUploading,
+})?.text || (props.avatarUploading ? '上传中...' : '更换头像'))
+const settingsButtonText = computed(() => getUiCopy({
+  surface: 'profile-hero-settings-button',
+})?.text || '设置')
 
 defineEmits(['avatar-selected', 'open-settings'])
 </script>
@@ -292,16 +308,23 @@ defineEmits(['avatar-selected', 'open-settings'])
   overflow-wrap: anywhere;
 }
 
+.user-info-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .user-info i {
   margin-right: 6px;
 }
 
-.user-last-seen .fa-circle {
+.user-info-item :deep(.hero-meta-icon.fa-circle) {
   font-size: 8px;
   vertical-align: middle;
+  margin-right: 0;
 }
 
-.user-last-seen .fa-circle.online {
+.user-info-item :deep(.hero-meta-icon--online.fa-circle) {
   color: #2ecc71;
 }
 

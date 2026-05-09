@@ -5,6 +5,7 @@ import {
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getEmptyState,
+  getHeroMetaItems,
   getPageState,
   getStateBlock,
   getUiCopy,
@@ -15,6 +16,7 @@ import {
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
   registerEmptyState,
+  registerHeroMeta,
   registerPageState,
   registerStateBlock,
   registerUiCopy,
@@ -111,6 +113,47 @@ test('post state badges are ordered and filtered by surface', () => {
   assert.equal(profileBadges.some(item => item.key === profileKey), true)
   assert.equal(profileBadges.some(item => item.key === detailKey), false)
   assert.equal(detailBadges.find(item => item.key === detailKey).label, '3 pending')
+})
+
+test('hero meta resolves ordered surface-specific items', () => {
+  const discussionMetaKey = uniqueKey('hero-discussion')
+  const profileMetaKey = uniqueKey('hero-profile')
+
+  registerHeroMeta({
+    key: discussionMetaKey,
+    order: 20,
+    surfaces: ['discussion-hero'],
+    isVisible: ({ discussion }) => Boolean(discussion?.created_at),
+    resolve: ({ discussion }) => ({
+      icon: 'far fa-clock',
+      text: `created ${discussion.created_at}`,
+    }),
+  })
+
+  registerHeroMeta({
+    key: profileMetaKey,
+    order: 10,
+    surfaces: ['profile-hero'],
+    isVisible: ({ isOnline }) => Boolean(isOnline),
+    resolve: () => ({
+      icon: 'fas fa-circle',
+      text: 'online',
+    }),
+  })
+
+  const discussionItems = getHeroMetaItems({
+    surface: 'discussion-hero',
+    discussion: { created_at: '2026-05-09T00:00:00Z' },
+  })
+  const profileItems = getHeroMetaItems({
+    surface: 'profile-hero',
+    isOnline: true,
+  })
+
+  assert.equal(discussionItems.some(item => item.key === discussionMetaKey), true)
+  assert.equal(discussionItems.some(item => item.key === profileMetaKey), false)
+  assert.equal(profileItems[0].key, profileMetaKey)
+  assert.equal(profileItems[0].text, 'online')
 })
 
 test('post review banner prefers matching surface-specific item', () => {
