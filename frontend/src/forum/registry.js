@@ -2541,6 +2541,42 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-sidebar-active-draft',
+  order: 479,
+  surfaces: ['discussion-sidebar-active-draft'],
+  resolve: () => ({
+    text: '当前讨论已有未发布回复草稿。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-sidebar-subscribed',
+  order: 479,
+  surfaces: ['discussion-sidebar-subscribed'],
+  resolve: () => ({
+    text: '你会收到这条讨论后续回复的通知。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-sidebar-locked',
+  order: 479,
+  surfaces: ['discussion-sidebar-locked'],
+  resolve: () => ({
+    text: '当前讨论已锁定，暂时无法继续回复。',
+  }),
+})
+
+registerUiCopy({
+  key: 'forum-action-menu-item-title',
+  order: 479,
+  surfaces: ['forum-action-menu-item-title'],
+  resolve: ({ disabledReason }) => ({
+    text: disabledReason || '',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],

@@ -51,13 +51,13 @@
     </div>
 
     <p v-if="authStore.isAuthenticated && hasActiveComposer" class="discussion-action-copy">
-      当前讨论已有未发布回复草稿。
+      {{ activeDraftText }}
     </p>
     <p v-else-if="authStore.isAuthenticated && discussion.is_subscribed" class="discussion-action-copy">
-      你会收到这条讨论后续回复的通知。
+      {{ subscribedText }}
     </p>
     <p v-else-if="authStore.isAuthenticated && discussion.is_locked" class="discussion-action-copy">
-      当前讨论已锁定，暂时无法继续回复。
+      {{ lockedText }}
     </p>
     <p v-else-if="authStore.isAuthenticated && isSuspended" class="discussion-action-copy discussion-action-copy--warning">
       {{ suspensionNotice }}
@@ -68,6 +68,7 @@
 <script setup>
 import { computed } from 'vue'
 import ForumActionMenu from '@/components/forum/ForumActionMenu.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   discussion: {
@@ -128,6 +129,15 @@ defineEmits([
 
 const primaryAction = computed(() => props.sidebarActionItems[0] || null)
 const secondaryAction = computed(() => props.sidebarActionItems[1] || null)
+const activeDraftText = computed(() => getUiCopy({
+  surface: 'discussion-sidebar-active-draft',
+})?.text || '当前讨论已有未发布回复草稿。')
+const subscribedText = computed(() => getUiCopy({
+  surface: 'discussion-sidebar-subscribed',
+})?.text || '你会收到这条讨论后续回复的通知。')
+const lockedText = computed(() => getUiCopy({
+  surface: 'discussion-sidebar-locked',
+})?.text || '当前讨论已锁定，暂时无法继续回复。')
 </script>
 
 <style scoped>

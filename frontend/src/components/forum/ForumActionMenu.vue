@@ -1,7 +1,7 @@
 <template>
   <div :class="containerClass">
     <button
-      v-for="item in items"
+      v-for="item in normalizedItems"
       :key="item.key"
       type="button"
       :class="[itemClass, {
@@ -9,7 +9,7 @@
         'is-disabled': item.disabled,
       }]"
       :disabled="item.disabled"
-      :title="item.disabledReason || ''"
+      :title="item.titleText"
       @click="$emit('select', item.key)"
     >
       <span :class="`${itemClass}__main`">
@@ -24,7 +24,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   items: {
     type: Array,
     default: () => []
@@ -40,6 +43,16 @@ defineProps({
 })
 
 defineEmits(['select'])
+
+const normalizedItems = computed(() => props.items.map(item => ({
+  ...item,
+  disabledReason: item.disabledReason || '',
+  titleText: getUiCopy({
+    surface: 'forum-action-menu-item-title',
+    disabledReason: item.disabledReason || '',
+    label: item.label || '',
+  })?.text || (item.disabledReason || ''),
+})))
 </script>
 
 <style scoped>

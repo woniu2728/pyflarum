@@ -994,3 +994,39 @@ test('ui copy resolves discussion and post action copy', () => {
   assert.equal(postResult.key, postKey)
   assert.equal(postResult.text, 'toggle post 9')
 })
+
+test('ui copy resolves sidebar and action menu helper copy', () => {
+  const sidebarKey = uniqueKey('ui-sidebar-copy')
+  const titleKey = uniqueKey('ui-action-title')
+
+  registerUiCopy({
+    key: sidebarKey,
+    order: 10,
+    surfaces: ['discussion-sidebar-subscribed'],
+    resolve: () => ({
+      text: 'sidebar subscribed',
+    }),
+  })
+
+  registerUiCopy({
+    key: titleKey,
+    order: 20,
+    surfaces: ['forum-action-menu-item-title'],
+    resolve: ({ disabledReason }) => ({
+      text: `title:${disabledReason}`,
+    }),
+  })
+
+  const sidebarResult = getUiCopy({
+    surface: 'discussion-sidebar-subscribed',
+  })
+  const titleResult = getUiCopy({
+    surface: 'forum-action-menu-item-title',
+    disabledReason: 'busy',
+  })
+
+  assert.equal(sidebarResult.key, sidebarKey)
+  assert.equal(sidebarResult.text, 'sidebar subscribed')
+  assert.equal(titleResult.key, titleKey)
+  assert.equal(titleResult.text, 'title:busy')
+})
