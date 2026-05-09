@@ -2,11 +2,11 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-card">
-        <h2>验证邮箱</h2>
-        <p class="subtitle">确认你的邮箱地址后，账号安全设置会完整开放。</p>
+        <h2>{{ titleText }}</h2>
+        <p class="subtitle">{{ subtitleText }}</p>
 
         <div v-if="loading" class="status-box">
-          正在验证邮箱，请稍候...
+          {{ loadingText }}
         </div>
         <div v-else-if="success" class="status-box status-success">
           {{ success }}
@@ -15,12 +15,12 @@
           {{ error }}
         </div>
         <div v-else class="status-box">
-          请从邮件中的链接打开本页面，或确认地址中的验证令牌是否完整。
+          {{ idleText }}
         </div>
 
         <div class="actions">
-          <router-link to="/login" class="primary action-link">前往登录</router-link>
-          <router-link to="/profile" class="secondary action-link">返回个人资料</router-link>
+          <router-link to="/login" class="primary action-link">{{ loginActionText }}</router-link>
+          <router-link to="/profile" class="secondary action-link">{{ profileActionText }}</router-link>
         </div>
       </div>
     </div>
@@ -28,9 +28,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getUiCopy } from '@/forum/registry'
 import api from '@/api'
 
 const route = useRoute()
@@ -39,6 +40,24 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const success = ref('')
 const error = ref('')
+const titleText = computed(() => getUiCopy({
+  surface: 'verify-email-title',
+})?.text || '验证邮箱')
+const subtitleText = computed(() => getUiCopy({
+  surface: 'verify-email-subtitle',
+})?.text || '确认你的邮箱地址后，账号安全设置会完整开放。')
+const loadingText = computed(() => getUiCopy({
+  surface: 'verify-email-loading',
+})?.text || '正在验证邮箱，请稍候...')
+const idleText = computed(() => getUiCopy({
+  surface: 'verify-email-idle',
+})?.text || '请从邮件中的链接打开本页面，或确认地址中的验证令牌是否完整。')
+const loginActionText = computed(() => getUiCopy({
+  surface: 'verify-email-login-action',
+})?.text || '前往登录')
+const profileActionText = computed(() => getUiCopy({
+  surface: 'verify-email-profile-action',
+})?.text || '返回个人资料')
 
 watch(
   () => route.query.token,
@@ -57,9 +76,13 @@ watch(
       if (authStore.isAuthenticated) {
         await authStore.fetchUser()
       }
-      success.value = '邮箱验证成功。现在你可以继续登录，或返回个人资料查看最新状态。'
+      success.value = getUiCopy({
+        surface: 'verify-email-success',
+      })?.text || '邮箱验证成功。现在你可以继续登录，或返回个人资料查看最新状态。'
     } catch (err) {
-      error.value = err.response?.data?.error || '邮箱验证失败，请稍后重试'
+      error.value = err.response?.data?.error || (getUiCopy({
+        surface: 'verify-email-error',
+      })?.text || '邮箱验证失败，请稍后重试')
     } finally {
       loading.value = false
     }

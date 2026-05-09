@@ -1,7 +1,7 @@
 <template>
   <div class="composer-preview">
     <div class="composer-preview-header">
-      <span>预览</span>
+      <span>{{ previewTitleText }}</span>
       <small>{{ statusText }}</small>
     </div>
     <div v-if="loading" class="composer-preview-loading">{{ loadingText }}</div>
@@ -34,6 +34,9 @@ defineProps({
 const loadingText = computed(() => getUiCopy({
   surface: 'composer-preview-panel-loading',
 })?.text || '正在生成预览...')
+const previewTitleText = computed(() => getUiCopy({
+  surface: 'composer-preview-panel-title',
+})?.text || '预览')
 const emptyHtml = computed(() => {
   const text = getUiCopy({
     surface: 'composer-preview-panel-empty',

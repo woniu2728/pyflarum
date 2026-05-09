@@ -690,3 +690,41 @@ test('ui copy resolves contextual search and submit copy', () => {
   assert.equal(submitResult.key, submitKey)
   assert.equal(submitResult.text, 'uploading attachment')
 })
+
+test('ui copy resolves modal and notification contextual copy', () => {
+  const reportDescriptionKey = uniqueKey('ui-report-description')
+  const notificationMarkKey = uniqueKey('ui-notification-mark')
+
+  registerUiCopy({
+    key: reportDescriptionKey,
+    order: 10,
+    surfaces: ['post-report-description'],
+    resolve: ({ postNumber }) => ({
+      text: `report post #${postNumber}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: notificationMarkKey,
+    order: 20,
+    surfaces: ['notification-page-mark-all'],
+    resolve: ({ marking, hasActiveFilter }) => ({
+      text: marking ? 'working' : (hasActiveFilter ? 'mark filtered' : 'mark all'),
+    }),
+  })
+
+  const reportDescriptionResult = getUiCopy({
+    surface: 'post-report-description',
+    postNumber: 12,
+  })
+  const notificationMarkResult = getUiCopy({
+    surface: 'notification-page-mark-all',
+    marking: false,
+    hasActiveFilter: true,
+  })
+
+  assert.equal(reportDescriptionResult.key, reportDescriptionKey)
+  assert.equal(reportDescriptionResult.text, 'report post #12')
+  assert.equal(notificationMarkResult.key, notificationMarkKey)
+  assert.equal(notificationMarkResult.text, 'mark filtered')
+})

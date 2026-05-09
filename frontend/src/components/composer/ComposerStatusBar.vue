@@ -1,5 +1,5 @@
 <template>
-  <div v-if="items.length" class="composer-status-bar" aria-label="编辑器状态">
+  <div v-if="items.length" class="composer-status-bar" :aria-label="statusBarLabelText">
     <div
       v-for="item in items"
       :key="item.key"
@@ -13,12 +13,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
 defineProps({
   items: {
     type: Array,
     default: () => [],
   },
 })
+const statusBarLabelText = computed(() => getUiCopy({
+  surface: 'composer-status-bar-label',
+})?.text || '编辑器状态')
 </script>
 
 <style scoped>

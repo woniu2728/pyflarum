@@ -10,7 +10,7 @@
       {{ submitText }}
     </button>
 
-    <div class="composer-formatting" aria-label="格式化工具栏">
+    <div class="composer-formatting" :aria-label="formattingLabelText">
       <slot name="formatting"></slot>
     </div>
 
@@ -21,6 +21,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
 defineProps({
   submitDisabled: {
     type: Boolean,
@@ -35,6 +38,9 @@ defineProps({
     default: () => []
   }
 })
+const formattingLabelText = computed(() => getUiCopy({
+  surface: 'composer-formatting-toolbar-label',
+})?.text || '格式化工具栏')
 
 defineEmits(['submit'])
 </script>

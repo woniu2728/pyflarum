@@ -5,7 +5,7 @@
       class="composer-emoji-autocomplete"
       :style="styleObject"
       role="listbox"
-      aria-label="表情建议"
+      :aria-label="autocompleteLabelText"
       @mousedown.stop
       @click.stop
     >
@@ -30,7 +30,8 @@
 </template>
 
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   items: {
@@ -51,6 +52,9 @@ defineEmits(['select', 'highlight'])
 
 const pickerRef = ref(null)
 const itemRefs = ref([])
+const autocompleteLabelText = computed(() => getUiCopy({
+  surface: 'composer-emoji-autocomplete-label',
+})?.text || '表情建议')
 
 watch(
   () => [props.activeIndex, props.items.length],

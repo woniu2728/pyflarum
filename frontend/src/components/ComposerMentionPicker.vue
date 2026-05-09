@@ -5,7 +5,7 @@
       class="composer-mention-picker"
       :style="styleObject"
       role="listbox"
-      aria-label="提及用户"
+      :aria-label="pickerLabelText"
       @mousedown.stop
       @click.stop
     >
@@ -37,7 +37,7 @@
 
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
-import { getStateBlock } from '@/forum/registry'
+import { getStateBlock, getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   items: {
@@ -62,6 +62,9 @@ defineEmits(['select', 'highlight'])
 
 const pickerRef = ref(null)
 const itemRefs = ref([])
+const pickerLabelText = computed(() => getUiCopy({
+  surface: 'composer-mention-picker-label',
+})?.text || '提及用户')
 const loadingStateText = computed(() => {
   const stateBlock = getStateBlock({
     surface: 'composer-mention-loading',

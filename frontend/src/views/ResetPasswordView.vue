@@ -2,12 +2,12 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-card">
-        <h2>重置密码</h2>
-        <p class="subtitle">输入新的密码以完成重置。如果你是通过邮件打开页面，令牌会自动填入。</p>
+        <h2>{{ titleText }}</h2>
+        <p class="subtitle">{{ subtitleText }}</p>
 
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label for="reset-password-token">重置令牌</label>
+            <label for="reset-password-token">{{ tokenLabelText }}</label>
             <input
               id="reset-password-token"
               v-model="form.token"
@@ -20,7 +20,7 @@
           </div>
 
           <div class="form-group">
-            <label for="reset-password-new">新密码</label>
+            <label for="reset-password-new">{{ newPasswordLabelText }}</label>
             <input
               id="reset-password-new"
               v-model="form.password"
@@ -34,7 +34,7 @@
           </div>
 
           <div class="form-group">
-            <label for="reset-password-confirm">确认新密码</label>
+            <label for="reset-password-confirm">{{ confirmPasswordLabelText }}</label>
             <input
               id="reset-password-confirm"
               v-model="form.passwordConfirm"
@@ -56,7 +56,7 @@
         </form>
 
         <div class="auth-footer">
-          <router-link to="/login" class="link">返回登录</router-link>
+          <router-link to="/login" class="link">{{ backToLoginText }}</router-link>
         </div>
       </div>
     </div>
@@ -81,6 +81,21 @@ const form = reactive({
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+const titleText = computed(() => getUiCopy({
+  surface: 'reset-password-title',
+})?.text || '重置密码')
+const subtitleText = computed(() => getUiCopy({
+  surface: 'reset-password-subtitle',
+})?.text || '输入新的密码以完成重置。如果你是通过邮件打开页面，令牌会自动填入。')
+const tokenLabelText = computed(() => getUiCopy({
+  surface: 'reset-password-token-label',
+})?.text || '重置令牌')
+const newPasswordLabelText = computed(() => getUiCopy({
+  surface: 'reset-password-new-label',
+})?.text || '新密码')
+const confirmPasswordLabelText = computed(() => getUiCopy({
+  surface: 'reset-password-confirm-label',
+})?.text || '确认新密码')
 const tokenPlaceholderText = computed(() => getUiCopy({
   surface: 'reset-password-token-placeholder',
 })?.text || '请输入邮件中的重置令牌')
@@ -94,6 +109,9 @@ const submitButtonText = computed(() => getUiCopy({
   surface: 'reset-password-submit',
   loading: loading.value,
 })?.text || (loading.value ? '提交中...' : '重置密码'))
+const backToLoginText = computed(() => getUiCopy({
+  surface: 'reset-password-back-to-login',
+})?.text || '返回登录')
 
 watch(
   () => route.query.token,
@@ -107,7 +125,9 @@ async function handleSubmit() {
   success.value = ''
 
   if (form.password !== form.passwordConfirm) {
-    error.value = '两次输入的新密码不一致'
+    error.value = getUiCopy({
+      surface: 'reset-password-mismatch-error',
+    })?.text || '两次输入的新密码不一致'
     return
   }
 
@@ -118,12 +138,16 @@ async function handleSubmit() {
       password: form.password
     })
 
-    success.value = '密码已重置，正在返回登录页...'
+    success.value = getUiCopy({
+      surface: 'reset-password-success',
+    })?.text || '密码已重置，正在返回登录页...'
     setTimeout(() => {
       router.push('/login')
     }, 1500)
   } catch (err) {
-    error.value = err.response?.data?.error || '重置失败，请检查令牌或稍后重试'
+    error.value = err.response?.data?.error || (getUiCopy({
+      surface: 'reset-password-error',
+    })?.text || '重置失败，请检查令牌或稍后重试')
   } finally {
     loading.value = false
   }

@@ -5,7 +5,7 @@
         <button
           type="button"
           class="Button Button--icon Button--link"
-          aria-label="关闭"
+          :aria-label="closeLabelText"
           @click="modalStore.dismiss()"
         >
           <i class="fas fa-times"></i>
@@ -13,12 +13,12 @@
       </div>
 
       <div class="Modal-header">
-        <h3>举报帖子</h3>
+        <h3>{{ titleText }}</h3>
       </div>
 
       <div class="Modal-body">
         <p class="modal-form-description">
-          帖子 #{{ post?.number || '?' }} 会进入举报队列，版主可以直接在讨论页或后台查看并处理。
+          {{ descriptionText }}
         </p>
 
         <div v-if="errorMessage" class="modal-form-error">
@@ -26,7 +26,7 @@
         </div>
 
         <div class="modal-form-group">
-          <label for="post-report-reason">举报原因</label>
+          <label for="post-report-reason">{{ reasonLabelText }}</label>
           <select
             id="post-report-reason"
             v-model="form.reason"
@@ -40,9 +40,9 @@
         </div>
 
         <div class="modal-form-group">
-          <label for="post-report-message">补充说明</label>
+          <label for="post-report-message">{{ messageLabelText }}</label>
           <p class="modal-form-help">
-            {{ form.reason === '其他' ? '请尽量写清楚问题背景，方便版主快速判断。' : '可补充上下文、受影响内容或希望的处理方式。' }}
+            {{ messageHelpText }}
           </p>
           <textarea
             id="post-report-message"
@@ -50,17 +50,17 @@
             name="message"
             rows="4"
             class="modal-form-control modal-form-control--textarea"
-            placeholder="告诉管理员这条帖子为什么需要处理"
+            :placeholder="messagePlaceholderText"
           ></textarea>
         </div>
       </div>
 
       <div class="Modal-footer Modal-footer--split">
         <button type="button" class="Button Button--secondary" :disabled="submitting" @click="modalStore.dismiss()">
-          取消
+          {{ cancelButtonText }}
         </button>
         <button type="button" class="Button Button--primary" :disabled="submitting" @click="submit">
-          {{ submitting ? '提交中...' : '提交举报' }}
+          {{ submitButtonText }}
         </button>
       </div>
     </div>
@@ -68,7 +68,8 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 import { useModalStore } from '@/stores/modal'
 
 const props = defineProps({
@@ -102,6 +103,36 @@ const form = reactive({
   reason: '垃圾广告',
   message: ''
 })
+const closeLabelText = computed(() => getUiCopy({
+  surface: 'post-report-close-label',
+})?.text || '关闭')
+const titleText = computed(() => getUiCopy({
+  surface: 'post-report-title',
+})?.text || '举报帖子')
+const descriptionText = computed(() => getUiCopy({
+  surface: 'post-report-description',
+  postNumber: props.post?.number || '?',
+})?.text || `帖子 #${props.post?.number || '?'} 会进入举报队列，版主可以直接在讨论页或后台查看并处理。`)
+const reasonLabelText = computed(() => getUiCopy({
+  surface: 'post-report-reason-label',
+})?.text || '举报原因')
+const messageLabelText = computed(() => getUiCopy({
+  surface: 'post-report-message-label',
+})?.text || '补充说明')
+const messageHelpText = computed(() => getUiCopy({
+  surface: 'post-report-message-help',
+  reason: form.reason,
+})?.text || (form.reason === '其他' ? '请尽量写清楚问题背景，方便版主快速判断。' : '可补充上下文、受影响内容或希望的处理方式。'))
+const messagePlaceholderText = computed(() => getUiCopy({
+  surface: 'post-report-message-placeholder',
+})?.text || '告诉管理员这条帖子为什么需要处理')
+const cancelButtonText = computed(() => getUiCopy({
+  surface: 'modal-cancel-button',
+})?.text || '取消')
+const submitButtonText = computed(() => getUiCopy({
+  surface: 'post-report-submit-button',
+  submitting: submitting.value,
+})?.text || (submitting.value ? '提交中...' : '提交举报'))
 
 async function submit() {
   submitting.value = true
@@ -114,7 +145,9 @@ async function submit() {
     })
     modalStore.close({ reported: true, flag: result })
   } catch (error) {
-    errorMessage.value = error.response?.data?.error || error.message || '提交失败，请稍后重试'
+    errorMessage.value = error.response?.data?.error || error.message || (getUiCopy({
+      surface: 'modal-submit-error',
+    })?.text || '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }

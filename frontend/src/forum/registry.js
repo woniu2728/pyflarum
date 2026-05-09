@@ -1811,6 +1811,447 @@ registerUiCopy({
   }),
 })
 
+registerUiCopy({
+  key: 'verify-email-title',
+  order: 640,
+  surfaces: ['verify-email-title'],
+  resolve: () => ({
+    text: '验证邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-subtitle',
+  order: 650,
+  surfaces: ['verify-email-subtitle'],
+  resolve: () => ({
+    text: '确认你的邮箱地址后，账号安全设置会完整开放。',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-loading',
+  order: 660,
+  surfaces: ['verify-email-loading'],
+  resolve: () => ({
+    text: '正在验证邮箱，请稍候...',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-idle',
+  order: 670,
+  surfaces: ['verify-email-idle'],
+  resolve: () => ({
+    text: '请从邮件中的链接打开本页面，或确认地址中的验证令牌是否完整。',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-login-action',
+  order: 680,
+  surfaces: ['verify-email-login-action'],
+  resolve: () => ({
+    text: '前往登录',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-profile-action',
+  order: 690,
+  surfaces: ['verify-email-profile-action'],
+  resolve: () => ({
+    text: '返回个人资料',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-success',
+  order: 700,
+  surfaces: ['verify-email-success'],
+  resolve: () => ({
+    text: '邮箱验证成功。现在你可以继续登录，或返回个人资料查看最新状态。',
+  }),
+})
+
+registerUiCopy({
+  key: 'verify-email-error',
+  order: 710,
+  surfaces: ['verify-email-error'],
+  resolve: () => ({
+    text: '邮箱验证失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-title',
+  order: 720,
+  surfaces: ['reset-password-title'],
+  resolve: () => ({
+    text: '重置密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-subtitle',
+  order: 730,
+  surfaces: ['reset-password-subtitle'],
+  resolve: () => ({
+    text: '输入新的密码以完成重置。如果你是通过邮件打开页面，令牌会自动填入。',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-token-label',
+  order: 740,
+  surfaces: ['reset-password-token-label'],
+  resolve: () => ({
+    text: '重置令牌',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-new-label',
+  order: 750,
+  surfaces: ['reset-password-new-label'],
+  resolve: () => ({
+    text: '新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-confirm-label',
+  order: 760,
+  surfaces: ['reset-password-confirm-label'],
+  resolve: () => ({
+    text: '确认新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-back-to-login',
+  order: 770,
+  surfaces: ['reset-password-back-to-login'],
+  resolve: () => ({
+    text: '返回登录',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-mismatch-error',
+  order: 780,
+  surfaces: ['reset-password-mismatch-error'],
+  resolve: () => ({
+    text: '两次输入的新密码不一致',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-success',
+  order: 790,
+  surfaces: ['reset-password-success'],
+  resolve: () => ({
+    text: '密码已重置，正在返回登录页...',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-error',
+  order: 800,
+  surfaces: ['reset-password-error'],
+  resolve: () => ({
+    text: '重置失败，请检查令牌或稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'modal-close-label',
+  order: 810,
+  surfaces: ['modal-close-label', 'post-report-close-label', 'moderation-action-close-label'],
+  resolve: () => ({
+    text: '关闭',
+  }),
+})
+
+registerUiCopy({
+  key: 'modal-cancel-button',
+  order: 820,
+  surfaces: ['modal-cancel-button'],
+  resolve: () => ({
+    text: '取消',
+  }),
+})
+
+registerUiCopy({
+  key: 'modal-submit-error',
+  order: 830,
+  surfaces: ['modal-submit-error'],
+  resolve: () => ({
+    text: '提交失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-title',
+  order: 840,
+  surfaces: ['post-report-title'],
+  resolve: () => ({
+    text: '举报帖子',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-description',
+  order: 850,
+  surfaces: ['post-report-description'],
+  resolve: ({ postNumber }) => ({
+    text: `帖子 #${postNumber || '?'} 会进入举报队列，版主可以直接在讨论页或后台查看并处理。`,
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-reason-label',
+  order: 860,
+  surfaces: ['post-report-reason-label'],
+  resolve: () => ({
+    text: '举报原因',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-message-label',
+  order: 870,
+  surfaces: ['post-report-message-label'],
+  resolve: () => ({
+    text: '补充说明',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-message-help',
+  order: 880,
+  surfaces: ['post-report-message-help'],
+  resolve: ({ reason }) => ({
+    text: reason === '其他' ? '请尽量写清楚问题背景，方便版主快速判断。' : '可补充上下文、受影响内容或希望的处理方式。',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-message-placeholder',
+  order: 890,
+  surfaces: ['post-report-message-placeholder'],
+  resolve: () => ({
+    text: '告诉管理员这条帖子为什么需要处理',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-report-submit-button',
+  order: 900,
+  surfaces: ['post-report-submit-button'],
+  resolve: ({ submitting }) => ({
+    text: submitting ? '提交中...' : '提交举报',
+  }),
+})
+
+registerUiCopy({
+  key: 'moderation-action-note-label',
+  order: 910,
+  surfaces: ['moderation-action-note-label'],
+  resolve: () => ({
+    text: '处理备注',
+  }),
+})
+
+registerUiCopy({
+  key: 'moderation-action-note-help',
+  order: 920,
+  surfaces: ['moderation-action-note-help'],
+  resolve: () => ({
+    text: '备注会同步显示给内容作者，建议简明说明处理原因。',
+  }),
+})
+
+registerUiCopy({
+  key: 'moderation-action-submit-button',
+  order: 930,
+  surfaces: ['moderation-action-submit-button'],
+  resolve: ({ submitting, confirmText }) => ({
+    text: submitting ? '提交中...' : (confirmText || '提交'),
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-hero-title',
+  order: 940,
+  surfaces: ['notification-page-hero-title'],
+  resolve: () => ({
+    text: '通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-hero-pill',
+  order: 950,
+  surfaces: ['notification-page-hero-pill'],
+  resolve: () => ({
+    text: '消息中心',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-hero-description',
+  order: 960,
+  surfaces: ['notification-page-hero-description'],
+  resolve: () => ({
+    text: '这里会显示回复、提及、点赞、审核和账号状态相关通知。',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-mark-all',
+  order: 970,
+  surfaces: ['notification-page-mark-all'],
+  resolve: ({ marking, hasActiveFilter }) => ({
+    text: marking ? '处理中...' : (hasActiveFilter ? '当前筛选标记已读' : '全部标记为已读'),
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-clear-read',
+  order: 980,
+  surfaces: ['notification-page-clear-read'],
+  resolve: ({ marking, hasActiveFilter }) => ({
+    text: marking ? '处理中...' : (hasActiveFilter ? '当前筛选清除已读' : '当前页清除已读'),
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-unread-toggle',
+  order: 990,
+  surfaces: ['notification-page-unread-toggle'],
+  resolve: ({ unreadOnly }) => ({
+    text: unreadOnly ? '查看全部通知' : '仅看未读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-preferences-link',
+  order: 1000,
+  surfaces: ['notification-page-preferences-link'],
+  resolve: () => ({
+    text: '通知偏好前往个人设置',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-filter-description',
+  order: 1010,
+  surfaces: ['notification-page-filter-description'],
+  resolve: () => ({
+    text: '按通知类型筛选消息流，方便集中处理提及、点赞、审核和账号状态通知。',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-open-discussion',
+  order: 1020,
+  surfaces: ['notification-page-open-discussion'],
+  resolve: () => ({
+    text: '打开讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-mark-group-read',
+  order: 1030,
+  surfaces: ['notification-page-mark-group-read'],
+  resolve: () => ({
+    text: '整组标记已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-clear-group-read',
+  order: 1040,
+  surfaces: ['notification-page-clear-group-read'],
+  resolve: () => ({
+    text: '整组清理已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-group-count',
+  order: 1050,
+  surfaces: ['notification-page-group-count'],
+  resolve: ({ count }) => ({
+    text: `${Number(count || 0)} 条通知`,
+  }),
+})
+
+registerUiCopy({
+  key: 'header-search-open-label',
+  order: 1060,
+  surfaces: ['header-search-open-label'],
+  resolve: () => ({
+    text: '打开全局搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'header-search-clear-label',
+  order: 1070,
+  surfaces: ['header-search-clear-label'],
+  resolve: () => ({
+    text: '清除搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-mention-picker-label',
+  order: 1080,
+  surfaces: ['composer-mention-picker-label'],
+  resolve: () => ({
+    text: '提及用户',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-emoji-autocomplete-label',
+  order: 1090,
+  surfaces: ['composer-emoji-autocomplete-label'],
+  resolve: () => ({
+    text: '表情建议',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-formatting-toolbar-label',
+  order: 1100,
+  surfaces: ['composer-formatting-toolbar-label'],
+  resolve: () => ({
+    text: '格式化工具栏',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-status-bar-label',
+  order: 1110,
+  surfaces: ['composer-status-bar-label'],
+  resolve: () => ({
+    text: '编辑器状态',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-panel-title',
+  order: 1120,
+  surfaces: ['composer-preview-panel-title'],
+  resolve: () => ({
+    text: '预览',
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,

@@ -26,7 +26,7 @@
               <button
                 type="button"
                 class="Button Button--icon Button--link"
-                aria-label="关闭"
+                :aria-label="closeButtonLabelText"
                 @click="handleDismiss"
               >
                 <i class="fas fa-times"></i>
@@ -69,6 +69,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 import { useModalStore } from '@/stores/modal'
 
 const modalStore = useModalStore()
@@ -85,6 +86,9 @@ const primaryButtonClass = computed(() => {
   if (current.value?.tone === 'danger') return 'Button--danger'
   return 'Button--primary'
 })
+const closeButtonLabelText = computed(() => getUiCopy({
+  surface: 'modal-close-label',
+})?.text || '关闭')
 
 watch(
   () => current.value?.key,

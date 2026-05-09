@@ -4,7 +4,7 @@
     :class="{ 'search-box--active': currentSearchQuery }"
     role="button"
     tabindex="0"
-    aria-label="打开全局搜索"
+    :aria-label="openLabelText"
     @click="$emit('open-search')"
     @keydown.enter.prevent="$emit('open-search')"
     @keydown.space.prevent="$emit('open-search')"
@@ -20,7 +20,7 @@
       v-if="currentSearchQuery"
       type="button"
       class="search-clear"
-      aria-label="清除搜索"
+      :aria-label="clearLabelText"
       @click.stop="$emit('clear-search')"
     >
       <i class="fas fa-times-circle"></i>
@@ -46,6 +46,12 @@ const placeholderText = computed(() => getUiCopy({
   surface: 'header-search-placeholder',
   currentSearchQuery: props.currentSearchQuery,
 })?.text || '搜索论坛')
+const openLabelText = computed(() => getUiCopy({
+  surface: 'header-search-open-label',
+})?.text || '打开全局搜索')
+const clearLabelText = computed(() => getUiCopy({
+  surface: 'header-search-clear-label',
+})?.text || '清除搜索')
 
 defineEmits(['open-search', 'clear-search'])
 </script>
