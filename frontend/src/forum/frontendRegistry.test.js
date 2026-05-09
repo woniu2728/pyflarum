@@ -1030,3 +1030,72 @@ test('ui copy resolves sidebar and action menu helper copy', () => {
   assert.equal(titleResult.key, titleKey)
   assert.equal(titleResult.text, 'title:busy')
 })
+
+test('ui copy resolves mobile header and discussion list navigation copy', () => {
+  const pageTitleKey = uniqueKey('ui-mobile-page-title')
+  const leftActionKey = uniqueKey('ui-mobile-left-action')
+  const rightActionKey = uniqueKey('ui-mobile-right-action')
+  const filterLabelKey = uniqueKey('ui-discussion-filter-label')
+
+  registerUiCopy({
+    key: pageTitleKey,
+    order: 10,
+    surfaces: ['header-mobile-page-title'],
+    resolve: ({ routeName }) => ({
+      text: `page:${routeName}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: leftActionKey,
+    order: 20,
+    surfaces: ['header-mobile-left-action-label'],
+    resolve: ({ leftAction }) => ({
+      text: `left:${leftAction}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: rightActionKey,
+    order: 30,
+    surfaces: ['header-mobile-right-action-label'],
+    resolve: ({ actionType }) => ({
+      text: `right:${actionType}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: filterLabelKey,
+    order: 40,
+    surfaces: ['discussion-list-default-filter-label'],
+    resolve: ({ code }) => ({
+      text: `filter:${code}`,
+    }),
+  })
+
+  const pageTitleResult = getUiCopy({
+    surface: 'header-mobile-page-title',
+    routeName: 'search',
+  })
+  const leftActionResult = getUiCopy({
+    surface: 'header-mobile-left-action-label',
+    leftAction: 'back',
+  })
+  const rightActionResult = getUiCopy({
+    surface: 'header-mobile-right-action-label',
+    actionType: 'discussion-menu',
+  })
+  const filterLabelResult = getUiCopy({
+    surface: 'discussion-list-default-filter-label',
+    code: 'following',
+  })
+
+  assert.equal(pageTitleResult.key, pageTitleKey)
+  assert.equal(pageTitleResult.text, 'page:search')
+  assert.equal(leftActionResult.key, leftActionKey)
+  assert.equal(leftActionResult.text, 'left:back')
+  assert.equal(rightActionResult.key, rightActionKey)
+  assert.equal(rightActionResult.text, 'right:discussion-menu')
+  assert.equal(filterLabelResult.key, filterLabelKey)
+  assert.equal(filterLabelResult.text, 'filter:following')
+})

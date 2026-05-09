@@ -2577,6 +2577,57 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'header-mobile-page-title',
+  order: 479,
+  surfaces: ['header-mobile-page-title'],
+  resolve: ({ routeName, forumTitle }) => ({
+    text: ({
+      home: '全部讨论',
+      following: '关注中',
+      tags: '标签',
+      profile: '个人主页',
+      'user-profile': '个人主页',
+      notifications: '通知',
+      search: '搜索结果',
+      'discussion-detail': '讨论详情',
+      login: '登录',
+      register: '注册',
+    })[routeName] || forumTitle || 'Bias',
+  }),
+})
+
+registerUiCopy({
+  key: 'header-mobile-left-action-label',
+  order: 479,
+  surfaces: ['header-mobile-left-action-label'],
+  resolve: ({ leftAction }) => ({
+    text: leftAction === 'back' ? '返回上一页' : '打开导航菜单',
+  }),
+})
+
+registerUiCopy({
+  key: 'header-mobile-right-action-label',
+  order: 479,
+  surfaces: ['header-mobile-right-action-label'],
+  resolve: ({ actionType }) => ({
+    text: actionType === 'discussion-menu'
+      ? '讨论操作菜单'
+      : actionType === 'login'
+        ? '登录'
+        : '发起讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-default-filter-label',
+  order: 479,
+  surfaces: ['discussion-list-default-filter-label'],
+  resolve: ({ code }) => ({
+    text: code === 'following' ? '关注中' : '全部讨论',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],

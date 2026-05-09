@@ -1,10 +1,10 @@
 import { computed } from 'vue'
-import { getEmptyState, getForumNavItems, getStateBlock } from '@/forum/registry'
+import { getEmptyState, getForumNavItems, getStateBlock, getUiCopy } from '@/forum/registry'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 
 const DEFAULT_DISCUSSION_FILTERS = [
-  { code: 'all', label: '全部讨论', icon: 'far fa-comments', sidebar_visible: true, route_path: '/' },
-  { code: 'following', label: '关注中', icon: 'fas fa-bell', requires_authenticated_user: true, sidebar_visible: true, route_path: '/following' },
+  { code: 'all', icon: 'far fa-comments', sidebar_visible: true, route_path: '/' },
+  { code: 'following', icon: 'fas fa-bell', requires_authenticated_user: true, sidebar_visible: true, route_path: '/following' },
 ]
 
 export function useDiscussionListNavigation({
@@ -76,11 +76,15 @@ export function useDiscussionListNavigation({
       .map(item => {
         const fallback = fallbackByCode.get(item.code) || {}
         const navItem = navItemsByCode.get(item.code) || {}
+        const fallbackLabel = getUiCopy({
+          surface: 'discussion-list-default-filter-label',
+          code: item.code,
+        })?.text || item.code
         return {
           ...fallback,
           ...navItem,
           ...item,
-          label: item.label || navItem.label || fallback.label || item.code,
+          label: item.label || navItem.label || fallback.label || fallbackLabel,
           icon: item.icon || navItem.icon || fallback.icon || 'far fa-comments',
         }
       })

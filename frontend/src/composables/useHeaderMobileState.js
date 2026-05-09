@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 
 export function useHeaderMobileState({
   authStore,
@@ -20,33 +21,18 @@ export function useHeaderMobileState({
       return mobileHeaderOverride.value.title
     }
 
-    switch (route.name) {
-      case 'home':
-        return '全部讨论'
-      case 'following':
-        return '关注中'
-      case 'tags':
-        return '标签'
-      case 'profile':
-      case 'user-profile':
-        return '个人主页'
-      case 'notifications':
-        return '通知'
-      case 'search':
-        return '搜索结果'
-      case 'discussion-detail':
-        return '讨论详情'
-      case 'login':
-        return '登录'
-      case 'register':
-        return '注册'
-      default:
-        return forumTitle || 'Bias'
-    }
+    return getUiCopy({
+      surface: 'header-mobile-page-title',
+      routeName: route.name,
+      forumTitle,
+    })?.text || resolveMobilePageTitle(route.name, forumTitle)
   })
 
   const mobileLeftActionIcon = computed(() => mobileHeaderOverride.value?.leftAction === 'back' ? 'fas fa-angle-left' : 'fas fa-bars')
-  const mobileLeftActionLabel = computed(() => mobileHeaderOverride.value?.leftAction === 'back' ? '返回上一页' : '打开导航菜单')
+  const mobileLeftActionLabel = computed(() => getUiCopy({
+    surface: 'header-mobile-left-action-label',
+    leftAction: mobileHeaderOverride.value?.leftAction || 'menu',
+  })?.text || (mobileHeaderOverride.value?.leftAction === 'back' ? '返回上一页' : '打开导航菜单'))
 
   const mobileRightActionType = computed(() => {
     if (mobileHeaderOverride.value?.rightAction) {
@@ -71,14 +57,10 @@ export function useHeaderMobileState({
   })
 
   const mobileRightActionLabel = computed(() => {
-    switch (mobileRightActionType.value) {
-      case 'discussion-menu':
-        return '讨论操作菜单'
-      case 'login':
-        return '登录'
-      default:
-        return '发起讨论'
-    }
+    return getUiCopy({
+      surface: 'header-mobile-right-action-label',
+      actionType: mobileRightActionType.value,
+    })?.text || resolveMobileRightActionLabel(mobileRightActionType.value)
   })
 
   function isMobileNavActive(key) {
@@ -125,5 +107,42 @@ export function useHeaderMobileState({
     flipMobileDrawer,
     resetMobileHeaderOverride,
     updateMobileHeaderOverride
+  }
+}
+
+function resolveMobilePageTitle(routeName, forumTitle) {
+  switch (routeName) {
+    case 'home':
+      return '全部讨论'
+    case 'following':
+      return '关注中'
+    case 'tags':
+      return '标签'
+    case 'profile':
+    case 'user-profile':
+      return '个人主页'
+    case 'notifications':
+      return '通知'
+    case 'search':
+      return '搜索结果'
+    case 'discussion-detail':
+      return '讨论详情'
+    case 'login':
+      return '登录'
+    case 'register':
+      return '注册'
+    default:
+      return forumTitle || 'Bias'
+  }
+}
+
+function resolveMobileRightActionLabel(actionType) {
+  switch (actionType) {
+    case 'discussion-menu':
+      return '讨论操作菜单'
+    case 'login':
+      return '登录'
+    default:
+      return '发起讨论'
   }
 }
