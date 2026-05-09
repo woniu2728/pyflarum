@@ -162,10 +162,17 @@ watch(
   () => [normalizedQuery.value, searchType.value, discussionTotal.value, postTotal.value, userTotal.value],
   () => {
     const query = normalizedQuery.value
-    const title = query ? `搜索：${query}` : '搜索'
-    const description = query
+    const title = getUiCopy({
+      surface: 'search-page-meta-title',
+      query,
+    })?.text || (query ? `搜索：${query}` : '搜索')
+    const description = getUiCopy({
+      surface: 'search-page-meta-description',
+      query,
+      hasQuery: Boolean(query),
+    })?.text || (query
       ? `查看“${query}”相关的讨论、回复和用户结果。`
-      : '搜索论坛中的讨论、回复和用户。'
+      : '搜索论坛中的讨论、回复和用户。')
     forumStore.setPageMeta({
       title,
       description,

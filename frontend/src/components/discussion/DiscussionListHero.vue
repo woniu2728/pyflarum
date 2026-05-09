@@ -3,10 +3,10 @@
     <div class="tag-hero-inner">
       <div class="tag-hero-pill following-pill">
         <i class="fas fa-bell"></i>
-        关注中
+        {{ followingPillText }}
       </div>
-      <h1>关注的讨论</h1>
-      <p>这里会显示你已关注、并在后续收到新回复通知的讨论。</p>
+      <h1>{{ followingTitleText }}</h1>
+      <p>{{ followingDescriptionText }}</p>
     </div>
   </section>
 
@@ -17,13 +17,16 @@
         {{ currentTag.name }}
       </div>
       <h1>{{ currentTag.name }}</h1>
-      <p>{{ currentTag.description || '这个标签下的讨论会集中显示在这里。' }}</p>
+      <p>{{ currentTag.description || currentTagDescriptionText }}</p>
     </div>
   </section>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   currentTag: {
     type: Object,
     default: null
@@ -33,6 +36,23 @@ defineProps({
     default: false
   }
 })
+
+const followingPillText = computed(() => getUiCopy({
+  surface: 'discussion-list-following-hero-pill',
+})?.text || '关注中')
+
+const followingTitleText = computed(() => getUiCopy({
+  surface: 'discussion-list-following-hero-title',
+})?.text || '关注的讨论')
+
+const followingDescriptionText = computed(() => getUiCopy({
+  surface: 'discussion-list-following-hero-description',
+})?.text || '这里会显示你已关注、并在后续收到新回复通知的讨论。')
+
+const currentTagDescriptionText = computed(() => getUiCopy({
+  surface: 'discussion-list-tag-hero-description',
+  tagName: props.currentTag?.name || '',
+})?.text || '这个标签下的讨论会集中显示在这里。')
 </script>
 
 <style scoped>

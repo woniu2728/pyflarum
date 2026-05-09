@@ -1788,6 +1788,24 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-page-meta-title',
+  order: 479,
+  surfaces: ['search-page-meta-title'],
+  resolve: ({ query }) => ({
+    text: query ? `搜索：${query}` : '搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-page-meta-description',
+  order: 479,
+  surfaces: ['search-page-meta-description'],
+  resolve: ({ query, hasQuery }) => ({
+    text: hasQuery ? `查看“${query}”相关的讨论、回复和用户结果。` : '搜索论坛中的讨论、回复和用户。',
+  }),
+})
+
+registerUiCopy({
   key: 'search-result-section-show-more',
   order: 479,
   surfaces: ['search-result-section-show-more'],
@@ -2624,6 +2642,42 @@ registerUiCopy({
   surfaces: ['discussion-list-default-filter-label'],
   resolve: ({ code }) => ({
     text: code === 'following' ? '关注中' : '全部讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-following-hero-pill',
+  order: 479,
+  surfaces: ['discussion-list-following-hero-pill'],
+  resolve: () => ({
+    text: '关注中',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-following-hero-title',
+  order: 479,
+  surfaces: ['discussion-list-following-hero-title'],
+  resolve: () => ({
+    text: '关注的讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-following-hero-description',
+  order: 479,
+  surfaces: ['discussion-list-following-hero-description'],
+  resolve: () => ({
+    text: '这里会显示你已关注、并在后续收到新回复通知的讨论。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-tag-hero-description',
+  order: 479,
+  surfaces: ['discussion-list-tag-hero-description'],
+  resolve: () => ({
+    text: '这个标签下的讨论会集中显示在这里。',
   }),
 })
 

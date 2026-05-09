@@ -1286,3 +1286,40 @@ test('ui copy resolves discussion list toolbar and content copy', () => {
   assert.equal(loadMoreResult.key, loadMoreKey)
   assert.equal(loadMoreResult.text, 'load more discussions')
 })
+
+test('ui copy resolves discussion list hero and search meta copy', () => {
+  const followingKey = uniqueKey('ui-following-hero')
+  const searchMetaKey = uniqueKey('ui-search-meta')
+
+  registerUiCopy({
+    key: followingKey,
+    order: 10,
+    surfaces: ['discussion-list-following-hero-description'],
+    resolve: () => ({
+      text: 'following hero description',
+    }),
+  })
+
+  registerUiCopy({
+    key: searchMetaKey,
+    order: 20,
+    surfaces: ['search-page-meta-description'],
+    resolve: ({ query }) => ({
+      text: `meta:${query}`,
+    }),
+  })
+
+  const followingResult = getUiCopy({
+    surface: 'discussion-list-following-hero-description',
+  })
+  const searchMetaResult = getUiCopy({
+    surface: 'search-page-meta-description',
+    query: 'Django',
+    hasQuery: true,
+  })
+
+  assert.equal(followingResult.key, followingKey)
+  assert.equal(followingResult.text, 'following hero description')
+  assert.equal(searchMetaResult.key, searchMetaKey)
+  assert.equal(searchMetaResult.text, 'meta:Django')
+})
