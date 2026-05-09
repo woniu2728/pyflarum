@@ -1496,3 +1496,55 @@ test('ui copy resolves discussion composer copy', () => {
   assert.equal(pendingResult.key, pendingKey)
   assert.equal(pendingResult.text, 'discussion pending')
 })
+
+test('ui copy resolves profile feedback copy', () => {
+  const settingsKey = uniqueKey('ui-profile-settings')
+  const passwordKey = uniqueKey('ui-profile-password')
+  const avatarKey = uniqueKey('ui-profile-avatar')
+
+  registerUiCopy({
+    key: settingsKey,
+    order: 10,
+    surfaces: ['profile-settings-save-success'],
+    resolve: ({ emailChanged, email }) => ({
+      text: emailChanged ? `settings:${email}` : 'settings:plain',
+    }),
+  })
+
+  registerUiCopy({
+    key: passwordKey,
+    order: 20,
+    surfaces: ['profile-password-mismatch-error'],
+    resolve: () => ({
+      text: 'password mismatch',
+    }),
+  })
+
+  registerUiCopy({
+    key: avatarKey,
+    order: 30,
+    surfaces: ['profile-avatar-upload-error-title'],
+    resolve: () => ({
+      text: 'avatar upload failed',
+    }),
+  })
+
+  const settingsResult = getUiCopy({
+    surface: 'profile-settings-save-success',
+    emailChanged: true,
+    email: 'a@b.com',
+  })
+  const passwordResult = getUiCopy({
+    surface: 'profile-password-mismatch-error',
+  })
+  const avatarResult = getUiCopy({
+    surface: 'profile-avatar-upload-error-title',
+  })
+
+  assert.equal(settingsResult.key, settingsKey)
+  assert.equal(settingsResult.text, 'settings:a@b.com')
+  assert.equal(passwordResult.key, passwordKey)
+  assert.equal(passwordResult.text, 'password mismatch')
+  assert.equal(avatarResult.key, avatarKey)
+  assert.equal(avatarResult.text, 'avatar upload failed')
+})

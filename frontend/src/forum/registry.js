@@ -1540,11 +1540,110 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'profile-settings-save-success',
+  order: 255,
+  surfaces: ['profile-settings-save-success'],
+  resolve: ({ emailChanged, email }) => ({
+    text: emailChanged ? `资料已保存，验证邮件已发送到 ${email}` : '资料已保存',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-save-error',
+  order: 256,
+  surfaces: ['profile-settings-save-error'],
+  resolve: () => ({
+    text: '保存失败',
+  }),
+})
+
+registerUiCopy({
   key: 'profile-preferences-save-button',
   order: 260,
   surfaces: ['profile-preferences-save-button'],
   resolve: ({ saving }) => ({
     text: saving ? '保存中...' : '保存偏好',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-load-error',
+  order: 261,
+  surfaces: ['profile-preferences-load-error'],
+  resolve: () => ({
+    text: '加载通知偏好失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-save-success',
+  order: 262,
+  surfaces: ['profile-preferences-save-success'],
+  resolve: () => ({
+    text: '通知偏好已保存',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-save-error',
+  order: 263,
+  surfaces: ['profile-preferences-save-error'],
+  resolve: () => ({
+    text: '保存通知偏好失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-verification-success',
+  order: 264,
+  surfaces: ['profile-verification-success'],
+  resolve: () => ({
+    text: '验证邮件已发送',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-verification-error',
+  order: 265,
+  surfaces: ['profile-verification-error'],
+  resolve: () => ({
+    text: '发送失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-password-empty-error',
+  order: 266,
+  surfaces: ['profile-password-empty-error'],
+  resolve: () => ({
+    text: '请完整填写密码信息',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-password-mismatch-error',
+  order: 267,
+  surfaces: ['profile-password-mismatch-error'],
+  resolve: () => ({
+    text: '两次输入的新密码不一致',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-password-success',
+  order: 268,
+  surfaces: ['profile-password-success'],
+  resolve: () => ({
+    text: '密码修改成功',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-password-error',
+  order: 269,
+  surfaces: ['profile-password-error'],
+  resolve: () => ({
+    text: '密码修改失败',
   }),
 })
 
@@ -3992,6 +4091,24 @@ registerUiCopy({
   surfaces: ['profile-hero-avatar-upload'],
   resolve: ({ uploading }) => ({
     text: uploading ? '上传中...' : '更换头像',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-avatar-upload-error-title',
+  order: 1171,
+  surfaces: ['profile-avatar-upload-error-title'],
+  resolve: () => ({
+    text: '头像上传失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-avatar-upload-error-message',
+  order: 1172,
+  surfaces: ['profile-avatar-upload-error-message'],
+  resolve: () => ({
+    text: '未知错误',
   }),
 })
 

@@ -1,5 +1,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import api from '@/api'
+import { getUiCopy } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
 import {
   normalizeDiscussion,
@@ -185,11 +186,17 @@ export function useProfilePage({
 
       await authStore.fetchUser()
 
-      settingsSuccess.value = previousEmail !== nextUser.email
+      settingsSuccess.value = getUiCopy({
+        surface: 'profile-settings-save-success',
+        emailChanged: previousEmail !== nextUser.email,
+        email: nextUser.email,
+      })?.text || (previousEmail !== nextUser.email
         ? `资料已保存，验证邮件已发送到 ${nextUser.email}`
-        : '资料已保存'
+        : '资料已保存')
     } catch (error) {
-      settingsError.value = error.response?.data?.error || error.message || '保存失败'
+      settingsError.value = getUiCopy({
+        surface: 'profile-settings-save-error',
+      })?.text || (error.response?.data?.error || error.message || '保存失败')
     } finally {
       saving.value = false
     }
@@ -209,7 +216,9 @@ export function useProfilePage({
         authStore.user.preferences = { ...data }
       }
     } catch (error) {
-      preferencesError.value = error.response?.data?.error || error.message || '加载通知偏好失败'
+      preferencesError.value = getUiCopy({
+        surface: 'profile-preferences-load-error',
+      })?.text || (error.response?.data?.error || error.message || '加载通知偏好失败')
     } finally {
       loadingPreferences.value = false
     }
@@ -232,9 +241,13 @@ export function useProfilePage({
       if (authStore.user) {
         authStore.user.preferences = { ...data }
       }
-      preferencesSuccess.value = '通知偏好已保存'
+      preferencesSuccess.value = getUiCopy({
+        surface: 'profile-preferences-save-success',
+      })?.text || '通知偏好已保存'
     } catch (error) {
-      preferencesError.value = error.response?.data?.error || error.message || '保存通知偏好失败'
+      preferencesError.value = getUiCopy({
+        surface: 'profile-preferences-save-error',
+      })?.text || (error.response?.data?.error || error.message || '保存通知偏好失败')
     } finally {
       savingPreferences.value = false
     }
@@ -247,9 +260,13 @@ export function useProfilePage({
 
     try {
       const data = await api.post('/users/me/resend-email-verification')
-      verificationSuccess.value = data.message || '验证邮件已发送'
+      verificationSuccess.value = data.message || getUiCopy({
+        surface: 'profile-verification-success',
+      })?.text || '验证邮件已发送'
     } catch (error) {
-      verificationError.value = error.response?.data?.error || error.message || '发送失败'
+      verificationError.value = getUiCopy({
+        surface: 'profile-verification-error',
+      })?.text || (error.response?.data?.error || error.message || '发送失败')
     } finally {
       verificationSending.value = false
     }
@@ -260,12 +277,16 @@ export function useProfilePage({
     passwordError.value = ''
 
     if (!passwordForm.value.old_password || !passwordForm.value.new_password) {
-      passwordError.value = '请完整填写密码信息'
+      passwordError.value = getUiCopy({
+        surface: 'profile-password-empty-error',
+      })?.text || '请完整填写密码信息'
       return
     }
 
     if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
-      passwordError.value = '两次输入的新密码不一致'
+      passwordError.value = getUiCopy({
+        surface: 'profile-password-mismatch-error',
+      })?.text || '两次输入的新密码不一致'
       return
     }
 
@@ -275,14 +296,18 @@ export function useProfilePage({
         old_password: passwordForm.value.old_password,
         new_password: passwordForm.value.new_password
       })
-      passwordSuccess.value = data.message || '密码修改成功'
+      passwordSuccess.value = data.message || getUiCopy({
+        surface: 'profile-password-success',
+      })?.text || '密码修改成功'
       passwordForm.value = {
         old_password: '',
         new_password: '',
         confirm_password: ''
       }
     } catch (error) {
-      passwordError.value = error.response?.data?.error || error.message || '密码修改失败'
+      passwordError.value = getUiCopy({
+        surface: 'profile-password-error',
+      })?.text || (error.response?.data?.error || error.message || '密码修改失败')
     } finally {
       changingPassword.value = false
     }
@@ -313,8 +338,12 @@ export function useProfilePage({
       await authStore.fetchUser()
     } catch (error) {
       await modalStore.alert({
-        title: '头像上传失败',
-        message: error.response?.data?.error || error.message || '未知错误',
+        title: getUiCopy({
+          surface: 'profile-avatar-upload-error-title',
+        })?.text || '头像上传失败',
+        message: getUiCopy({
+          surface: 'profile-avatar-upload-error-message',
+        })?.text || (error.response?.data?.error || error.message || '未知错误'),
         tone: 'danger'
       })
     } finally {
