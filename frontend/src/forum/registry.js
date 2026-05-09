@@ -1815,11 +1815,29 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-page-stats-label',
+  order: 479,
+  surfaces: ['search-page-stats-label'],
+  resolve: ({ itemKey }) => ({
+    text: itemKey === 'posts' ? '帖子' : itemKey === 'users' ? '用户' : '讨论',
+  }),
+})
+
+registerUiCopy({
   key: 'search-section-discussions-title',
   order: 479,
   surfaces: ['search-section-discussions-title'],
   resolve: () => ({
     text: '讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-discussion-result-replies',
+  order: 479,
+  surfaces: ['search-discussion-result-replies'],
+  resolve: ({ count }) => ({
+    text: `${count || 0} 回复`,
   }),
 })
 
@@ -1838,6 +1856,24 @@ registerUiCopy({
   surfaces: ['search-section-users-title'],
   resolve: () => ({
     text: '用户',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-user-result-discussions',
+  order: 479,
+  surfaces: ['search-user-result-discussions'],
+  resolve: ({ count }) => ({
+    text: `${count || 0} 讨论`,
+  }),
+})
+
+registerUiCopy({
+  key: 'search-user-result-replies',
+  order: 479,
+  surfaces: ['search-user-result-replies'],
+  resolve: ({ count }) => ({
+    text: `${count || 0} 回复`,
   }),
 })
 

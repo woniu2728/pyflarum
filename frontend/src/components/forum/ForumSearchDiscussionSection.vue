@@ -5,20 +5,16 @@
     @show-more="$emit('show-more')"
   >
     <ForumSearchResultCard
-      v-for="discussion in discussions"
-      :key="`discussion-${discussion.id}`"
-      :avatar-mode="Boolean(discussion.user?.avatar_url)"
-      :avatar-url="discussion.user?.avatar_url || ''"
-      :avatar-alt="discussion.user?.display_name || discussion.user?.username || ''"
+      v-for="item in discussionResultItems"
+      :key="item.key"
+      :avatar-mode="item.avatarMode"
+      :avatar-url="item.avatarUrl"
+      :avatar-alt="item.avatarAlt"
       icon-class="far fa-comments"
-      :title-html="getTitleHtml(discussion)"
-      :excerpt-html="getExcerptHtml(discussion)"
-      :meta-items="[
-        discussion.user?.display_name || discussion.user?.username || '未知用户',
-        `${discussion.comment_count || 0} 回复`,
-        formatRelativeTime(discussion.last_posted_at || discussion.created_at)
-      ]"
-      @click="openDiscussion(discussion)"
+      :title-html="item.titleHtml"
+      :excerpt-html="item.excerptHtml"
+      :meta-items="item.metaItems"
+      @click="openDiscussion(item.discussion)"
     />
   </ForumSearchResultSection>
 </template>
@@ -31,7 +27,7 @@ import { getUiCopy } from '@/forum/registry'
 import { buildDiscussionPath } from '@/utils/forum'
 import { useRouter } from 'vue-router'
 
-defineProps({
+const props = defineProps({
   discussions: {
     type: Array,
     default: () => []
@@ -60,6 +56,23 @@ const router = useRouter()
 const titleText = computed(() => getUiCopy({
   surface: 'search-section-discussions-title',
 })?.text || '讨论')
+const discussionResultItems = computed(() => props.discussions.map(discussion => ({
+  key: `discussion-${discussion.id}`,
+  avatarMode: Boolean(discussion.user?.avatar_url),
+  avatarUrl: discussion.user?.avatar_url || '',
+  avatarAlt: discussion.user?.display_name || discussion.user?.username || '',
+  titleHtml: props.getTitleHtml(discussion),
+  excerptHtml: props.getExcerptHtml(discussion),
+  metaItems: [
+    discussion.user?.display_name || discussion.user?.username || '未知用户',
+    getUiCopy({
+      surface: 'search-discussion-result-replies',
+      count: discussion.comment_count || 0,
+    })?.text || `${discussion.comment_count || 0} 回复`,
+    props.formatRelativeTime(discussion.last_posted_at || discussion.created_at)
+  ],
+  discussion,
+})))
 
 function openDiscussion(discussion) {
   router.push(buildDiscussionPath(discussion))

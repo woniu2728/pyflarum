@@ -1323,3 +1323,56 @@ test('ui copy resolves discussion list hero and search meta copy', () => {
   assert.equal(searchMetaResult.key, searchMetaKey)
   assert.equal(searchMetaResult.text, 'meta:Django')
 })
+
+test('ui copy resolves search stats and result count copy', () => {
+  const statsKey = uniqueKey('ui-search-stats')
+  const repliesKey = uniqueKey('ui-search-replies')
+  const userDiscussionsKey = uniqueKey('ui-search-user-discussions')
+
+  registerUiCopy({
+    key: statsKey,
+    order: 10,
+    surfaces: ['search-page-stats-label'],
+    resolve: ({ itemKey }) => ({
+      text: `stats:${itemKey}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: repliesKey,
+    order: 20,
+    surfaces: ['search-discussion-result-replies'],
+    resolve: ({ count }) => ({
+      text: `replies:${count}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: userDiscussionsKey,
+    order: 30,
+    surfaces: ['search-user-result-discussions'],
+    resolve: ({ count }) => ({
+      text: `discussions:${count}`,
+    }),
+  })
+
+  const statsResult = getUiCopy({
+    surface: 'search-page-stats-label',
+    itemKey: 'users',
+  })
+  const repliesResult = getUiCopy({
+    surface: 'search-discussion-result-replies',
+    count: 8,
+  })
+  const userDiscussionsResult = getUiCopy({
+    surface: 'search-user-result-discussions',
+    count: 3,
+  })
+
+  assert.equal(statsResult.key, statsKey)
+  assert.equal(statsResult.text, 'stats:users')
+  assert.equal(repliesResult.key, repliesKey)
+  assert.equal(repliesResult.text, 'replies:8')
+  assert.equal(userDiscussionsResult.key, userDiscussionsKey)
+  assert.equal(userDiscussionsResult.text, 'discussions:3')
+})

@@ -153,9 +153,33 @@ const heroTitleText = computed(() => getUiCopy({
   query: normalizedQuery.value,
 })?.text || `“${normalizedQuery.value || '未输入关键词'}”`)
 const searchStatsItems = computed(() => [
-  { key: 'discussions', label: '讨论', count: discussionTotal.value },
-  { key: 'posts', label: '帖子', count: postTotal.value },
-  { key: 'users', label: '用户', count: userTotal.value },
+  {
+    key: 'discussions',
+    label: getUiCopy({
+      surface: 'search-page-stats-label',
+      itemKey: 'discussions',
+      count: discussionTotal.value,
+    })?.text || '讨论',
+    count: discussionTotal.value,
+  },
+  {
+    key: 'posts',
+    label: getUiCopy({
+      surface: 'search-page-stats-label',
+      itemKey: 'posts',
+      count: postTotal.value,
+    })?.text || '帖子',
+    count: postTotal.value,
+  },
+  {
+    key: 'users',
+    label: getUiCopy({
+      surface: 'search-page-stats-label',
+      itemKey: 'users',
+      count: userTotal.value,
+    })?.text || '用户',
+    count: userTotal.value,
+  },
 ])
 
 watch(

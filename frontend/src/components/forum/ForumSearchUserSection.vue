@@ -5,21 +5,17 @@
     @show-more="$emit('show-more')"
   >
     <ForumSearchResultCard
-      v-for="user in users"
-      :key="`user-${user.id}`"
+      v-for="item in userResultItems"
+      :key="item.key"
       avatar-mode
-      :avatar-url="user.avatar_url || ''"
-      :avatar-alt="user.username || ''"
-      :avatar-text="user.avatar_url ? '' : (user.display_name || user.username || '?').charAt(0).toUpperCase()"
-      :title-html="getTitleHtml(user)"
-      :excerpt-html="getSubtitleHtml(user)"
-      :meta-items="[
-        `@${user.username}`,
-        `${user.discussion_count || 0} 讨论`,
-        `${user.comment_count || 0} 回复`
-      ]"
+      :avatar-url="item.avatarUrl"
+      :avatar-alt="item.avatarAlt"
+      :avatar-text="item.avatarText"
+      :title-html="item.titleHtml"
+      :excerpt-html="item.excerptHtml"
+      :meta-items="item.metaItems"
       user-layout
-      @click="openUser(user)"
+      @click="openUser(item.user)"
     />
   </ForumSearchResultSection>
 </template>
@@ -32,7 +28,7 @@ import { getUiCopy } from '@/forum/registry'
 import { buildUserPath } from '@/utils/forum'
 import { useRouter } from 'vue-router'
 
-defineProps({
+const props = defineProps({
   getSubtitleHtml: {
     type: Function,
     required: true
@@ -57,6 +53,26 @@ const router = useRouter()
 const titleText = computed(() => getUiCopy({
   surface: 'search-section-users-title',
 })?.text || '用户')
+const userResultItems = computed(() => props.users.map(user => ({
+  key: `user-${user.id}`,
+  avatarUrl: user.avatar_url || '',
+  avatarAlt: user.username || '',
+  avatarText: user.avatar_url ? '' : (user.display_name || user.username || '?').charAt(0).toUpperCase(),
+  titleHtml: props.getTitleHtml(user),
+  excerptHtml: props.getSubtitleHtml(user),
+  metaItems: [
+    `@${user.username}`,
+    getUiCopy({
+      surface: 'search-user-result-discussions',
+      count: user.discussion_count || 0,
+    })?.text || `${user.discussion_count || 0} 讨论`,
+    getUiCopy({
+      surface: 'search-user-result-replies',
+      count: user.comment_count || 0,
+    })?.text || `${user.comment_count || 0} 回复`,
+  ],
+  user,
+})))
 
 function openUser(user) {
   router.push(buildUserPath(user))
