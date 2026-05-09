@@ -1235,3 +1235,54 @@ test('ui copy resolves discussion post item and list meta copy', () => {
   assert.equal(lastPostedResult.key, lastPostedKey)
   assert.equal(lastPostedResult.text, 'last:2 分钟前')
 })
+
+test('ui copy resolves discussion list toolbar and content copy', () => {
+  const sortKey = uniqueKey('ui-sort-label')
+  const refreshingKey = uniqueKey('ui-list-refreshing')
+  const loadMoreKey = uniqueKey('ui-list-load-more')
+
+  registerUiCopy({
+    key: sortKey,
+    order: 10,
+    surfaces: ['discussion-list-toolbar-sort-label'],
+    resolve: ({ code }) => ({
+      text: `sort:${code}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: refreshingKey,
+    order: 20,
+    surfaces: ['discussion-list-refreshing'],
+    resolve: () => ({
+      text: 'refreshing discussions',
+    }),
+  })
+
+  registerUiCopy({
+    key: loadMoreKey,
+    order: 30,
+    surfaces: ['discussion-list-load-more'],
+    resolve: () => ({
+      text: 'load more discussions',
+    }),
+  })
+
+  const sortResult = getUiCopy({
+    surface: 'discussion-list-toolbar-sort-label',
+    code: 'top',
+  })
+  const refreshingResult = getUiCopy({
+    surface: 'discussion-list-refreshing',
+  })
+  const loadMoreResult = getUiCopy({
+    surface: 'discussion-list-load-more',
+  })
+
+  assert.equal(sortResult.key, sortKey)
+  assert.equal(sortResult.text, 'sort:top')
+  assert.equal(refreshingResult.key, refreshingKey)
+  assert.equal(refreshingResult.text, 'refreshing discussions')
+  assert.equal(loadMoreResult.key, loadMoreKey)
+  assert.equal(loadMoreResult.text, 'load more discussions')
+})

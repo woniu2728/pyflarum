@@ -77,9 +77,30 @@ const normalizedSortOptions = computed(() => {
   }
 
   return [
-    { code: 'latest', label: '最新活跃', icon: 'fas fa-clock' },
-    { code: 'newest', label: '新主题', icon: 'fas fa-file-alt' },
-    { code: 'top', label: '热门', icon: 'fas fa-fire' },
+    {
+      code: 'latest',
+      label: getUiCopy({
+        surface: 'discussion-list-toolbar-sort-label',
+        code: 'latest',
+      })?.text || '最新活跃',
+      icon: 'fas fa-clock'
+    },
+    {
+      code: 'newest',
+      label: getUiCopy({
+        surface: 'discussion-list-toolbar-sort-label',
+        code: 'newest',
+      })?.text || '新主题',
+      icon: 'fas fa-file-alt'
+    },
+    {
+      code: 'top',
+      label: getUiCopy({
+        surface: 'discussion-list-toolbar-sort-label',
+        code: 'top',
+      })?.text || '热门',
+      icon: 'fas fa-fire'
+    },
   ]
 })
 

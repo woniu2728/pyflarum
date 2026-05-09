@@ -25,7 +25,7 @@
     <template v-else>
       <div v-if="refreshing" class="discussion-list-refreshing" aria-live="polite">
         <i class="fas fa-sync-alt fa-spin"></i>
-        正在刷新讨论
+        {{ refreshingText }}
       </div>
 
       <ForumStateBlock v-if="discussions.length === 0" class="discussion-list-state">
@@ -51,8 +51,8 @@
         <ForumLoadMoreButton
           v-if="hasMore"
           :loading="loadingMore"
-          text="加载更多讨论"
-          loading-text="正在加载讨论..."
+          :text="loadMoreText"
+          :loading-text="loadingMoreText"
           @click="$emit('load-more')"
         />
       </template>
@@ -61,10 +61,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import DiscussionListHeaderSection from '@/components/discussion/DiscussionListHeaderSection.vue'
 import DiscussionListItem from '@/components/discussion/DiscussionListItem.vue'
 import ForumLoadMoreButton from '@/components/forum/ForumLoadMoreButton.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
+import { getUiCopy } from '@/forum/registry'
 
 defineProps({
   authStore: {
@@ -162,6 +164,18 @@ defineProps({
 })
 
 defineEmits(['change-sort', 'change-filter', 'change-search', 'mark-all-read', 'refresh', 'load-more'])
+
+const refreshingText = computed(() => getUiCopy({
+  surface: 'discussion-list-refreshing',
+})?.text || '正在刷新讨论')
+
+const loadMoreText = computed(() => getUiCopy({
+  surface: 'discussion-list-load-more',
+})?.text || '加载更多讨论')
+
+const loadingMoreText = computed(() => getUiCopy({
+  surface: 'discussion-list-loading-more',
+})?.text || '正在加载讨论...')
 </script>
 
 <style scoped>

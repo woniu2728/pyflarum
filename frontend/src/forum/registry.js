@@ -3532,6 +3532,42 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-list-toolbar-sort-label',
+  order: 1200,
+  surfaces: ['discussion-list-toolbar-sort-label'],
+  resolve: ({ code }) => ({
+    text: code === 'newest' ? '新主题' : code === 'top' ? '热门' : '最新活跃',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-refreshing',
+  order: 1200,
+  surfaces: ['discussion-list-refreshing'],
+  resolve: () => ({
+    text: '正在刷新讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-load-more',
+  order: 1200,
+  surfaces: ['discussion-list-load-more'],
+  resolve: () => ({
+    text: '加载更多讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-loading-more',
+  order: 1200,
+  surfaces: ['discussion-list-loading-more'],
+  resolve: () => ({
+    text: '正在加载讨论...',
+  }),
+})
+
+registerUiCopy({
   key: 'notifications-menu-title',
   order: 1210,
   surfaces: ['notifications-menu-title'],
