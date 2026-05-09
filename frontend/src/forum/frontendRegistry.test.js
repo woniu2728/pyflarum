@@ -5,6 +5,7 @@ import {
   getDiscussionReplyState,
   getDiscussionReviewBanner,
   getEmptyState,
+  getPageState,
   getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
@@ -12,6 +13,7 @@ import {
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
   registerEmptyState,
+  registerPageState,
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
@@ -483,4 +485,45 @@ test('empty state resolves search page and modal entries by query state', () => 
   assert.equal(idleResult.text, 'search idle')
   assert.equal(emptyResult.key, searchModalEmptyKey)
   assert.equal(emptyResult.text, 'search empty: posts')
+})
+
+test('page state resolves surface entries by loading and resource presence', () => {
+  const loadingKey = uniqueKey('page-loading')
+  const missingKey = uniqueKey('page-missing')
+
+  registerPageState({
+    key: loadingKey,
+    order: 10,
+    surfaces: ['discussion-detail-loading'],
+    isVisible: ({ loading }) => Boolean(loading),
+    resolve: () => ({
+      text: 'detail loading',
+    }),
+  })
+
+  registerPageState({
+    key: missingKey,
+    order: 20,
+    surfaces: ['profile-not-found'],
+    isVisible: ({ loading, user }) => !loading && !user,
+    resolve: () => ({
+      text: 'profile missing',
+    }),
+  })
+
+  const loadingResult = getPageState({
+    surface: 'discussion-detail-loading',
+    loading: true,
+    discussion: null,
+  })
+  const missingResult = getPageState({
+    surface: 'profile-not-found',
+    loading: false,
+    user: null,
+  })
+
+  assert.equal(loadingResult.key, loadingKey)
+  assert.equal(loadingResult.text, 'detail loading')
+  assert.equal(missingResult.key, missingKey)
+  assert.equal(missingResult.text, 'profile missing')
 })

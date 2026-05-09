@@ -17,6 +17,7 @@ import {
   getPostFlagPanel,
   getApprovalNote,
   getEmptyState,
+  getPageState,
   getPostStateBadges,
   getPostReviewBanner,
   getUserBadges,
@@ -27,6 +28,7 @@ import {
   registerPostFlagPanel,
   registerApprovalNote,
   registerEmptyState,
+  registerPageState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -63,6 +65,7 @@ export {
   getPostFlagPanel,
   getApprovalNote,
   getEmptyState,
+  getPageState,
   getPostStateBadges,
   getPostReviewBanner,
   registerDiscussionAction,
@@ -72,6 +75,7 @@ export {
   registerPostFlagPanel,
   registerApprovalNote,
   registerEmptyState,
+  registerPageState,
   registerDiscussionStateBadge,
   registerPostStateBadge,
   registerPostReviewBanner,
@@ -1070,6 +1074,46 @@ registerEmptyState({
   isVisible: ({ hasQuery }) => Boolean(hasQuery),
   resolve: () => ({
     text: '没有找到相关结果，试试更短的关键词或切换分类。',
+  }),
+})
+
+registerPageState({
+  key: 'discussion-detail-loading',
+  order: 10,
+  surfaces: ['discussion-detail-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载中...',
+  }),
+})
+
+registerPageState({
+  key: 'discussion-detail-not-found',
+  order: 20,
+  surfaces: ['discussion-detail-not-found'],
+  isVisible: ({ loading, discussion }) => !loading && !discussion,
+  resolve: () => ({
+    text: '讨论不存在',
+  }),
+})
+
+registerPageState({
+  key: 'profile-loading',
+  order: 30,
+  surfaces: ['profile-loading'],
+  isVisible: ({ loading }) => Boolean(loading),
+  resolve: () => ({
+    text: '加载中...',
+  }),
+})
+
+registerPageState({
+  key: 'profile-not-found',
+  order: 40,
+  surfaces: ['profile-not-found'],
+  isVisible: ({ loading, user }) => !loading && !user,
+  resolve: () => ({
+    text: '用户不存在',
   }),
 })
 

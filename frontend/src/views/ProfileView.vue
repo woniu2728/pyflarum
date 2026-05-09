@@ -1,7 +1,7 @@
 <template>
   <div class="profile-page">
-    <ForumStateBlock v-if="loading" class="profile-state-block">加载中...</ForumStateBlock>
-    <ForumStateBlock v-else-if="!user" class="profile-state-block">用户不存在</ForumStateBlock>
+    <ForumStateBlock v-if="loading" class="profile-state-block">{{ loadingStateText }}</ForumStateBlock>
+    <ForumStateBlock v-else-if="!user" class="profile-state-block">{{ missingStateText }}</ForumStateBlock>
     <div v-else>
       <ProfileHero
         :user="user"
@@ -54,7 +54,7 @@ import { useModalStore } from '@/stores/modal'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ProfileHero from '@/components/profile/ProfileHero.vue'
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue'
-import { getProfilePanels, getUserBadges } from '@/forum/registry'
+import { getPageState, getProfilePanels, getUserBadges } from '@/forum/registry'
 import { useProfilePage } from '@/composables/useProfilePage'
 import { useProfilePresentation } from '@/composables/useProfilePresentation'
 import {
@@ -121,6 +121,24 @@ const userBadges = computed(() => {
     user: user.value,
     authStore,
   })
+})
+const loadingStateText = computed(() => {
+  const pageState = getPageState({
+    surface: 'profile-loading',
+    loading: loading.value,
+    user: user.value,
+  })
+
+  return pageState?.text || '加载中...'
+})
+const missingStateText = computed(() => {
+  const pageState = getPageState({
+    surface: 'profile-not-found',
+    loading: loading.value,
+    user: user.value,
+  })
+
+  return pageState?.text || '用户不存在'
 })
 
 const profilePanels = computed(() => {

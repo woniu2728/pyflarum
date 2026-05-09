@@ -1,8 +1,8 @@
 <template>
   <div class="discussion-detail-page">
     <div class="container">
-      <ForumStateBlock v-if="loading" class="discussion-state-block">加载中...</ForumStateBlock>
-      <ForumStateBlock v-else-if="!discussion" class="discussion-state-block">讨论不存在</ForumStateBlock>
+      <ForumStateBlock v-if="loading" class="discussion-state-block">{{ loadingStateText }}</ForumStateBlock>
+      <ForumStateBlock v-else-if="!discussion" class="discussion-state-block">{{ missingStateText }}</ForumStateBlock>
       <div v-else class="layout">
         <!-- 主内容区 -->
         <main class="main-content">
@@ -166,7 +166,7 @@ import DiscussionHero from '@/components/discussion/DiscussionHero.vue'
 import DiscussionMobileActions from '@/components/discussion/DiscussionMobileActions.vue'
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
-import { getDiscussionBadges } from '@/forum/registry'
+import { getDiscussionBadges, getPageState } from '@/forum/registry'
 import { getPostTypeDefinition } from '@/forum/postTypes'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
 import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
@@ -242,6 +242,24 @@ const discussionBadges = computed(() => {
     discussion: discussion.value,
     surface: 'hero',
   })
+})
+const loadingStateText = computed(() => {
+  const pageState = getPageState({
+    surface: 'discussion-detail-loading',
+    loading: loading.value,
+    discussion: discussion.value,
+  })
+
+  return pageState?.text || '加载中...'
+})
+const missingStateText = computed(() => {
+  const pageState = getPageState({
+    surface: 'discussion-detail-not-found',
+    loading: loading.value,
+    discussion: discussion.value,
+  })
+
+  return pageState?.text || '讨论不存在'
 })
 const {
   canDeletePost,
