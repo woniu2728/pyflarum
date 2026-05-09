@@ -10,9 +10,9 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>更新了讨论标签</span>
-      <span v-if="addedTags.length" class="tag-change tag-change--added">新增 {{ addedTags.join('、') }}</span>
-      <span v-if="removedTags.length" class="tag-change tag-change--removed">移除 {{ removedTags.join('、') }}</span>
+      <span>{{ updatedText }}</span>
+      <span v-if="addedTags.length" class="tag-change tag-change--added">{{ addedPrefixText }} {{ addedTags.join('、') }}</span>
+      <span v-if="removedTags.length" class="tag-change tag-change--removed">{{ removedPrefixText }} {{ removedTags.join('、') }}</span>
     </template>
   </DiscussionEventPostBase>
 </template>
@@ -20,6 +20,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -34,6 +35,15 @@ defineEmits(['jump-to-post'])
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
 const addedTags = computed(() => props.post.event_data?.added_tags || [])
 const removedTags = computed(() => props.post.event_data?.removed_tags || [])
+const updatedText = computed(() => getUiCopy({
+  surface: 'discussion-event-tagged-label',
+})?.text || '更新了讨论标签')
+const addedPrefixText = computed(() => getUiCopy({
+  surface: 'discussion-event-tagged-added-prefix',
+})?.text || '新增')
+const removedPrefixText = computed(() => getUiCopy({
+  surface: 'discussion-event-tagged-removed-prefix',
+})?.text || '移除')
 </script>
 
 <style scoped>

@@ -10,9 +10,9 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>将讨论标题从</span>
+      <span>{{ renamedFromText }}</span>
       <span class="event-post-title event-post-title--old">“{{ oldTitle }}”</span>
-      <span>改为</span>
+      <span>{{ renamedToText }}</span>
       <span class="event-post-title">“{{ newTitle }}”</span>
     </template>
   </DiscussionEventPostBase>
@@ -21,6 +21,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -33,8 +34,18 @@ const props = defineProps({
 defineEmits(['jump-to-post'])
 
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
-const oldTitle = computed(() => props.post.event_data?.old_title || '旧标题')
-const newTitle = computed(() => props.post.event_data?.new_title || '新标题')
+const oldTitle = computed(() => props.post.event_data?.old_title || getUiCopy({
+  surface: 'discussion-event-renamed-old-title-fallback',
+})?.text || '旧标题')
+const newTitle = computed(() => props.post.event_data?.new_title || getUiCopy({
+  surface: 'discussion-event-renamed-new-title-fallback',
+})?.text || '新标题')
+const renamedFromText = computed(() => getUiCopy({
+  surface: 'discussion-event-renamed-from-label',
+})?.text || '将讨论标题从')
+const renamedToText = computed(() => getUiCopy({
+  surface: 'discussion-event-renamed-to-label',
+})?.text || '改为')
 </script>
 
 <style scoped>

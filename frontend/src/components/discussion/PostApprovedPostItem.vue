@@ -11,8 +11,8 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>通过了第 {{ targetPostNumber }} 楼回复的审核</span>
-      <span v-if="note">理由：{{ note }}</span>
+      <span>{{ approvedText }}</span>
+      <span v-if="note">{{ notePrefixText }}{{ note }}</span>
     </template>
   </DiscussionEventPostBase>
 </template>
@@ -20,6 +20,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -34,4 +35,11 @@ defineEmits(['jump-to-post'])
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
 const note = computed(() => String(props.post.event_data?.note || '').trim())
 const targetPostNumber = computed(() => props.post.event_data?.target_post_number || '?')
+const approvedText = computed(() => getUiCopy({
+  surface: 'post-event-approved-label',
+  targetPostNumber: targetPostNumber.value,
+})?.text || `通过了第 ${targetPostNumber.value} 楼回复的审核`)
+const notePrefixText = computed(() => getUiCopy({
+  surface: 'discussion-event-note-prefix',
+})?.text || '理由：')
 </script>

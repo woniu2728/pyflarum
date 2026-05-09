@@ -10,7 +10,7 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>{{ isHidden ? '隐藏了该讨论' : '恢复显示该讨论' }}</span>
+      <span>{{ hiddenText }}</span>
     </template>
   </DiscussionEventPostBase>
 </template>
@@ -18,6 +18,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -31,4 +32,8 @@ defineEmits(['jump-to-post'])
 
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
 const isHidden = computed(() => Boolean(props.post.event_data?.is_hidden))
+const hiddenText = computed(() => getUiCopy({
+  surface: 'discussion-event-hidden-label',
+  isHidden: isHidden.value,
+})?.text || (isHidden.value ? '隐藏了该讨论' : '恢复显示该讨论'))
 </script>

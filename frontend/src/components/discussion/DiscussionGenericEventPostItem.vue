@@ -19,6 +19,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -31,7 +32,9 @@ const props = defineProps({
 defineEmits(['jump-to-post'])
 
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
-const resolvedLabel = computed(() => props.post.post_type?.label || props.post.type || '系统事件')
+const resolvedLabel = computed(() => props.post.post_type?.label || props.post.type || getUiCopy({
+  surface: 'discussion-generic-event-fallback-label',
+})?.text || '系统事件')
 const resolvedDescription = computed(() => props.post.post_type?.description || '')
 const resolvedIcon = computed(() => props.post.post_type?.icon || 'fas fa-info-circle')
 const variant = computed(() => {

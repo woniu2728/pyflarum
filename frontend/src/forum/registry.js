@@ -2628,6 +2628,195 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-event-post-number-title',
+  order: 479,
+  surfaces: ['discussion-event-post-number-title'],
+  resolve: ({ postNumber }) => ({
+    text: `跳转到第 ${postNumber} 楼`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-target-post-number-title',
+  order: 479,
+  surfaces: ['discussion-event-target-post-number-title'],
+  resolve: ({ targetPostNumber }) => ({
+    text: `跳转到相关的第 ${targetPostNumber} 楼`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-note-prefix',
+  order: 479,
+  surfaces: ['discussion-event-note-prefix'],
+  resolve: () => ({
+    text: '理由：',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-approved-label',
+  order: 479,
+  surfaces: ['discussion-event-approved-label'],
+  resolve: () => ({
+    text: '通过了该讨论的审核',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-rejected-label',
+  order: 479,
+  surfaces: ['discussion-event-rejected-label'],
+  resolve: () => ({
+    text: '拒绝了该讨论的审核',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-hidden-label',
+  order: 479,
+  surfaces: ['discussion-event-hidden-label'],
+  resolve: ({ isHidden }) => ({
+    text: isHidden ? '隐藏了该讨论' : '恢复显示该讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-locked-label',
+  order: 479,
+  surfaces: ['discussion-event-locked-label'],
+  resolve: ({ isLocked }) => ({
+    text: isLocked ? '锁定了该讨论' : '解锁了该讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-resubmitted-label',
+  order: 479,
+  surfaces: ['discussion-event-resubmitted-label'],
+  resolve: () => ({
+    text: '修改后重新提交了该讨论的审核',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-sticky-label',
+  order: 479,
+  surfaces: ['discussion-event-sticky-label'],
+  resolve: ({ isSticky }) => ({
+    text: isSticky ? '置顶了该讨论' : '取消了该讨论的置顶状态',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-tagged-label',
+  order: 479,
+  surfaces: ['discussion-event-tagged-label'],
+  resolve: () => ({
+    text: '更新了讨论标签',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-tagged-added-prefix',
+  order: 479,
+  surfaces: ['discussion-event-tagged-added-prefix'],
+  resolve: () => ({
+    text: '新增',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-tagged-removed-prefix',
+  order: 479,
+  surfaces: ['discussion-event-tagged-removed-prefix'],
+  resolve: () => ({
+    text: '移除',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-renamed-from-label',
+  order: 479,
+  surfaces: ['discussion-event-renamed-from-label'],
+  resolve: () => ({
+    text: '将讨论标题从',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-renamed-to-label',
+  order: 479,
+  surfaces: ['discussion-event-renamed-to-label'],
+  resolve: () => ({
+    text: '改为',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-renamed-old-title-fallback',
+  order: 479,
+  surfaces: ['discussion-event-renamed-old-title-fallback'],
+  resolve: () => ({
+    text: '旧标题',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-event-renamed-new-title-fallback',
+  order: 479,
+  surfaces: ['discussion-event-renamed-new-title-fallback'],
+  resolve: () => ({
+    text: '新标题',
+  }),
+})
+
+registerUiCopy({
+  key: 'post-event-approved-label',
+  order: 479,
+  surfaces: ['post-event-approved-label'],
+  resolve: ({ targetPostNumber }) => ({
+    text: `通过了第 ${targetPostNumber} 楼回复的审核`,
+  }),
+})
+
+registerUiCopy({
+  key: 'post-event-rejected-label',
+  order: 479,
+  surfaces: ['post-event-rejected-label'],
+  resolve: ({ targetPostNumber }) => ({
+    text: `拒绝了第 ${targetPostNumber} 楼回复的审核`,
+  }),
+})
+
+registerUiCopy({
+  key: 'post-event-hidden-label',
+  order: 479,
+  surfaces: ['post-event-hidden-label'],
+  resolve: ({ isHidden, targetPostNumber }) => ({
+    text: isHidden ? `隐藏了第 ${targetPostNumber} 楼回复` : `恢复显示第 ${targetPostNumber} 楼回复`,
+  }),
+})
+
+registerUiCopy({
+  key: 'post-event-resubmitted-label',
+  order: 479,
+  surfaces: ['post-event-resubmitted-label'],
+  resolve: ({ targetPostNumber }) => ({
+    text: `修改后重新提交了第 ${targetPostNumber} 楼回复的审核`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-generic-event-fallback-label',
+  order: 479,
+  surfaces: ['discussion-generic-event-fallback-label'],
+  resolve: () => ({
+    text: '系统事件',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],

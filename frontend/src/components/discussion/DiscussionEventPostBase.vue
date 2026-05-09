@@ -16,7 +16,7 @@
           <button
             type="button"
             class="event-post-number"
-            :title="`跳转到第 ${post.number} 楼`"
+            :title="postNumberTitle"
             @click="$emit('jump-to-post', post.number)"
           >
             #{{ post.number }}
@@ -25,7 +25,7 @@
             v-if="targetPostNumber"
             type="button"
             class="event-post-number event-post-target"
-            :title="`跳转到相关的第 ${targetPostNumber} 楼`"
+            :title="targetPostNumberTitle"
             @click="$emit('jump-to-post', targetPostNumber)"
           >
             关联 #{{ targetPostNumber }}
@@ -41,6 +41,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -56,6 +57,14 @@ defineEmits(['jump-to-post'])
 
 const variantClass = computed(() => `event-post-card--${props.variant}`)
 const iconClassName = computed(() => `event-post-icon--${props.variant}`)
+const postNumberTitle = computed(() => getUiCopy({
+  surface: 'discussion-event-post-number-title',
+  postNumber: props.post.number,
+})?.text || `跳转到第 ${props.post.number} 楼`)
+const targetPostNumberTitle = computed(() => getUiCopy({
+  surface: 'discussion-event-target-post-number-title',
+  targetPostNumber: props.targetPostNumber,
+})?.text || `跳转到相关的第 ${props.targetPostNumber} 楼`)
 </script>
 
 <style scoped>

@@ -10,7 +10,7 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>{{ isLocked ? '锁定了该讨论' : '解锁了该讨论' }}</span>
+      <span>{{ lockedText }}</span>
     </template>
   </DiscussionEventPostBase>
 </template>
@@ -18,6 +18,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -31,4 +32,8 @@ defineEmits(['jump-to-post'])
 
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
 const isLocked = computed(() => Boolean(props.post.event_data?.is_locked))
+const lockedText = computed(() => getUiCopy({
+  surface: 'discussion-event-locked-label',
+  isLocked: isLocked.value,
+})?.text || (isLocked.value ? '锁定了该讨论' : '解锁了该讨论'))
 </script>

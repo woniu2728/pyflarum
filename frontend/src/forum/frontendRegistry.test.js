@@ -1099,3 +1099,71 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
   assert.equal(filterLabelResult.key, filterLabelKey)
   assert.equal(filterLabelResult.text, 'filter:following')
 })
+
+test('ui copy resolves discussion event post copy', () => {
+  const jumpKey = uniqueKey('ui-event-jump')
+  const approvedKey = uniqueKey('ui-event-approved')
+  const postHiddenKey = uniqueKey('ui-event-post-hidden')
+  const fallbackKey = uniqueKey('ui-event-fallback')
+
+  registerUiCopy({
+    key: jumpKey,
+    order: 10,
+    surfaces: ['discussion-event-post-number-title'],
+    resolve: ({ postNumber }) => ({
+      text: `jump:${postNumber}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: approvedKey,
+    order: 20,
+    surfaces: ['discussion-event-approved-label'],
+    resolve: () => ({
+      text: 'event approved',
+    }),
+  })
+
+  registerUiCopy({
+    key: postHiddenKey,
+    order: 30,
+    surfaces: ['post-event-hidden-label'],
+    resolve: ({ isHidden, targetPostNumber }) => ({
+      text: `${isHidden ? 'hide' : 'show'}:${targetPostNumber}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: fallbackKey,
+    order: 40,
+    surfaces: ['discussion-generic-event-fallback-label'],
+    resolve: () => ({
+      text: 'generic event',
+    }),
+  })
+
+  const jumpResult = getUiCopy({
+    surface: 'discussion-event-post-number-title',
+    postNumber: 8,
+  })
+  const approvedResult = getUiCopy({
+    surface: 'discussion-event-approved-label',
+  })
+  const postHiddenResult = getUiCopy({
+    surface: 'post-event-hidden-label',
+    isHidden: true,
+    targetPostNumber: 15,
+  })
+  const fallbackResult = getUiCopy({
+    surface: 'discussion-generic-event-fallback-label',
+  })
+
+  assert.equal(jumpResult.key, jumpKey)
+  assert.equal(jumpResult.text, 'jump:8')
+  assert.equal(approvedResult.key, approvedKey)
+  assert.equal(approvedResult.text, 'event approved')
+  assert.equal(postHiddenResult.key, postHiddenKey)
+  assert.equal(postHiddenResult.text, 'hide:15')
+  assert.equal(fallbackResult.key, fallbackKey)
+  assert.equal(fallbackResult.text, 'generic event')
+})

@@ -11,7 +11,7 @@
   >
     <template #line>
       <strong>{{ actorName }}</strong>
-      <span>修改后重新提交了第 {{ targetPostNumber }} 楼回复的审核</span>
+      <span>{{ resubmittedText }}</span>
     </template>
   </DiscussionEventPostBase>
 </template>
@@ -19,6 +19,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiscussionEventPostBase from '@/components/discussion/DiscussionEventPostBase.vue'
+import { getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -32,4 +33,8 @@ defineEmits(['jump-to-post'])
 
 const actorName = computed(() => props.getUserDisplayName(props.post.user))
 const targetPostNumber = computed(() => props.post.event_data?.target_post_number || '?')
+const resubmittedText = computed(() => getUiCopy({
+  surface: 'post-event-resubmitted-label',
+  targetPostNumber: targetPostNumber.value,
+})?.text || `修改后重新提交了第 ${targetPostNumber.value} 楼回复的审核`)
 </script>
