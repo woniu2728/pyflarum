@@ -18,7 +18,7 @@
           class="profile-form-control"
           :value="editForm.display_name"
           name="display_name"
-          placeholder="显示名称"
+          :placeholder="displayNamePlaceholderText"
           type="text"
           @input="$emit('update-edit-form', { key: 'display_name', value: $event.target.value })"
         />
@@ -31,12 +31,12 @@
           class="profile-form-control"
           :value="editForm.email"
           name="email"
-          placeholder="name@example.com"
+          :placeholder="emailPlaceholderText"
           type="email"
           @input="$emit('update-edit-form', { key: 'email', value: $event.target.value })"
         />
         <small class="profile-form-help">
-          {{ user.is_email_confirmed ? '当前邮箱已完成验证。' : '修改邮箱后会重新进入未验证状态。' }}
+          {{ emailHelpText }}
         </small>
       </div>
 
@@ -47,7 +47,7 @@
           class="profile-form-control"
           :value="editForm.bio"
           name="bio"
-          placeholder="介绍一下自己..."
+          :placeholder="bioPlaceholderText"
           rows="5"
           @input="$emit('update-edit-form', { key: 'bio', value: $event.target.value })"
         ></textarea>
@@ -55,7 +55,7 @@
 
       <div class="profile-form-actions">
         <button type="button" class="primary" :disabled="saving" @click="$emit('save-profile')">
-          {{ saving ? '保存中...' : '保存资料' }}
+          {{ saveProfileButtonText }}
         </button>
       </div>
     </div>
@@ -72,7 +72,7 @@
           :disabled="loadingPreferences || savingPreferences"
           @click="$emit('save-preferences')"
         >
-          {{ savingPreferences ? '保存中...' : '保存偏好' }}
+          {{ savePreferencesButtonText }}
         </button>
       </div>
 
@@ -121,7 +121,7 @@
 import { computed } from 'vue'
 import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
-import { getStateBlock } from '@/forum/registry'
+import { getStateBlock, getUiCopy } from '@/forum/registry'
 
 const props = defineProps({
   user: {
@@ -196,6 +196,27 @@ const preferencesLoadingStateText = computed(() => {
 
   return stateBlock?.text || '加载偏好中...'
 })
+const displayNamePlaceholderText = computed(() => getUiCopy({
+  surface: 'profile-settings-display-name-placeholder',
+})?.text || '显示名称')
+const emailPlaceholderText = computed(() => getUiCopy({
+  surface: 'profile-settings-email-placeholder',
+})?.text || 'name@example.com')
+const bioPlaceholderText = computed(() => getUiCopy({
+  surface: 'profile-settings-bio-placeholder',
+})?.text || '介绍一下自己...')
+const emailHelpText = computed(() => getUiCopy({
+  surface: 'profile-settings-email-help',
+  isEmailConfirmed: props.user.is_email_confirmed,
+})?.text || (props.user.is_email_confirmed ? '当前邮箱已完成验证。' : '修改邮箱后会重新进入未验证状态。'))
+const saveProfileButtonText = computed(() => getUiCopy({
+  surface: 'profile-settings-save-button',
+  saving: props.saving,
+})?.text || (props.saving ? '保存中...' : '保存资料'))
+const savePreferencesButtonText = computed(() => getUiCopy({
+  surface: 'profile-preferences-save-button',
+  saving: props.savingPreferences,
+})?.text || (props.savingPreferences ? '保存中...' : '保存偏好'))
 
 defineEmits(['save-profile', 'save-preferences', 'update-edit-form', 'update-preference'])
 </script>

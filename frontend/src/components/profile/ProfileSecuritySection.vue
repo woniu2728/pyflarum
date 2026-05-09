@@ -18,14 +18,13 @@
             class="email-status"
             :class="{ confirmed: user.is_email_confirmed, pending: !user.is_email_confirmed }"
           >
-            {{ user.is_email_confirmed ? '已验证' : '未验证' }}
+            {{ emailStatusText }}
           </span>
         </div>
 
         <div class="email-summary">
           <strong>{{ user.email }}</strong>
-          <p v-if="user.is_email_confirmed">当前邮箱已通过验证。</p>
-          <p v-else>当前邮箱尚未验证，你可以重新发送验证邮件。</p>
+          <p>{{ emailHelpText }}</p>
         </div>
 
         <ForumInlineMessage v-if="verificationSuccess" tone="success">{{ verificationSuccess }}</ForumInlineMessage>
@@ -38,7 +37,7 @@
           :disabled="verificationSending"
           @click="$emit('resend-verification')"
         >
-          {{ verificationSending ? '发送中...' : '重新发送验证邮件' }}
+          {{ resendVerificationButtonText }}
         </button>
       </section>
 
@@ -60,7 +59,7 @@
             class="profile-form-control"
             :value="passwordForm.old_password"
             name="old_password"
-            placeholder="请输入当前密码"
+            :placeholder="oldPasswordPlaceholderText"
             type="password"
             @input="$emit('update-password-form', { key: 'old_password', value: $event.target.value })"
           />
@@ -73,7 +72,7 @@
             class="profile-form-control"
             :value="passwordForm.new_password"
             name="new_password"
-            placeholder="请输入新密码"
+            :placeholder="newPasswordPlaceholderText"
             type="password"
             @input="$emit('update-password-form', { key: 'new_password', value: $event.target.value })"
           />
@@ -86,7 +85,7 @@
             class="profile-form-control"
             :value="passwordForm.confirm_password"
             name="confirm_password"
-            placeholder="请再次输入新密码"
+            :placeholder="confirmPasswordPlaceholderText"
             type="password"
             @input="$emit('update-password-form', { key: 'confirm_password', value: $event.target.value })"
           />
@@ -94,7 +93,7 @@
 
         <div class="profile-form-actions">
           <button type="button" class="primary" :disabled="changingPassword" @click="$emit('change-password')">
-            {{ changingPassword ? '提交中...' : '更新密码' }}
+            {{ changePasswordButtonText }}
           </button>
         </div>
       </section>
@@ -103,9 +102,11 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
+import { getUiCopy } from '@/forum/registry'
 
-defineProps({
+const props = defineProps({
   user: {
     type: Object,
     required: true
@@ -139,6 +140,31 @@ defineProps({
     default: ''
   }
 })
+const emailStatusText = computed(() => getUiCopy({
+  surface: 'profile-security-status-label',
+  isEmailConfirmed: props.user.is_email_confirmed,
+})?.text || (props.user.is_email_confirmed ? '已验证' : '未验证'))
+const emailHelpText = computed(() => getUiCopy({
+  surface: 'profile-security-email-help',
+  isEmailConfirmed: props.user.is_email_confirmed,
+})?.text || (props.user.is_email_confirmed ? '当前邮箱已通过验证。' : '当前邮箱尚未验证，你可以重新发送验证邮件。'))
+const resendVerificationButtonText = computed(() => getUiCopy({
+  surface: 'profile-security-resend-button',
+  sending: props.verificationSending,
+})?.text || (props.verificationSending ? '发送中...' : '重新发送验证邮件'))
+const oldPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'profile-security-old-password-placeholder',
+})?.text || '请输入当前密码')
+const newPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'profile-security-new-password-placeholder',
+})?.text || '请输入新密码')
+const confirmPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'profile-security-confirm-password-placeholder',
+})?.text || '请再次输入新密码')
+const changePasswordButtonText = computed(() => getUiCopy({
+  surface: 'profile-security-submit-button',
+  submitting: props.changingPassword,
+})?.text || (props.changingPassword ? '提交中...' : '更新密码'))
 
 defineEmits(['resend-verification', 'change-password', 'update-password-form'])
 </script>

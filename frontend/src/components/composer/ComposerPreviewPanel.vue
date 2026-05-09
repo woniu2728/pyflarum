@@ -4,16 +4,19 @@
       <span>预览</span>
       <small>{{ statusText }}</small>
     </div>
-    <div v-if="loading" class="composer-preview-loading">正在生成预览...</div>
+    <div v-if="loading" class="composer-preview-loading">{{ loadingText }}</div>
     <div
       v-else
       class="composer-preview-body post-body"
-      v-html="html || '<p class=&quot;composer-preview-empty&quot;>输入内容后即可查看预览</p>'"
+      v-html="html || emptyHtml"
     ></div>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
 defineProps({
   html: {
     type: String,
@@ -28,6 +31,25 @@ defineProps({
     default: ''
   }
 })
+const loadingText = computed(() => getUiCopy({
+  surface: 'composer-preview-panel-loading',
+})?.text || '正在生成预览...')
+const emptyHtml = computed(() => {
+  const text = getUiCopy({
+    surface: 'composer-preview-panel-empty',
+  })?.text || '输入内容后即可查看预览'
+
+  return `<p class="composer-preview-empty">${escapeHtml(text)}</p>`
+})
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 </script>
 
 <style scoped>

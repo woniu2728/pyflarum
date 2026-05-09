@@ -612,3 +612,40 @@ test('ui copy resolves surface entries by context', () => {
   assert.equal(turnstileResult.key, turnstileKey)
   assert.equal(turnstileResult.text, 'complete verification')
 })
+
+test('ui copy resolves button and placeholder variants by loading state', () => {
+  const submitKey = uniqueKey('ui-submit')
+  const placeholderKey = uniqueKey('ui-placeholder')
+
+  registerUiCopy({
+    key: submitKey,
+    order: 10,
+    surfaces: ['reset-password-submit'],
+    isVisible: ({ loading }) => Boolean(loading),
+    resolve: () => ({
+      text: 'reset submitting',
+    }),
+  })
+
+  registerUiCopy({
+    key: placeholderKey,
+    order: 20,
+    surfaces: ['header-search-placeholder'],
+    resolve: () => ({
+      text: 'search site',
+    }),
+  })
+
+  const submitResult = getUiCopy({
+    surface: 'reset-password-submit',
+    loading: true,
+  })
+  const placeholderResult = getUiCopy({
+    surface: 'header-search-placeholder',
+  })
+
+  assert.equal(submitResult.key, submitKey)
+  assert.equal(submitResult.text, 'reset submitting')
+  assert.equal(placeholderResult.key, placeholderKey)
+  assert.equal(placeholderResult.text, 'search site')
+})

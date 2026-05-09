@@ -13,7 +13,7 @@
               v-model="form.token"
               name="token"
               type="text"
-              placeholder="请输入邮件中的重置令牌"
+              :placeholder="tokenPlaceholderText"
               autocomplete="one-time-code"
               required
             />
@@ -26,7 +26,7 @@
               v-model="form.password"
               name="password"
               type="password"
-              placeholder="请输入新密码"
+              :placeholder="newPasswordPlaceholderText"
               autocomplete="new-password"
               minlength="6"
               required
@@ -40,7 +40,7 @@
               v-model="form.passwordConfirm"
               name="password_confirm"
               type="password"
-              placeholder="请再次输入新密码"
+              :placeholder="confirmPasswordPlaceholderText"
               autocomplete="new-password"
               minlength="6"
               required
@@ -51,7 +51,7 @@
           <div v-if="success" class="success-message">{{ success }}</div>
 
           <button type="submit" class="primary full-width" :disabled="loading">
-            {{ loading ? '提交中...' : '重置密码' }}
+            {{ submitButtonText }}
           </button>
         </form>
 
@@ -64,9 +64,10 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api'
+import { getUiCopy } from '@/forum/registry'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,6 +81,19 @@ const form = reactive({
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+const tokenPlaceholderText = computed(() => getUiCopy({
+  surface: 'reset-password-token-placeholder',
+})?.text || '请输入邮件中的重置令牌')
+const newPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'reset-password-new-placeholder',
+})?.text || '请输入新密码')
+const confirmPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'reset-password-confirm-placeholder',
+})?.text || '请再次输入新密码')
+const submitButtonText = computed(() => getUiCopy({
+  surface: 'reset-password-submit',
+  loading: loading.value,
+})?.text || (loading.value ? '提交中...' : '重置密码'))
 
 watch(
   () => route.query.token,

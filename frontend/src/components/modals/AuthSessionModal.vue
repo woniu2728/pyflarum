@@ -29,7 +29,7 @@
               name="identification"
               class="FormControl"
               type="text"
-              placeholder="请输入用户名或邮箱"
+              :placeholder="loginIdentificationPlaceholderText"
               autocomplete="username"
               :disabled="loading"
               required
@@ -44,7 +44,7 @@
               name="password"
               class="FormControl"
               type="password"
-              placeholder="请输入密码"
+              :placeholder="loginPasswordPlaceholderText"
               autocomplete="current-password"
               :disabled="loading"
               required
@@ -79,7 +79,7 @@
           <div v-if="errorMessage" class="AuthSessionAlert AuthSessionAlert--error">{{ errorMessage }}</div>
 
           <button type="submit" class="Button Button--primary Button--block" :disabled="loading">
-            {{ loading ? '登录中...' : '登录' }}
+            {{ loginSubmitText }}
           </button>
 
           <p class="AuthSessionFooter">
@@ -105,7 +105,7 @@
               name="username"
               class="FormControl"
               type="text"
-              placeholder="3-30 个字符"
+              :placeholder="registerUsernamePlaceholderText"
               autocomplete="username"
               minlength="3"
               maxlength="30"
@@ -122,7 +122,7 @@
               name="email"
               class="FormControl"
               type="email"
-              placeholder="请输入邮箱"
+              :placeholder="registerEmailPlaceholderText"
               autocomplete="email"
               :disabled="loading"
               required
@@ -137,7 +137,7 @@
               name="password"
               class="FormControl"
               type="password"
-              placeholder="至少 6 个字符"
+              :placeholder="registerPasswordPlaceholderText"
               autocomplete="new-password"
               minlength="6"
               :disabled="loading"
@@ -153,7 +153,7 @@
               name="password_confirm"
               class="FormControl"
               type="password"
-              placeholder="请再次输入密码"
+              :placeholder="registerPasswordConfirmPlaceholderText"
               autocomplete="new-password"
               :disabled="loading"
               required
@@ -174,7 +174,7 @@
           <div v-if="successMessage" class="AuthSessionAlert AuthSessionAlert--success">{{ successMessage }}</div>
 
           <button type="submit" class="Button Button--primary Button--block" :disabled="loading">
-            {{ loading ? '注册中...' : '注册' }}
+            {{ registerSubmitText }}
           </button>
 
           <p class="AuthSessionFooter">
@@ -192,7 +192,7 @@
 
         <form v-else class="AuthSessionForm" @submit.prevent="handleForgotPassword">
           <div v-if="forgotPasswordSuccess" class="AuthSessionAlert AuthSessionAlert--success">
-            {{ successMessage || '重置链接已发送，请检查邮箱。' }}
+            {{ successMessage || forgotPasswordSuccessText }}
           </div>
           <div v-else class="Form-group">
             <label for="auth-forgot-email">邮箱</label>
@@ -203,7 +203,7 @@
               name="email"
               class="FormControl"
               type="email"
-              placeholder="请输入注册邮箱"
+              :placeholder="forgotEmailPlaceholderText"
               autocomplete="email"
               :disabled="loading"
               required
@@ -213,14 +213,14 @@
           <div v-if="errorMessage" class="AuthSessionAlert AuthSessionAlert--error">{{ errorMessage }}</div>
 
           <div v-if="debugResetPath" class="AuthSessionDebugPanel">
-            <div class="AuthSessionDebugTitle">开发环境调试链接</div>
+            <div class="AuthSessionDebugTitle">{{ debugResetTitleText }}</div>
             <router-link :to="debugResetPath" class="AuthSessionDebugLink" @click="modalStore.dismiss()">
               {{ debugResetPath }}
             </router-link>
           </div>
 
           <button v-if="!forgotPasswordSuccess" type="submit" class="Button Button--primary Button--block" :disabled="loading">
-            {{ loading ? '发送中...' : '发送重置链接' }}
+            {{ forgotSubmitText }}
           </button>
           <button
             v-else
@@ -357,6 +357,45 @@ const turnstileStatusMessage = computed(() => {
   if (uiCopy?.text) return uiCopy.text
   return ''
 })
+const loginIdentificationPlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-login-identification-placeholder',
+})?.text || '请输入用户名或邮箱')
+const loginPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-login-password-placeholder',
+})?.text || '请输入密码')
+const registerUsernamePlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-register-username-placeholder',
+})?.text || '3-30 个字符')
+const registerEmailPlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-register-email-placeholder',
+})?.text || '请输入邮箱')
+const registerPasswordPlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-register-password-placeholder',
+})?.text || '至少 6 个字符')
+const registerPasswordConfirmPlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-register-password-confirm-placeholder',
+})?.text || '请再次输入密码')
+const forgotEmailPlaceholderText = computed(() => getUiCopy({
+  surface: 'auth-forgot-email-placeholder',
+})?.text || '请输入注册邮箱')
+const forgotPasswordSuccessText = computed(() => getUiCopy({
+  surface: 'auth-forgot-success',
+})?.text || '重置链接已发送，请检查邮箱。')
+const debugResetTitleText = computed(() => getUiCopy({
+  surface: 'auth-debug-reset-title',
+})?.text || '开发环境调试链接')
+const loginSubmitText = computed(() => getUiCopy({
+  surface: 'auth-login-submit',
+  loading: loading.value,
+})?.text || (loading.value ? '登录中...' : '登录'))
+const registerSubmitText = computed(() => getUiCopy({
+  surface: 'auth-register-submit',
+  loading: loading.value,
+})?.text || (loading.value ? '注册中...' : '注册'))
+const forgotSubmitText = computed(() => getUiCopy({
+  surface: 'auth-forgot-submit',
+  loading: loading.value,
+})?.text || (loading.value ? '发送中...' : '发送重置链接'))
 
 const titleText = computed(() => {
   if (activeMode.value === 'register') return '加入讨论'

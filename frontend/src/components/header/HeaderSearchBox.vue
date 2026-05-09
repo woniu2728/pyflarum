@@ -12,7 +12,7 @@
     <i class="fas fa-search"></i>
     <input
       type="text"
-      placeholder="搜索论坛"
+      :placeholder="placeholderText"
       :value="searchPreviewText"
       readonly
     />
@@ -29,7 +29,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   currentSearchQuery: {
     type: String,
     default: ''
@@ -39,6 +42,10 @@ defineProps({
     default: ''
   }
 })
+const placeholderText = computed(() => getUiCopy({
+  surface: 'header-search-placeholder',
+  currentSearchQuery: props.currentSearchQuery,
+})?.text || '搜索论坛')
 
 defineEmits(['open-search', 'clear-search'])
 </script>

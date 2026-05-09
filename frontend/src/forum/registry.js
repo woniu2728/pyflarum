@@ -1330,6 +1330,294 @@ registerUiCopy({
   }),
 })
 
+registerUiCopy({
+  key: 'composer-preview-panel-loading',
+  order: 110,
+  surfaces: ['composer-preview-panel-loading'],
+  resolve: () => ({
+    text: '正在生成预览...',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-panel-empty',
+  order: 120,
+  surfaces: ['composer-preview-panel-empty'],
+  resolve: () => ({
+    text: '输入内容后即可查看预览',
+  }),
+})
+
+registerUiCopy({
+  key: 'header-search-placeholder',
+  order: 130,
+  surfaces: ['header-search-placeholder'],
+  resolve: () => ({
+    text: '搜索论坛',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-display-name-placeholder',
+  order: 140,
+  surfaces: ['profile-settings-display-name-placeholder'],
+  resolve: () => ({
+    text: '显示名称',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-email-placeholder',
+  order: 150,
+  surfaces: ['profile-settings-email-placeholder'],
+  resolve: () => ({
+    text: 'name@example.com',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-bio-placeholder',
+  order: 160,
+  surfaces: ['profile-settings-bio-placeholder'],
+  resolve: () => ({
+    text: '介绍一下自己...',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-email-help',
+  order: 170,
+  surfaces: ['profile-settings-email-help'],
+  resolve: ({ isEmailConfirmed }) => ({
+    text: isEmailConfirmed ? '当前邮箱已完成验证。' : '修改邮箱后会重新进入未验证状态。',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-status-label',
+  order: 180,
+  surfaces: ['profile-security-status-label'],
+  resolve: ({ isEmailConfirmed }) => ({
+    text: isEmailConfirmed ? '已验证' : '未验证',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-email-help',
+  order: 190,
+  surfaces: ['profile-security-email-help'],
+  resolve: ({ isEmailConfirmed }) => ({
+    text: isEmailConfirmed ? '当前邮箱已通过验证。' : '当前邮箱尚未验证，你可以重新发送验证邮件。',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-resend-button',
+  order: 200,
+  surfaces: ['profile-security-resend-button'],
+  resolve: ({ sending }) => ({
+    text: sending ? '发送中...' : '重新发送验证邮件',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-old-password-placeholder',
+  order: 210,
+  surfaces: ['profile-security-old-password-placeholder'],
+  resolve: () => ({
+    text: '请输入当前密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-new-password-placeholder',
+  order: 220,
+  surfaces: ['profile-security-new-password-placeholder'],
+  resolve: () => ({
+    text: '请输入新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-confirm-password-placeholder',
+  order: 230,
+  surfaces: ['profile-security-confirm-password-placeholder'],
+  resolve: () => ({
+    text: '请再次输入新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-submit-button',
+  order: 240,
+  surfaces: ['profile-security-submit-button'],
+  resolve: ({ submitting }) => ({
+    text: submitting ? '提交中...' : '更新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-save-button',
+  order: 250,
+  surfaces: ['profile-settings-save-button'],
+  resolve: ({ saving }) => ({
+    text: saving ? '保存中...' : '保存资料',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-save-button',
+  order: 260,
+  surfaces: ['profile-preferences-save-button'],
+  resolve: ({ saving }) => ({
+    text: saving ? '保存中...' : '保存偏好',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-login-identification-placeholder',
+  order: 270,
+  surfaces: ['auth-login-identification-placeholder'],
+  resolve: () => ({
+    text: '请输入用户名或邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-login-password-placeholder',
+  order: 280,
+  surfaces: ['auth-login-password-placeholder'],
+  resolve: () => ({
+    text: '请输入密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-username-placeholder',
+  order: 290,
+  surfaces: ['auth-register-username-placeholder'],
+  resolve: () => ({
+    text: '3-30 个字符',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-email-placeholder',
+  order: 300,
+  surfaces: ['auth-register-email-placeholder'],
+  resolve: () => ({
+    text: '请输入邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-password-placeholder',
+  order: 310,
+  surfaces: ['auth-register-password-placeholder'],
+  resolve: () => ({
+    text: '至少 6 个字符',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-password-confirm-placeholder',
+  order: 320,
+  surfaces: ['auth-register-password-confirm-placeholder'],
+  resolve: () => ({
+    text: '请再次输入密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-forgot-email-placeholder',
+  order: 330,
+  surfaces: ['auth-forgot-email-placeholder'],
+  resolve: () => ({
+    text: '请输入注册邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-forgot-success',
+  order: 340,
+  surfaces: ['auth-forgot-success'],
+  resolve: () => ({
+    text: '重置链接已发送，请检查邮箱。',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-debug-reset-title',
+  order: 350,
+  surfaces: ['auth-debug-reset-title'],
+  resolve: () => ({
+    text: '开发环境调试链接',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-login-submit',
+  order: 360,
+  surfaces: ['auth-login-submit'],
+  resolve: ({ loading }) => ({
+    text: loading ? '登录中...' : '登录',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-submit',
+  order: 370,
+  surfaces: ['auth-register-submit'],
+  resolve: ({ loading }) => ({
+    text: loading ? '注册中...' : '注册',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-forgot-submit',
+  order: 380,
+  surfaces: ['auth-forgot-submit'],
+  resolve: ({ loading }) => ({
+    text: loading ? '发送中...' : '发送重置链接',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-token-placeholder',
+  order: 390,
+  surfaces: ['reset-password-token-placeholder'],
+  resolve: () => ({
+    text: '请输入邮件中的重置令牌',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-new-placeholder',
+  order: 400,
+  surfaces: ['reset-password-new-placeholder'],
+  resolve: () => ({
+    text: '请输入新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-confirm-placeholder',
+  order: 410,
+  surfaces: ['reset-password-confirm-placeholder'],
+  resolve: () => ({
+    text: '请再次输入新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'reset-password-submit',
+  order: 420,
+  surfaces: ['reset-password-submit'],
+  resolve: ({ loading }) => ({
+    text: loading ? '提交中...' : '重置密码',
+  }),
+})
+
 registerPostReviewBanner({
   key: 'pending',
   order: 10,
