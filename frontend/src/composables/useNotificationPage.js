@@ -83,6 +83,13 @@ export function useNotificationPage({
     ]
   })
 
+  function getNotificationUiCopy(surface, context = {}, fallback = '') {
+    return getUiCopy({
+      surface,
+      ...context,
+    })?.text || fallback
+  }
+
   function formatSummaryCount() {
     if (unreadOnly.value) {
       return `${notifications.value.length || 0} 未读`
@@ -180,12 +187,20 @@ export function useNotificationPage({
     if (unreadCount === 0) return
 
     const confirmed = await modalStore.confirm({
-      title: hasActiveFilter.value ? '标记当前筛选结果为已读' : '全部标记为已读',
-      message: hasActiveFilter.value
-        ? `确定将当前筛选结果中的 ${unreadCount} 条未读通知标记为已读吗？`
-        : `确定将当前 ${unreadCount} 条未读通知标记为已读吗？`,
-      confirmText: '标记已读',
-      cancelText: '取消',
+      title: getNotificationUiCopy(
+        'notification-confirm-mark-all-title',
+        { hasActiveFilter: hasActiveFilter.value },
+        hasActiveFilter.value ? '标记当前筛选结果为已读' : '全部标记为已读'
+      ),
+      message: getNotificationUiCopy(
+        'notification-confirm-mark-all-message',
+        { hasActiveFilter: hasActiveFilter.value, unreadCount },
+        hasActiveFilter.value
+          ? `确定将当前筛选结果中的 ${unreadCount} 条未读通知标记为已读吗？`
+          : `确定将当前 ${unreadCount} 条未读通知标记为已读吗？`
+      ),
+      confirmText: getNotificationUiCopy('notification-confirm-mark-all-confirm', {}, '标记已读'),
+      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
       tone: 'primary'
     })
     if (!confirmed) return
@@ -202,14 +217,18 @@ export function useNotificationPage({
       }
       await loadNotifications()
       await modalStore.alert({
-        title: '已全部标记为已读',
-        message: hasActiveFilter.value ? '当前筛选范围内的未读通知已更新为已读。' : '当前页面的未读通知已更新为已读。',
+        title: getNotificationUiCopy('notification-alert-mark-all-success-title', {}, '已全部标记为已读'),
+        message: getNotificationUiCopy(
+          'notification-alert-mark-all-success-message',
+          { hasActiveFilter: hasActiveFilter.value },
+          hasActiveFilter.value ? '当前筛选范围内的未读通知已更新为已读。' : '当前页面的未读通知已更新为已读。'
+        ),
         tone: 'success'
       })
     } catch (error) {
       console.error('标记失败:', error)
       await modalStore.alert({
-        title: '操作失败',
+        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
         message: error.response?.data?.error || error.message || '请稍后重试',
         tone: 'danger'
       })
@@ -223,12 +242,20 @@ export function useNotificationPage({
     if (readCount === 0) return
 
     const confirmed = await modalStore.confirm({
-      title: hasActiveFilter.value ? '清除当前筛选中的已读通知' : '清除当前页已读通知',
-      message: hasActiveFilter.value
-        ? `确定清除当前筛选结果中的 ${readCount} 条已读通知吗？`
-        : `确定清除当前页中的 ${readCount} 条已读通知吗？`,
-      confirmText: '清除已读',
-      cancelText: '取消',
+      title: getNotificationUiCopy(
+        'notification-confirm-clear-read-title',
+        { hasActiveFilter: hasActiveFilter.value },
+        hasActiveFilter.value ? '清除当前筛选中的已读通知' : '清除当前页已读通知'
+      ),
+      message: getNotificationUiCopy(
+        'notification-confirm-clear-read-message',
+        { hasActiveFilter: hasActiveFilter.value, readCount },
+        hasActiveFilter.value
+          ? `确定清除当前筛选结果中的 ${readCount} 条已读通知吗？`
+          : `确定清除当前页中的 ${readCount} 条已读通知吗？`
+      ),
+      confirmText: getNotificationUiCopy('notification-confirm-clear-read-confirm', {}, '清除已读'),
+      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
       tone: 'danger'
     })
     if (!confirmed) return
@@ -245,14 +272,14 @@ export function useNotificationPage({
       }
       await loadNotifications()
       await modalStore.alert({
-        title: '已清除已读通知',
-        message: '当前范围内的已读通知已清除。',
+        title: getNotificationUiCopy('notification-alert-clear-read-success-title', {}, '已清除已读通知'),
+        message: getNotificationUiCopy('notification-alert-clear-read-success-message', {}, '当前范围内的已读通知已清除。'),
         tone: 'success'
       })
     } catch (error) {
       console.error('清除失败:', error)
       await modalStore.alert({
-        title: '操作失败',
+        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
         message: error.response?.data?.error || error.message || '请稍后重试',
         tone: 'danger'
       })
@@ -267,10 +294,14 @@ export function useNotificationPage({
     if (!discussionId || unreadCount === 0) return
 
     const confirmed = await modalStore.confirm({
-      title: '标记该讨论通知为已读',
-      message: `确定将“${group.title}”下的 ${unreadCount} 条未读通知标记为已读吗？`,
-      confirmText: '标记已读',
-      cancelText: '取消',
+      title: getNotificationUiCopy('notification-confirm-mark-group-title', {}, '标记该讨论通知为已读'),
+      message: getNotificationUiCopy(
+        'notification-confirm-mark-group-message',
+        { groupTitle: group.title, unreadCount },
+        `确定将“${group.title}”下的 ${unreadCount} 条未读通知标记为已读吗？`
+      ),
+      confirmText: getNotificationUiCopy('notification-confirm-mark-all-confirm', {}, '标记已读'),
+      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
       tone: 'primary'
     })
     if (!confirmed) return
@@ -285,7 +316,7 @@ export function useNotificationPage({
     } catch (error) {
       console.error('分组标记失败:', error)
       await modalStore.alert({
-        title: '操作失败',
+        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
         message: error.response?.data?.error || error.message || '请稍后重试',
         tone: 'danger'
       })
@@ -300,10 +331,14 @@ export function useNotificationPage({
     if (!discussionId || readCount === 0) return
 
     const confirmed = await modalStore.confirm({
-      title: '清除该讨论中的已读通知',
-      message: `确定清除“${group.title}”下的 ${readCount} 条已读通知吗？`,
-      confirmText: '清除已读',
-      cancelText: '取消',
+      title: getNotificationUiCopy('notification-confirm-clear-group-title', {}, '清除该讨论中的已读通知'),
+      message: getNotificationUiCopy(
+        'notification-confirm-clear-group-message',
+        { groupTitle: group.title, readCount },
+        `确定清除“${group.title}”下的 ${readCount} 条已读通知吗？`
+      ),
+      confirmText: getNotificationUiCopy('notification-confirm-clear-read-confirm', {}, '清除已读'),
+      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
       tone: 'danger'
     })
     if (!confirmed) return
@@ -318,7 +353,7 @@ export function useNotificationPage({
     } catch (error) {
       console.error('分组清除失败:', error)
       await modalStore.alert({
-        title: '操作失败',
+        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
         message: error.response?.data?.error || error.message || '请稍后重试',
         tone: 'danger'
       })
@@ -329,10 +364,10 @@ export function useNotificationPage({
 
   async function deleteNotification(notificationId) {
     const confirmed = await modalStore.confirm({
-      title: '删除通知',
-      message: '确定要删除这条通知吗？',
-      confirmText: '删除',
-      cancelText: '取消',
+      title: getNotificationUiCopy('notification-confirm-delete-title', {}, '删除通知'),
+      message: getNotificationUiCopy('notification-confirm-delete-message', {}, '确定要删除这条通知吗？'),
+      confirmText: getNotificationUiCopy('notification-confirm-delete-confirm', {}, '删除'),
+      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
       tone: 'danger'
     })
     if (!confirmed) return
@@ -342,7 +377,7 @@ export function useNotificationPage({
     } catch (error) {
       console.error('删除失败:', error)
       await modalStore.alert({
-        title: '删除失败',
+        title: getNotificationUiCopy('notification-alert-delete-failed-title', {}, '删除失败'),
         message: error.response?.data?.error || error.message || '请稍后重试',
         tone: 'danger'
       })

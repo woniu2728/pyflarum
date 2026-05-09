@@ -920,3 +920,40 @@ test('ui copy resolves filter and stat labels', () => {
   assert.equal(statResult.key, statKey)
   assert.equal(statResult.text, 'users:3')
 })
+
+test('ui copy resolves notification confirm and alert copy', () => {
+  const confirmKey = uniqueKey('ui-notification-confirm')
+  const alertKey = uniqueKey('ui-notification-alert')
+
+  registerUiCopy({
+    key: confirmKey,
+    order: 10,
+    surfaces: ['notification-confirm-mark-all-message'],
+    resolve: ({ unreadCount }) => ({
+      text: `confirm:${unreadCount}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: alertKey,
+    order: 20,
+    surfaces: ['notification-alert-mark-all-success-message'],
+    resolve: ({ hasActiveFilter }) => ({
+      text: hasActiveFilter ? 'alert:filtered' : 'alert:page',
+    }),
+  })
+
+  const confirmResult = getUiCopy({
+    surface: 'notification-confirm-mark-all-message',
+    unreadCount: 5,
+  })
+  const alertResult = getUiCopy({
+    surface: 'notification-alert-mark-all-success-message',
+    hasActiveFilter: true,
+  })
+
+  assert.equal(confirmResult.key, confirmKey)
+  assert.equal(confirmResult.text, 'confirm:5')
+  assert.equal(alertResult.key, alertKey)
+  assert.equal(alertResult.text, 'alert:filtered')
+})

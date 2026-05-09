@@ -1952,6 +1952,190 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'notification-confirm-cancel',
+  order: 479,
+  surfaces: ['notification-confirm-cancel'],
+  resolve: () => ({
+    text: '取消',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-mark-all-title',
+  order: 479,
+  surfaces: ['notification-confirm-mark-all-title'],
+  resolve: ({ hasActiveFilter }) => ({
+    text: hasActiveFilter ? '标记当前筛选结果为已读' : '全部标记为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-mark-all-message',
+  order: 479,
+  surfaces: ['notification-confirm-mark-all-message'],
+  resolve: ({ hasActiveFilter, unreadCount }) => ({
+    text: hasActiveFilter
+      ? `确定将当前筛选结果中的 ${unreadCount} 条未读通知标记为已读吗？`
+      : `确定将当前 ${unreadCount} 条未读通知标记为已读吗？`,
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-mark-all-confirm',
+  order: 479,
+  surfaces: ['notification-confirm-mark-all-confirm'],
+  resolve: () => ({
+    text: '标记已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-alert-mark-all-success-title',
+  order: 479,
+  surfaces: ['notification-alert-mark-all-success-title'],
+  resolve: () => ({
+    text: '已全部标记为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-alert-mark-all-success-message',
+  order: 479,
+  surfaces: ['notification-alert-mark-all-success-message'],
+  resolve: ({ hasActiveFilter }) => ({
+    text: hasActiveFilter ? '当前筛选范围内的未读通知已更新为已读。' : '当前页面的未读通知已更新为已读。',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-alert-action-failed-title',
+  order: 479,
+  surfaces: ['notification-alert-action-failed-title'],
+  resolve: () => ({
+    text: '操作失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-clear-read-title',
+  order: 479,
+  surfaces: ['notification-confirm-clear-read-title'],
+  resolve: ({ hasActiveFilter }) => ({
+    text: hasActiveFilter ? '清除当前筛选中的已读通知' : '清除当前页已读通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-clear-read-message',
+  order: 479,
+  surfaces: ['notification-confirm-clear-read-message'],
+  resolve: ({ hasActiveFilter, readCount }) => ({
+    text: hasActiveFilter
+      ? `确定清除当前筛选结果中的 ${readCount} 条已读通知吗？`
+      : `确定清除当前页中的 ${readCount} 条已读通知吗？`,
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-clear-read-confirm',
+  order: 479,
+  surfaces: ['notification-confirm-clear-read-confirm'],
+  resolve: () => ({
+    text: '清除已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-alert-clear-read-success-title',
+  order: 479,
+  surfaces: ['notification-alert-clear-read-success-title'],
+  resolve: () => ({
+    text: '已清除已读通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-alert-clear-read-success-message',
+  order: 479,
+  surfaces: ['notification-alert-clear-read-success-message'],
+  resolve: () => ({
+    text: '当前范围内的已读通知已清除。',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-mark-group-title',
+  order: 479,
+  surfaces: ['notification-confirm-mark-group-title'],
+  resolve: () => ({
+    text: '标记该讨论通知为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-mark-group-message',
+  order: 479,
+  surfaces: ['notification-confirm-mark-group-message'],
+  resolve: ({ groupTitle, unreadCount }) => ({
+    text: `确定将“${groupTitle}”下的 ${unreadCount} 条未读通知标记为已读吗？`,
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-clear-group-title',
+  order: 479,
+  surfaces: ['notification-confirm-clear-group-title'],
+  resolve: () => ({
+    text: '清除该讨论中的已读通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-clear-group-message',
+  order: 479,
+  surfaces: ['notification-confirm-clear-group-message'],
+  resolve: ({ groupTitle, readCount }) => ({
+    text: `确定清除“${groupTitle}”下的 ${readCount} 条已读通知吗？`,
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-delete-title',
+  order: 479,
+  surfaces: ['notification-confirm-delete-title'],
+  resolve: () => ({
+    text: '删除通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-delete-message',
+  order: 479,
+  surfaces: ['notification-confirm-delete-message'],
+  resolve: () => ({
+    text: '确定要删除这条通知吗？',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-confirm-delete-confirm',
+  order: 479,
+  surfaces: ['notification-confirm-delete-confirm'],
+  resolve: () => ({
+    text: '删除',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-alert-delete-failed-title',
+  order: 479,
+  surfaces: ['notification-alert-delete-failed-title'],
+  resolve: () => ({
+    text: '删除失败',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],
