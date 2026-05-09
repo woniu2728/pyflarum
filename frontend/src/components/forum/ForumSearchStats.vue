@@ -6,18 +6,29 @@
       class="search-stat"
     >
       <strong>{{ item.count }}</strong>
-      <span>{{ item.label }}</span>
+      <span>{{ formatLabel(item) }}</span>
     </span>
   </div>
 </template>
 
 <script setup>
+import { getUiCopy } from '@/forum/registry'
+
 defineProps({
   items: {
     type: Array,
     default: () => []
   }
 })
+
+function formatLabel(item) {
+  return getUiCopy({
+    surface: 'search-stat-label',
+    key: item?.key,
+    label: item?.label,
+    count: item?.count,
+  })?.text || item?.label || ''
+}
 </script>
 
 <style scoped>

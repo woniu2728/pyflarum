@@ -73,7 +73,14 @@ export function useSearchResultsPage({ route, router }) {
     }
 
     return [
-      { value: 'all', label: '全部', count: discussionTotal.value + postTotal.value + userTotal.value },
+      {
+        value: 'all',
+        label: getUiCopy({
+          surface: 'search-filter-all-label',
+          count: discussionTotal.value + postTotal.value + userTotal.value,
+        })?.text || '全部',
+        count: discussionTotal.value + postTotal.value + userTotal.value
+      },
       ...searchSources.map(item => ({
         value: item.routeType || item.type,
         label: item.label,

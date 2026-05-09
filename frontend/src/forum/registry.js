@@ -1898,6 +1898,60 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-filter-all-label',
+  order: 479,
+  surfaces: ['search-filter-all-label'],
+  resolve: () => ({
+    text: '全部',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-filter-item-label',
+  order: 479,
+  surfaces: ['search-filter-item-label'],
+  resolve: ({ label }) => ({
+    text: label || '',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-stat-label',
+  order: 479,
+  surfaces: ['search-stat-label'],
+  resolve: ({ label }) => ({
+    text: label || '',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-filter-all-label',
+  order: 479,
+  surfaces: ['notification-filter-all-label'],
+  resolve: () => ({
+    text: '全部通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-view-mode-timeline',
+  order: 479,
+  surfaces: ['notification-view-mode-timeline'],
+  resolve: () => ({
+    text: '时间流',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-view-mode-grouped',
+  order: 479,
+  surfaces: ['notification-view-mode-grouped'],
+  resolve: () => ({
+    text: '按讨论分组',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],

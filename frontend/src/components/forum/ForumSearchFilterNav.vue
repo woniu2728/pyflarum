@@ -1,7 +1,7 @@
 <template>
   <nav class="search-filters">
     <button
-      v-for="item in items"
+      v-for="item in normalizedItems"
       :key="item.value"
       type="button"
       class="filter-item"
@@ -15,7 +15,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   activeValue: {
     type: String,
     required: true
@@ -27,6 +30,21 @@ defineProps({
 })
 
 defineEmits(['change'])
+
+const normalizedItems = computed(() => props.items.map(item => {
+  const uiCopy = getUiCopy({
+    surface: 'search-filter-item-label',
+    value: item.value,
+    label: item.label,
+    count: item.count,
+    active: props.activeValue === item.value,
+  })
+
+  return {
+    ...item,
+    label: uiCopy?.text || item.label,
+  }
+}))
 </script>
 
 <style scoped>

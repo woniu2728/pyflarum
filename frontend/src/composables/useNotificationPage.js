@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import { getEmptyState, getStateBlock } from '@/forum/registry'
+import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
 import { resolveNotificationPath, useNotificationGroups } from '@/composables/useNotificationPresentation'
@@ -54,15 +54,32 @@ export function useNotificationPage({
     }))
 
     return [
-      { value: '', label: '全部通知', count: formatSummaryCount() },
+      {
+        value: '',
+        label: getUiCopy({
+          surface: 'notification-filter-all-label',
+          count: formatSummaryCount(),
+        })?.text || '全部通知',
+        count: formatSummaryCount()
+      },
       ...registeredItems,
     ]
   })
 
   const viewModeItems = computed(() => {
     return [
-      { value: 'timeline', label: '时间流' },
-      { value: 'grouped', label: '按讨论分组' },
+      {
+        value: 'timeline',
+        label: getUiCopy({
+          surface: 'notification-view-mode-timeline',
+        })?.text || '时间流'
+      },
+      {
+        value: 'grouped',
+        label: getUiCopy({
+          surface: 'notification-view-mode-grouped',
+        })?.text || '按讨论分组'
+      },
     ]
   })
 

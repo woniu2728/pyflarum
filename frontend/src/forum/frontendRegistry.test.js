@@ -881,3 +881,42 @@ test('ui copy resolves home, tags and start discussion copy', () => {
   assert.equal(startResult.key, startKey)
   assert.equal(startResult.text, 'start in Vue')
 })
+
+test('ui copy resolves filter and stat labels', () => {
+  const filterKey = uniqueKey('ui-filter-label')
+  const statKey = uniqueKey('ui-stat-label')
+
+  registerUiCopy({
+    key: filterKey,
+    order: 10,
+    surfaces: ['search-filter-item-label'],
+    resolve: ({ label, count }) => ({
+      text: `${label}:${count}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: statKey,
+    order: 20,
+    surfaces: ['search-stat-label'],
+    resolve: ({ key, count }) => ({
+      text: `${key}:${count}`,
+    }),
+  })
+
+  const filterResult = getUiCopy({
+    surface: 'search-filter-item-label',
+    label: '讨论',
+    count: 12,
+  })
+  const statResult = getUiCopy({
+    surface: 'search-stat-label',
+    key: 'users',
+    count: 3,
+  })
+
+  assert.equal(filterResult.key, filterKey)
+  assert.equal(filterResult.text, '讨论:12')
+  assert.equal(statResult.key, statKey)
+  assert.equal(statResult.text, 'users:3')
+})
