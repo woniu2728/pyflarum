@@ -7,12 +7,15 @@
     @click="$emit('click')"
   >
     <i class="fas fa-edit"></i>
-    发起讨论
+    {{ labelText }}
   </button>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getUiCopy } from '@/forum/registry'
+
+const props = defineProps({
   currentTag: {
     type: Object,
     default: null
@@ -24,6 +27,12 @@ defineProps({
 })
 
 defineEmits(['click'])
+
+const labelText = computed(() => getUiCopy({
+  surface: 'start-discussion-button',
+  hasTag: Boolean(props.currentTag),
+  tagName: props.currentTag?.name || '',
+})?.text || '发起讨论')
 </script>
 
 <style scoped>

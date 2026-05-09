@@ -1,6 +1,6 @@
 <template>
   <ForumSearchResultSection
-    title="用户"
+    :title="titleText"
     :show-more="showMore"
     @show-more="$emit('show-more')"
   >
@@ -25,8 +25,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumSearchResultCard from '@/components/forum/ForumSearchResultCard.vue'
 import ForumSearchResultSection from '@/components/forum/ForumSearchResultSection.vue'
+import { getUiCopy } from '@/forum/registry'
 import { buildUserPath } from '@/utils/forum'
 import { useRouter } from 'vue-router'
 
@@ -52,6 +54,9 @@ defineProps({
 defineEmits(['show-more'])
 
 const router = useRouter()
+const titleText = computed(() => getUiCopy({
+  surface: 'search-section-users-title',
+})?.text || '用户')
 
 function openUser(user) {
   router.push(buildUserPath(user))

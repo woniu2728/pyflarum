@@ -13,7 +13,7 @@
       </template>
 
       <main class="tags-content">
-        <ForumHeroPanel title="全部标签" variant="default" />
+        <ForumHeroPanel :title="heroTitleText" :description="heroDescriptionText" variant="default" />
 
         <ForumStateBlock v-if="loading">{{ loadingStateText }}</ForumStateBlock>
         <ForumStateBlock v-else-if="tags.length === 0">{{ emptyStateText }}</ForumStateBlock>
@@ -47,7 +47,7 @@ import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumTagCloud from '@/components/forum/ForumTagCloud.vue'
 import ForumTagTile from '@/components/forum/ForumTagTile.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
-import { getEmptyState, getStateBlock } from '@/forum/registry'
+import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useTagsPage } from '@/composables/useTagsPage'
 
@@ -62,6 +62,15 @@ const { startDiscussion } = useStartDiscussionAction({
 })
 
 const { cloudTags, loading, tags } = useTagsPage()
+const heroTitleText = computed(() => getUiCopy({
+  surface: 'tags-page-hero-title',
+})?.text || '全部标签')
+const heroDescriptionText = computed(() => getUiCopy({
+  surface: 'tags-page-hero-description',
+  tagCount: tags.value.length,
+})?.text || (tags.value.length
+  ? `浏览 ${tags.value.length} 个论坛标签，按主题发现相关讨论。`
+  : '浏览论坛标签，按主题发现相关讨论。'))
 const emptyStateText = computed(() => {
   const emptyState = getEmptyState({
     surface: 'tags-page-empty',
@@ -82,10 +91,10 @@ const loadingStateText = computed(() => {
 
 watch(
   tags,
-  value => {
+  () => {
     forumStore.setPageMeta({
-      title: '全部标签',
-      description: value.length ? `浏览 ${value.length} 个论坛标签，按主题发现相关讨论。` : '浏览论坛标签，按主题发现相关讨论。',
+      title: heroTitleText.value,
+      description: heroDescriptionText.value,
       canonicalUrl: '/tags',
     })
   },

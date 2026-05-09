@@ -2,22 +2,22 @@
   <div class="home">
     <div class="flarum-container">
       <ForumHeroPanel
-        title="Bias"
-        description="基于 Django 和 Vue 3 的现代化论坛"
+        :title="heroTitleText"
+        :description="heroDescriptionText"
         variant="default"
       />
       <div class="quick-actions">
         <router-link to="/discussions" class="action-btn primary">
           <span class="icon">💬</span>
-          <span>浏览讨论</span>
+          <span>{{ browseDiscussionsText }}</span>
         </router-link>
         <button v-if="authStore.canStartDiscussion" type="button" class="action-btn" @click="handleStartDiscussion">
           <span class="icon">✏️</span>
-          <span>发起讨论</span>
+          <span>{{ startDiscussionText }}</span>
         </button>
         <router-link v-else to="/register" class="action-btn">
           <span class="icon">👤</span>
-          <span>注册账号</span>
+          <span>{{ registerAccountText }}</span>
         </router-link>
       </div>
     </div>
@@ -25,8 +25,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
+import { getUiCopy } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
@@ -39,6 +41,22 @@ const { startDiscussion } = useStartDiscussionAction({
   composerStore,
   router
 })
+
+const heroTitleText = computed(() => getUiCopy({
+  surface: 'home-hero-title',
+})?.text || 'Bias')
+const heroDescriptionText = computed(() => getUiCopy({
+  surface: 'home-hero-description',
+})?.text || '基于 Django 和 Vue 3 的现代化论坛')
+const browseDiscussionsText = computed(() => getUiCopy({
+  surface: 'home-browse-discussions',
+})?.text || '浏览讨论')
+const startDiscussionText = computed(() => getUiCopy({
+  surface: 'home-start-discussion',
+})?.text || '发起讨论')
+const registerAccountText = computed(() => getUiCopy({
+  surface: 'home-register-account',
+})?.text || '注册账号')
 
 function handleStartDiscussion() {
   startDiscussion({

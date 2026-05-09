@@ -1,6 +1,6 @@
 <template>
   <ForumSearchResultSection
-    title="讨论"
+    :title="titleText"
     :show-more="showMore"
     @show-more="$emit('show-more')"
   >
@@ -24,8 +24,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumSearchResultCard from '@/components/forum/ForumSearchResultCard.vue'
 import ForumSearchResultSection from '@/components/forum/ForumSearchResultSection.vue'
+import { getUiCopy } from '@/forum/registry'
 import { buildDiscussionPath } from '@/utils/forum'
 import { useRouter } from 'vue-router'
 
@@ -55,6 +57,9 @@ defineProps({
 defineEmits(['show-more'])
 
 const router = useRouter()
+const titleText = computed(() => getUiCopy({
+  surface: 'search-section-discussions-title',
+})?.text || '讨论')
 
 function openDiscussion(discussion) {
   router.push(buildDiscussionPath(discussion))

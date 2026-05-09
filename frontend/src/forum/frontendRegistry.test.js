@@ -844,3 +844,40 @@ test('ui copy resolves search modal and page contextual copy', () => {
   assert.equal(heroResult.key, heroKey)
   assert.equal(heroResult.text, 'query:Vue')
 })
+
+test('ui copy resolves home, tags and start discussion copy', () => {
+  const homeKey = uniqueKey('ui-home-hero')
+  const startKey = uniqueKey('ui-start-discussion')
+
+  registerUiCopy({
+    key: homeKey,
+    order: 10,
+    surfaces: ['home-hero-description'],
+    resolve: () => ({
+      text: 'forum home',
+    }),
+  })
+
+  registerUiCopy({
+    key: startKey,
+    order: 20,
+    surfaces: ['start-discussion-button'],
+    resolve: ({ hasTag, tagName }) => ({
+      text: hasTag ? `start in ${tagName}` : 'start discussion',
+    }),
+  })
+
+  const homeResult = getUiCopy({
+    surface: 'home-hero-description',
+  })
+  const startResult = getUiCopy({
+    surface: 'start-discussion-button',
+    hasTag: true,
+    tagName: 'Vue',
+  })
+
+  assert.equal(homeResult.key, homeKey)
+  assert.equal(homeResult.text, 'forum home')
+  assert.equal(startResult.key, startKey)
+  assert.equal(startResult.text, 'start in Vue')
+})

@@ -1,6 +1,6 @@
 <template>
   <ForumSearchResultSection
-    title="帖子"
+    :title="titleText"
     :show-more="showMore"
     @show-more="$emit('show-more')"
   >
@@ -24,8 +24,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ForumSearchResultCard from '@/components/forum/ForumSearchResultCard.vue'
 import ForumSearchResultSection from '@/components/forum/ForumSearchResultSection.vue'
+import { getUiCopy } from '@/forum/registry'
 import { useRouter } from 'vue-router'
 
 defineProps({
@@ -54,6 +56,9 @@ defineProps({
 defineEmits(['show-more'])
 
 const router = useRouter()
+const titleText = computed(() => getUiCopy({
+  surface: 'search-section-posts-title',
+})?.text || '帖子')
 
 function openPost(post) {
   router.push(`/d/${post.discussion_id}?near=${post.number}`)

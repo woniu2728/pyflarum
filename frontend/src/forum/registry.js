@@ -1797,6 +1797,107 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-section-discussions-title',
+  order: 479,
+  surfaces: ['search-section-discussions-title'],
+  resolve: () => ({
+    text: '讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-section-posts-title',
+  order: 479,
+  surfaces: ['search-section-posts-title'],
+  resolve: () => ({
+    text: '帖子',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-section-users-title',
+  order: 479,
+  surfaces: ['search-section-users-title'],
+  resolve: () => ({
+    text: '用户',
+  }),
+})
+
+registerUiCopy({
+  key: 'home-hero-title',
+  order: 479,
+  surfaces: ['home-hero-title'],
+  resolve: () => ({
+    text: 'Bias',
+  }),
+})
+
+registerUiCopy({
+  key: 'home-hero-description',
+  order: 479,
+  surfaces: ['home-hero-description'],
+  resolve: () => ({
+    text: '基于 Django 和 Vue 3 的现代化论坛',
+  }),
+})
+
+registerUiCopy({
+  key: 'home-browse-discussions',
+  order: 479,
+  surfaces: ['home-browse-discussions'],
+  resolve: () => ({
+    text: '浏览讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'home-start-discussion',
+  order: 479,
+  surfaces: ['home-start-discussion'],
+  resolve: () => ({
+    text: '发起讨论',
+  }),
+})
+
+registerUiCopy({
+  key: 'home-register-account',
+  order: 479,
+  surfaces: ['home-register-account'],
+  resolve: () => ({
+    text: '注册账号',
+  }),
+})
+
+registerUiCopy({
+  key: 'tags-page-hero-title',
+  order: 479,
+  surfaces: ['tags-page-hero-title'],
+  resolve: () => ({
+    text: '全部标签',
+  }),
+})
+
+registerUiCopy({
+  key: 'tags-page-hero-description',
+  order: 479,
+  surfaces: ['tags-page-hero-description'],
+  resolve: ({ tagCount }) => ({
+    text: Number(tagCount || 0) > 0
+      ? `浏览 ${tagCount} 个论坛标签，按主题发现相关讨论。`
+      : '浏览论坛标签，按主题发现相关讨论。',
+  }),
+})
+
+registerUiCopy({
+  key: 'start-discussion-button',
+  order: 479,
+  surfaces: ['start-discussion-button'],
+  resolve: ({ hasTag, tagName }) => ({
+    text: hasTag && tagName ? `在 ${tagName} 下发起讨论` : '发起讨论',
+  }),
+})
+
+registerUiCopy({
   key: 'mobile-drawer-close-label',
   order: 480,
   surfaces: ['mobile-drawer-close-label'],
