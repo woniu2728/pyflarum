@@ -1031,6 +1031,56 @@ test('ui copy resolves sidebar and action menu helper copy', () => {
   assert.equal(titleResult.text, 'title:busy')
 })
 
+test('ui copy resolves discussion sidebar scrubber and list sidebar copy', () => {
+  const scrubberStartKey = uniqueKey('ui-scrubber-start')
+  const scrubberEndKey = uniqueKey('ui-scrubber-end')
+  const profileLinkKey = uniqueKey('ui-profile-link')
+
+  registerUiCopy({
+    key: scrubberStartKey,
+    order: 10,
+    surfaces: ['discussion-sidebar-scrubber-start'],
+    resolve: () => ({
+      text: 'first post',
+    }),
+  })
+
+  registerUiCopy({
+    key: scrubberEndKey,
+    order: 20,
+    surfaces: ['discussion-sidebar-scrubber-end'],
+    resolve: () => ({
+      text: 'now',
+    }),
+  })
+
+  registerUiCopy({
+    key: profileLinkKey,
+    order: 30,
+    surfaces: ['discussion-list-sidebar-profile-link'],
+    resolve: () => ({
+      text: 'my profile',
+    }),
+  })
+
+  const scrubberStartResult = getUiCopy({
+    surface: 'discussion-sidebar-scrubber-start',
+  })
+  const scrubberEndResult = getUiCopy({
+    surface: 'discussion-sidebar-scrubber-end',
+  })
+  const profileLinkResult = getUiCopy({
+    surface: 'discussion-list-sidebar-profile-link',
+  })
+
+  assert.equal(scrubberStartResult.key, scrubberStartKey)
+  assert.equal(scrubberStartResult.text, 'first post')
+  assert.equal(scrubberEndResult.key, scrubberEndKey)
+  assert.equal(scrubberEndResult.text, 'now')
+  assert.equal(profileLinkResult.key, profileLinkKey)
+  assert.equal(profileLinkResult.text, 'my profile')
+})
+
 test('ui copy resolves mobile header and discussion list navigation copy', () => {
   const pageTitleKey = uniqueKey('ui-mobile-page-title')
   const leftActionKey = uniqueKey('ui-mobile-left-action')

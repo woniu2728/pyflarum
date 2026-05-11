@@ -19,7 +19,7 @@
     />
 
     <div v-if="authStore.isAuthenticated && isSuspended" class="sidebar-section sidebar-section--warning">
-      <h3>账号状态</h3>
+      <h3>{{ suspensionTitle }}</h3>
       <p class="subscription-copy">{{ suspensionNotice }}</p>
     </div>
 
@@ -44,9 +44,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import DiscussionSidebarActions from '@/components/discussion/DiscussionSidebarActions.vue'
 import DiscussionSidebarScrubber from '@/components/discussion/DiscussionSidebarScrubber.vue'
+import { getUiCopy } from '@/forum/registry'
 
 defineProps({
   discussion: {
@@ -166,6 +167,10 @@ defineExpose({
   getScrubberPanelEl,
   getScrubberTrackEl
 })
+
+const suspensionTitle = computed(() => getUiCopy({
+  surface: 'discussion-sidebar-suspension-title',
+})?.text || '账号状态')
 </script>
 
 <style scoped>

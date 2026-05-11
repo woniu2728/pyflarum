@@ -2730,6 +2730,33 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-sidebar-suspension-title',
+  order: 479,
+  surfaces: ['discussion-sidebar-suspension-title'],
+  resolve: () => ({
+    text: '账号状态',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-sidebar-scrubber-start',
+  order: 479,
+  surfaces: ['discussion-sidebar-scrubber-start'],
+  resolve: () => ({
+    text: '原帖',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-sidebar-scrubber-end',
+  order: 479,
+  surfaces: ['discussion-sidebar-scrubber-end'],
+  resolve: () => ({
+    text: '现在',
+  }),
+})
+
+registerUiCopy({
   key: 'forum-action-menu-item-title',
   order: 479,
   surfaces: ['forum-action-menu-item-title'],
@@ -2764,6 +2791,33 @@ registerUiCopy({
   surfaces: ['header-mobile-left-action-label'],
   resolve: ({ leftAction }) => ({
     text: leftAction === 'back' ? '返回上一页' : '打开导航菜单',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-sidebar-profile-link',
+  order: 479,
+  surfaces: ['discussion-list-sidebar-profile-link'],
+  resolve: () => ({
+    text: '我的主页',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-sidebar-tags-link',
+  order: 479,
+  surfaces: ['discussion-list-sidebar-tags-link'],
+  resolve: () => ({
+    text: '标签',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-sidebar-more-tags-link',
+  order: 479,
+  surfaces: ['discussion-list-sidebar-more-tags-link'],
+  resolve: () => ({
+    text: '更多标签',
   }),
 })
 

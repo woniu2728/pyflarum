@@ -3,7 +3,7 @@
     <div ref="scrubberPanel" class="scrubber-panel">
       <button type="button" class="scrubber-link" @click="$emit('jump-to-post', 1)">
         <i class="fas fa-angle-double-up"></i>
-        原帖
+        {{ startLinkText }}
       </button>
 
       <div
@@ -43,14 +43,15 @@
 
       <button type="button" class="scrubber-link" @click="$emit('jump-to-post', maxPostNumber)">
         <i class="fas fa-angle-double-down"></i>
-        现在
+        {{ endLinkText }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 
 defineProps({
   scrubberScrollbarStyle: {
@@ -120,6 +121,14 @@ defineExpose({
   getScrubberPanelEl,
   getScrubberTrackEl
 })
+
+const startLinkText = computed(() => getUiCopy({
+  surface: 'discussion-sidebar-scrubber-start',
+})?.text || '原帖')
+
+const endLinkText = computed(() => getUiCopy({
+  surface: 'discussion-sidebar-scrubber-end',
+})?.text || '现在')
 </script>
 
 <style scoped>
