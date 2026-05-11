@@ -7,11 +7,12 @@
   >
     <div class="DashboardPage-widgets">
       <AdminInlineMessage
-        v-if="!loading && !loadError && runtimeRisks.length"
-        :tone="runtimeRiskTone"
+        v-for="alert in dashboardAlerts"
+        :key="alert.key"
+        :tone="alert.tone"
       >
-        <strong>运行时风险提示：</strong>
-        {{ runtimeRiskSummary }}
+        <strong>{{ alert.title }}</strong>
+        {{ alert.text }}
       </AdminInlineMessage>
 
       <!-- 状态小部件 -->
@@ -156,6 +157,7 @@ import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
 import {
+  getAdminDashboardAlerts,
   getAdminDashboardActions,
   getAdminDashboardStats,
   getAdminDashboardStatusBadges,
@@ -202,11 +204,9 @@ const resettingQueueMetrics = ref(false)
 const queueMetricsMessage = ref('')
 const queueMetricsMessageTone = ref('success')
 const modalStore = useModalStore()
-const runtimeRisks = computed(() => Array.isArray(stats.value.runtimeRisks) ? stats.value.runtimeRisks : [])
-const runtimeRiskTone = computed(() => (
-  runtimeRisks.value.some(item => item?.level === 'danger') ? 'danger' : 'warning'
-))
-const runtimeRiskSummary = computed(() => runtimeRisks.value.map(item => item.title).join('；'))
+const dashboardAlerts = computed(() => getAdminDashboardAlerts({
+  stats: stats.value,
+}))
 const dashboardActions = computed(() => getAdminDashboardActions())
 const dashboardStats = computed(() => getAdminDashboardStats({
   stats: stats.value,

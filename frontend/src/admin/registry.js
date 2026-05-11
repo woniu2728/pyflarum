@@ -16,6 +16,7 @@ const adminDashboardStats = []
 const adminDashboardStatusSummaries = []
 const adminDashboardStatusBadges = []
 const adminDashboardStatusItems = []
+const adminDashboardAlerts = []
 
 function upsertByPath(target, value) {
   const existingIndex = target.findIndex(item => item.path === value.path)
@@ -193,6 +194,23 @@ export function registerAdminDashboardStatusItem(item) {
 
 export function getAdminDashboardStatusItems(context = {}) {
   return [...adminDashboardStatusItems]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerAdminDashboardAlert(item) {
+  const normalizedItem = {
+    order: 100,
+    tone: 'warning',
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardAlerts, normalizedItem)
+}
+
+export function getAdminDashboardAlerts(context = {}) {
+  return [...adminDashboardAlerts]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .filter(Boolean)
@@ -524,4 +542,18 @@ registerAdminDashboardStatusItem({
     value: stats?.queueWorkerLabel || '-',
     help: stats?.queueWorkerMessage || '',
   }),
+})
+
+registerAdminDashboardAlert({
+  key: 'runtime-risks',
+  order: 10,
+  isVisible: ({ stats }) => Array.isArray(stats?.runtimeRisks) && stats.runtimeRisks.length > 0,
+  resolve: ({ stats }) => {
+    const risks = Array.isArray(stats?.runtimeRisks) ? stats.runtimeRisks : []
+    return {
+      title: '运行时风险提示：',
+      tone: risks.some(item => item?.level === 'danger') ? 'danger' : 'warning',
+      text: risks.map(item => item.title).join('；'),
+    }
+  },
 })
