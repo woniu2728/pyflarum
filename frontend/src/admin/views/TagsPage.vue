@@ -2,86 +2,87 @@
   <AdminPage
     class-name="TagsPage"
     icon="fas fa-tags"
-    title="标签管理"
-    description="管理讨论标签和分类"
+    :title="tagsCopy?.pageTitle || '标签管理'"
+    :description="tagsCopy?.pageDescription || '管理讨论标签和分类'"
   >
     <div class="TagsPage-content">
       <AdminToolbar align="end">
         <button type="button" class="Button Button--primary" @click="openCreateModal">
           <i class="fas fa-plus"></i>
-          创建标签
+          {{ tagsCopy?.createLabel || '创建标签' }}
         </button>
         <button type="button" class="Button" :disabled="refreshingStats" @click="refreshTagStats">
           <i class="fas fa-sync-alt" :class="{ 'fa-spin': refreshingStats }"></i>
-          {{ refreshingStats ? '刷新中...' : '刷新统计' }}
+          {{ refreshingStats ? (tagsCopy?.refreshingLabel || '刷新中...') : (tagsCopy?.refreshLabel || '刷新统计') }}
         </button>
       </AdminToolbar>
 
+      <AdminStateBlock v-if="loadError" tone="danger">{{ loadError }}</AdminStateBlock>
       <AdminSummaryGrid :items="tagSummaryItems" />
 
       <div class="TagsPage-list">
         <table class="TagTable">
           <thead>
             <tr>
-              <th style="width: 190px">预览</th>
-              <th>标签名称</th>
-              <th>别名</th>
-              <th>层级</th>
-              <th>状态</th>
-              <th>讨论数</th>
-              <th>操作</th>
+              <th style="width: 190px">{{ tagsCopy?.tablePreviewHeader || '预览' }}</th>
+              <th>{{ tagsCopy?.tableNameHeader || '标签名称' }}</th>
+              <th>{{ tagsCopy?.tableSlugHeader || '别名' }}</th>
+              <th>{{ tagsCopy?.tableHierarchyHeader || '层级' }}</th>
+              <th>{{ tagsCopy?.tableStatusHeader || '状态' }}</th>
+              <th>{{ tagsCopy?.tableDiscussionCountHeader || '讨论数' }}</th>
+              <th>{{ tagsCopy?.tableActionHeader || '操作' }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
               <td colspan="7" class="TagTable-loading">
-                <AdminStateBlock tone="subtle">加载中...</AdminStateBlock>
+                <AdminStateBlock tone="subtle">{{ tagsCopy?.loadingText || '加载中...' }}</AdminStateBlock>
               </td>
             </tr>
             <tr v-else-if="!tagRows.length">
               <td colspan="7" class="TagTable-empty">
-                <AdminStateBlock>暂无标签</AdminStateBlock>
+                <AdminStateBlock>{{ tagsCopy?.emptyText || '暂无标签' }}</AdminStateBlock>
               </td>
             </tr>
             <tr v-for="row in tagRows" v-else :key="row.tag.id">
-              <td data-label="预览">
+              <td :data-label="tagsCopy?.tablePreviewHeader || '预览'">
                 <span class="TagBadgePreview" :style="getTagBadgeStyle(row.tag)">
                   <i v-if="row.tag.icon" :class="row.tag.icon"></i>
                   <span>{{ row.tag.name }}</span>
                 </span>
               </td>
-              <td data-label="标签名称">
+              <td :data-label="tagsCopy?.tableNameHeader || '标签名称'">
                 <div class="TagNameCell" :style="{ '--tag-depth': row.depth }">
                   <span class="TagNameCell-line" :class="{ 'is-child': row.depth > 0 }"></span>
                   <div class="TagNameCell-main">
                     <strong>{{ row.tag.name }}</strong>
-                    <small>排序 {{ row.tag.position }}</small>
+                    <small>{{ tagsCopy?.sortTextPrefix || '排序' }} {{ row.tag.position }}</small>
                   </div>
                 </div>
               </td>
-              <td data-label="别名">
+              <td :data-label="tagsCopy?.tableSlugHeader || '别名'">
                 <code class="TagSlug">{{ row.tag.slug }}</code>
               </td>
-              <td data-label="层级">
+              <td :data-label="tagsCopy?.tableHierarchyHeader || '层级'">
                 <div class="TagHierarchy">
-                  <span>{{ row.depth > 0 ? '子标签' : '顶级标签' }}</span>
-                  <small v-if="row.parentName">隶属 {{ row.parentName }}</small>
+                  <span>{{ row.depth > 0 ? (tagsCopy?.childLevelText || '子标签') : (tagsCopy?.rootLevelText || '顶级标签') }}</span>
+                  <small v-if="row.parentName">{{ tagsCopy?.childOwnedPrefix || '隶属' }} {{ row.parentName }}</small>
                 </div>
               </td>
-              <td data-label="状态">
+              <td :data-label="tagsCopy?.tableStatusHeader || '状态'">
                 <div class="TagStatusList">
-                  <span v-if="row.tag.is_hidden" class="TagStatus TagStatus--muted">隐藏</span>
-                  <span v-if="row.tag.is_restricted" class="TagStatus TagStatus--warning">限制发帖</span>
-                  <span class="TagStatus">查看: {{ getScopeLabel(row.tag.view_scope) }}</span>
-                  <span class="TagStatus">发帖: {{ getScopeLabel(row.tag.start_discussion_scope) }}</span>
-                  <span class="TagStatus">回帖: {{ getScopeLabel(row.tag.reply_scope) }}</span>
-                  <span v-if="!row.tag.is_hidden && !row.tag.is_restricted" class="TagStatus">公开</span>
+                  <span v-if="row.tag.is_hidden" class="TagStatus TagStatus--muted">{{ tagsCopy?.hiddenLabel || '隐藏标签' }}</span>
+                  <span v-if="row.tag.is_restricted" class="TagStatus TagStatus--warning">{{ tagsCopy?.restrictedLabel || '限制发帖' }}</span>
+                  <span class="TagStatus">{{ tagsCopy?.viewTextPrefix || '查看' }}: {{ getScopeLabel(row.tag.view_scope) }}</span>
+                  <span class="TagStatus">{{ tagsCopy?.startTextPrefix || '发帖' }}: {{ getScopeLabel(row.tag.start_discussion_scope) }}</span>
+                  <span class="TagStatus">{{ tagsCopy?.replyTextPrefix || '回帖' }}: {{ getScopeLabel(row.tag.reply_scope) }}</span>
+                  <span v-if="!row.tag.is_hidden && !row.tag.is_restricted" class="TagStatus">{{ tagsCopy?.publicText || '公开' }}</span>
                 </div>
               </td>
-              <td data-label="讨论数">{{ row.tag.discussion_count }}</td>
-              <td data-label="操作">
+              <td :data-label="tagsCopy?.tableDiscussionCountHeader || '讨论数'">{{ row.tag.discussion_count }}</td>
+              <td :data-label="tagsCopy?.tableActionHeader || '操作'">
                 <button type="button" class="Button Button--small" @click="editTag(row.tag)">
-                  编辑
+                  {{ tagsCopy?.editLabel || '编辑' }}
                 </button>
                 <button
                   type="button"
@@ -89,7 +90,7 @@
                   :disabled="!canMoveTag(row.tag, 'up') || movingTagId === row.tag.id"
                   @click="moveTag(row.tag, 'up')"
                 >
-                  上移
+                  {{ tagsCopy?.moveUpLabel || '上移' }}
                 </button>
                 <button
                   type="button"
@@ -97,10 +98,10 @@
                   :disabled="!canMoveTag(row.tag, 'down') || movingTagId === row.tag.id"
                   @click="moveTag(row.tag, 'down')"
                 >
-                  下移
+                  {{ tagsCopy?.moveDownLabel || '下移' }}
                 </button>
                 <button type="button" class="Button Button--small Button--danger" @click="deleteTag(row.tag)">
-                  删除
+                  {{ tagsCopy?.deleteLabel || '删除' }}
                 </button>
               </td>
             </tr>
@@ -113,8 +114,8 @@
       <div class="Modal-content">
         <div class="Modal-header">
           <div>
-            <h3>{{ showEditModal ? '编辑标签' : '创建标签' }}</h3>
-            <p class="Modal-subtitle">参考 Flarum 的标签编辑流程，并补齐父子层级、排序和显示状态配置。</p>
+            <h3>{{ showEditModal ? (tagsCopy?.modalEditTitle || '编辑标签') : (tagsCopy?.modalCreateTitle || '创建标签') }}</h3>
+            <p class="Modal-subtitle">{{ tagsCopy?.modalSubtitle || '参考 Flarum 的标签编辑流程，并补齐父子层级、排序和显示状态配置。' }}</p>
           </div>
           <button type="button" class="Modal-close" @click="closeModal">
             <i class="fas fa-times"></i>
@@ -123,17 +124,17 @@
 
         <div class="Modal-body">
           <div class="TagPreviewPanel">
-            <span class="TagPreviewPanel-label">实时预览</span>
+            <span class="TagPreviewPanel-label">{{ tagsCopy?.previewLabel || '实时预览' }}</span>
             <div class="TagPreviewPanel-card">
               <div class="TagPreviewPanel-badge">
                 <span class="TagBadgePreview TagBadgePreview--large" :style="getTagBadgeStyle(formData)">
                   <i v-if="formData.icon" :class="formData.icon"></i>
-                  <span>{{ formData.name || '新标签' }}</span>
+                  <span>{{ formData.name || tagsCopy?.previewFallbackName || '新标签' }}</span>
                 </span>
               </div>
               <div class="TagPreviewPanel-meta">
                 <small>
-                  {{ formData.parent_id ? '当前会作为子标签显示在父标签下方。' : '当前会作为顶级标签显示在列表中。' }}
+                  {{ formData.parent_id ? (tagsCopy?.previewChildText || '当前会作为子标签显示在父标签下方。') : (tagsCopy?.previewRootText || '当前会作为顶级标签显示在列表中。') }}
                 </small>
               </div>
             </div>
@@ -143,46 +144,46 @@
 
           <div class="FormRow">
             <div class="Form-group">
-              <label for="tag-name">标签名称 *</label>
+              <label for="tag-name">{{ tagsCopy?.nameLabel || '标签名称 *' }}</label>
               <input
                 id="tag-name"
                 v-model.trim="formData.name"
                 name="tag_name"
                 type="text"
                 class="FormControl"
-                placeholder="例如：技术讨论"
+                :placeholder="tagsCopy?.namePlaceholder || '例如：技术讨论'"
               />
             </div>
 
             <div class="Form-group">
-              <label for="tag-slug">别名 / Slug</label>
+              <label for="tag-slug">{{ tagsCopy?.slugLabel || '别名 / Slug' }}</label>
               <input
                 id="tag-slug"
                 v-model.trim="formData.slug"
                 name="tag_slug"
                 type="text"
                 class="FormControl"
-                placeholder="例如：tech-talk"
+                :placeholder="tagsCopy?.slugPlaceholder || '例如：tech-talk'"
               />
-              <div class="Form-help">留空时自动生成，建议使用短横线风格。</div>
+              <div class="Form-help">{{ tagsCopy?.slugHelpText || '留空时自动生成，建议使用短横线风格。' }}</div>
             </div>
           </div>
 
           <div class="Form-group">
-            <label for="tag-description">描述</label>
+            <label for="tag-description">{{ tagsCopy?.descriptionLabel || '描述' }}</label>
             <textarea
               id="tag-description"
               v-model.trim="formData.description"
               name="tag_description"
               class="FormControl"
               rows="3"
-              placeholder="标签的简短描述"
+              :placeholder="tagsCopy?.descriptionPlaceholder || '标签的简短描述'"
             ></textarea>
           </div>
 
           <div class="FormRow">
             <div class="Form-group">
-              <label for="tag-parent">父标签</label>
+              <label for="tag-parent">{{ tagsCopy?.parentLabel || '父标签' }}</label>
               <select
                 id="tag-parent"
                 v-model="formData.parent_id"
@@ -190,7 +191,7 @@
                 class="FormControl"
                 :disabled="editingTagHasChildren"
               >
-                <option :value="null">作为顶级标签</option>
+                <option :value="null">{{ tagsCopy?.parentRootOptionLabel || '作为顶级标签' }}</option>
                 <option
                   v-for="option in availableParentOptions"
                   :key="option.id"
@@ -201,13 +202,13 @@
               </select>
               <div class="Form-help">
                 {{ editingTagHasChildren
-                  ? '当前标签下已有子标签，不能再把它设为次标签。'
-                  : '只能选择顶级标签作为父标签；设置后，这个标签会显示在对应父标签下方。' }}
+                  ? (tagsCopy?.parentChildrenBlockedText || '当前标签下已有子标签，不能再把它设为次标签。')
+                  : (tagsCopy?.parentHelpText || '只能选择顶级标签作为父标签；设置后，这个标签会显示在对应父标签下方。') }}
               </div>
             </div>
 
             <div class="Form-group">
-              <label for="tag-position">排序位置</label>
+              <label for="tag-position">{{ tagsCopy?.positionLabel || '排序位置' }}</label>
               <input
                 id="tag-position"
                 v-model.number="formData.position"
@@ -215,14 +216,14 @@
                 type="number"
                 min="0"
                 class="FormControl"
-                placeholder="0"
+                :placeholder="tagsCopy?.positionPlaceholder || '0'"
               />
               <div class="Form-help">{{ positionHelpText }}</div>
             </div>
           </div>
 
           <div class="Form-group">
-            <label for="tag-color-text">颜色</label>
+            <label for="tag-color-text">{{ tagsCopy?.colorLabel || '颜色' }}</label>
             <div class="ColorPicker">
               <input
                 id="tag-color-picker"
@@ -230,7 +231,7 @@
                 name="tag_color_picker"
                 type="color"
                 class="ColorPicker-input"
-                aria-label="标签颜色选择器"
+                :aria-label="tagsCopy?.colorPickerAriaLabel || '标签颜色选择器'"
               />
               <input
                 id="tag-color-text"
@@ -238,12 +239,12 @@
                 name="tag_color"
                 type="text"
                 class="FormControl ColorPicker-text"
-                placeholder="#888888"
+                :placeholder="tagsCopy?.colorPlaceholder || '#888888'"
               />
             </div>
             <div class="ColorPresetList">
               <button
-                v-for="color in TAG_COLOR_PRESETS"
+                v-for="color in tagColorPresets"
                 :key="color"
                 type="button"
                 class="ColorPreset"
@@ -256,8 +257,8 @@
 
           <div class="Form-group">
             <div class="Form-group-header">
-              <label for="tag-icon-search">图标</label>
-              <button type="button" class="LinkButton" @click="formData.icon = ''">清除图标</button>
+              <label for="tag-icon-search">{{ tagsCopy?.iconLabel || '图标' }}</label>
+              <button type="button" class="LinkButton" @click="formData.icon = ''">{{ tagsCopy?.clearIconLabel || '清除图标' }}</button>
             </div>
 
             <input
@@ -266,7 +267,7 @@
               name="tag_icon_search"
               type="text"
               class="FormControl"
-              placeholder="搜索图标，例如 code、comments、tag"
+              :placeholder="tagsCopy?.iconSearchPlaceholder || '搜索图标，例如 code、comments、tag'"
             />
 
             <div class="IconPicker">
@@ -284,23 +285,23 @@
             </div>
 
             <div v-if="!filteredIconOptions.length" class="IconPicker-empty">
-              没有找到匹配的图标
+              {{ tagsCopy?.iconNoMatchText || '没有找到匹配的图标' }}
             </div>
 
-            <div class="Form-help">标签仍然保存为 Font Awesome 类名，但现在可以直接搜索和点选。</div>
-            <label class="sr-only" for="tag-icon">手动输入图标类名</label>
+            <div class="Form-help">{{ tagsCopy?.iconHelpText || '标签仍然保存为 Font Awesome 类名，但现在可以直接搜索和点选。' }}</div>
+            <label class="sr-only" for="tag-icon">{{ tagsCopy?.iconManualLabel || '手动输入图标类名' }}</label>
             <input
               id="tag-icon"
               v-model.trim="formData.icon"
               name="tag_icon"
               type="text"
               class="FormControl FormControl--subtle"
-              placeholder="高级模式：手动输入 Font Awesome 类名"
+              :placeholder="tagsCopy?.iconManualPlaceholder || '高级模式：手动输入 Font Awesome 类名'"
             />
           </div>
 
           <div class="Form-group">
-            <span id="tag-visibility-controls" class="Form-label">显示与发帖限制</span>
+            <span id="tag-visibility-controls" class="Form-label">{{ tagsCopy?.visibilityLabel || '显示与发帖限制' }}</span>
             <div class="CheckboxRow">
               <label class="CheckboxChip">
                 <input
@@ -309,7 +310,7 @@
                   type="checkbox"
                   aria-describedby="tag-visibility-controls"
                 />
-                <span>隐藏标签</span>
+                <span>{{ tagsCopy?.hiddenLabel || '隐藏标签' }}</span>
               </label>
 
               <label class="CheckboxChip">
@@ -319,28 +320,28 @@
                   type="checkbox"
                   aria-describedby="tag-visibility-controls"
                 />
-                <span>限制发帖</span>
+                <span>{{ tagsCopy?.restrictedLabel || '限制发帖' }}</span>
               </label>
             </div>
           </div>
 
           <div class="FormRow">
             <div class="Form-group">
-              <label for="tag-view-scope">查看权限</label>
+              <label for="tag-view-scope">{{ tagsCopy?.viewScopeLabel || '查看权限' }}</label>
               <select
                 id="tag-view-scope"
                 v-model="formData.view_scope"
                 name="tag_view_scope"
                 class="FormControl"
               >
-                <option v-for="option in TAG_SCOPE_OPTIONS" :key="`view-${option.value}`" :value="option.value">
+                <option v-for="option in tagScopeOptions" :key="`view-${option.value}`" :value="option.value">
                   {{ option.label }}
                 </option>
               </select>
             </div>
 
             <div class="Form-group">
-              <label for="tag-start-scope">发帖权限</label>
+              <label for="tag-start-scope">{{ tagsCopy?.startScopeLabel || '发帖权限' }}</label>
               <select
                 id="tag-start-scope"
                 v-model="formData.start_discussion_scope"
@@ -351,12 +352,12 @@
                   {{ option.label }}
                 </option>
               </select>
-              <div class="Form-help">发帖权限不能比查看权限更宽松。</div>
+              <div class="Form-help">{{ tagsCopy?.startScopeHelpText || '发帖权限不能比查看权限更宽松。' }}</div>
             </div>
           </div>
 
           <div class="Form-group">
-            <label for="tag-reply-scope">回帖权限</label>
+            <label for="tag-reply-scope">{{ tagsCopy?.replyScopeLabel || '回帖权限' }}</label>
             <select
               id="tag-reply-scope"
               v-model="formData.reply_scope"
@@ -369,18 +370,18 @@
             </select>
             <div class="Form-help">
               {{ formData.is_restricted
-                ? '“限制发帖”开启后，普通用户无法在该标签下发起讨论；回帖权限仍按这里的配置生效。'
-                : '标签级权限会作用到讨论列表、详情页、发帖和回帖流程。' }}
+                ? (tagsCopy?.restrictedHelpText || '“限制发帖”开启后，普通用户无法在该标签下发起讨论；回帖权限仍按这里的配置生效。')
+                : (tagsCopy?.postingHelpText || '标签级权限会作用到讨论列表、详情页、发帖和回帖流程。') }}
             </div>
           </div>
         </div>
 
         <div class="Modal-footer">
           <button type="button" class="Button" @click="closeModal">
-            取消
+            {{ tagsCopy?.cancelLabel || '取消' }}
           </button>
           <button type="button" class="Button Button--primary" :disabled="saving" @click="saveTag">
-            {{ saving ? '保存中...' : '保存' }}
+            {{ saving ? (tagsCopy?.savingLabel || '保存中...') : (tagsCopy?.saveLabel || '保存') }}
           </button>
         </div>
       </div>
@@ -396,69 +397,15 @@ import AdminSummaryGrid from '../components/AdminSummaryGrid.vue'
 import AdminToolbar from '../components/AdminToolbar.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
-
-const TAG_COLOR_PRESETS = [
-  '#3c78d8',
-  '#4d698e',
-  '#0e7490',
-  '#0f766e',
-  '#2f855a',
-  '#65a30d',
-  '#ca8a04',
-  '#ea580c',
-  '#dc2626',
-  '#c026d3',
-  '#7c3aed',
-  '#475569',
-]
-
-const TAG_SCOPE_OPTIONS = [
-  { value: 'public', label: '所有人' },
-  { value: 'members', label: '已登录用户' },
-  { value: 'staff', label: '仅管理员' },
-]
-
-const TAG_ICON_OPTIONS = [
-  { value: 'fas fa-comments', label: '讨论' },
-  { value: 'fas fa-comment-dots', label: '对话' },
-  { value: 'fas fa-code', label: '代码' },
-  { value: 'fas fa-terminal', label: '终端' },
-  { value: 'fas fa-bug', label: '问题' },
-  { value: 'fas fa-lightbulb', label: '想法' },
-  { value: 'fas fa-rocket', label: '发布' },
-  { value: 'fas fa-book', label: '文档' },
-  { value: 'fas fa-graduation-cap', label: '教程' },
-  { value: 'fas fa-wrench', label: '工具' },
-  { value: 'fas fa-cubes', label: '框架' },
-  { value: 'fas fa-plug', label: '插件' },
-  { value: 'fas fa-cloud', label: '云服务' },
-  { value: 'fas fa-server', label: '服务端' },
-  { value: 'fas fa-database', label: '数据库' },
-  { value: 'fas fa-shield-alt', label: '安全' },
-  { value: 'fas fa-mobile-alt', label: '移动端' },
-  { value: 'fas fa-desktop', label: '桌面端' },
-  { value: 'fas fa-image', label: '图片' },
-  { value: 'fas fa-video', label: '视频' },
-  { value: 'fas fa-music', label: '音频' },
-  { value: 'fas fa-gamepad', label: '游戏' },
-  { value: 'fas fa-briefcase', label: '工作' },
-  { value: 'fas fa-chart-line', label: '增长' },
-  { value: 'fas fa-bullhorn', label: '公告' },
-  { value: 'fas fa-fire', label: '热门' },
-  { value: 'fas fa-star', label: '精选' },
-  { value: 'fas fa-heart', label: '喜欢' },
-  { value: 'fas fa-users', label: '社区' },
-  { value: 'fas fa-user-shield', label: '管理' },
-  { value: 'fas fa-tags', label: '标签' },
-  { value: 'fas fa-thumbtack', label: '置顶' },
-  { value: 'fas fa-lock', label: '锁定' },
-  { value: 'fas fa-language', label: '语言' },
-  { value: 'fas fa-globe', label: '全球' },
-  { value: 'fas fa-seedling', label: '新手' },
-]
+import {
+  getAdminTagsPageActionMeta,
+  getAdminTagsPageConfig,
+  getAdminTagsPageCopy,
+} from '../registry'
 
 const tags = ref([])
 const loading = ref(true)
+const loadError = ref('')
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const saving = ref(false)
@@ -467,14 +414,20 @@ const refreshingStats = ref(false)
 const editingTag = ref(null)
 const iconSearch = ref('')
 const modalStore = useModalStore()
+const tagsCopy = computed(() => getAdminTagsPageCopy())
+const tagsConfig = computed(() => getAdminTagsPageConfig())
+const tagsActionMeta = computed(() => getAdminTagsPageActionMeta())
+const tagColorPresets = computed(() => tagsConfig.value?.colorPresets || [])
+const tagScopeOptions = computed(() => tagsConfig.value?.scopeOptions || [])
+const tagIconOptions = computed(() => tagsConfig.value?.iconOptions || [])
 
 const formData = ref(getEmptyForm())
 
 const filteredIconOptions = computed(() => {
   const query = iconSearch.value.trim().toLowerCase()
-  if (!query) return TAG_ICON_OPTIONS
+  if (!query) return tagIconOptions.value
 
-  return TAG_ICON_OPTIONS.filter(icon =>
+  return tagIconOptions.value.filter(icon =>
     icon.label.toLowerCase().includes(query) || icon.value.toLowerCase().includes(query)
   )
 })
@@ -489,10 +442,10 @@ const tagSummary = computed(() => ({
   restricted: tags.value.filter(tag => tag.is_restricted).length,
 }))
 const tagSummaryItems = computed(() => [
-  { label: '标签总数', value: tagSummary.value.total },
-  { label: '顶级 / 子标签', value: `${tagSummary.value.root} / ${tagSummary.value.child}` },
-  { label: '隐藏标签', value: tagSummary.value.hidden },
-  { label: '限制发帖', value: tagSummary.value.restricted },
+  { label: tagsCopy.value?.summaryTagTotalLabel || '标签总数', value: tagSummary.value.total },
+  { label: tagsCopy.value?.summaryTagHierarchyLabel || '顶级 / 子标签', value: `${tagSummary.value.root} / ${tagSummary.value.child}` },
+  { label: tagsCopy.value?.summaryHiddenLabel || '隐藏标签', value: tagSummary.value.hidden },
+  { label: tagsCopy.value?.summaryRestrictedLabel || '限制发帖', value: tagSummary.value.restricted },
 ])
 const editingTagHasChildren = computed(() => {
   if (!editingTag.value) return false
@@ -511,19 +464,21 @@ const availableParentOptions = computed(() => {
 })
 const availableStartScopeOptions = computed(() => {
   const minimumLevel = getScopeLevel(formData.value.view_scope)
-  return TAG_SCOPE_OPTIONS.filter(option => getScopeLevel(option.value) >= minimumLevel)
+  return tagScopeOptions.value.filter(option => getScopeLevel(option.value) >= minimumLevel)
 })
 const availableReplyScopeOptions = computed(() => {
   const minimumLevel = getScopeLevel(formData.value.view_scope)
-  return TAG_SCOPE_OPTIONS.filter(option => getScopeLevel(option.value) >= minimumLevel)
+  return tagScopeOptions.value.filter(option => getScopeLevel(option.value) >= minimumLevel)
 })
 const hierarchySummary = computed(() => {
   if (!formData.value.parent_id) {
-    return '顶级标签'
+    return tagsCopy.value?.rootLevelText || '顶级标签'
   }
 
   const parentTag = tags.value.find(tag => tag.id === formData.value.parent_id)
-  return parentTag ? `子标签 · 归属 ${parentTag.name}` : '子标签'
+  const childLabel = tagsCopy.value?.childLevelText || '子标签'
+  const ownedPrefix = tagsCopy.value?.childOwnedPrefix || '隶属'
+  return parentTag ? `${childLabel} · ${ownedPrefix} ${parentTag.name}` : childLabel
 })
 const positionSummary = computed(() => {
   const siblingCount = getSiblingCount(formData.value.parent_id, editingTag.value?.id)
@@ -531,24 +486,27 @@ const positionSummary = computed(() => {
   return `第 ${rank} 位 / 共 ${siblingCount + 1} 个同级标签`
 })
 const visibilitySummary = computed(() => {
-  const baseText = `查看: ${getScopeLabel(formData.value.view_scope)}`
+  const baseText = `${tagsCopy.value?.viewTextPrefix || '查看'}: ${getScopeLabel(formData.value.view_scope)}`
   return formData.value.is_hidden ? `${baseText} · 前台隐藏` : `${baseText} · 正常显示`
 })
 const postingSummary = computed(() => {
   if (formData.value.is_restricted) {
-    return `发帖: 仅管理员 · 回帖: ${getScopeLabel(formData.value.reply_scope)}`
+    return `${tagsCopy.value?.startTextPrefix || '发帖'}: 仅管理员 · ${tagsCopy.value?.replyTextPrefix || '回帖'}: ${getScopeLabel(formData.value.reply_scope)}`
   }
-  return `发帖: ${getScopeLabel(formData.value.start_discussion_scope)} · 回帖: ${getScopeLabel(formData.value.reply_scope)}`
+  return `${tagsCopy.value?.startTextPrefix || '发帖'}: ${getScopeLabel(formData.value.start_discussion_scope)} · ${tagsCopy.value?.replyTextPrefix || '回帖'}: ${getScopeLabel(formData.value.reply_scope)}`
 })
 const positionHelpText = computed(() => {
-  const parentText = formData.value.parent_id ? '当前父标签下' : '顶级标签层'
-  return `${parentText}数字越小越靠前；${positionSummary.value}。`
+  const parentText = formData.value.parent_id
+    ? (tagsCopy.value?.positionHelpParentText || '当前父标签下')
+    : (tagsCopy.value?.positionHelpRootText || '顶级标签层')
+  const prefix = tagsCopy.value?.positionHelpTextPrefix || '数字越小越靠前'
+  return `${parentText}${prefix}；${positionSummary.value}。`
 })
 const tagConfigSummaryItems = computed(() => [
-  { label: '层级', value: hierarchySummary.value },
-  { label: '排序', value: positionSummary.value },
-  { label: '查看范围', value: visibilitySummary.value },
-  { label: '发帖 / 回帖', value: postingSummary.value },
+  { label: tagsCopy.value?.configHierarchyLabel || '层级', value: hierarchySummary.value },
+  { label: tagsCopy.value?.configSortLabel || '排序', value: positionSummary.value },
+  { label: tagsCopy.value?.configViewLabel || '查看范围', value: visibilitySummary.value },
+  { label: tagsCopy.value?.configPostingLabel || '发帖 / 回帖', value: postingSummary.value },
 ])
 onMounted(() => {
   loadTags()
@@ -568,11 +526,13 @@ watch(
 
 async function loadTags() {
   loading.value = true
+  loadError.value = ''
   try {
     const data = await api.get('/admin/tags')
     tags.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('加载标签失败:', error)
+    loadError.value = error.response?.data?.error || error.message || tagsActionMeta.value?.loadErrorText || '加载标签失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -610,8 +570,8 @@ function editTag(tag) {
 async function saveTag() {
   if (!formData.value.name) {
     await modalStore.alert({
-      title: '信息不完整',
-      message: '请输入标签名称',
+      title: tagsActionMeta.value?.saveIncompleteTitle || '信息不完整',
+      message: tagsActionMeta.value?.saveIncompleteMessage || '请输入标签名称',
       tone: 'warning'
     })
     return
@@ -648,9 +608,10 @@ async function saveTag() {
     const errorMsg = error.response?.data?.error
       || error.response?.data?.detail
       || error.message
+      || tagsActionMeta.value?.saveUnknownErrorText
       || '未知错误'
     await modalStore.alert({
-      title: '保存失败',
+      title: tagsActionMeta.value?.saveFailedTitle || '保存失败',
       message: errorMsg,
       tone: 'danger'
     })
@@ -661,10 +622,10 @@ async function saveTag() {
 
 async function deleteTag(tag) {
   const confirmed = await modalStore.confirm({
-    title: '删除标签',
-    message: `确定要删除标签“${tag.name}”吗？`,
-    confirmText: '删除',
-    cancelText: '取消',
+    title: tagsActionMeta.value?.deleteConfirmTitle || '删除标签',
+    message: tagsActionMeta.value?.deleteConfirmMessage?.(tag.name) || `确定要删除标签“${tag.name}”吗？`,
+    confirmText: tagsActionMeta.value?.deleteConfirmText || '删除',
+    cancelText: tagsActionMeta.value?.deleteCancelText || '取消',
     tone: 'danger'
   })
   if (!confirmed) {
@@ -675,14 +636,14 @@ async function deleteTag(tag) {
     await api.delete(`/admin/tags/${tag.id}`)
     await loadTags()
     await modalStore.alert({
-      title: '标签已删除',
-      message: `标签“${tag.name}”已删除。`,
+      title: tagsActionMeta.value?.deleteSuccessTitle || '标签已删除',
+      message: tagsActionMeta.value?.deleteSuccessMessage?.(tag.name) || `标签“${tag.name}”已删除。`,
       tone: 'success'
     })
   } catch (error) {
     await modalStore.alert({
-      title: '删除失败',
-      message: error.response?.data?.error || '未知错误',
+      title: tagsActionMeta.value?.deleteFailedTitle || '删除失败',
+      message: error.response?.data?.error || tagsActionMeta.value?.deleteFailedMessage || '未知错误',
       tone: 'danger'
     })
   }
@@ -690,10 +651,10 @@ async function deleteTag(tag) {
 
 async function refreshTagStats() {
   const confirmed = await modalStore.confirm({
-    title: '刷新标签统计',
-    message: '确定刷新全部标签的讨论数和最后发帖信息吗？数据量较大时建议在低峰期执行。',
-    confirmText: '刷新',
-    cancelText: '取消',
+    title: tagsActionMeta.value?.refreshConfirmTitle || '刷新标签统计',
+    message: tagsActionMeta.value?.refreshConfirmMessage || '确定刷新全部标签的讨论数和最后发帖信息吗？数据量较大时建议在低峰期执行。',
+    confirmText: tagsActionMeta.value?.refreshConfirmText || '刷新',
+    cancelText: tagsActionMeta.value?.refreshCancelText || '取消',
     tone: 'warning'
   })
   if (!confirmed) {
@@ -706,8 +667,8 @@ async function refreshTagStats() {
     await loadTags()
   } catch (error) {
     await modalStore.alert({
-      title: '刷新标签统计失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: tagsActionMeta.value?.refreshFailedTitle || '刷新标签统计失败',
+      message: error.response?.data?.error || error.message || tagsActionMeta.value?.refreshFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
@@ -726,9 +687,10 @@ async function moveTag(tag, direction) {
     const errorMsg = error.response?.data?.error
       || error.response?.data?.detail
       || error.message
+      || tagsActionMeta.value?.moveFailedMessage
       || '未知错误'
     await modalStore.alert({
-      title: '调整排序失败',
+      title: tagsActionMeta.value?.moveFailedTitle || '调整排序失败',
       message: errorMsg,
       tone: 'danger'
     })
@@ -768,7 +730,7 @@ function normalizeColor(value) {
 }
 
 function getScopeLabel(scope) {
-  return TAG_SCOPE_OPTIONS.find(option => option.value === scope)?.label || '未知'
+  return tagScopeOptions.value.find(option => option.value === scope)?.label || '未知'
 }
 
 function getScopeLevel(scope) {
@@ -1347,17 +1309,17 @@ function getNextPosition(sourceTags, parentId) {
     gap: 6px;
   }
 
-  .TagTable tbody td[data-label='操作'] {
+  .TagTable tbody td:last-child {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
   }
 
-  .TagTable tbody td[data-label='操作']::before {
+  .TagTable tbody td:last-child::before {
     width: 100%;
   }
 
-  .TagTable tbody td[data-label='操作'] .Button {
+  .TagTable tbody td:last-child .Button {
     flex: 1 1 calc(50% - 8px);
     justify-content: center;
   }
