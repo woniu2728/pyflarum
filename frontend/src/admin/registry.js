@@ -18,6 +18,7 @@ const adminDashboardStatusBadges = []
 const adminDashboardStatusItems = []
 const adminDashboardAlerts = []
 const adminDashboardQueueMetrics = []
+const adminDashboardCopies = []
 
 function upsertByPath(target, value) {
   const existingIndex = target.findIndex(item => item.path === value.path)
@@ -232,6 +233,22 @@ export function getAdminDashboardQueueMetrics(context = {}) {
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .filter(Boolean)
+}
+
+export function registerAdminDashboardCopy(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardCopies, normalizedItem)
+}
+
+export function getAdminDashboardCopy(context = {}) {
+  return [...adminDashboardCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
 }
 
 registerAdminRoute({
@@ -614,5 +631,17 @@ registerAdminDashboardQueueMetric({
   resolve: ({ stats }) => ({
     value: stats?.queueMetrics?.last_task || '-',
     error: stats?.queueMetrics?.last_error || '',
+  }),
+})
+
+registerAdminDashboardCopy({
+  key: 'core-dashboard-copy',
+  order: 10,
+  resolve: () => ({
+    pageTitle: '仪表盘',
+    pageDescription: '查看论坛概况和系统状态',
+    statusWidgetTitle: '系统状态',
+    statsWidgetTitle: '论坛统计',
+    actionsWidgetTitle: '快速操作',
   }),
 })

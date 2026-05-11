@@ -2,8 +2,8 @@
   <AdminPage
     class-name="DashboardPage"
     icon="fas fa-chart-bar"
-    title="仪表盘"
-    description="查看论坛概况和系统状态"
+    :title="dashboardCopy?.pageTitle || '仪表盘'"
+    :description="dashboardCopy?.pageDescription || '查看论坛概况和系统状态'"
   >
     <div class="DashboardPage-widgets">
       <AdminInlineMessage
@@ -18,7 +18,7 @@
       <!-- 状态小部件 -->
       <div class="Widget StatusWidget">
         <div class="Widget-header">
-          <h3>系统状态</h3>
+          <h3>{{ dashboardCopy?.statusWidgetTitle || '系统状态' }}</h3>
         </div>
         <AdminStateBlock v-if="loading" class="Widget-state" tone="subtle">加载中...</AdminStateBlock>
         <AdminStateBlock v-else-if="loadError" class="Widget-state" tone="danger">{{ loadError }}</AdminStateBlock>
@@ -97,7 +97,7 @@
       <!-- 统计小部件 -->
       <div class="Widget StatsWidget">
         <div class="Widget-header">
-          <h3>论坛统计</h3>
+          <h3>{{ dashboardCopy?.statsWidgetTitle || '论坛统计' }}</h3>
         </div>
         <div v-if="!loading && !loadError" class="Widget-content">
           <div class="StatsWidget-items">
@@ -121,7 +121,7 @@
       <!-- 快速操作 -->
       <div class="Widget ActionsWidget">
         <div class="Widget-header">
-          <h3>快速操作</h3>
+          <h3>{{ dashboardCopy?.actionsWidgetTitle || '快速操作' }}</h3>
         </div>
         <div class="Widget-content">
           <div class="ActionsWidget-items">
@@ -151,6 +151,7 @@ import { useModalStore } from '../../stores/modal'
 import {
   getAdminDashboardAlerts,
   getAdminDashboardActions,
+  getAdminDashboardCopy,
   getAdminDashboardQueueMetrics,
   getAdminDashboardStats,
   getAdminDashboardStatusBadges,
@@ -197,6 +198,7 @@ const resettingQueueMetrics = ref(false)
 const queueMetricsMessage = ref('')
 const queueMetricsMessageTone = ref('success')
 const modalStore = useModalStore()
+const dashboardCopy = computed(() => getAdminDashboardCopy())
 const dashboardAlerts = computed(() => getAdminDashboardAlerts({
   stats: stats.value,
 }))
