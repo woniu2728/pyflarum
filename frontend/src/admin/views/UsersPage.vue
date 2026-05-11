@@ -2,20 +2,20 @@
   <AdminPage
     class-name="UsersPage"
     icon="fas fa-users"
-    title="用户管理"
-    description="管理论坛用户"
+    :title="usersCopy?.pageTitle || '用户管理'"
+    :description="usersCopy?.pageDescription || '管理论坛用户'"
   >
     <div class="UsersPage-content">
       <!-- 搜索栏 -->
       <div class="UsersPage-search">
-        <label class="sr-only" for="user-search">搜索用户</label>
+        <label class="sr-only" for="user-search">{{ usersCopy?.searchLabel || '搜索用户' }}</label>
         <input
           id="user-search"
           v-model="searchQuery"
           name="user_search"
           type="text"
           class="FormControl"
-          placeholder="搜索用户名或邮箱..."
+          :placeholder="usersCopy?.searchPlaceholder || '搜索用户名或邮箱...'"
           @input="handleSearch"
         />
       </div>
@@ -26,31 +26,36 @@
           <table class="UserTable">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>用户名</th>
-                <th>邮箱</th>
-                <th>显示名称</th>
-                <th>讨论</th>
-                <th>回复</th>
-                <th>加入时间</th>
-                <th>状态</th>
-                <th>操作</th>
+                <th>{{ usersCopy?.tableIdHeader || 'ID' }}</th>
+                <th>{{ usersCopy?.tableUsernameHeader || '用户名' }}</th>
+                <th>{{ usersCopy?.tableEmailHeader || '邮箱' }}</th>
+                <th>{{ usersCopy?.tableDisplayNameHeader || '显示名称' }}</th>
+                <th>{{ usersCopy?.tableDiscussionHeader || '讨论' }}</th>
+                <th>{{ usersCopy?.tableReplyHeader || '回复' }}</th>
+                <th>{{ usersCopy?.tableJoinedHeader || '加入时间' }}</th>
+                <th>{{ usersCopy?.tableStatusHeader || '状态' }}</th>
+                <th>{{ usersCopy?.tableActionHeader || '操作' }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
                 <td colspan="9" class="UserTable-loading">
-                  <AdminStateBlock tone="subtle">加载中...</AdminStateBlock>
+                  <AdminStateBlock tone="subtle">{{ usersCopy?.loadingText || '加载中...' }}</AdminStateBlock>
+                </td>
+              </tr>
+              <tr v-else-if="loadError">
+                <td colspan="9" class="UserTable-empty">
+                  <AdminStateBlock tone="danger">{{ loadError }}</AdminStateBlock>
                 </td>
               </tr>
               <tr v-else-if="users.length === 0">
                 <td colspan="9" class="UserTable-empty">
-                  <AdminStateBlock>暂无用户</AdminStateBlock>
+                  <AdminStateBlock>{{ usersCopy?.emptyText || '暂无用户' }}</AdminStateBlock>
                 </td>
               </tr>
               <tr v-for="user in users" v-else :key="user.id">
-                <td data-label="ID">{{ user.id }}</td>
-                <td data-label="用户名">
+                <td :data-label="usersCopy?.tableIdHeader || 'ID'">{{ user.id }}</td>
+                <td :data-label="usersCopy?.tableUsernameHeader || '用户名'">
                   <strong>{{ user.username }}</strong>
                   <div v-if="getUserGroupBadges(user).length" class="UserGroups">
                     <span
@@ -65,12 +70,12 @@
                     </span>
                   </div>
                 </td>
-                <td data-label="邮箱">{{ user.email }}</td>
-                <td data-label="显示名称">{{ user.display_name }}</td>
-                <td data-label="讨论">{{ user.discussion_count }}</td>
-                <td data-label="回复">{{ user.comment_count }}</td>
-                <td data-label="加入时间">{{ formatDate(user.joined_at) }}</td>
-                <td data-label="状态">
+                <td :data-label="usersCopy?.tableEmailHeader || '邮箱'">{{ user.email }}</td>
+                <td :data-label="usersCopy?.tableDisplayNameHeader || '显示名称'">{{ user.display_name }}</td>
+                <td :data-label="usersCopy?.tableDiscussionHeader || '讨论'">{{ user.discussion_count }}</td>
+                <td :data-label="usersCopy?.tableReplyHeader || '回复'">{{ user.comment_count }}</td>
+                <td :data-label="usersCopy?.tableJoinedHeader || '加入时间'">{{ formatDate(user.joined_at) }}</td>
+                <td :data-label="usersCopy?.tableStatusHeader || '状态'">
                   <span
                     class="UserStatus"
                     :class="statusClass(user)"
@@ -78,9 +83,9 @@
                     {{ statusLabel(user) }}
                   </span>
                 </td>
-                <td data-label="操作">
+                <td :data-label="usersCopy?.tableActionHeader || '操作'">
                   <button type="button" class="Button Button--small" :disabled="savingDetails" @click="editUser(user)">
-                    编辑
+                    {{ usersCopy?.editLabel || '编辑' }}
                   </button>
                 </td>
               </tr>
@@ -89,8 +94,9 @@
         </div>
 
         <div class="UserMobileList">
-          <AdminStateBlock v-if="loading" class="UserMobileState" tone="subtle">加载中...</AdminStateBlock>
-          <AdminStateBlock v-else-if="users.length === 0" class="UserMobileState">暂无用户</AdminStateBlock>
+          <AdminStateBlock v-if="loading" class="UserMobileState" tone="subtle">{{ usersCopy?.loadingText || '加载中...' }}</AdminStateBlock>
+          <AdminStateBlock v-else-if="loadError" class="UserMobileState" tone="danger">{{ loadError }}</AdminStateBlock>
+          <AdminStateBlock v-else-if="users.length === 0" class="UserMobileState">{{ usersCopy?.emptyText || '暂无用户' }}</AdminStateBlock>
           <article v-for="user in users" v-else :key="`mobile-${user.id}`" class="UserMobileCard">
             <div class="UserMobileCard-header">
               <div class="UserMobileCard-identity">
@@ -121,29 +127,29 @@
               </div>
 
               <button type="button" class="Button Button--small UserMobileCard-edit" :disabled="savingDetails" @click="editUser(user)">
-                编辑
+                {{ usersCopy?.editLabel || '编辑' }}
               </button>
             </div>
 
             <dl class="UserMobileCard-meta">
               <div class="UserMobileCard-metaItem">
-                <dt>邮箱</dt>
-                <dd>{{ user.email || '-' }}</dd>
+                <dt>{{ usersCopy?.mobileEmailLabel || '邮箱' }}</dt>
+                <dd>{{ user.email || (usersCopy?.noEmailValueText || '-') }}</dd>
               </div>
               <div class="UserMobileCard-metaItem">
-                <dt>ID</dt>
+                <dt>{{ usersCopy?.mobileIdLabel || 'ID' }}</dt>
                 <dd>#{{ user.id }}</dd>
               </div>
               <div class="UserMobileCard-metaItem">
-                <dt>讨论</dt>
+                <dt>{{ usersCopy?.mobileDiscussionLabel || '讨论' }}</dt>
                 <dd>{{ user.discussion_count }}</dd>
               </div>
               <div class="UserMobileCard-metaItem">
-                <dt>回复</dt>
+                <dt>{{ usersCopy?.mobileReplyLabel || '回复' }}</dt>
                 <dd>{{ user.comment_count }}</dd>
               </div>
               <div class="UserMobileCard-metaItem UserMobileCard-metaItem--full">
-                <dt>加入时间</dt>
+                <dt>{{ usersCopy?.mobileJoinedLabel || '加入时间' }}</dt>
                 <dd>{{ formatDate(user.joined_at) || '-' }}</dd>
               </div>
             </dl>
@@ -163,16 +169,16 @@
     <div v-if="showEditModal" class="Modal" @click.self="closeModal">
       <div class="Modal-content Modal-content--user">
         <div class="Modal-header">
-          <h3>编辑用户</h3>
+          <h3>{{ usersCopy?.modalTitle || '编辑用户' }}</h3>
           <button type="button" class="Modal-close" @click="closeModal">
             <i class="fas fa-times"></i>
           </button>
         </div>
 
-        <AdminStateBlock v-if="loadingDetails" class="Modal-loading" tone="subtle">加载中...</AdminStateBlock>
+        <AdminStateBlock v-if="loadingDetails" class="Modal-loading" tone="subtle">{{ usersCopy?.loadingText || '加载中...' }}</AdminStateBlock>
         <div v-else class="Modal-body">
           <div class="Form-group">
-            <label for="user-username">用户名</label>
+            <label for="user-username">{{ usersCopy?.usernameLabel || '用户名' }}</label>
             <input
               id="user-username"
               v-model="formData.username"
@@ -184,7 +190,7 @@
 
           <div class="FormRow">
             <div class="Form-group">
-              <label for="user-email">邮箱</label>
+              <label for="user-email">{{ usersCopy?.emailLabel || '邮箱' }}</label>
               <input
                 id="user-email"
                 v-model="formData.email"
@@ -194,7 +200,7 @@
               />
             </div>
             <div class="Form-group">
-              <label for="user-display-name">显示名称</label>
+              <label for="user-display-name">{{ usersCopy?.displayNameLabel || '显示名称' }}</label>
               <input
                 id="user-display-name"
                 v-model="formData.display_name"
@@ -206,14 +212,14 @@
           </div>
 
           <div class="Form-group">
-            <label for="user-bio">个人简介</label>
+            <label for="user-bio">{{ usersCopy?.bioLabel || '个人简介' }}</label>
             <textarea
               id="user-bio"
               v-model="formData.bio"
               name="user_bio"
               class="FormControl"
               rows="3"
-              placeholder="管理员后台可直接维护用户简介"
+              :placeholder="usersCopy?.bioPlaceholder || '管理员后台可直接维护用户简介'"
             ></textarea>
           </div>
 
@@ -224,7 +230,7 @@
                 name="user_is_staff"
                 type="checkbox"
               />
-              <span>管理员</span>
+              <span>{{ usersCopy?.staffLabel || '管理员' }}</span>
             </label>
             <label class="CheckboxField CheckboxField--toggle">
               <input
@@ -232,12 +238,12 @@
                 name="user_is_email_confirmed"
                 type="checkbox"
               />
-              <span>邮箱已验证</span>
+              <span>{{ usersCopy?.emailConfirmedLabel || '邮箱已验证' }}</span>
             </label>
           </div>
 
           <div class="Form-group">
-            <label>用户组</label>
+            <label>{{ usersCopy?.groupsLabel || '用户组' }}</label>
             <div class="GroupChecklist">
               <label v-for="group in availableGroups" :key="group.id" class="CheckboxField CheckboxField--card">
                 <input
@@ -252,7 +258,7 @@
           </div>
 
           <div class="Form-group">
-            <label for="user-suspended-until">封禁截止时间</label>
+            <label for="user-suspended-until">{{ usersCopy?.suspendedUntilLabel || '封禁截止时间' }}</label>
             <input
               id="user-suspended-until"
               v-model="formData.suspended_until"
@@ -260,30 +266,30 @@
               type="datetime-local"
               class="FormControl"
             />
-            <small class="Form-help">留空表示未封禁</small>
+            <small class="Form-help">{{ usersCopy?.suspendedUntilHelpText || '留空表示未封禁' }}</small>
           </div>
 
           <div class="Form-group">
-            <label for="user-suspend-reason">封禁原因</label>
+            <label for="user-suspend-reason">{{ usersCopy?.suspendReasonLabel || '封禁原因' }}</label>
             <input
               id="user-suspend-reason"
               v-model="formData.suspend_reason"
               name="user_suspend_reason"
               type="text"
               class="FormControl"
-              placeholder="例如：垃圾广告、违规内容"
+              :placeholder="usersCopy?.suspendReasonPlaceholder || '例如：垃圾广告、违规内容'"
             />
           </div>
 
           <div class="Form-group">
-            <label for="user-suspend-message">对用户显示的信息</label>
+            <label for="user-suspend-message">{{ usersCopy?.suspendMessageLabel || '对用户显示的信息' }}</label>
             <textarea
               id="user-suspend-message"
               v-model="formData.suspend_message"
               name="user_suspend_message"
               class="FormControl"
               rows="3"
-              placeholder="显示给被封禁用户的提示"
+              :placeholder="usersCopy?.suspendMessagePlaceholder || '显示给被封禁用户的提示'"
             ></textarea>
           </div>
         </div>
@@ -296,15 +302,15 @@
             :disabled="saving || deleting"
             @click="deleteUser"
           >
-            {{ deleting ? '删除中...' : '删除用户' }}
+            {{ deleting ? (usersCopy?.deletingLabel || '删除中...') : (usersCopy?.deleteLabel || '删除用户') }}
           </button>
-          <span v-else class="Modal-footerNote">当前登录管理员账号不允许删除</span>
+          <span v-else class="Modal-footerNote">{{ usersCopy?.deleteBlockedText || '当前登录管理员账号不允许删除' }}</span>
           <div class="Modal-footerActions">
             <button type="button" class="Button" @click="closeModal">
-              取消
+              {{ usersCopy?.cancelLabel || '取消' }}
             </button>
             <button type="button" class="Button Button--primary" :disabled="saving || deleting" @click="saveUser">
-              {{ saving ? '保存中...' : '保存' }}
+              {{ saving ? (usersCopy?.savingLabel || '保存中...') : (usersCopy?.saveLabel || '保存') }}
             </button>
           </div>
         </div>
@@ -321,11 +327,13 @@ import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useAuthStore } from '../../stores/auth'
 import { useModalStore } from '../../stores/modal'
+import { getAdminUsersPageActionMeta, getAdminUsersPageCopy } from '../registry'
 
 const authStore = useAuthStore()
 const modalStore = useModalStore()
 const users = ref([])
 const loading = ref(true)
+const loadError = ref('')
 const searchQuery = ref('')
 const page = ref(1)
 const limit = ref(20)
@@ -343,6 +351,8 @@ let searchTimeout = null
 
 const formData = ref(getEmptyForm())
 const currentAdminId = computed(() => authStore.user?.id ?? null)
+const usersCopy = computed(() => getAdminUsersPageCopy())
+const usersActionMeta = computed(() => getAdminUsersPageActionMeta())
 
 onMounted(() => {
   loadGroups()
@@ -351,6 +361,7 @@ onMounted(() => {
 
 async function loadUsers() {
   loading.value = true
+  loadError.value = ''
   try {
     const data = await api.get('/admin/users', {
       params: {
@@ -363,6 +374,7 @@ async function loadUsers() {
     total.value = data.total
   } catch (error) {
     console.error('加载用户失败:', error)
+    loadError.value = error.response?.data?.error || error.message || usersActionMeta.value?.loadUsersFailedMessage || '加载用户失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -414,8 +426,8 @@ async function editUser(user) {
   } catch (error) {
     console.error('加载用户详情失败:', error)
     await modalStore.alert({
-      title: '加载用户详情失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: usersActionMeta.value?.loadDetailFailedTitle || '加载用户详情失败',
+      message: error.response?.data?.error || error.message || usersActionMeta.value?.loadDetailFailedMessage || '未知错误',
       tone: 'danger'
     })
     closeModal()
@@ -440,10 +452,10 @@ async function saveUser() {
   const riskChanges = getUserRiskChanges()
   if (riskChanges.length > 0) {
     const confirmed = await modalStore.confirm({
-      title: '保存用户变更',
-      message: `以下变更会立即影响用户权限或账号状态：${riskChanges.join('、')}。确定保存吗？`,
-      confirmText: '保存',
-      cancelText: '取消',
+      title: usersActionMeta.value?.saveRiskConfirmTitle || '保存用户变更',
+      message: usersActionMeta.value?.saveRiskConfirmMessage?.(riskChanges.join('、')) || `以下变更会立即影响用户权限或账号状态：${riskChanges.join('、')}。确定保存吗？`,
+      confirmText: usersActionMeta.value?.saveConfirmText || '保存',
+      cancelText: usersActionMeta.value?.saveCancelText || '取消',
       tone: 'warning'
     })
     if (!confirmed) {
@@ -461,15 +473,15 @@ async function saveUser() {
     closeModal()
     await loadUsers()
     await modalStore.alert({
-      title: '用户已保存',
-      message: '用户资料和状态已更新。',
+      title: usersActionMeta.value?.saveSuccessTitle || '用户已保存',
+      message: usersActionMeta.value?.saveSuccessMessage || '用户资料和状态已更新。',
       tone: 'success'
     })
   } catch (error) {
     console.error('保存用户失败:', error)
     await modalStore.alert({
-      title: '保存失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: usersActionMeta.value?.saveFailedTitle || '保存失败',
+      message: error.response?.data?.error || error.message || usersActionMeta.value?.saveFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
@@ -482,10 +494,10 @@ async function deleteUser() {
   if (!editingUserId.value || !canDeleteCurrentUser.value) return
 
   const confirmed = await modalStore.confirm({
-    title: '删除用户',
-    message: `确定删除用户“${formData.value.username || editingUserId.value}”吗？该操作不可撤销。`,
-    confirmText: '删除',
-    cancelText: '取消',
+    title: usersActionMeta.value?.deleteConfirmTitle || '删除用户',
+    message: usersActionMeta.value?.deleteConfirmMessage?.(formData.value.username || editingUserId.value) || `确定删除用户“${formData.value.username || editingUserId.value}”吗？该操作不可撤销。`,
+    confirmText: usersActionMeta.value?.deleteConfirmText || '删除',
+    cancelText: usersActionMeta.value?.deleteCancelText || '取消',
     tone: 'danger'
   })
   if (!confirmed) {
@@ -500,15 +512,15 @@ async function deleteUser() {
     closeModal()
     await loadUsers()
     await modalStore.alert({
-      title: '用户已删除',
-      message: `用户“${deletedUsername}”已删除。`,
+      title: usersActionMeta.value?.deleteSuccessTitle || '用户已删除',
+      message: usersActionMeta.value?.deleteSuccessMessage?.(deletedUsername) || `用户“${deletedUsername}”已删除。`,
       tone: 'success'
     })
   } catch (error) {
     console.error('删除用户失败:', error)
     await modalStore.alert({
-      title: '删除失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: usersActionMeta.value?.deleteFailedTitle || '删除失败',
+      message: error.response?.data?.error || error.message || usersActionMeta.value?.deleteFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
@@ -561,25 +573,25 @@ function getUserRiskChanges() {
   const current = createUserRiskSnapshot(formData.value)
   const changes = []
   if (previous.is_staff !== current.is_staff) {
-    changes.push('管理员权限')
+    changes.push(usersCopy.value?.riskAdminLabel || '管理员权限')
   }
   if (previous.group_ids !== current.group_ids) {
-    changes.push('用户组')
+    changes.push(usersCopy.value?.riskGroupLabel || '用户组')
   }
   if (
     previous.suspended_until !== current.suspended_until
     || previous.suspend_reason !== current.suspend_reason
     || previous.suspend_message !== current.suspend_message
   ) {
-    changes.push('封禁状态')
+    changes.push(usersCopy.value?.riskSuspensionLabel || '封禁状态')
   }
   return changes
 }
 
 function statusLabel(user) {
-  if (user.is_suspended) return '已封禁'
-  if (user.is_email_confirmed) return '已激活'
-  return '未激活'
+  if (user.is_suspended) return usersCopy.value?.statusSuspendedLabel || '已封禁'
+  if (user.is_email_confirmed) return usersCopy.value?.statusActiveLabel || '已激活'
+  return usersCopy.value?.statusPendingLabel || '未激活'
 }
 
 function statusClass(user) {
