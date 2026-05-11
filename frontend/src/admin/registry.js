@@ -17,6 +17,7 @@ const adminDashboardStatusSummaries = []
 const adminDashboardStatusBadges = []
 const adminDashboardStatusItems = []
 const adminDashboardAlerts = []
+const adminDashboardQueueMetrics = []
 
 function upsertByPath(target, value) {
   const existingIndex = target.findIndex(item => item.path === value.path)
@@ -211,6 +212,23 @@ export function registerAdminDashboardAlert(item) {
 
 export function getAdminDashboardAlerts(context = {}) {
   return [...adminDashboardAlerts]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerAdminDashboardQueueMetric(item) {
+  const normalizedItem = {
+    order: 100,
+    variant: 'stat',
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardQueueMetrics, normalizedItem)
+}
+
+export function getAdminDashboardQueueMetrics(context = {}) {
+  return [...adminDashboardQueueMetrics]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .filter(Boolean)
@@ -556,4 +574,45 @@ registerAdminDashboardAlert({
       text: risks.map(item => item.title).join('；'),
     }
   },
+})
+
+registerAdminDashboardQueueMetric({
+  key: 'queue-enqueued',
+  order: 10,
+  variant: 'stat',
+  label: '入队',
+  resolve: ({ stats }) => ({
+    value: stats?.queueMetrics?.enqueued_count || 0,
+  }),
+})
+
+registerAdminDashboardQueueMetric({
+  key: 'queue-sync',
+  order: 20,
+  variant: 'stat',
+  label: '同步',
+  resolve: ({ stats }) => ({
+    value: stats?.queueMetrics?.sync_count || 0,
+  }),
+})
+
+registerAdminDashboardQueueMetric({
+  key: 'queue-fallback',
+  order: 30,
+  variant: 'stat',
+  label: '回退',
+  resolve: ({ stats }) => ({
+    value: stats?.queueMetrics?.fallback_count || 0,
+  }),
+})
+
+registerAdminDashboardQueueMetric({
+  key: 'queue-last-task',
+  order: 40,
+  variant: 'detail',
+  label: '最近任务',
+  resolve: ({ stats }) => ({
+    value: stats?.queueMetrics?.last_task || '-',
+    error: stats?.queueMetrics?.last_error || '',
+  }),
 })

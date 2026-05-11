@@ -61,23 +61,15 @@
           </div>
 
           <div class="QueueMetrics">
-            <div class="QueueMetrics-item">
-              <span class="QueueMetrics-label">入队</span>
-              <strong>{{ stats.queueMetrics?.enqueued_count || 0 }}</strong>
-            </div>
-            <div class="QueueMetrics-item">
-              <span class="QueueMetrics-label">同步</span>
-              <strong>{{ stats.queueMetrics?.sync_count || 0 }}</strong>
-            </div>
-            <div class="QueueMetrics-item">
-              <span class="QueueMetrics-label">回退</span>
-              <strong>{{ stats.queueMetrics?.fallback_count || 0 }}</strong>
-            </div>
-            <div class="QueueMetrics-last">
-              <span class="QueueMetrics-label">最近任务</span>
-              <strong>{{ stats.queueMetrics?.last_task || '-' }}</strong>
-              <span v-if="stats.queueMetrics?.last_error" class="QueueMetrics-error">
-                {{ stats.queueMetrics.last_error }}
+            <div
+              v-for="item in dashboardQueueMetrics"
+              :key="item.key"
+              :class="item.variant === 'detail' ? 'QueueMetrics-last' : 'QueueMetrics-item'"
+            >
+              <span class="QueueMetrics-label">{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+              <span v-if="item.error" class="QueueMetrics-error">
+                {{ item.error }}
               </span>
             </div>
             <div class="QueueMetrics-actions">
@@ -159,6 +151,7 @@ import { useModalStore } from '../../stores/modal'
 import {
   getAdminDashboardAlerts,
   getAdminDashboardActions,
+  getAdminDashboardQueueMetrics,
   getAdminDashboardStats,
   getAdminDashboardStatusBadges,
   getAdminDashboardStatusItems,
@@ -209,6 +202,9 @@ const dashboardAlerts = computed(() => getAdminDashboardAlerts({
 }))
 const dashboardActions = computed(() => getAdminDashboardActions())
 const dashboardStats = computed(() => getAdminDashboardStats({
+  stats: stats.value,
+}))
+const dashboardQueueMetrics = computed(() => getAdminDashboardQueueMetrics({
   stats: stats.value,
 }))
 const dashboardStatusSummaries = computed(() => getAdminDashboardStatusSummaries({
