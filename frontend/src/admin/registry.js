@@ -19,6 +19,7 @@ const adminDashboardStatusItems = []
 const adminDashboardAlerts = []
 const adminDashboardQueueMetrics = []
 const adminDashboardCopies = []
+const adminDashboardActionsMeta = []
 
 function upsertByPath(target, value) {
   const existingIndex = target.findIndex(item => item.path === value.path)
@@ -246,6 +247,22 @@ export function registerAdminDashboardCopy(item) {
 
 export function getAdminDashboardCopy(context = {}) {
   return [...adminDashboardCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminDashboardActionMeta(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardActionsMeta, normalizedItem)
+}
+
+export function getAdminDashboardActionMeta(context = {}) {
+  return [...adminDashboardActionsMeta]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -643,5 +660,22 @@ registerAdminDashboardCopy({
     statusWidgetTitle: '系统状态',
     statsWidgetTitle: '论坛统计',
     actionsWidgetTitle: '快速操作',
+  }),
+})
+
+registerAdminDashboardActionMeta({
+  key: 'core-dashboard-actions-meta',
+  order: 10,
+  resolve: () => ({
+    loadingErrorText: '加载统计数据失败，请稍后重试',
+    queueResetIdleText: '重置指标',
+    queueResetPendingText: '重置中...',
+    queueResetConfirmTitle: '重置队列指标',
+    queueResetConfirmMessage: '确定重置队列运行指标吗？当前累计的入队、同步和回退计数会清零。',
+    queueResetConfirmText: '重置',
+    queueResetCancelText: '取消',
+    queueResetSuccessTitle: '指标已重置',
+    queueResetSuccessMessage: '队列运行指标已重置',
+    queueResetErrorMessage: '重置失败，请稍后重试',
   }),
 })

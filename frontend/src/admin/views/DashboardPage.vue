@@ -80,7 +80,7 @@
                 @click="resetQueueMetrics"
               >
                 <i class="fas fa-redo-alt"></i>
-                <span>{{ resettingQueueMetrics ? '重置中...' : '重置指标' }}</span>
+                <span>{{ resettingQueueMetrics ? queueResetPendingText : queueResetIdleText }}</span>
               </button>
               <span
                 v-if="queueMetricsMessage"
@@ -151,6 +151,7 @@ import { useModalStore } from '../../stores/modal'
 import {
   getAdminDashboardAlerts,
   getAdminDashboardActions,
+  getAdminDashboardActionMeta,
   getAdminDashboardCopy,
   getAdminDashboardQueueMetrics,
   getAdminDashboardStats,
@@ -198,6 +199,7 @@ const resettingQueueMetrics = ref(false)
 const queueMetricsMessage = ref('')
 const queueMetricsMessageTone = ref('success')
 const modalStore = useModalStore()
+const dashboardActionMeta = computed(() => getAdminDashboardActionMeta())
 const dashboardCopy = computed(() => getAdminDashboardCopy())
 const dashboardAlerts = computed(() => getAdminDashboardAlerts({
   stats: stats.value,
@@ -218,6 +220,8 @@ const dashboardStatusBadges = computed(() => getAdminDashboardStatusBadges({
 const dashboardStatusItems = computed(() => getAdminDashboardStatusItems({
   stats: stats.value,
 }))
+const queueResetIdleText = computed(() => dashboardActionMeta.value?.queueResetIdleText || '重置指标')
+const queueResetPendingText = computed(() => dashboardActionMeta.value?.queueResetPendingText || '重置中...')
 
 async function loadStats() {
   try {
@@ -226,7 +230,7 @@ async function loadStats() {
     stats.value = data
   } catch (error) {
     console.error('加载统计数据失败:', error)
-    loadError.value = '加载统计数据失败，请稍后重试'
+    loadError.value = dashboardActionMeta.value?.loadingErrorText || '加载统计数据失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -238,10 +242,10 @@ async function resetQueueMetrics() {
   }
 
   const confirmed = await modalStore.confirm({
-    title: '重置队列指标',
-    message: '确定重置队列运行指标吗？当前累计的入队、同步和回退计数会清零。',
-    confirmText: '重置',
-    cancelText: '取消',
+    title: dashboardActionMeta.value?.queueResetConfirmTitle || '重置队列指标',
+    message: dashboardActionMeta.value?.queueResetConfirmMessage || '确定重置队列运行指标吗？当前累计的入队、同步和回退计数会清零。',
+    confirmText: dashboardActionMeta.value?.queueResetConfirmText || '重置',
+    cancelText: dashboardActionMeta.value?.queueResetCancelText || '取消',
     tone: 'warning'
   })
   if (!confirmed) {
@@ -258,16 +262,16 @@ async function resetQueueMetrics() {
       ...stats.value,
       queueMetrics: data.metrics || stats.value.queueMetrics
     }
-    queueMetricsMessage.value = data.message || '队列运行指标已重置'
+    queueMetricsMessage.value = data.message || dashboardActionMeta.value?.queueResetSuccessMessage || '队列运行指标已重置'
     await modalStore.alert({
-      title: '指标已重置',
+      title: dashboardActionMeta.value?.queueResetSuccessTitle || '指标已重置',
       message: queueMetricsMessage.value,
       tone: 'success'
     })
   } catch (error) {
     console.error('重置队列指标失败:', error)
     queueMetricsMessageTone.value = 'error'
-    queueMetricsMessage.value = error.response?.data?.error || '重置失败，请稍后重试'
+    queueMetricsMessage.value = error.response?.data?.error || dashboardActionMeta.value?.queueResetErrorMessage || '重置失败，请稍后重试'
   } finally {
     resettingQueueMetrics.value = false
   }
