@@ -20,6 +20,7 @@ const adminDashboardAlerts = []
 const adminDashboardQueueMetrics = []
 const adminDashboardCopies = []
 const adminDashboardActionsMeta = []
+const adminDashboardActions = []
 
 function upsertByPath(target, value) {
   const existingIndex = target.findIndex(item => item.path === value.path)
@@ -263,6 +264,25 @@ export function registerAdminDashboardActionMeta(item) {
 
 export function getAdminDashboardActionMeta(context = {}) {
   return [...adminDashboardActionsMeta]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminDashboardAction(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardActions, normalizedItem)
+}
+
+export function getAdminDashboardAction(context = {}, key = '') {
+  if (!key) return null
+
+  return [...adminDashboardActions]
+    .filter(item => item.key === key)
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -677,5 +697,49 @@ registerAdminDashboardActionMeta({
     queueResetSuccessTitle: '指标已重置',
     queueResetSuccessMessage: '队列运行指标已重置',
     queueResetErrorMessage: '重置失败，请稍后重试',
+  }),
+})
+
+registerAdminDashboardAction({
+  key: 'reset-queue-metrics',
+  order: 10,
+  resolve: ({ api, modalStore, stats, setStats, setMessage, setMessageTone, setPending, copy }) => ({
+    run: async () => {
+      const confirmed = await modalStore.confirm({
+        title: copy?.queueResetConfirmTitle || '重置队列指标',
+        message: copy?.queueResetConfirmMessage || '确定重置队列运行指标吗？当前累计的入队、同步和回退计数会清零。',
+        confirmText: copy?.queueResetConfirmText || '重置',
+        cancelText: copy?.queueResetCancelText || '取消',
+        tone: 'warning'
+      })
+      if (!confirmed) {
+        return
+      }
+
+      setPending(true)
+      setMessage('')
+      setMessageTone('success')
+
+      try {
+        const data = await api.post('/admin/queue/metrics/reset')
+        setStats({
+          ...stats,
+          queueMetrics: data.metrics || stats.queueMetrics
+        })
+        const successMessage = data.message || copy?.queueResetSuccessMessage || '队列运行指标已重置'
+        setMessage(successMessage)
+        await modalStore.alert({
+          title: copy?.queueResetSuccessTitle || '指标已重置',
+          message: successMessage,
+          tone: 'success'
+        })
+      } catch (error) {
+        console.error('重置队列指标失败:', error)
+        setMessageTone('error')
+        setMessage(error.response?.data?.error || copy?.queueResetErrorMessage || '重置失败，请稍后重试')
+      } finally {
+        setPending(false)
+      }
+    },
   }),
 })

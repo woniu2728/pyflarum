@@ -150,6 +150,7 @@ import api from '../../api'
 import { useModalStore } from '../../stores/modal'
 import {
   getAdminDashboardAlerts,
+  getAdminDashboardAction,
   getAdminDashboardActions,
   getAdminDashboardActionMeta,
   getAdminDashboardCopy,
@@ -222,6 +223,24 @@ const dashboardStatusItems = computed(() => getAdminDashboardStatusItems({
 }))
 const queueResetIdleText = computed(() => dashboardActionMeta.value?.queueResetIdleText || '重置指标')
 const queueResetPendingText = computed(() => dashboardActionMeta.value?.queueResetPendingText || '重置中...')
+const queueResetAction = computed(() => getAdminDashboardAction({
+  api,
+  modalStore,
+  stats: stats.value,
+  copy: dashboardActionMeta.value,
+  setStats: value => {
+    stats.value = value
+  },
+  setMessage: value => {
+    queueMetricsMessage.value = value
+  },
+  setMessageTone: value => {
+    queueMetricsMessageTone.value = value
+  },
+  setPending: value => {
+    resettingQueueMetrics.value = value
+  },
+}, 'reset-queue-metrics'))
 
 async function loadStats() {
   try {
@@ -241,40 +260,11 @@ async function resetQueueMetrics() {
     return
   }
 
-  const confirmed = await modalStore.confirm({
-    title: dashboardActionMeta.value?.queueResetConfirmTitle || '重置队列指标',
-    message: dashboardActionMeta.value?.queueResetConfirmMessage || '确定重置队列运行指标吗？当前累计的入队、同步和回退计数会清零。',
-    confirmText: dashboardActionMeta.value?.queueResetConfirmText || '重置',
-    cancelText: dashboardActionMeta.value?.queueResetCancelText || '取消',
-    tone: 'warning'
-  })
-  if (!confirmed) {
+  if (!queueResetAction.value?.run) {
     return
   }
 
-  resettingQueueMetrics.value = true
-  queueMetricsMessage.value = ''
-  queueMetricsMessageTone.value = 'success'
-
-  try {
-    const data = await api.post('/admin/queue/metrics/reset')
-    stats.value = {
-      ...stats.value,
-      queueMetrics: data.metrics || stats.value.queueMetrics
-    }
-    queueMetricsMessage.value = data.message || dashboardActionMeta.value?.queueResetSuccessMessage || '队列运行指标已重置'
-    await modalStore.alert({
-      title: dashboardActionMeta.value?.queueResetSuccessTitle || '指标已重置',
-      message: queueMetricsMessage.value,
-      tone: 'success'
-    })
-  } catch (error) {
-    console.error('重置队列指标失败:', error)
-    queueMetricsMessageTone.value = 'error'
-    queueMetricsMessage.value = error.response?.data?.error || dashboardActionMeta.value?.queueResetErrorMessage || '重置失败，请稍后重试'
-  } finally {
-    resettingQueueMetrics.value = false
-  }
+  await queueResetAction.value.run()
 }
 
 onMounted(async () => {
