@@ -2,8 +2,8 @@
   <AdminPage
     class-name="AuditLogsPage"
     icon="fas fa-clipboard-list"
-    title="审计日志"
-    description="查看管理员关键操作记录"
+    :title="auditCopy?.pageTitle || '审计日志'"
+    :description="auditCopy?.pageDescription || '查看管理员关键操作记录'"
   >
     <AdminToolbar class="AuditLogsPage-toolbar">
       <select
@@ -11,10 +11,10 @@
         v-model="filters.action"
         name="action"
         class="FormControl"
-        aria-label="筛选操作"
+        :aria-label="auditCopy?.actionFilterLabel || '筛选操作'"
         @change="reloadFromFirstPage"
       >
-        <option value="">全部操作</option>
+        <option value="">{{ auditCopy?.allActionsLabel || '全部操作' }}</option>
         <option v-for="option in actionOptions" :key="option.value" :value="option.value">
           {{ option.label }}
         </option>
@@ -24,55 +24,55 @@
         v-model="filters.target_type"
         name="target_type"
         class="FormControl"
-        aria-label="筛选对象"
+        :aria-label="auditCopy?.targetFilterLabel || '筛选对象'"
         @change="reloadFromFirstPage"
       >
-        <option value="">全部对象</option>
+        <option value="">{{ auditCopy?.allTargetsLabel || '全部对象' }}</option>
         <option v-for="option in targetOptions" :key="option.value" :value="option.value">
           {{ option.label }}
         </option>
       </select>
       <button type="button" class="Button" :disabled="loading" @click="loadLogs">
         <i class="fas fa-sync-alt"></i>
-        <span>刷新</span>
+        <span>{{ auditCopy?.refreshLabel || '刷新' }}</span>
       </button>
     </AdminToolbar>
 
     <div class="AuditLogsPage-list">
-      <AdminStateBlock v-if="loading" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-if="loading" tone="subtle">{{ auditCopy?.loadingText || '加载中...' }}</AdminStateBlock>
       <AdminStateBlock v-else-if="loadError" tone="danger">{{ loadError }}</AdminStateBlock>
-      <AdminStateBlock v-else-if="logs.length === 0">暂无审计日志</AdminStateBlock>
+      <AdminStateBlock v-else-if="logs.length === 0">{{ auditCopy?.emptyText || '暂无审计日志' }}</AdminStateBlock>
 
       <div v-else class="AuditLogTable-wrap">
         <table class="AuditLogTable">
           <thead>
             <tr>
-              <th>时间</th>
-              <th>管理员</th>
-              <th>操作</th>
-              <th>对象</th>
-              <th>来源</th>
-              <th>详情</th>
+              <th>{{ auditCopy?.tableTimeHeader || '时间' }}</th>
+              <th>{{ auditCopy?.tableUserHeader || '管理员' }}</th>
+              <th>{{ auditCopy?.tableActionHeader || '操作' }}</th>
+              <th>{{ auditCopy?.tableTargetHeader || '对象' }}</th>
+              <th>{{ auditCopy?.tableSourceHeader || '来源' }}</th>
+              <th>{{ auditCopy?.tableDetailHeader || '详情' }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="log in logs" :key="log.id">
-              <td data-label="时间">{{ formatDate(log.created_at) }}</td>
-              <td data-label="管理员">
-                <strong>{{ log.user?.display_name || log.user?.username || '系统' }}</strong>
+              <td :data-label="auditCopy?.timeLabel || '时间'">{{ formatDate(log.created_at) }}</td>
+              <td :data-label="auditCopy?.userLabel || '管理员'">
+                <strong>{{ log.user?.display_name || log.user?.username || auditCopy?.systemUserLabel || '系统' }}</strong>
               </td>
-              <td data-label="操作">
+              <td :data-label="auditCopy?.actionLabel || '操作'">
                 <span class="AuditAction">{{ getActionLabel(log.action) }}</span>
                 <code>{{ log.action }}</code>
               </td>
-              <td data-label="对象">
+              <td :data-label="auditCopy?.targetLabel || '对象'">
                 <span>{{ getTargetLabel(log.target_type) }}</span>
                 <small v-if="log.target_id">#{{ log.target_id }}</small>
               </td>
-              <td data-label="来源">
+              <td :data-label="auditCopy?.sourceLabel || '来源'">
                 <span>{{ log.ip_address || '-' }}</span>
               </td>
-              <td data-label="详情">
+              <td :data-label="auditCopy?.detailLabel || '详情'">
                 <pre>{{ formatData(log.data) }}</pre>
               </td>
             </tr>
@@ -92,12 +92,13 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AdminPage from '../components/AdminPage.vue'
 import AdminPagination from '../components/AdminPagination.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import AdminToolbar from '../components/AdminToolbar.vue'
 import api from '../../api'
+import { getAdminAuditLogsPageConfig, getAdminAuditLogsPageCopy } from '../registry'
 
 const logs = ref([])
 const loading = ref(false)
@@ -109,57 +110,13 @@ const filters = reactive({
   action: '',
   target_type: '',
 })
+const auditCopy = computed(() => getAdminAuditLogsPageCopy())
+const auditConfig = computed(() => getAdminAuditLogsPageConfig())
+const actionLabels = computed(() => auditConfig.value?.actionLabels || {})
+const targetLabels = computed(() => auditConfig.value?.targetLabels || {})
+const actionOptions = computed(() => Object.entries(actionLabels.value).map(([value, label]) => ({ value, label })))
+const targetOptions = computed(() => Object.entries(targetLabels.value).map(([value, label]) => ({ value, label })))
 
-const actionLabels = {
-  'admin.appearance_asset.upload': '上传外观资源',
-  'admin.approval.approve': '审核通过',
-  'admin.approval.reject': '审核拒绝',
-  'admin.cache.clear': '清除缓存',
-  'admin.discussion.delete': '删除讨论',
-  'admin.discussion.hide': '隐藏讨论',
-  'admin.discussion.lock': '锁定讨论',
-  'admin.discussion.restore': '恢复讨论',
-  'admin.discussion.sticky': '置顶讨论',
-  'admin.discussion.unlock': '解锁讨论',
-  'admin.discussion.unsticky': '取消置顶',
-  'admin.flag.resolve': '处理举报',
-  'admin.group.create': '创建用户组',
-  'admin.group.delete': '删除用户组',
-  'admin.group.update': '更新用户组',
-  'admin.mail.test': '发送测试邮件',
-  'admin.permissions.update': '更新权限',
-  'admin.post.delete': '删除回复',
-  'admin.post.hide': '隐藏回复',
-  'admin.post.restore': '恢复回复',
-  'admin.queue_metrics.reset': '重置队列指标',
-  'admin.search_indexes.rebuild': '重建搜索索引',
-  'admin.settings.update': '更新设置',
-  'admin.tag.create': '创建标签',
-  'admin.tag.delete': '删除标签',
-  'admin.tag.move': '移动标签',
-  'admin.tag.refresh_stats': '刷新标签统计',
-  'admin.tag.update': '更新标签',
-  'admin.user.delete': '删除用户',
-  'admin.user.update': '更新用户',
-}
-
-const targetLabels = {
-  appearance_asset: '外观资源',
-  cache: '缓存',
-  discussion: '讨论',
-  group: '用户组',
-  mail: '邮件',
-  search_index: '搜索索引',
-  permissions: '权限',
-  post: '回复',
-  post_flag: '举报',
-  settings: '设置',
-  tag: '标签',
-  user: '用户',
-}
-
-const actionOptions = Object.entries(actionLabels).map(([value, label]) => ({ value, label }))
-const targetOptions = Object.entries(targetLabels).map(([value, label]) => ({ value, label }))
 onMounted(() => {
   loadLogs()
 })
@@ -179,7 +136,7 @@ async function loadLogs() {
     logs.value = payload.data || []
     total.value = payload.total || 0
   } catch (error) {
-    loadError.value = error.response?.data?.error || error.message || '加载审计日志失败'
+    loadError.value = error.response?.data?.error || error.message || auditCopy.value?.loadErrorText || '加载审计日志失败'
   } finally {
     loading.value = false
   }
@@ -196,11 +153,11 @@ function changePage(nextPage) {
 }
 
 function getActionLabel(action) {
-  return actionLabels[action] || '未知操作'
+  return actionLabels.value[action] || auditCopy.value?.unknownActionLabel || '未知操作'
 }
 
 function getTargetLabel(targetType) {
-  return targetLabels[targetType] || targetType || '-'
+  return targetLabels.value[targetType] || targetType || '-'
 }
 
 function formatDate(value) {
