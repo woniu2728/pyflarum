@@ -1598,3 +1598,69 @@ test('ui copy resolves profile feedback copy', () => {
   assert.equal(avatarResult.key, avatarKey)
   assert.equal(avatarResult.text, 'avatar upload failed')
 })
+
+test('ui copy resolves profile settings and security section copy', () => {
+  const settingsSectionKey = uniqueKey('ui-profile-settings-section')
+  const preferenceGroupKey = uniqueKey('ui-profile-preference-group')
+  const securitySectionKey = uniqueKey('ui-profile-security-section')
+  const passwordLabelKey = uniqueKey('ui-profile-password-label')
+
+  registerUiCopy({
+    key: settingsSectionKey,
+    order: 10,
+    surfaces: ['profile-settings-section-title'],
+    resolve: () => ({
+      text: 'settings section',
+    }),
+  })
+
+  registerUiCopy({
+    key: preferenceGroupKey,
+    order: 20,
+    surfaces: ['profile-preferences-group-label'],
+    resolve: ({ category }) => ({
+      text: `group:${category}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: securitySectionKey,
+    order: 30,
+    surfaces: ['profile-security-section-title'],
+    resolve: () => ({
+      text: 'security section',
+    }),
+  })
+
+  registerUiCopy({
+    key: passwordLabelKey,
+    order: 40,
+    surfaces: ['profile-security-new-password-label'],
+    resolve: () => ({
+      text: 'new password label',
+    }),
+  })
+
+  const settingsSectionResult = getUiCopy({
+    surface: 'profile-settings-section-title',
+  })
+  const preferenceGroupResult = getUiCopy({
+    surface: 'profile-preferences-group-label',
+    category: 'behavior',
+  })
+  const securitySectionResult = getUiCopy({
+    surface: 'profile-security-section-title',
+  })
+  const passwordLabelResult = getUiCopy({
+    surface: 'profile-security-new-password-label',
+  })
+
+  assert.equal(settingsSectionResult.key, settingsSectionKey)
+  assert.equal(settingsSectionResult.text, 'settings section')
+  assert.equal(preferenceGroupResult.key, preferenceGroupKey)
+  assert.equal(preferenceGroupResult.text, 'group:behavior')
+  assert.equal(securitySectionResult.key, securitySectionKey)
+  assert.equal(securitySectionResult.text, 'security section')
+  assert.equal(passwordLabelResult.key, passwordLabelKey)
+  assert.equal(passwordLabelResult.text, 'new password label')
+})

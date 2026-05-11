@@ -1432,6 +1432,51 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'profile-settings-section-title',
+  order: 135,
+  surfaces: ['profile-settings-section-title'],
+  resolve: () => ({
+    text: '个人设置',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-section-description',
+  order: 136,
+  surfaces: ['profile-settings-section-description'],
+  resolve: () => ({
+    text: '维护你的显示名称、邮箱、个人简介和通知偏好。',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-display-name-label',
+  order: 137,
+  surfaces: ['profile-settings-display-name-label'],
+  resolve: () => ({
+    text: '显示名称',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-email-label',
+  order: 138,
+  surfaces: ['profile-settings-email-label'],
+  resolve: () => ({
+    text: '邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-settings-bio-label',
+  order: 139,
+  surfaces: ['profile-settings-bio-label'],
+  resolve: () => ({
+    text: '个人简介',
+  }),
+})
+
+registerUiCopy({
   key: 'profile-settings-display-name-placeholder',
   order: 140,
   surfaces: ['profile-settings-display-name-placeholder'],
@@ -1468,6 +1513,42 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'profile-security-section-title',
+  order: 175,
+  surfaces: ['profile-security-section-title'],
+  resolve: () => ({
+    text: '账号安全',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-section-description',
+  order: 176,
+  surfaces: ['profile-security-section-description'],
+  resolve: () => ({
+    text: '查看邮箱验证状态，并修改登录密码。',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-email-section-title',
+  order: 177,
+  surfaces: ['profile-security-email-section-title'],
+  resolve: () => ({
+    text: '邮箱验证',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-email-section-description',
+  order: 178,
+  surfaces: ['profile-security-email-section-description'],
+  resolve: () => ({
+    text: '验证邮箱后，可确保找回密码和安全通知正常送达。',
+  }),
+})
+
+registerUiCopy({
   key: 'profile-security-status-label',
   order: 180,
   surfaces: ['profile-security-status-label'],
@@ -1495,11 +1576,29 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'profile-security-old-password-label',
+  order: 207,
+  surfaces: ['profile-security-old-password-label'],
+  resolve: () => ({
+    text: '当前密码',
+  }),
+})
+
+registerUiCopy({
   key: 'profile-security-old-password-placeholder',
   order: 210,
   surfaces: ['profile-security-old-password-placeholder'],
   resolve: () => ({
     text: '请输入当前密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-new-password-label',
+  order: 217,
+  surfaces: ['profile-security-new-password-label'],
+  resolve: () => ({
+    text: '新密码',
   }),
 })
 
@@ -1513,11 +1612,38 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'profile-security-confirm-password-label',
+  order: 227,
+  surfaces: ['profile-security-confirm-password-label'],
+  resolve: () => ({
+    text: '确认新密码',
+  }),
+})
+
+registerUiCopy({
   key: 'profile-security-confirm-password-placeholder',
   order: 230,
   surfaces: ['profile-security-confirm-password-placeholder'],
   resolve: () => ({
     text: '请再次输入新密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-password-section-title',
+  order: 235,
+  surfaces: ['profile-security-password-section-title'],
+  resolve: () => ({
+    text: '修改密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-security-password-section-description',
+  order: 236,
+  surfaces: ['profile-security-password-section-description'],
+  resolve: () => ({
+    text: '修改后，下次登录请使用新密码。',
   }),
 })
 
@@ -1554,6 +1680,44 @@ registerUiCopy({
   surfaces: ['profile-settings-save-error'],
   resolve: () => ({
     text: '保存失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-section-title',
+  order: 257,
+  surfaces: ['profile-preferences-section-title'],
+  resolve: () => ({
+    text: '通知偏好',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-section-description',
+  order: 258,
+  surfaces: ['profile-preferences-section-description'],
+  resolve: () => ({
+    text: '按模块统一管理自动关注和通知订阅，新增通知类型后可以直接从注册表接入这里。',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-group-label',
+  order: 259,
+  surfaces: ['profile-preferences-group-label'],
+  resolve: ({ category }) => ({
+    text: category === 'behavior' ? '自动关注' : '通知订阅',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-preferences-group-description',
+  order: 259,
+  surfaces: ['profile-preferences-group-description'],
+  resolve: ({ category }) => ({
+    text: category === 'behavior'
+      ? '控制发帖和回帖时的默认关注行为。'
+      : '控制哪些站内通知会推送给你。',
   }),
 })
 

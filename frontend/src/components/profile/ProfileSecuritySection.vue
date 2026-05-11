@@ -2,8 +2,8 @@
   <div class="profile-section security-section">
     <div class="profile-section-header">
       <div>
-        <h2>账号安全</h2>
-        <p>查看邮箱验证状态，并修改登录密码。</p>
+        <h2>{{ securitySectionTitleText }}</h2>
+        <p>{{ securitySectionDescriptionText }}</p>
       </div>
     </div>
 
@@ -11,8 +11,8 @@
       <section class="profile-settings-card">
         <div class="profile-card-header">
           <div>
-            <h3>邮箱验证</h3>
-            <p>验证邮箱后，可确保找回密码和安全通知正常送达。</p>
+            <h3>{{ emailSectionTitleText }}</h3>
+            <p>{{ emailSectionDescriptionText }}</p>
           </div>
           <span
             class="email-status"
@@ -44,8 +44,8 @@
       <section class="profile-settings-card">
         <div class="profile-card-header">
           <div>
-            <h3>修改密码</h3>
-            <p>修改后，下次登录请使用新密码。</p>
+            <h3>{{ passwordSectionTitleText }}</h3>
+            <p>{{ passwordSectionDescriptionText }}</p>
           </div>
         </div>
 
@@ -53,7 +53,7 @@
         <ForumInlineMessage v-if="passwordError" tone="danger">{{ passwordError }}</ForumInlineMessage>
 
         <div class="profile-form-group">
-          <label for="profile-old-password">当前密码</label>
+          <label for="profile-old-password">{{ oldPasswordLabelText }}</label>
           <input
             id="profile-old-password"
             class="profile-form-control"
@@ -66,7 +66,7 @@
         </div>
 
         <div class="profile-form-group">
-          <label for="profile-new-password">新密码</label>
+          <label for="profile-new-password">{{ newPasswordLabelText }}</label>
           <input
             id="profile-new-password"
             class="profile-form-control"
@@ -79,7 +79,7 @@
         </div>
 
         <div class="profile-form-group">
-          <label for="profile-confirm-password">确认新密码</label>
+          <label for="profile-confirm-password">{{ confirmPasswordLabelText }}</label>
           <input
             id="profile-confirm-password"
             class="profile-form-control"
@@ -140,6 +140,18 @@ const props = defineProps({
     default: ''
   }
 })
+const securitySectionTitleText = computed(() => getUiCopy({
+  surface: 'profile-security-section-title',
+})?.text || '账号安全')
+const securitySectionDescriptionText = computed(() => getUiCopy({
+  surface: 'profile-security-section-description',
+})?.text || '查看邮箱验证状态，并修改登录密码。')
+const emailSectionTitleText = computed(() => getUiCopy({
+  surface: 'profile-security-email-section-title',
+})?.text || '邮箱验证')
+const emailSectionDescriptionText = computed(() => getUiCopy({
+  surface: 'profile-security-email-section-description',
+})?.text || '验证邮箱后，可确保找回密码和安全通知正常送达。')
 const emailStatusText = computed(() => getUiCopy({
   surface: 'profile-security-status-label',
   isEmailConfirmed: props.user.is_email_confirmed,
@@ -148,6 +160,21 @@ const emailHelpText = computed(() => getUiCopy({
   surface: 'profile-security-email-help',
   isEmailConfirmed: props.user.is_email_confirmed,
 })?.text || (props.user.is_email_confirmed ? '当前邮箱已通过验证。' : '当前邮箱尚未验证，你可以重新发送验证邮件。'))
+const passwordSectionTitleText = computed(() => getUiCopy({
+  surface: 'profile-security-password-section-title',
+})?.text || '修改密码')
+const passwordSectionDescriptionText = computed(() => getUiCopy({
+  surface: 'profile-security-password-section-description',
+})?.text || '修改后，下次登录请使用新密码。')
+const oldPasswordLabelText = computed(() => getUiCopy({
+  surface: 'profile-security-old-password-label',
+})?.text || '当前密码')
+const newPasswordLabelText = computed(() => getUiCopy({
+  surface: 'profile-security-new-password-label',
+})?.text || '新密码')
+const confirmPasswordLabelText = computed(() => getUiCopy({
+  surface: 'profile-security-confirm-password-label',
+})?.text || '确认新密码')
 const resendVerificationButtonText = computed(() => getUiCopy({
   surface: 'profile-security-resend-button',
   sending: props.verificationSending,

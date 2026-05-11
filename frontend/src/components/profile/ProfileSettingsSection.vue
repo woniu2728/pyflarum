@@ -2,8 +2,8 @@
   <div class="profile-section settings-section">
     <div class="profile-section-header">
       <div>
-        <h2>个人设置</h2>
-        <p>维护你的显示名称、邮箱、个人简介和通知偏好。</p>
+        <h2>{{ sectionTitleText }}</h2>
+        <p>{{ sectionDescriptionText }}</p>
       </div>
     </div>
 
@@ -12,7 +12,7 @@
 
     <div class="profile-settings-card">
       <div class="profile-form-group">
-        <label for="profile-display-name">显示名称</label>
+        <label for="profile-display-name">{{ displayNameLabelText }}</label>
         <input
           id="profile-display-name"
           class="profile-form-control"
@@ -25,7 +25,7 @@
       </div>
 
       <div class="profile-form-group">
-        <label for="profile-email">邮箱</label>
+        <label for="profile-email">{{ emailLabelText }}</label>
         <input
           id="profile-email"
           class="profile-form-control"
@@ -41,7 +41,7 @@
       </div>
 
       <div class="profile-form-group">
-        <label for="profile-bio">个人简介</label>
+        <label for="profile-bio">{{ bioLabelText }}</label>
         <textarea
           id="profile-bio"
           class="profile-form-control"
@@ -63,8 +63,8 @@
     <div class="profile-settings-card profile-settings-card--stacked">
       <div class="profile-card-header">
         <div>
-          <h3>通知偏好</h3>
-          <p>按模块统一管理自动关注和通知订阅，新增通知类型后可以直接从注册表接入这里。</p>
+          <h3>{{ preferencesTitleText }}</h3>
+          <p>{{ preferencesDescriptionText }}</p>
         </div>
         <button
           type="button"
@@ -175,10 +175,16 @@ const groupedPreferences = computed(() => {
     if (!groups.has(category)) {
       groups.set(category, {
         key: category,
-        label: category === 'behavior' ? '自动关注' : '通知订阅',
-        description: category === 'behavior'
+        label: getUiCopy({
+          surface: 'profile-preferences-group-label',
+          category,
+        })?.text || (category === 'behavior' ? '自动关注' : '通知订阅'),
+        description: getUiCopy({
+          surface: 'profile-preferences-group-description',
+          category,
+        })?.text || (category === 'behavior'
           ? '控制发帖和回帖时的默认关注行为。'
-          : '控制哪些站内通知会推送给你。',
+          : '控制哪些站内通知会推送给你。'),
         items: []
       })
     }
@@ -187,6 +193,27 @@ const groupedPreferences = computed(() => {
 
   return Array.from(groups.values())
 })
+const sectionTitleText = computed(() => getUiCopy({
+  surface: 'profile-settings-section-title',
+})?.text || '个人设置')
+const sectionDescriptionText = computed(() => getUiCopy({
+  surface: 'profile-settings-section-description',
+})?.text || '维护你的显示名称、邮箱、个人简介和通知偏好。')
+const displayNameLabelText = computed(() => getUiCopy({
+  surface: 'profile-settings-display-name-label',
+})?.text || '显示名称')
+const emailLabelText = computed(() => getUiCopy({
+  surface: 'profile-settings-email-label',
+})?.text || '邮箱')
+const bioLabelText = computed(() => getUiCopy({
+  surface: 'profile-settings-bio-label',
+})?.text || '个人简介')
+const preferencesTitleText = computed(() => getUiCopy({
+  surface: 'profile-preferences-section-title',
+})?.text || '通知偏好')
+const preferencesDescriptionText = computed(() => getUiCopy({
+  surface: 'profile-preferences-section-description',
+})?.text || '按模块统一管理自动关注和通知订阅，新增通知类型后可以直接从注册表接入这里。')
 const preferencesLoadingStateText = computed(() => {
   const stateBlock = getStateBlock({
     surface: 'profile-preferences-loading',
