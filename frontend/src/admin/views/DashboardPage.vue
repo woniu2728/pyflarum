@@ -22,59 +22,39 @@
         <AdminStateBlock v-if="loading" class="Widget-state" tone="subtle">加载中...</AdminStateBlock>
         <AdminStateBlock v-else-if="loadError" class="Widget-state" tone="danger">{{ loadError }}</AdminStateBlock>
         <div v-else class="Widget-content">
-          <div class="StatusWidget-summary">
+          <div
+            v-for="summary in dashboardStatusSummaries"
+            :key="summary.key"
+            class="StatusWidget-summary"
+          >
             <div class="StatusWidget-runtime">
-              <div class="StatusWidget-runtimeLabel">运行时</div>
+              <div class="StatusWidget-runtimeLabel">{{ summary.label }}</div>
               <div class="StatusWidget-runtimeValue">
-                {{ stats.runtimeName || 'Python' }}
-                <span class="StatusWidget-runtimeMeta">Python {{ stats.pythonVersion || '-' }}</span>
+                {{ summary.value }}
+                <span v-if="summary.meta" class="StatusWidget-runtimeMeta">{{ summary.meta }}</span>
               </div>
             </div>
             <div class="StatusWidget-flags">
-              <span class="StatusBadge" :class="stats.debugMode ? 'StatusBadge--warning' : 'StatusBadge--success'">
-                {{ stats.debugMode ? 'DEBUG' : 'PRODUCTION' }}
-              </span>
-              <span class="StatusBadge" :class="stats.maintenanceMode ? 'StatusBadge--warning' : 'StatusBadge--neutral'">
-                {{ stats.maintenanceMode ? '维护模式开启' : '维护模式关闭' }}
-              </span>
-              <span class="StatusBadge" :class="stats.redisEnabled ? 'StatusBadge--success' : 'StatusBadge--neutral'">
-                {{ stats.redisEnabled ? 'Redis 已启用' : 'Redis 未启用' }}
-              </span>
-              <span class="StatusBadge" :class="queueWorkerBadgeClass">
-                {{ stats.queueWorkerLabel || '队列未检测' }}
+              <span
+                v-for="badge in dashboardStatusBadges"
+                :key="badge.key"
+                class="StatusBadge"
+                :class="`StatusBadge--${badge.tone}`"
+              >
+                {{ badge.text }}
               </span>
             </div>
           </div>
           <div class="StatusWidget-items">
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">Python 版本</div>
-              <div class="StatusWidget-value">{{ stats.pythonVersion || '-' }}</div>
-            </div>
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">Django 版本</div>
-              <div class="StatusWidget-value">{{ stats.djangoVersion || '-' }}</div>
-            </div>
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">数据库</div>
-              <div class="StatusWidget-value">{{ stats.databaseLabel || '-' }}</div>
-            </div>
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">缓存驱动</div>
-              <div class="StatusWidget-value">{{ stats.cacheDriver || '-' }}</div>
-            </div>
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">实时层</div>
-              <div class="StatusWidget-value">{{ stats.realtimeDriver || '-' }}</div>
-            </div>
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">队列执行</div>
-              <div class="StatusWidget-value">{{ stats.queueLabel || '-' }}</div>
-            </div>
-            <div class="StatusWidget-item">
-              <div class="StatusWidget-label">队列 Worker</div>
+            <div
+              v-for="item in dashboardStatusItems"
+              :key="item.key"
+              class="StatusWidget-item"
+            >
+              <div class="StatusWidget-label">{{ item.label }}</div>
               <div class="StatusWidget-value">
-                {{ stats.queueWorkerLabel || '-' }}
-                <span v-if="stats.queueWorkerMessage" class="StatusWidget-help">{{ stats.queueWorkerMessage }}</span>
+                {{ item.value }}
+                <span v-if="item.help" class="StatusWidget-help">{{ item.help }}</span>
               </div>
             </div>
           </div>
@@ -175,7 +155,13 @@ import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
-import { getAdminDashboardActions, getAdminDashboardStats } from '../registry'
+import {
+  getAdminDashboardActions,
+  getAdminDashboardStats,
+  getAdminDashboardStatusBadges,
+  getAdminDashboardStatusItems,
+  getAdminDashboardStatusSummaries,
+} from '../registry'
 
 const stats = ref({
   runtimeName: 'Python',
@@ -225,12 +211,15 @@ const dashboardActions = computed(() => getAdminDashboardActions())
 const dashboardStats = computed(() => getAdminDashboardStats({
   stats: stats.value,
 }))
-const queueWorkerBadgeClass = computed(() => {
-  if (!stats.value.queueEnabled || ['disabled', 'sync'].includes(stats.value.queueWorkerStatus)) {
-    return 'StatusBadge--neutral'
-  }
-  return stats.value.queueWorkerAvailable ? 'StatusBadge--success' : 'StatusBadge--warning'
-})
+const dashboardStatusSummaries = computed(() => getAdminDashboardStatusSummaries({
+  stats: stats.value,
+}))
+const dashboardStatusBadges = computed(() => getAdminDashboardStatusBadges({
+  stats: stats.value,
+}))
+const dashboardStatusItems = computed(() => getAdminDashboardStatusItems({
+  stats: stats.value,
+}))
 
 async function loadStats() {
   try {

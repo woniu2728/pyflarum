@@ -13,6 +13,9 @@ import AdvancedPage from './views/AdvancedPage.vue'
 
 const adminRoutes = []
 const adminDashboardStats = []
+const adminDashboardStatusSummaries = []
+const adminDashboardStatusBadges = []
+const adminDashboardStatusItems = []
 
 function upsertByPath(target, value) {
   const existingIndex = target.findIndex(item => item.path === value.path)
@@ -141,6 +144,55 @@ export function registerAdminDashboardStat(item) {
 
 export function getAdminDashboardStats(context = {}) {
   return [...adminDashboardStats]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerAdminDashboardStatusSummary(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardStatusSummaries, normalizedItem)
+}
+
+export function getAdminDashboardStatusSummaries(context = {}) {
+  return [...adminDashboardStatusSummaries]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerAdminDashboardStatusBadge(item) {
+  const normalizedItem = {
+    order: 100,
+    tone: 'neutral',
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardStatusBadges, normalizedItem)
+}
+
+export function getAdminDashboardStatusBadges(context = {}) {
+  return [...adminDashboardStatusBadges]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerAdminDashboardStatusItem(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardStatusItems, normalizedItem)
+}
+
+export function getAdminDashboardStatusItems(context = {}) {
+  return [...adminDashboardStatusItems]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .filter(Boolean)
@@ -359,5 +411,117 @@ registerAdminDashboardStat({
   moduleId: 'flags',
   resolve: ({ stats }) => ({
     value: stats?.openFlags || 0,
+  }),
+})
+
+registerAdminDashboardStatusSummary({
+  key: 'runtime',
+  order: 10,
+  resolve: ({ stats }) => ({
+    label: '运行时',
+    value: stats?.runtimeName || 'Python',
+    meta: `Python ${stats?.pythonVersion || '-'}`,
+  }),
+})
+
+registerAdminDashboardStatusBadge({
+  key: 'debug-mode',
+  order: 10,
+  resolve: ({ stats }) => ({
+    text: stats?.debugMode ? 'DEBUG' : 'PRODUCTION',
+    tone: stats?.debugMode ? 'warning' : 'success',
+  }),
+})
+
+registerAdminDashboardStatusBadge({
+  key: 'maintenance-mode',
+  order: 20,
+  resolve: ({ stats }) => ({
+    text: stats?.maintenanceMode ? '维护模式开启' : '维护模式关闭',
+    tone: stats?.maintenanceMode ? 'warning' : 'neutral',
+  }),
+})
+
+registerAdminDashboardStatusBadge({
+  key: 'redis-status',
+  order: 30,
+  resolve: ({ stats }) => ({
+    text: stats?.redisEnabled ? 'Redis 已启用' : 'Redis 未启用',
+    tone: stats?.redisEnabled ? 'success' : 'neutral',
+  }),
+})
+
+registerAdminDashboardStatusBadge({
+  key: 'queue-worker-status',
+  order: 40,
+  resolve: ({ stats }) => ({
+    text: stats?.queueWorkerLabel || '队列未检测',
+    tone: !stats?.queueEnabled || ['disabled', 'sync'].includes(stats?.queueWorkerStatus)
+      ? 'neutral'
+      : (stats?.queueWorkerAvailable ? 'success' : 'warning'),
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'python-version',
+  order: 10,
+  label: 'Python 版本',
+  resolve: ({ stats }) => ({
+    value: stats?.pythonVersion || '-',
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'django-version',
+  order: 20,
+  label: 'Django 版本',
+  resolve: ({ stats }) => ({
+    value: stats?.djangoVersion || '-',
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'database',
+  order: 30,
+  label: '数据库',
+  resolve: ({ stats }) => ({
+    value: stats?.databaseLabel || '-',
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'cache-driver',
+  order: 40,
+  label: '缓存驱动',
+  resolve: ({ stats }) => ({
+    value: stats?.cacheDriver || '-',
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'realtime-driver',
+  order: 50,
+  label: '实时层',
+  resolve: ({ stats }) => ({
+    value: stats?.realtimeDriver || '-',
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'queue-driver',
+  order: 60,
+  label: '队列执行',
+  resolve: ({ stats }) => ({
+    value: stats?.queueLabel || '-',
+  }),
+})
+
+registerAdminDashboardStatusItem({
+  key: 'queue-worker',
+  order: 70,
+  label: '队列 Worker',
+  resolve: ({ stats }) => ({
+    value: stats?.queueWorkerLabel || '-',
+    help: stats?.queueWorkerMessage || '',
   }),
 })
