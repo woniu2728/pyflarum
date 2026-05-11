@@ -4493,6 +4493,181 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'auth-session-title',
+  order: 1311,
+  surfaces: ['auth-session-title'],
+  resolve: ({ mode }) => ({
+    text: mode === 'register' ? '加入讨论' : (mode === 'forgot-password' ? '找回密码' : '登录'),
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-subtitle',
+  order: 1312,
+  surfaces: ['auth-session-subtitle'],
+  resolve: ({ mode }) => ({
+    text: mode === 'register'
+      ? '参考 Flarum 的会话流程，注册完成后即可回到当前页面继续操作。'
+      : (mode === 'forgot-password'
+          ? '输入注册邮箱，我们会向你发送重置密码链接。'
+          : '欢迎回来，登录后即可继续回复、关注和管理你的内容。'),
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-session-eyebrow',
+  order: 1313,
+  surfaces: ['auth-session-eyebrow'],
+  resolve: ({ mode }) => ({
+    text: mode === 'register' ? 'Sign Up' : (mode === 'forgot-password' ? 'Recovery' : 'Session'),
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-login-identification-label',
+  order: 1314,
+  surfaces: ['auth-login-identification-label'],
+  resolve: () => ({
+    text: '用户名或邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-login-password-label',
+  order: 1315,
+  surfaces: ['auth-login-password-label'],
+  resolve: () => ({
+    text: '密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-human-verification-label',
+  order: 1316,
+  surfaces: ['auth-human-verification-label'],
+  resolve: () => ({
+    text: '真人验证',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-username-label',
+  order: 1317,
+  surfaces: ['auth-register-username-label'],
+  resolve: () => ({
+    text: '用户名',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-email-label',
+  order: 1318,
+  surfaces: ['auth-register-email-label'],
+  resolve: () => ({
+    text: '邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-password-label',
+  order: 1319,
+  surfaces: ['auth-register-password-label'],
+  resolve: () => ({
+    text: '密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-password-confirm-label',
+  order: 1319,
+  surfaces: ['auth-register-password-confirm-label'],
+  resolve: () => ({
+    text: '确认密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-forgot-email-label',
+  order: 1319,
+  surfaces: ['auth-forgot-email-label'],
+  resolve: () => ({
+    text: '邮箱',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-turnstile-expired-error',
+  order: 1319,
+  surfaces: ['auth-turnstile-expired-error'],
+  resolve: () => ({
+    text: '真人验证已过期，请重新完成验证。',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-turnstile-load-error',
+  order: 1319,
+  surfaces: ['auth-turnstile-load-error'],
+  resolve: () => ({
+    text: '真人验证加载失败，请稍后重试。',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-login-error',
+  order: 1319,
+  surfaces: ['auth-login-error'],
+  resolve: () => ({
+    text: '登录失败，请检查用户名和密码',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-password-mismatch-error',
+  order: 1319,
+  surfaces: ['auth-register-password-mismatch-error'],
+  resolve: () => ({
+    text: '两次输入的密码不一致',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-error',
+  order: 1319,
+  surfaces: ['auth-register-error'],
+  resolve: () => ({
+    text: '注册失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-success',
+  order: 1319,
+  surfaces: ['auth-register-success'],
+  resolve: () => ({
+    text: '注册成功，请检查邮箱完成验证。',
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-register-field-error',
+  order: 1319,
+  surfaces: ['auth-register-field-error'],
+  resolve: ({ field, message }) => ({
+    text: `${field}: ${message}`,
+  }),
+})
+
+registerUiCopy({
+  key: 'auth-forgot-error',
+  order: 1319,
+  surfaces: ['auth-forgot-error'],
+  resolve: () => ({
+    text: '发送失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
   key: 'auth-session-remember-me',
   order: 1320,
   surfaces: ['auth-session-remember-me'],

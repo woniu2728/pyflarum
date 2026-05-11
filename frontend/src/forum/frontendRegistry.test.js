@@ -1664,3 +1664,56 @@ test('ui copy resolves profile settings and security section copy', () => {
   assert.equal(passwordLabelResult.key, passwordLabelKey)
   assert.equal(passwordLabelResult.text, 'new password label')
 })
+
+test('ui copy resolves auth session modal copy', () => {
+  const titleKey = uniqueKey('ui-auth-title')
+  const fieldErrorKey = uniqueKey('ui-auth-field-error')
+  const turnstileErrorKey = uniqueKey('ui-auth-turnstile-error')
+
+  registerUiCopy({
+    key: titleKey,
+    order: 10,
+    surfaces: ['auth-session-title'],
+    resolve: ({ mode }) => ({
+      text: `title:${mode}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: fieldErrorKey,
+    order: 20,
+    surfaces: ['auth-register-field-error'],
+    resolve: ({ field, message }) => ({
+      text: `${field}=>${message}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: turnstileErrorKey,
+    order: 30,
+    surfaces: ['auth-turnstile-load-error'],
+    resolve: () => ({
+      text: 'turnstile load failed',
+    }),
+  })
+
+  const titleResult = getUiCopy({
+    surface: 'auth-session-title',
+    mode: 'register',
+  })
+  const fieldErrorResult = getUiCopy({
+    surface: 'auth-register-field-error',
+    field: '邮箱',
+    message: 'invalid',
+  })
+  const turnstileErrorResult = getUiCopy({
+    surface: 'auth-turnstile-load-error',
+  })
+
+  assert.equal(titleResult.key, titleKey)
+  assert.equal(titleResult.text, 'title:register')
+  assert.equal(fieldErrorResult.key, fieldErrorKey)
+  assert.equal(fieldErrorResult.text, '邮箱=>invalid')
+  assert.equal(turnstileErrorResult.key, turnstileErrorKey)
+  assert.equal(turnstileErrorResult.text, 'turnstile load failed')
+})

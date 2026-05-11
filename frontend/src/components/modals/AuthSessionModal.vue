@@ -21,7 +21,7 @@
       <div class="Modal-body AuthSessionModal-body">
         <form v-if="activeMode === 'login'" class="AuthSessionForm" @submit.prevent="handleLogin">
           <div class="Form-group">
-            <label for="auth-login-identification">用户名或邮箱</label>
+            <label for="auth-login-identification">{{ loginIdentificationLabelText }}</label>
             <input
               id="auth-login-identification"
               ref="loginIdentificationInput"
@@ -37,7 +37,7 @@
           </div>
 
           <div class="Form-group">
-            <label for="auth-login-password">密码</label>
+            <label for="auth-login-password">{{ loginPasswordLabelText }}</label>
             <input
               id="auth-login-password"
               v-model="loginForm.password"
@@ -67,7 +67,7 @@
           </div>
 
           <div v-if="loginHumanVerificationRequired" class="Form-group">
-            <div class="AuthSessionFieldLabel">真人验证</div>
+            <div class="AuthSessionFieldLabel">{{ humanVerificationLabelText }}</div>
             <div
               ref="turnstileContainer"
               class="AuthSessionTurnstile"
@@ -97,7 +97,7 @@
 
         <form v-else-if="activeMode === 'register'" class="AuthSessionForm" @submit.prevent="handleRegister">
           <div class="Form-group">
-            <label for="auth-register-username">用户名</label>
+            <label for="auth-register-username">{{ registerUsernameLabelText }}</label>
             <input
               id="auth-register-username"
               ref="registerUsernameInput"
@@ -115,7 +115,7 @@
           </div>
 
           <div class="Form-group">
-            <label for="auth-register-email">邮箱</label>
+            <label for="auth-register-email">{{ registerEmailLabelText }}</label>
             <input
               id="auth-register-email"
               v-model.trim="registerForm.email"
@@ -130,7 +130,7 @@
           </div>
 
           <div class="Form-group">
-            <label for="auth-register-password">密码</label>
+            <label for="auth-register-password">{{ registerPasswordLabelText }}</label>
             <input
               id="auth-register-password"
               v-model="registerForm.password"
@@ -146,7 +146,7 @@
           </div>
 
           <div class="Form-group">
-            <label for="auth-register-password-confirm">确认密码</label>
+            <label for="auth-register-password-confirm">{{ registerPasswordConfirmLabelText }}</label>
             <input
               id="auth-register-password-confirm"
               v-model="registerForm.passwordConfirm"
@@ -161,7 +161,7 @@
           </div>
 
           <div v-if="registerHumanVerificationRequired" class="Form-group">
-            <div class="AuthSessionFieldLabel">真人验证</div>
+            <div class="AuthSessionFieldLabel">{{ humanVerificationLabelText }}</div>
             <div
               ref="turnstileContainer"
               class="AuthSessionTurnstile"
@@ -195,7 +195,7 @@
             {{ successMessage || forgotPasswordSuccessText }}
           </div>
           <div v-else class="Form-group">
-            <label for="auth-forgot-email">邮箱</label>
+            <label for="auth-forgot-email">{{ forgotEmailLabelText }}</label>
             <input
               id="auth-forgot-email"
               ref="forgotPasswordInput"
@@ -396,6 +396,30 @@ const forgotSubmitText = computed(() => getUiCopy({
   surface: 'auth-forgot-submit',
   loading: loading.value,
 })?.text || (loading.value ? '发送中...' : '发送重置链接'))
+const loginIdentificationLabelText = computed(() => getUiCopy({
+  surface: 'auth-login-identification-label',
+})?.text || '用户名或邮箱')
+const loginPasswordLabelText = computed(() => getUiCopy({
+  surface: 'auth-login-password-label',
+})?.text || '密码')
+const humanVerificationLabelText = computed(() => getUiCopy({
+  surface: 'auth-human-verification-label',
+})?.text || '真人验证')
+const registerUsernameLabelText = computed(() => getUiCopy({
+  surface: 'auth-register-username-label',
+})?.text || '用户名')
+const registerEmailLabelText = computed(() => getUiCopy({
+  surface: 'auth-register-email-label',
+})?.text || '邮箱')
+const registerPasswordLabelText = computed(() => getUiCopy({
+  surface: 'auth-register-password-label',
+})?.text || '密码')
+const registerPasswordConfirmLabelText = computed(() => getUiCopy({
+  surface: 'auth-register-password-confirm-label',
+})?.text || '确认密码')
+const forgotEmailLabelText = computed(() => getUiCopy({
+  surface: 'auth-forgot-email-label',
+})?.text || '邮箱')
 const closeLabelText = computed(() => getUiCopy({
   surface: 'auth-session-close',
 })?.text || '关闭')
@@ -421,23 +445,24 @@ const backToLoginText = computed(() => getUiCopy({
   surface: 'auth-session-back-login',
 })?.text || '返回登录')
 
-const titleText = computed(() => {
-  if (activeMode.value === 'register') return '加入讨论'
-  if (activeMode.value === 'forgot-password') return '找回密码'
-  return '登录'
-})
+const titleText = computed(() => getUiCopy({
+  surface: 'auth-session-title',
+  mode: activeMode.value,
+})?.text || (activeMode.value === 'register' ? '加入讨论' : (activeMode.value === 'forgot-password' ? '找回密码' : '登录')))
 
-const subtitleText = computed(() => {
-  if (activeMode.value === 'register') return '参考 Flarum 的会话流程，注册完成后即可回到当前页面继续操作。'
-  if (activeMode.value === 'forgot-password') return '输入注册邮箱，我们会向你发送重置密码链接。'
-  return '欢迎回来，登录后即可继续回复、关注和管理你的内容。'
-})
+const subtitleText = computed(() => getUiCopy({
+  surface: 'auth-session-subtitle',
+  mode: activeMode.value,
+})?.text || (activeMode.value === 'register'
+  ? '参考 Flarum 的会话流程，注册完成后即可回到当前页面继续操作。'
+  : (activeMode.value === 'forgot-password'
+      ? '输入注册邮箱，我们会向你发送重置密码链接。'
+      : '欢迎回来，登录后即可继续回复、关注和管理你的内容。')))
 
-const eyebrowText = computed(() => {
-  if (activeMode.value === 'register') return 'Sign Up'
-  if (activeMode.value === 'forgot-password') return 'Recovery'
-  return 'Session'
-})
+const eyebrowText = computed(() => getUiCopy({
+  surface: 'auth-session-eyebrow',
+  mode: activeMode.value,
+})?.text || (activeMode.value === 'register' ? 'Sign Up' : (activeMode.value === 'forgot-password' ? 'Recovery' : 'Session')))
 
 const debugResetPath = computed(() => {
   if (!debugResetUrl.value) return ''
@@ -637,15 +662,21 @@ async function syncTurnstileWidget() {
       },
       'expired-callback'() {
         turnstileToken.value = ''
-        turnstileError.value = '真人验证已过期，请重新完成验证。'
+        turnstileError.value = getUiCopy({
+          surface: 'auth-turnstile-expired-error',
+        })?.text || '真人验证已过期，请重新完成验证。'
       },
       'error-callback'() {
         turnstileToken.value = ''
-        turnstileError.value = '真人验证加载失败，请稍后重试。'
+        turnstileError.value = getUiCopy({
+          surface: 'auth-turnstile-load-error',
+        })?.text || '真人验证加载失败，请稍后重试。'
       }
     })
   } catch (error) {
-    turnstileError.value = error.message || '真人验证加载失败，请稍后重试。'
+    turnstileError.value = error.message || getUiCopy({
+      surface: 'auth-turnstile-load-error',
+    })?.text || '真人验证加载失败，请稍后重试。'
   } finally {
     turnstileLoading.value = false
   }
@@ -662,7 +693,9 @@ async function handleLogin() {
       turnstileToken.value
     )
     if (!result.success) {
-      errorMessage.value = result.error || '登录失败，请检查用户名和密码'
+      errorMessage.value = result.error || getUiCopy({
+        surface: 'auth-login-error',
+      })?.text || '登录失败，请检查用户名和密码'
       loginForm.value.password = ''
       if (loginHumanVerificationRequired.value) {
         refreshTurnstileWidget()
@@ -678,7 +711,9 @@ async function handleLogin() {
       await router.push(redirect)
     }
   } catch (error) {
-    errorMessage.value = error.response?.data?.error || '登录失败，请检查用户名和密码'
+    errorMessage.value = error.response?.data?.error || getUiCopy({
+      surface: 'auth-login-error',
+    })?.text || '登录失败，请检查用户名和密码'
     loginForm.value.password = ''
     if (loginHumanVerificationRequired.value) {
       refreshTurnstileWidget()
@@ -694,7 +729,9 @@ async function handleRegister() {
   successMessage.value = ''
 
   if (registerForm.value.password !== registerForm.value.passwordConfirm) {
-    errorMessage.value = '两次输入的密码不一致'
+    errorMessage.value = getUiCopy({
+      surface: 'auth-register-password-mismatch-error',
+    })?.text || '两次输入的密码不一致'
     loading.value = false
     return
   }
@@ -708,14 +745,18 @@ async function handleRegister() {
     )
 
     if (!result.success) {
-      errorMessage.value = result.error || '注册失败，请稍后重试'
+      errorMessage.value = result.error || getUiCopy({
+        surface: 'auth-register-error',
+      })?.text || '注册失败，请稍后重试'
       if (registerHumanVerificationRequired.value) {
         refreshTurnstileWidget()
       }
       return
     }
 
-    successMessage.value = '注册成功，请检查邮箱完成验证。'
+    successMessage.value = getUiCopy({
+      surface: 'auth-register-success',
+    })?.text || '注册成功，请检查邮箱完成验证。'
     if (registerSwitchTimer) {
       clearTimeout(registerSwitchTimer)
     }
@@ -725,13 +766,27 @@ async function handleRegister() {
   } catch (error) {
     const data = error.response?.data || {}
     if (data.username?.[0]) {
-      errorMessage.value = `用户名: ${data.username[0]}`
+      errorMessage.value = getUiCopy({
+        surface: 'auth-register-field-error',
+        field: '用户名',
+        message: data.username[0],
+      })?.text || `用户名: ${data.username[0]}`
     } else if (data.email?.[0]) {
-      errorMessage.value = `邮箱: ${data.email[0]}`
+      errorMessage.value = getUiCopy({
+        surface: 'auth-register-field-error',
+        field: '邮箱',
+        message: data.email[0],
+      })?.text || `邮箱: ${data.email[0]}`
     } else if (data.password?.[0]) {
-      errorMessage.value = `密码: ${data.password[0]}`
+      errorMessage.value = getUiCopy({
+        surface: 'auth-register-field-error',
+        field: '密码',
+        message: data.password[0],
+      })?.text || `密码: ${data.password[0]}`
     } else {
-      errorMessage.value = data.detail || data.error || '注册失败，请稍后重试'
+      errorMessage.value = data.detail || data.error || getUiCopy({
+        surface: 'auth-register-error',
+      })?.text || '注册失败，请稍后重试'
     }
     if (registerHumanVerificationRequired.value) {
       refreshTurnstileWidget()
@@ -753,10 +808,14 @@ async function handleForgotPassword() {
     })
 
     forgotPasswordSuccess.value = true
-    successMessage.value = response.message || '重置链接已发送，请检查邮箱。'
+    successMessage.value = response.message || getUiCopy({
+      surface: 'auth-forgot-success',
+    })?.text || '重置链接已发送，请检查邮箱。'
     debugResetUrl.value = response.debug_reset_url || ''
   } catch (error) {
-    errorMessage.value = error.response?.data?.error || '发送失败，请稍后重试'
+    errorMessage.value = error.response?.data?.error || getUiCopy({
+      surface: 'auth-forgot-error',
+    })?.text || '发送失败，请稍后重试'
   } finally {
     loading.value = false
   }
