@@ -18,6 +18,9 @@ export function registerAdminRoute(route) {
     navSection: 'feature',
     navOrder: 100,
     showInNavigation: true,
+    showInDashboardActions: false,
+    dashboardActionOrder: null,
+    dashboardActionLabel: '',
     navDescription: '',
     navBadge: '',
     ...route
@@ -72,6 +75,24 @@ export function getAdminNavSections() {
     .filter(section => section.items.length > 0)
 }
 
+export function getAdminDashboardActions() {
+  return getAdminRoutes()
+    .filter(route => route.showInDashboardActions)
+    .sort((left, right) => {
+      const leftOrder = left.dashboardActionOrder ?? left.navOrder ?? 100
+      const rightOrder = right.dashboardActionOrder ?? right.navOrder ?? 100
+      return leftOrder - rightOrder
+    })
+    .map(route => ({
+      key: route.name || route.path,
+      to: route.path,
+      icon: route.icon,
+      label: route.dashboardActionLabel || route.label,
+      description: route.navDescription || '',
+      moduleId: route.moduleId || 'core',
+    }))
+}
+
 registerAdminRoute({
   path: '/admin',
   name: 'admin-dashboard',
@@ -93,6 +114,7 @@ registerAdminRoute({
   navDescription: '查看内置模块、扩展能力和注册快照。',
   navSection: 'core',
   navOrder: 20,
+  showInDashboardActions: true,
   moduleId: 'core'
 })
 
@@ -105,6 +127,8 @@ registerAdminRoute({
   navDescription: '维护论坛标题、公告和基础信息。',
   navSection: 'core',
   navOrder: 30,
+  showInDashboardActions: true,
+  dashboardActionLabel: '编辑基础设置',
   moduleId: 'core'
 })
 
@@ -117,6 +141,8 @@ registerAdminRoute({
   navDescription: '管理用户组和访问权限矩阵。',
   navSection: 'core',
   navOrder: 40,
+  showInDashboardActions: true,
+  dashboardActionLabel: '管理权限',
   moduleId: 'core'
 })
 
@@ -129,6 +155,8 @@ registerAdminRoute({
   navDescription: '调整主题、Logo 和界面外观。',
   navSection: 'core',
   navOrder: 50,
+  showInDashboardActions: true,
+  dashboardActionLabel: '自定义外观',
   moduleId: 'core'
 })
 
@@ -141,6 +169,8 @@ registerAdminRoute({
   navDescription: '查看用户资料、分组和封禁状态。',
   navSection: 'core',
   navOrder: 60,
+  showInDashboardActions: true,
+  dashboardActionLabel: '管理用户',
   moduleId: 'users'
 })
 
@@ -153,6 +183,8 @@ registerAdminRoute({
   navDescription: '集中处理待审核讨论和回复。',
   navSection: 'feature',
   navOrder: 110,
+  showInDashboardActions: true,
+  dashboardActionLabel: '处理审核',
   moduleId: 'approval'
 })
 
@@ -165,6 +197,8 @@ registerAdminRoute({
   navDescription: '查看和处理社区举报内容。',
   navSection: 'feature',
   navOrder: 120,
+  showInDashboardActions: true,
+  dashboardActionLabel: '处理举报',
   moduleId: 'flags'
 })
 
@@ -177,6 +211,8 @@ registerAdminRoute({
   navDescription: '追踪后台关键操作记录。',
   navSection: 'feature',
   navOrder: 130,
+  showInDashboardActions: true,
+  dashboardActionLabel: '查看审计',
   moduleId: 'core'
 })
 

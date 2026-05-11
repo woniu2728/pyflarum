@@ -184,37 +184,14 @@
         </div>
         <div class="Widget-content">
           <div class="ActionsWidget-items">
-            <router-link to="/admin/basics" class="ActionsWidget-item">
-              <i class="fas fa-pencil-alt"></i>
-              <span>编辑基础设置</span>
-            </router-link>
-            <router-link to="/admin/modules" class="ActionsWidget-item">
-              <i class="fas fa-cubes"></i>
-              <span>查看模块中心</span>
-            </router-link>
-            <router-link to="/admin/permissions" class="ActionsWidget-item">
-              <i class="fas fa-key"></i>
-              <span>管理权限</span>
-            </router-link>
-            <router-link to="/admin/users" class="ActionsWidget-item">
-              <i class="fas fa-users"></i>
-              <span>管理用户</span>
-            </router-link>
-            <router-link to="/admin/approval" class="ActionsWidget-item">
-              <i class="fas fa-user-check"></i>
-              <span>处理审核</span>
-            </router-link>
-            <router-link to="/admin/flags" class="ActionsWidget-item">
-              <i class="fas fa-flag"></i>
-              <span>处理举报</span>
-            </router-link>
-            <router-link to="/admin/audit-logs" class="ActionsWidget-item">
-              <i class="fas fa-clipboard-list"></i>
-              <span>查看审计</span>
-            </router-link>
-            <router-link to="/admin/appearance" class="ActionsWidget-item">
-              <i class="fas fa-paint-brush"></i>
-              <span>自定义外观</span>
+            <router-link
+              v-for="action in dashboardActions"
+              :key="action.key"
+              :to="action.to"
+              class="ActionsWidget-item"
+            >
+              <i :class="action.icon"></i>
+              <span>{{ action.label }}</span>
             </router-link>
           </div>
         </div>
@@ -230,6 +207,7 @@ import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
+import { getAdminDashboardActions } from '../registry'
 
 const stats = ref({
   runtimeName: 'Python',
@@ -275,6 +253,7 @@ const runtimeRiskTone = computed(() => (
   runtimeRisks.value.some(item => item?.level === 'danger') ? 'danger' : 'warning'
 ))
 const runtimeRiskSummary = computed(() => runtimeRisks.value.map(item => item.title).join('；'))
+const dashboardActions = computed(() => getAdminDashboardActions())
 const queueWorkerBadgeClass = computed(() => {
   if (!stats.value.queueEnabled || ['disabled', 'sync'].includes(stats.value.queueWorkerStatus)) {
     return 'StatusBadge--neutral'
