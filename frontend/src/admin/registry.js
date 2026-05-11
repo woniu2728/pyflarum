@@ -12,6 +12,49 @@ import MailPage from './views/MailPage.vue'
 import AdvancedPage from './views/AdvancedPage.vue'
 
 const adminRoutes = []
+const adminDashboardStats = []
+
+function upsertByPath(target, value) {
+  const existingIndex = target.findIndex(item => item.path === value.path)
+  if (existingIndex >= 0) {
+    target.splice(existingIndex, 1, value)
+    return value
+  }
+
+  target.push(value)
+  return value
+}
+
+function upsertByKey(target, value) {
+  const existingIndex = target.findIndex(item => item.key === value.key)
+  if (existingIndex >= 0) {
+    target.splice(existingIndex, 1, value)
+    return value
+  }
+
+  target.push(value)
+  return value
+}
+
+function resolveAdminItem(item, context = {}) {
+  const isVisible = typeof item.isVisible === 'function' ? item.isVisible(context) : true
+  if (!isVisible) {
+    return null
+  }
+
+  const resolvedItem = typeof item.resolve === 'function'
+    ? item.resolve(context)
+    : item
+
+  if (!resolvedItem) {
+    return null
+  }
+
+  return {
+    ...item,
+    ...resolvedItem,
+  }
+}
 
 export function registerAdminRoute(route) {
   const normalizedRoute = {
@@ -26,14 +69,7 @@ export function registerAdminRoute(route) {
     ...route
   }
 
-  const existingIndex = adminRoutes.findIndex(item => item.path === normalizedRoute.path)
-  if (existingIndex >= 0) {
-    adminRoutes.splice(existingIndex, 1, normalizedRoute)
-    return normalizedRoute
-  }
-
-  adminRoutes.push(normalizedRoute)
-  return normalizedRoute
+  return upsertByPath(adminRoutes, normalizedRoute)
 }
 
 export function getAdminRoutes() {
@@ -91,6 +127,23 @@ export function getAdminDashboardActions() {
       description: route.navDescription || '',
       moduleId: route.moduleId || 'core',
     }))
+}
+
+export function registerAdminDashboardStat(item) {
+  const normalizedItem = {
+    order: 100,
+    iconClass: '',
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardStats, normalizedItem)
+}
+
+export function getAdminDashboardStats(context = {}) {
+  return [...adminDashboardStats]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
 }
 
 registerAdminRoute({
@@ -250,4 +303,61 @@ registerAdminRoute({
   navSection: 'feature',
   navOrder: 160,
   moduleId: 'core'
+})
+
+registerAdminDashboardStat({
+  key: 'users',
+  order: 10,
+  icon: 'fas fa-users',
+  label: '用户总数',
+  moduleId: 'users',
+  resolve: ({ stats }) => ({
+    value: stats?.totalUsers || 0,
+  }),
+})
+
+registerAdminDashboardStat({
+  key: 'discussions',
+  order: 20,
+  icon: 'fas fa-comments',
+  label: '讨论总数',
+  moduleId: 'core',
+  resolve: ({ stats }) => ({
+    value: stats?.totalDiscussions || 0,
+  }),
+})
+
+registerAdminDashboardStat({
+  key: 'posts',
+  order: 30,
+  icon: 'fas fa-comment',
+  label: '帖子总数',
+  moduleId: 'core',
+  resolve: ({ stats }) => ({
+    value: stats?.totalPosts || 0,
+  }),
+})
+
+registerAdminDashboardStat({
+  key: 'pending-approvals',
+  order: 40,
+  icon: 'fas fa-user-check',
+  iconClass: 'StatsWidget-icon--info',
+  label: '待审核内容',
+  moduleId: 'approval',
+  resolve: ({ stats }) => ({
+    value: stats?.pendingApprovals || 0,
+  }),
+})
+
+registerAdminDashboardStat({
+  key: 'open-flags',
+  order: 50,
+  icon: 'fas fa-flag',
+  iconClass: 'StatsWidget-icon--warning',
+  label: '待处理举报',
+  moduleId: 'flags',
+  resolve: ({ stats }) => ({
+    value: stats?.openFlags || 0,
+  }),
 })

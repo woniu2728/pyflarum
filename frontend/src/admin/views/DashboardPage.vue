@@ -128,49 +128,17 @@
         </div>
         <div v-if="!loading && !loadError" class="Widget-content">
           <div class="StatsWidget-items">
-            <div class="StatsWidget-item">
-              <div class="StatsWidget-icon">
-                <i class="fas fa-users"></i>
+            <div
+              v-for="item in dashboardStats"
+              :key="item.key"
+              class="StatsWidget-item"
+            >
+              <div class="StatsWidget-icon" :class="item.iconClass">
+                <i :class="item.icon"></i>
               </div>
               <div class="StatsWidget-info">
-                <div class="StatsWidget-value">{{ stats.totalUsers || 0 }}</div>
-                <div class="StatsWidget-label">用户总数</div>
-              </div>
-            </div>
-            <div class="StatsWidget-item">
-              <div class="StatsWidget-icon">
-                <i class="fas fa-comments"></i>
-              </div>
-              <div class="StatsWidget-info">
-                <div class="StatsWidget-value">{{ stats.totalDiscussions || 0 }}</div>
-                <div class="StatsWidget-label">讨论总数</div>
-              </div>
-            </div>
-            <div class="StatsWidget-item">
-              <div class="StatsWidget-icon">
-                <i class="fas fa-comment"></i>
-              </div>
-              <div class="StatsWidget-info">
-                <div class="StatsWidget-value">{{ stats.totalPosts || 0 }}</div>
-                <div class="StatsWidget-label">帖子总数</div>
-              </div>
-            </div>
-            <div class="StatsWidget-item">
-              <div class="StatsWidget-icon StatsWidget-icon--info">
-                <i class="fas fa-user-check"></i>
-              </div>
-              <div class="StatsWidget-info">
-                <div class="StatsWidget-value">{{ stats.pendingApprovals || 0 }}</div>
-                <div class="StatsWidget-label">待审核内容</div>
-              </div>
-            </div>
-            <div class="StatsWidget-item">
-              <div class="StatsWidget-icon StatsWidget-icon--warning">
-                <i class="fas fa-flag"></i>
-              </div>
-              <div class="StatsWidget-info">
-                <div class="StatsWidget-value">{{ stats.openFlags || 0 }}</div>
-                <div class="StatsWidget-label">待处理举报</div>
+                <div class="StatsWidget-value">{{ item.value }}</div>
+                <div class="StatsWidget-label">{{ item.label }}</div>
               </div>
             </div>
           </div>
@@ -207,7 +175,7 @@ import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
-import { getAdminDashboardActions } from '../registry'
+import { getAdminDashboardActions, getAdminDashboardStats } from '../registry'
 
 const stats = ref({
   runtimeName: 'Python',
@@ -254,6 +222,9 @@ const runtimeRiskTone = computed(() => (
 ))
 const runtimeRiskSummary = computed(() => runtimeRisks.value.map(item => item.title).join('；'))
 const dashboardActions = computed(() => getAdminDashboardActions())
+const dashboardStats = computed(() => getAdminDashboardStats({
+  stats: stats.value,
+}))
 const queueWorkerBadgeClass = computed(() => {
   if (!stats.value.queueEnabled || ['disabled', 'sync'].includes(stats.value.queueWorkerStatus)) {
     return 'StatusBadge--neutral'
