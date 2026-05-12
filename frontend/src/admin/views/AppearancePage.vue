@@ -2,14 +2,16 @@
   <AdminPage
     class-name="AppearancePage"
     icon="fas fa-paint-brush"
-    title="外观设置"
-    description="自定义论坛的外观和主题"
+    :title="appearanceCopy?.pageTitle || '外观设置'"
+    :description="appearanceCopy?.pageDescription || '自定义论坛的外观和主题'"
   >
-    <div class="AppearancePage-content">
+    <AdminStateBlock v-if="loading" tone="subtle">{{ appearanceCopy?.loadingText || '加载外观配置中...' }}</AdminStateBlock>
+    <AdminStateBlock v-else-if="loadError" tone="danger">{{ loadError }}</AdminStateBlock>
+    <div v-else class="AppearancePage-content">
       <div class="AppearancePage-section">
-        <h3 class="Section-title">颜色</h3>
+        <h3 class="Section-title">{{ appearanceCopy?.colorsSectionTitle || '颜色' }}</h3>
         <div class="Form-group">
-          <label for="appearance-primary-color">主题色</label>
+          <label for="appearance-primary-color">{{ appearanceCopy?.primaryColorLabel || '主题色' }}</label>
           <div class="ColorPicker">
             <input
               id="appearance-primary-color-picker"
@@ -17,7 +19,7 @@
               name="primary_color_picker"
               type="color"
               class="ColorPicker-input"
-              aria-label="主题色取色器"
+              :aria-label="appearanceCopy?.primaryColorPickerAriaLabel || '主题色取色器'"
             />
             <input
               id="appearance-primary-color"
@@ -25,14 +27,14 @@
               name="primary_color"
               type="text"
               class="FormControl ColorPicker-text"
-              placeholder="#4d698e"
+              :placeholder="appearanceConfig?.placeholders?.primaryColor || '#4d698e'"
             />
           </div>
-          <p class="Form-help">论坛的主题颜色</p>
+          <p class="Form-help">{{ appearanceCopy?.primaryColorHelpText || '论坛的主题颜色' }}</p>
         </div>
 
         <div class="Form-group">
-          <label for="appearance-accent-color">强调色</label>
+          <label for="appearance-accent-color">{{ appearanceCopy?.accentColorLabel || '强调色' }}</label>
           <div class="ColorPicker">
             <input
               id="appearance-accent-color-picker"
@@ -40,7 +42,7 @@
               name="accent_color_picker"
               type="color"
               class="ColorPicker-input"
-              aria-label="强调色取色器"
+              :aria-label="appearanceCopy?.accentColorPickerAriaLabel || '强调色取色器'"
             />
             <input
               id="appearance-accent-color"
@@ -48,99 +50,109 @@
               name="accent_color"
               type="text"
               class="FormControl ColorPicker-text"
-              placeholder="#e74c3c"
+              :placeholder="appearanceConfig?.placeholders?.accentColor || '#e74c3c'"
             />
           </div>
-          <p class="Form-help">用于按钮和链接的强调色</p>
+          <p class="Form-help">{{ appearanceCopy?.accentColorHelpText || '用于按钮和链接的强调色' }}</p>
         </div>
       </div>
 
       <div class="AppearancePage-section">
-        <h3 class="Section-title">Logo</h3>
+        <h3 class="Section-title">{{ appearanceCopy?.brandingSectionTitle || 'Logo 与图标' }}</h3>
         <div class="AssetCard">
           <div class="AssetCard-preview">
-            <img v-if="settings.logo_url" :src="settings.logo_url" alt="Logo 预览" class="AssetCard-image AssetCard-image--logo" />
-            <div v-else class="AssetCard-placeholder">暂无 Logo</div>
+            <img
+              v-if="settings.logo_url"
+              :src="settings.logo_url"
+              :alt="appearanceCopy?.logoPreviewAlt || 'Logo 预览'"
+              class="AssetCard-image AssetCard-image--logo"
+            />
+            <div v-else class="AssetCard-placeholder">{{ appearanceCopy?.logoEmptyText || '暂无 Logo' }}</div>
           </div>
           <div class="AssetCard-meta">
-            <div class="AssetCard-title">站点 Logo</div>
-            <p class="Form-help">建议上传透明背景 PNG、SVG 或 WebP，Header 会优先展示这里的资源。</p>
+            <div class="AssetCard-title">{{ appearanceCopy?.logoCardTitle || '站点 Logo' }}</div>
+            <p class="Form-help">{{ appearanceCopy?.logoHelpText || '建议上传透明背景 PNG、SVG 或 WebP，Header 会优先展示这里的资源。' }}</p>
             <div class="AssetCard-actions">
               <label class="Button Button--secondary Button--upload" :class="{ 'is-disabled': uploadingLogo }">
                 <input
                   name="logo_file"
                   type="file"
-                  accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                  :accept="appearanceConfig?.uploads?.logoAccept || '.png,.jpg,.jpeg,.gif,.webp,.svg'"
                   hidden
                   @change="uploadAsset($event, 'logo')"
                 />
-                {{ uploadingLogo ? '上传中...' : '上传本地 Logo' }}
+                {{ uploadingLogo ? (appearanceCopy?.logoUploadingLabel || '上传中...') : (appearanceCopy?.logoUploadLabel || '上传本地 Logo') }}
               </label>
-              <button v-if="settings.logo_url" type="button" class="Button" @click="settings.logo_url = ''">清空</button>
+              <button v-if="settings.logo_url" type="button" class="Button" @click="settings.logo_url = ''">{{ appearanceCopy?.clearAssetLabel || '清空' }}</button>
             </div>
           </div>
         </div>
 
         <div class="Form-group Form-group--assetUrl">
-          <label for="appearance-logo-url">Logo URL</label>
+          <label for="appearance-logo-url">{{ appearanceCopy?.logoUrlLabel || 'Logo URL' }}</label>
           <input
             id="appearance-logo-url"
             v-model="settings.logo_url"
             name="logo_url"
             type="text"
             class="FormControl"
-            placeholder="https://example.com/logo.png"
+            :placeholder="appearanceConfig?.placeholders?.logoUrl || 'https://example.com/logo.png'"
           />
-          <p class="Form-help">论坛Logo的URL地址</p>
+          <p class="Form-help">{{ appearanceCopy?.logoUrlHelpText || '论坛 Logo 的 URL 地址' }}</p>
         </div>
 
         <div class="AssetCard">
           <div class="AssetCard-preview AssetCard-preview--favicon">
-            <img v-if="settings.favicon_url" :src="settings.favicon_url" alt="Favicon 预览" class="AssetCard-image AssetCard-image--favicon" />
-            <div v-else class="AssetCard-placeholder">暂无 Favicon</div>
+            <img
+              v-if="settings.favicon_url"
+              :src="settings.favicon_url"
+              :alt="appearanceCopy?.faviconPreviewAlt || 'Favicon 预览'"
+              class="AssetCard-image AssetCard-image--favicon"
+            />
+            <div v-else class="AssetCard-placeholder">{{ appearanceCopy?.faviconEmptyText || '暂无 Favicon' }}</div>
           </div>
           <div class="AssetCard-meta">
-            <div class="AssetCard-title">浏览器图标</div>
-            <p class="Form-help">建议上传 `.ico`、PNG 或 SVG，小尺寸图标在浏览器标签页里更清晰。</p>
+            <div class="AssetCard-title">{{ appearanceCopy?.faviconCardTitle || '浏览器图标' }}</div>
+            <p class="Form-help">{{ appearanceCopy?.faviconHelpText || '建议上传 `.ico`、PNG 或 SVG，小尺寸图标在浏览器标签页里更清晰。' }}</p>
             <div class="AssetCard-actions">
               <label class="Button Button--secondary Button--upload" :class="{ 'is-disabled': uploadingFavicon }">
                 <input
                   name="favicon_file"
                   type="file"
-                  accept=".ico,.png,.svg,.webp"
+                  :accept="appearanceConfig?.uploads?.faviconAccept || '.ico,.png,.svg,.webp'"
                   hidden
                   @change="uploadAsset($event, 'favicon')"
                 />
-                {{ uploadingFavicon ? '上传中...' : '上传本地 Favicon' }}
+                {{ uploadingFavicon ? (appearanceCopy?.faviconUploadingLabel || '上传中...') : (appearanceCopy?.faviconUploadLabel || '上传本地 Favicon') }}
               </label>
-              <button v-if="settings.favicon_url" type="button" class="Button" @click="settings.favicon_url = ''">清空</button>
+              <button v-if="settings.favicon_url" type="button" class="Button" @click="settings.favicon_url = ''">{{ appearanceCopy?.clearAssetLabel || '清空' }}</button>
             </div>
           </div>
         </div>
 
         <div class="Form-group Form-group--assetUrl">
-          <label for="appearance-favicon-url">Favicon URL</label>
+          <label for="appearance-favicon-url">{{ appearanceCopy?.faviconUrlLabel || 'Favicon URL' }}</label>
           <input
             id="appearance-favicon-url"
             v-model="settings.favicon_url"
             name="favicon_url"
             type="text"
             class="FormControl"
-            placeholder="https://example.com/favicon.ico"
+            :placeholder="appearanceConfig?.placeholders?.faviconUrl || 'https://example.com/favicon.ico'"
           />
-          <p class="Form-help">浏览器标签页图标的URL地址</p>
+          <p class="Form-help">{{ appearanceCopy?.faviconUrlHelpText || '浏览器标签页图标的 URL 地址' }}</p>
         </div>
       </div>
 
       <div class="AppearancePage-section">
-        <h3 class="Section-title">自定义样式</h3>
+        <h3 class="Section-title">{{ appearanceCopy?.customStyleSectionTitle || '自定义样式' }}</h3>
         <div class="PresetPanel">
           <div class="PresetPanel-header">
             <div>
-              <h4>样式预设</h4>
-              <p>点击即可把常用样式片段填入自定义 CSS，你可以继续修改后再保存。</p>
+              <h4>{{ appearanceCopy?.presetPanelTitle || '样式预设' }}</h4>
+              <p>{{ appearanceCopy?.presetPanelDescription || '点击即可把常用样式片段填入自定义 CSS，你可以继续修改后再保存。' }}</p>
             </div>
-            <button type="button" class="Button" @click="settings.custom_css = ''">清空 CSS</button>
+            <button type="button" class="Button" @click="settings.custom_css = ''">{{ appearanceCopy?.clearCssLabel || '清空 CSS' }}</button>
           </div>
           <div class="PresetPanel-grid">
             <button
@@ -157,29 +169,29 @@
         </div>
 
         <div class="Form-group">
-          <label for="appearance-custom-css">自定义CSS</label>
+          <label for="appearance-custom-css">{{ appearanceCopy?.customCssLabel || '自定义 CSS' }}</label>
           <textarea
             id="appearance-custom-css"
             v-model="settings.custom_css"
             name="custom_css"
             class="FormControl"
             rows="10"
-            placeholder="/* 在这里添加自定义CSS */"
+            :placeholder="appearanceConfig?.placeholders?.customCss || '/* 在这里添加自定义 CSS */'"
           ></textarea>
-          <p class="Form-help">添加自定义CSS样式来进一步定制论坛外观</p>
+          <p class="Form-help">{{ appearanceCopy?.customCssHelpText || '添加自定义 CSS 样式来进一步定制论坛外观' }}</p>
         </div>
 
         <div class="Form-group">
-          <label for="appearance-custom-header">自定义Header HTML</label>
+          <label for="appearance-custom-header">{{ appearanceCopy?.customHeaderLabel || '自定义 Header HTML' }}</label>
           <textarea
             id="appearance-custom-header"
             v-model="settings.custom_header"
             name="custom_header"
             class="FormControl"
             rows="5"
-            placeholder="<!-- 在这里添加自定义HTML -->"
+            :placeholder="appearanceConfig?.placeholders?.customHeader || '<!-- 在这里添加自定义 HTML -->'"
           ></textarea>
-          <p class="Form-help">在页面头部添加自定义HTML（如统计代码）</p>
+          <p class="Form-help">{{ appearanceCopy?.customHeaderHelpText || '在页面头部添加自定义 HTML（如统计代码）' }}</p>
         </div>
       </div>
 
@@ -190,61 +202,66 @@
           :disabled="saving"
           @click="saveSettings"
         >
-          {{ saving ? '保存中...' : '保存设置' }}
+          {{ saving ? (appearanceCopy?.savingLabel || '保存中...') : (appearanceCopy?.saveLabel || '保存设置') }}
         </button>
       </div>
-      <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
-      <AdminInlineMessage v-if="saveError" tone="danger">保存失败，请重试</AdminInlineMessage>
+      <AdminInlineMessage v-if="saveSuccess" tone="success">{{ appearanceCopy?.saveSuccessText || '保存成功' }}</AdminInlineMessage>
+      <AdminInlineMessage v-if="saveError" tone="danger">{{ appearanceCopy?.saveErrorText || '保存失败，请重试' }}</AdminInlineMessage>
     </div>
   </AdminPage>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AdminInlineMessage from '../components/AdminInlineMessage.vue'
 import AdminPage from '../components/AdminPage.vue'
+import AdminStateBlock from '../components/AdminStateBlock.vue'
 import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
+import {
+  getAdminAppearancePageActionMeta,
+  getAdminAppearancePageConfig,
+  getAdminAppearancePageCopy,
+} from '../registry'
 
-const settings = ref({
-  primary_color: '#4d698e',
-  accent_color: '#e74c3c',
-  logo_url: '',
-  favicon_url: '',
-  custom_css: '',
-  custom_header: '',
-})
-
+const appearanceCopy = computed(() => getAdminAppearancePageCopy())
+const appearanceConfig = computed(() => getAdminAppearancePageConfig())
+const appearanceActionMeta = computed(() => getAdminAppearancePageActionMeta())
+const loading = ref(true)
+const loadError = ref('')
+const settings = ref({})
 const saving = ref(false)
 const uploadingLogo = ref(false)
 const uploadingFavicon = ref(false)
 const modalStore = useModalStore()
 const { saveSuccess, saveError, resetSaveFeedback, showSaveSuccess, showSaveError } = useAdminSaveFeedback()
-const cssPresets = [
-  {
-    name: '柔和圆角',
-    description: '让卡片、按钮和输入框更柔和一些',
-    css: `:root {\n  --forum-primary-color: #3f6f90;\n  --forum-accent-color: #d66b4d;\n}\n\n.Button,\n.FormControl,\n.DiscussionListItem,\n.DiscussionHero,\n.PostCard {\n  border-radius: 12px;\n}\n`,
-  },
-  {
-    name: '对比增强',
-    description: '提高标题、边框和标签的可读性',
-    css: `body {\n  color: #223245;\n}\n\n.Header,\n.DiscussionListItem,\n.PostCard,\n.Sidebar {\n  border-color: #d2dce6;\n}\n\nh1, h2, h3,\n.DiscussionListItem-title {\n  color: #162332;\n}\n`,
-  },
-  {
-    name: '紧凑列表',
-    description: '压缩讨论列表和帖子区域的纵向间距',
-    css: `.DiscussionListItem,\n.PostCard {\n  padding-top: 12px;\n  padding-bottom: 12px;\n}\n\n.DiscussionHero {\n  padding-top: 20px;\n  padding-bottom: 20px;\n}\n`,
-  },
-]
+const cssPresets = computed(() => appearanceConfig.value?.cssPresets || [])
+
+function buildDefaultSettings() {
+  return {
+    primary_color: '#4d698e',
+    accent_color: '#e74c3c',
+    logo_url: '',
+    favicon_url: '',
+    custom_css: '',
+    custom_header: '',
+    ...(appearanceConfig.value?.defaultSettings || {}),
+  }
+}
 
 onMounted(async () => {
+  settings.value = buildDefaultSettings()
+  loading.value = true
+  loadError.value = ''
   try {
     const data = await api.get('/admin/appearance')
     settings.value = { ...settings.value, ...data }
   } catch (error) {
     console.error('加载外观设置失败:', error)
+    loadError.value = error.response?.data?.error || error.message || appearanceActionMeta.value?.loadErrorText || '加载外观设置失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 })
 
@@ -292,8 +309,8 @@ async function uploadAsset(event, target) {
   } catch (error) {
     console.error('上传站点资源失败:', error)
     await modalStore.alert({
-      title: '上传失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: appearanceActionMeta.value?.uploadFailedTitle || '上传失败',
+      message: error.response?.data?.error || error.message || appearanceActionMeta.value?.uploadUnknownErrorText || '未知错误',
       tone: 'danger'
     })
   } finally {

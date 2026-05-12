@@ -24,6 +24,9 @@ const adminDashboardActions = []
 const adminModulesPageCopies = []
 const adminModulesPageConfig = []
 const adminModulesPageActionMeta = []
+const adminAppearancePageCopies = []
+const adminAppearancePageConfig = []
+const adminAppearancePageActionMeta = []
 const adminAuditLogsPageCopies = []
 const adminAuditLogsPageConfig = []
 const adminApprovalQueuePageCopies = []
@@ -350,6 +353,54 @@ export function registerAdminModulesPageActionMeta(item) {
 
 export function getAdminModulesPageActionMeta(context = {}) {
   return [...adminModulesPageActionMeta]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminAppearancePageCopy(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminAppearancePageCopies, normalizedItem)
+}
+
+export function getAdminAppearancePageCopy(context = {}) {
+  return [...adminAppearancePageCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminAppearancePageConfig(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminAppearancePageConfig, normalizedItem)
+}
+
+export function getAdminAppearancePageConfig(context = {}) {
+  return [...adminAppearancePageConfig]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminAppearancePageActionMeta(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminAppearancePageActionMeta, normalizedItem)
+}
+
+export function getAdminAppearancePageActionMeta(context = {}) {
+  return [...adminAppearancePageActionMeta]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -1234,6 +1285,107 @@ registerAdminModulesPageActionMeta({
   order: 10,
   resolve: () => ({
     loadErrorText: '加载模块信息失败，请稍后重试',
+  }),
+})
+
+registerAdminAppearancePageCopy({
+  key: 'core-appearance-page-copy',
+  order: 10,
+  resolve: () => ({
+    pageTitle: '外观设置',
+    pageDescription: '自定义论坛的外观和主题',
+    loadingText: '加载外观配置中...',
+    colorsSectionTitle: '颜色',
+    primaryColorLabel: '主题色',
+    primaryColorPickerAriaLabel: '主题色取色器',
+    primaryColorHelpText: '论坛的主题颜色',
+    accentColorLabel: '强调色',
+    accentColorPickerAriaLabel: '强调色取色器',
+    accentColorHelpText: '用于按钮和链接的强调色',
+    brandingSectionTitle: 'Logo 与图标',
+    logoPreviewAlt: 'Logo 预览',
+    logoEmptyText: '暂无 Logo',
+    logoCardTitle: '站点 Logo',
+    logoHelpText: '建议上传透明背景 PNG、SVG 或 WebP，Header 会优先展示这里的资源。',
+    logoUploadLabel: '上传本地 Logo',
+    logoUploadingLabel: '上传中...',
+    clearAssetLabel: '清空',
+    logoUrlLabel: 'Logo URL',
+    logoUrlHelpText: '论坛 Logo 的 URL 地址',
+    faviconPreviewAlt: 'Favicon 预览',
+    faviconEmptyText: '暂无 Favicon',
+    faviconCardTitle: '浏览器图标',
+    faviconHelpText: '建议上传 `.ico`、PNG 或 SVG，小尺寸图标在浏览器标签页里更清晰。',
+    faviconUploadLabel: '上传本地 Favicon',
+    faviconUploadingLabel: '上传中...',
+    faviconUrlLabel: 'Favicon URL',
+    faviconUrlHelpText: '浏览器标签页图标的 URL 地址',
+    customStyleSectionTitle: '自定义样式',
+    presetPanelTitle: '样式预设',
+    presetPanelDescription: '点击即可把常用样式片段填入自定义 CSS，你可以继续修改后再保存。',
+    clearCssLabel: '清空 CSS',
+    customCssLabel: '自定义 CSS',
+    customCssHelpText: '添加自定义 CSS 样式来进一步定制论坛外观',
+    customHeaderLabel: '自定义 Header HTML',
+    customHeaderHelpText: '在页面头部添加自定义 HTML（如统计代码）',
+    saveLabel: '保存设置',
+    savingLabel: '保存中...',
+    saveSuccessText: '保存成功',
+    saveErrorText: '保存失败，请重试',
+  }),
+})
+
+registerAdminAppearancePageConfig({
+  key: 'core-appearance-page-config',
+  order: 10,
+  resolve: () => ({
+    defaultSettings: {
+      primary_color: '#4d698e',
+      accent_color: '#e74c3c',
+      logo_url: '',
+      favicon_url: '',
+      custom_css: '',
+      custom_header: '',
+    },
+    placeholders: {
+      primaryColor: '#4d698e',
+      accentColor: '#e74c3c',
+      logoUrl: 'https://example.com/logo.png',
+      faviconUrl: 'https://example.com/favicon.ico',
+      customCss: '/* 在这里添加自定义 CSS */',
+      customHeader: '<!-- 在这里添加自定义 HTML -->',
+    },
+    uploads: {
+      logoAccept: '.png,.jpg,.jpeg,.gif,.webp,.svg',
+      faviconAccept: '.ico,.png,.svg,.webp',
+    },
+    cssPresets: [
+      {
+        name: '柔和圆角',
+        description: '让卡片、按钮和输入框更柔和一些',
+        css: `:root {\n  --forum-primary-color: #3f6f90;\n  --forum-accent-color: #d66b4d;\n}\n\n.Button,\n.FormControl,\n.DiscussionListItem,\n.DiscussionHero,\n.PostCard {\n  border-radius: 12px;\n}\n`,
+      },
+      {
+        name: '对比增强',
+        description: '提高标题、边框和标签的可读性',
+        css: `body {\n  color: #223245;\n}\n\n.Header,\n.DiscussionListItem,\n.PostCard,\n.Sidebar {\n  border-color: #d2dce6;\n}\n\nh1, h2, h3,\n.DiscussionListItem-title {\n  color: #162332;\n}\n`,
+      },
+      {
+        name: '紧凑列表',
+        description: '压缩讨论列表和帖子区域的纵向间距',
+        css: `.DiscussionListItem,\n.PostCard {\n  padding-top: 12px;\n  padding-bottom: 12px;\n}\n\n.DiscussionHero {\n  padding-top: 20px;\n  padding-bottom: 20px;\n}\n`,
+      },
+    ],
+  }),
+})
+
+registerAdminAppearancePageActionMeta({
+  key: 'core-appearance-page-actions-meta',
+  order: 10,
+  resolve: () => ({
+    loadErrorText: '加载外观设置失败，请稍后重试',
+    uploadFailedTitle: '上传失败',
+    uploadUnknownErrorText: '未知错误',
   }),
 })
 
