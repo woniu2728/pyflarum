@@ -253,7 +253,11 @@ const {
 
 const activeNotificationLabel = computed(() => {
   const activeItem = notificationTypeItems.value.find(item => item.value === activeType.value)
-  return activeItem?.label || '全部通知'
+  return getUiCopy({
+    surface: 'notification-page-active-filter-label',
+    label: activeItem?.label || '',
+    value: activeType.value,
+  })?.text || activeItem?.label || '全部通知'
 })
 const heroTitleText = computed(() => getUiCopy({
   surface: 'notification-page-hero-title',

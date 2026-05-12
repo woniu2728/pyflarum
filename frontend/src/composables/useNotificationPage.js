@@ -90,22 +90,37 @@ export function useNotificationPage({
     })?.text || fallback
   }
 
+  function getNotificationErrorMessage(error, fallback = getNotificationUiCopy('notification-error-retry-message', {}, '请稍后重试')) {
+    return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
+  }
+
+  async function showNotificationActionError(error, titleFallback = '操作失败') {
+    await modalStore.alert({
+      title: getNotificationUiCopy('notification-alert-action-failed-title', {}, titleFallback),
+      message: getNotificationErrorMessage(error),
+      tone: 'danger'
+    })
+  }
+
   function formatSummaryCount() {
-    if (unreadOnly.value) {
-      return `${notifications.value.length || 0} 未读`
-    }
-    return String(totalCount.value || notifications.value.length || 0)
+    return getNotificationUiCopy('notification-summary-count', {
+      unreadOnly: unreadOnly.value,
+      count: unreadOnly.value
+        ? notifications.value.length
+        : (totalCount.value || notifications.value.length || 0),
+    }, unreadOnly.value
+      ? `${notifications.value.length || 0} 未读`
+      : String(totalCount.value || notifications.value.length || 0))
   }
 
   function formatTypeCount(type) {
     const total = Number(notificationStore.typeCounts?.[type] || 0)
     const unread = Number(notificationStore.unreadTypeCounts?.[type] || 0)
-
-    if (unread > 0) {
-      return `${total} / ${unread} 未读`
-    }
-
-    return String(total)
+    return getNotificationUiCopy('notification-type-count', {
+      total,
+      unread,
+      type,
+    }, unread > 0 ? `${total} / ${unread} 未读` : String(total))
   }
 
   watch(
@@ -130,7 +145,10 @@ export function useNotificationPage({
       totalPages.value = Math.max(1, Math.ceil((data.total || notifications.value.length) / (data.limit || 20)))
     } catch (error) {
       console.error('加载通知失败:', error)
-      loadError.value = error.response?.data?.error || error.message || '加载通知失败，请稍后重试'
+      loadError.value = getNotificationErrorMessage(
+        error,
+        getNotificationUiCopy('notification-load-error', {}, '加载通知失败，请稍后重试')
+      )
       totalCount.value = 0
       notificationStore.typeCounts = {}
       notificationStore.unreadTypeCounts = {}
@@ -227,11 +245,7 @@ export function useNotificationPage({
       })
     } catch (error) {
       console.error('标记失败:', error)
-      await modalStore.alert({
-        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
-        message: error.response?.data?.error || error.message || '请稍后重试',
-        tone: 'danger'
-      })
+      await showNotificationActionError(error)
     } finally {
       marking.value = false
     }
@@ -278,11 +292,7 @@ export function useNotificationPage({
       })
     } catch (error) {
       console.error('清除失败:', error)
-      await modalStore.alert({
-        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
-        message: error.response?.data?.error || error.message || '请稍后重试',
-        tone: 'danger'
-      })
+      await showNotificationActionError(error)
     } finally {
       marking.value = false
     }
@@ -315,11 +325,7 @@ export function useNotificationPage({
       await loadNotifications()
     } catch (error) {
       console.error('分组标记失败:', error)
-      await modalStore.alert({
-        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
-        message: error.response?.data?.error || error.message || '请稍后重试',
-        tone: 'danger'
-      })
+      await showNotificationActionError(error)
     } finally {
       marking.value = false
     }
@@ -352,11 +358,7 @@ export function useNotificationPage({
       await loadNotifications()
     } catch (error) {
       console.error('分组清除失败:', error)
-      await modalStore.alert({
-        title: getNotificationUiCopy('notification-alert-action-failed-title', {}, '操作失败'),
-        message: error.response?.data?.error || error.message || '请稍后重试',
-        tone: 'danger'
-      })
+      await showNotificationActionError(error)
     } finally {
       marking.value = false
     }
@@ -378,7 +380,7 @@ export function useNotificationPage({
       console.error('删除失败:', error)
       await modalStore.alert({
         title: getNotificationUiCopy('notification-alert-delete-failed-title', {}, '删除失败'),
-        message: error.response?.data?.error || error.message || '请稍后重试',
+        message: getNotificationErrorMessage(error),
         tone: 'danger'
       })
     }

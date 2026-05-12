@@ -2466,6 +2466,44 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'notification-error-retry-message',
+  order: 479,
+  surfaces: ['notification-error-retry-message'],
+  resolve: () => ({
+    text: '请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-load-error',
+  order: 479,
+  surfaces: ['notification-load-error'],
+  resolve: () => ({
+    text: '加载通知失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-summary-count',
+  order: 479,
+  surfaces: ['notification-summary-count'],
+  resolve: ({ unreadOnly, count }) => ({
+    text: unreadOnly ? `${Number(count || 0)} 未读` : String(Number(count || 0)),
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-type-count',
+  order: 479,
+  surfaces: ['notification-type-count'],
+  resolve: ({ total, unread }) => ({
+    text: Number(unread || 0) > 0
+      ? `${Number(total || 0)} / ${Number(unread || 0)} 未读`
+      : String(Number(total || 0)),
+  }),
+})
+
+registerUiCopy({
   key: 'discussion-action-confirm-cancel',
   order: 479,
   surfaces: ['discussion-action-confirm-cancel'],
@@ -4596,6 +4634,15 @@ registerUiCopy({
   surfaces: ['notification-page-group-count'],
   resolve: ({ count }) => ({
     text: `${Number(count || 0)} 条通知`,
+  }),
+})
+
+registerUiCopy({
+  key: 'notification-page-active-filter-label',
+  order: 1055,
+  surfaces: ['notification-page-active-filter-label'],
+  resolve: ({ label }) => ({
+    text: label || '全部通知',
   }),
 })
 
