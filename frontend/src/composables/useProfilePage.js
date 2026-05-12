@@ -71,6 +71,17 @@ export function useProfilePage({
     await refreshProfile()
   })
 
+  function getProfileUiCopy(surface, context = {}, fallback = '') {
+    return getUiCopy({
+      surface,
+      ...context,
+    })?.text || fallback
+  }
+
+  function getProfileErrorMessage(error, fallback = getProfileUiCopy('profile-error-unknown', {}, '未知错误')) {
+    return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
+  }
+
   async function refreshProfile() {
     await loadUser()
     if (isOwnProfile.value) {
@@ -108,6 +119,10 @@ export function useProfilePage({
       }
     } catch (error) {
       console.error('加载用户失败:', error)
+      settingsError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-settings-load-error', {}, '加载用户失败，请稍后重试')
+      )
     } finally {
       loading.value = false
     }
@@ -130,6 +145,10 @@ export function useProfilePage({
         .map(item => resourceStore.upsert('discussions', item).id)
     } catch (error) {
       console.error('加载讨论失败:', error)
+      settingsError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-discussions-load-error', {}, '加载讨论失败，请稍后重试')
+      )
     } finally {
       loadingDiscussions.value = false
     }
@@ -151,6 +170,10 @@ export function useProfilePage({
         .map(item => resourceStore.upsert('posts', item).id)
     } catch (error) {
       console.error('加载回复失败:', error)
+      settingsError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-posts-load-error', {}, '加载回复失败，请稍后重试')
+      )
     } finally {
       loadingPosts.value = false
     }
@@ -194,9 +217,10 @@ export function useProfilePage({
         ? `资料已保存，验证邮件已发送到 ${nextUser.email}`
         : '资料已保存')
     } catch (error) {
-      settingsError.value = getUiCopy({
-        surface: 'profile-settings-save-error',
-      })?.text || (error.response?.data?.error || error.message || '保存失败')
+      settingsError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-settings-save-error', {}, '保存失败')
+      )
     } finally {
       saving.value = false
     }
@@ -216,9 +240,10 @@ export function useProfilePage({
         authStore.user.preferences = { ...data }
       }
     } catch (error) {
-      preferencesError.value = getUiCopy({
-        surface: 'profile-preferences-load-error',
-      })?.text || (error.response?.data?.error || error.message || '加载通知偏好失败')
+      preferencesError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-preferences-load-error', {}, '加载通知偏好失败')
+      )
     } finally {
       loadingPreferences.value = false
     }
@@ -245,9 +270,10 @@ export function useProfilePage({
         surface: 'profile-preferences-save-success',
       })?.text || '通知偏好已保存'
     } catch (error) {
-      preferencesError.value = getUiCopy({
-        surface: 'profile-preferences-save-error',
-      })?.text || (error.response?.data?.error || error.message || '保存通知偏好失败')
+      preferencesError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-preferences-save-error', {}, '保存通知偏好失败')
+      )
     } finally {
       savingPreferences.value = false
     }
@@ -264,9 +290,10 @@ export function useProfilePage({
         surface: 'profile-verification-success',
       })?.text || '验证邮件已发送'
     } catch (error) {
-      verificationError.value = getUiCopy({
-        surface: 'profile-verification-error',
-      })?.text || (error.response?.data?.error || error.message || '发送失败')
+      verificationError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-verification-error', {}, '发送失败')
+      )
     } finally {
       verificationSending.value = false
     }
@@ -305,9 +332,10 @@ export function useProfilePage({
         confirm_password: ''
       }
     } catch (error) {
-      passwordError.value = getUiCopy({
-        surface: 'profile-password-error',
-      })?.text || (error.response?.data?.error || error.message || '密码修改失败')
+      passwordError.value = getProfileErrorMessage(
+        error,
+        getProfileUiCopy('profile-password-error', {}, '密码修改失败')
+      )
     } finally {
       changingPassword.value = false
     }
@@ -338,12 +366,11 @@ export function useProfilePage({
       await authStore.fetchUser()
     } catch (error) {
       await modalStore.alert({
-        title: getUiCopy({
-          surface: 'profile-avatar-upload-error-title',
-        })?.text || '头像上传失败',
-        message: getUiCopy({
-          surface: 'profile-avatar-upload-error-message',
-        })?.text || (error.response?.data?.error || error.message || '未知错误'),
+        title: getProfileUiCopy('profile-avatar-upload-error-title', {}, '头像上传失败'),
+        message: getProfileErrorMessage(
+          error,
+          getProfileUiCopy('profile-avatar-upload-error-message', {}, '未知错误')
+        ),
         tone: 'danger'
       })
     } finally {

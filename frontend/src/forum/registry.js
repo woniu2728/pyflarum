@@ -1688,6 +1688,33 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'profile-settings-load-error',
+  order: 256,
+  surfaces: ['profile-settings-load-error'],
+  resolve: () => ({
+    text: '加载用户失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-discussions-load-error',
+  order: 256,
+  surfaces: ['profile-discussions-load-error'],
+  resolve: () => ({
+    text: '加载讨论失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-posts-load-error',
+  order: 256,
+  surfaces: ['profile-posts-load-error'],
+  resolve: () => ({
+    text: '加载回复失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
   key: 'profile-preferences-section-title',
   order: 257,
   surfaces: ['profile-preferences-section-title'],
@@ -4767,6 +4794,15 @@ registerUiCopy({
   key: 'profile-avatar-upload-error-message',
   order: 1172,
   surfaces: ['profile-avatar-upload-error-message'],
+  resolve: () => ({
+    text: '未知错误',
+  }),
+})
+
+registerUiCopy({
+  key: 'profile-error-unknown',
+  order: 1173,
+  surfaces: ['profile-error-unknown'],
   resolve: () => ({
     text: '未知错误',
   }),
