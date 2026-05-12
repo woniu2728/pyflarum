@@ -2,18 +2,18 @@
   <AdminPage
     class-name="ModulesPage"
     icon="fas fa-cubes"
-    title="模块中心"
-    description="围绕注册中心查看模块边界、依赖健康、扩展注入面与后台入口。"
+    :title="modulesCopy?.pageTitle || '模块中心'"
+    :description="modulesCopy?.pageDescription || '围绕注册中心查看模块边界、依赖健康、扩展注入面与后台入口。'"
   >
-    <AdminStateBlock v-if="loading" tone="subtle">加载模块信息中...</AdminStateBlock>
+    <AdminStateBlock v-if="loading" tone="subtle">{{ modulesCopy?.loadingText || '加载模块信息中...' }}</AdminStateBlock>
     <AdminStateBlock v-else-if="errorMessage" tone="danger">{{ errorMessage }}</AdminStateBlock>
     <div v-else class="ModulesPage-content">
       <AdminSummaryGrid :items="summaryItems" />
 
       <section v-if="dependencyAttention.length" class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>依赖关注项</h3>
-          <p>模块依赖状态会直接影响后续扩展启用与注册结果，这里优先暴露需要处理的项。</p>
+          <h3>{{ modulesCopy?.dependencyAttentionTitle || '依赖关注项' }}</h3>
+          <p>{{ modulesCopy?.dependencyAttentionDescription || '模块依赖状态会直接影响后续扩展启用与注册结果，这里优先暴露需要处理的项。' }}</p>
         </div>
 
         <div class="ModulesPage-alerts">
@@ -27,10 +27,10 @@
               <span class="ModuleStatus ModuleStatus--warning">{{ issue.label }}</span>
             </div>
             <p v-if="issue.missing?.length">
-              缺少依赖: <code>{{ issue.missing.join(', ') }}</code>
+              {{ modulesCopy?.missingDependenciesPrefix || '缺少依赖' }}: <code>{{ issue.missing.join(', ') }}</code>
             </p>
             <p v-if="issue.disabled?.length">
-              未启用依赖: <code>{{ issue.disabled.join(', ') }}</code>
+              {{ modulesCopy?.disabledDependenciesPrefix || '未启用依赖' }}: <code>{{ issue.disabled.join(', ') }}</code>
             </p>
           </article>
         </div>
@@ -38,8 +38,8 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>分类概览</h3>
-          <p>按模块类别查看当前注册规模，优先识别哪些能力已经模块化，哪些区域仍需继续收口。</p>
+          <h3>{{ modulesCopy?.categorySummaryTitle || '分类概览' }}</h3>
+          <p>{{ modulesCopy?.categorySummaryDescription || '按模块类别查看当前注册规模，优先识别哪些能力已经模块化，哪些区域仍需继续收口。' }}</p>
         </div>
 
         <div class="CategorySummaryGrid">
@@ -51,13 +51,13 @@
             <div class="CategorySummaryCard-header">
               <h4>{{ category.label }}</h4>
               <span class="ModuleBadge" :class="category.id === 'core' ? 'ModuleBadge--core' : 'ModuleBadge--feature'">
-                {{ category.module_count }} 个模块
+                {{ modulesCopy?.categoryModuleCountText?.(category.module_count) || `${category.module_count} 个模块` }}
               </span>
             </div>
             <div class="CategorySummaryCard-meta">
-              <span>已启用 {{ category.enabled_count }}</span>
-              <span v-if="category.attention_count">需关注 {{ category.attention_count }}</span>
-              <span v-else>依赖健康</span>
+              <span>{{ modulesCopy?.categoryEnabledText?.(category.enabled_count) || `已启用 ${category.enabled_count}` }}</span>
+              <span v-if="category.attention_count">{{ modulesCopy?.categoryAttentionText?.(category.attention_count) || `需关注 ${category.attention_count}` }}</span>
+              <span v-else>{{ modulesCopy?.categoryHealthyText || '依赖健康' }}</span>
             </div>
           </article>
         </div>
@@ -65,8 +65,8 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>模块列表</h3>
-          <p>这里展示内置模块注册结果。当前重点是注册覆盖面、依赖健康和后台接入，不再只是静态清单。</p>
+          <h3>{{ modulesCopy?.moduleListTitle || '模块列表' }}</h3>
+          <p>{{ modulesCopy?.moduleListDescription || '这里展示内置模块注册结果。当前重点是注册覆盖面、依赖健康和后台接入，不再只是静态清单。' }}</p>
         </div>
 
         <AdminToolbar class="ModulesPage-toolbar" align="between">
@@ -75,12 +75,12 @@
             <AdminFilterTabs v-model="statusFilter" :options="statusFilterOptions" />
           </div>
           <label class="ModulesPage-search">
-            <span class="sr-only">搜索模块</span>
+            <span class="sr-only">{{ modulesCopy?.searchLabel || '搜索模块' }}</span>
             <input
               v-model.trim="searchQuery"
               class="FormControl"
               type="search"
-              placeholder="搜索模块名、ID、能力或依赖"
+              :placeholder="modulesCopy?.searchPlaceholder || '搜索模块名、ID、能力或依赖'"
             />
           </label>
         </AdminToolbar>
@@ -92,7 +92,7 @@
                 <div class="ModuleCard-titleRow">
                   <h4>{{ module.name }}</h4>
                   <span class="ModuleBadge" :class="module.is_core ? 'ModuleBadge--core' : 'ModuleBadge--feature'">
-                    {{ module.is_core ? '核心' : module.category_label }}
+                    {{ module.is_core ? (modulesCopy?.coreCategoryLabel || '核心') : module.category_label }}
                   </span>
                   <span
                     class="ModuleStatus"
@@ -110,7 +110,7 @@
                 <p>{{ module.description }}</p>
               </div>
               <span class="ModuleStatus" :class="module.enabled ? 'ModuleStatus--enabled' : 'ModuleStatus--disabled'">
-                {{ module.enabled ? '已启用' : '未启用' }}
+                {{ module.enabled ? (modulesCopy?.enabledStatusLabel || '已启用') : (modulesCopy?.disabledStatusLabel || '未启用') }}
               </span>
             </div>
 
@@ -118,27 +118,27 @@
 
             <div class="ModuleMeta">
               <div class="ModuleMeta-row">
-                <span>模块 ID</span>
+                <span>{{ modulesCopy?.moduleIdLabel || '模块 ID' }}</span>
                 <strong>{{ module.id }}</strong>
               </div>
               <div class="ModuleMeta-row">
-                <span>版本</span>
+                <span>{{ modulesCopy?.versionLabel || '版本' }}</span>
                 <strong>{{ module.version }}</strong>
               </div>
               <div class="ModuleMeta-row">
-                <span>依赖</span>
-                <strong>{{ module.dependencies.length ? module.dependencies.join(', ') : '无' }}</strong>
+                <span>{{ modulesCopy?.dependenciesLabel || '依赖' }}</span>
+                <strong>{{ module.dependencies.length ? module.dependencies.join(', ') : (modulesCopy?.noValueText || '无') }}</strong>
               </div>
               <div class="ModuleMeta-row">
-                <span>启动方式</span>
-                <strong>{{ module.runtime?.boot_mode_label || '静态注册' }}</strong>
+                <span>{{ modulesCopy?.bootModeLabel || '启动方式' }}</span>
+                <strong>{{ module.runtime?.boot_mode_label || modulesCopy?.staticBootModeLabel || '静态注册' }}</strong>
               </div>
               <div class="ModuleMeta-row">
-                <span>设置组</span>
-                <strong>{{ module.settings?.groups?.length ? module.settings.groups.join(', ') : '无' }}</strong>
+                <span>{{ modulesCopy?.settingsGroupLabel || '设置组' }}</span>
+                <strong>{{ module.settings?.groups?.length ? module.settings.groups.join(', ') : (modulesCopy?.noValueText || '无') }}</strong>
               </div>
               <div class="ModuleMeta-row">
-                <span>文档</span>
+                <span>{{ modulesCopy?.documentationLabel || '文档' }}</span>
                 <strong>
                   <a :href="module.documentation_url">{{ module.documentation_url }}</a>
                 </strong>
@@ -147,10 +147,10 @@
 
             <div v-if="module.missing_dependencies.length || module.disabled_dependencies.length" class="ModuleWarnings">
               <p v-if="module.missing_dependencies.length">
-                缺少依赖: <code>{{ module.missing_dependencies.join(', ') }}</code>
+                {{ modulesCopy?.missingDependenciesPrefix || '缺少依赖' }}: <code>{{ module.missing_dependencies.join(', ') }}</code>
               </p>
               <p v-if="module.disabled_dependencies.length">
-                未启用依赖: <code>{{ module.disabled_dependencies.join(', ') }}</code>
+                {{ modulesCopy?.disabledDependenciesPrefix || '未启用依赖' }}: <code>{{ module.disabled_dependencies.join(', ') }}</code>
               </p>
             </div>
             <div v-if="module.health_issues.length" class="ModuleWarnings ModuleWarnings--neutral">
@@ -167,156 +167,156 @@
 
             <div class="ModuleLists">
               <div>
-                <h5>后台入口</h5>
+                <h5>{{ modulesCopy?.adminEntriesTitle || '后台入口' }}</h5>
                 <ul v-if="module.admin_pages.length" class="ModuleList">
                   <li v-for="page in module.admin_pages" :key="page.path">
                     <router-link :to="page.path">{{ page.label }}</router-link>
-                    <small v-if="page.settings_group">设置组: {{ page.settings_group }}</small>
+                    <small v-if="page.settings_group">{{ modulesCopy?.pageSettingsGroupText?.(page.settings_group) || `设置组: ${page.settings_group}` }}</small>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无后台入口</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noAdminEntriesText || '暂无后台入口' }}</p>
               </div>
 
               <div>
-                <h5>权限注册</h5>
+                <h5>{{ modulesCopy?.permissionsTitle || '权限注册' }}</h5>
                 <ul v-if="module.permissions.length" class="ModuleList">
                   <li v-for="permission in module.permissions" :key="permission.code">
                     <code>{{ permission.code }}</code>
                     <span>{{ permission.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无权限声明</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noPermissionsText || '暂无权限声明' }}</p>
               </div>
 
               <div>
-                <h5>设置与运行时</h5>
+                <h5>{{ modulesCopy?.settingsRuntimeTitle || '设置与运行时' }}</h5>
                 <ul v-if="module.settings?.has_settings || module.runtime" class="ModuleList">
                   <li v-if="module.settings?.groups?.length">
-                    <span>设置组</span>
+                    <span>{{ modulesCopy?.settingsGroupItemLabel || '设置组' }}</span>
                     <code>{{ module.settings.groups.join(', ') }}</code>
                   </li>
                   <li v-if="module.settings?.has_settings">
-                    <span>已配置键</span>
+                    <span>{{ modulesCopy?.configuredKeyCountLabel || '已配置键' }}</span>
                     <code>{{ module.settings.configured_key_count }}</code>
                   </li>
                   <li v-if="module.runtime?.migration_label">
-                    <span>迁移状态</span>
+                    <span>{{ modulesCopy?.migrationStatusLabel || '迁移状态' }}</span>
                     <code>{{ module.runtime.migration_label }}</code>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无设置或运行时元数据</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noSettingsRuntimeText || '暂无设置或运行时元数据' }}</p>
               </div>
 
               <div>
-                <h5>通知类型</h5>
+                <h5>{{ modulesCopy?.notificationTypesTitle || '通知类型' }}</h5>
                 <ul v-if="module.notification_types.length" class="ModuleList">
                   <li v-for="notificationType in module.notification_types" :key="notificationType.code">
                     <code>{{ notificationType.code }}</code>
                     <span>{{ notificationType.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无通知类型</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noNotificationTypesText || '暂无通知类型' }}</p>
               </div>
 
               <div>
-                <h5>用户偏好</h5>
+                <h5>{{ modulesCopy?.userPreferencesTitle || '用户偏好' }}</h5>
                 <ul v-if="module.user_preferences.length" class="ModuleList">
                   <li v-for="preference in module.user_preferences" :key="preference.key">
                     <code>{{ preference.key }}</code>
                     <span>{{ preference.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无用户偏好</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noUserPreferencesText || '暂无用户偏好' }}</p>
               </div>
 
               <div>
-                <h5>事件监听</h5>
+                <h5>{{ modulesCopy?.eventListenersTitle || '事件监听' }}</h5>
                 <ul v-if="module.event_listeners.length" class="ModuleList">
                   <li v-for="listener in module.event_listeners" :key="`${listener.event}:${listener.listener}`">
                     <code>{{ listener.event }}</code>
                     <span>{{ listener.listener }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无事件监听</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noEventListenersText || '暂无事件监听' }}</p>
               </div>
 
               <div>
-                <h5>帖子类型</h5>
+                <h5>{{ modulesCopy?.postTypesTitle || '帖子类型' }}</h5>
                 <ul v-if="module.post_types.length" class="ModuleList">
                   <li v-for="postType in module.post_types" :key="postType.code">
                     <code>{{ postType.code }}</code>
                     <span>{{ postType.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无帖子类型</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noPostTypesText || '暂无帖子类型' }}</p>
               </div>
 
               <div>
-                <h5>资源字段</h5>
+                <h5>{{ modulesCopy?.resourceFieldsTitle || '资源字段' }}</h5>
                 <ul v-if="module.resource_fields.length" class="ModuleList">
                   <li
                     v-for="resourceField in module.resource_fields"
                     :key="`${resourceField.resource}:${resourceField.field}`"
                   >
                     <code>{{ resourceField.resource }}.{{ resourceField.field }}</code>
-                    <span>{{ resourceField.description || '已注册资源扩展字段' }}</span>
+                    <span>{{ resourceField.description || modulesCopy?.resourceFieldFallbackText || '已注册资源扩展字段' }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无资源字段</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noResourceFieldsText || '暂无资源字段' }}</p>
               </div>
 
               <div>
-                <h5>搜索过滤器</h5>
+                <h5>{{ modulesCopy?.searchFiltersTitle || '搜索过滤器' }}</h5>
                 <ul v-if="module.search_filters.length" class="ModuleList">
                   <li v-for="searchFilter in module.search_filters" :key="`${searchFilter.target}:${searchFilter.code}`">
                     <code>{{ searchFilter.syntax || searchFilter.code }}</code>
                     <span>{{ searchFilter.description || searchFilter.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无搜索过滤器</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noSearchFiltersText || '暂无搜索过滤器' }}</p>
               </div>
 
               <div>
-                <h5>讨论排序</h5>
+                <h5>{{ modulesCopy?.discussionSortsTitle || '讨论排序' }}</h5>
                 <ul v-if="module.discussion_sorts.length" class="ModuleList">
                   <li v-for="discussionSort in module.discussion_sorts" :key="discussionSort.code">
                     <code>{{ discussionSort.code }}</code>
                     <span>{{ discussionSort.description || discussionSort.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无讨论排序</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noDiscussionSortsText || '暂无讨论排序' }}</p>
               </div>
 
               <div>
-                <h5>讨论列表过滤</h5>
+                <h5>{{ modulesCopy?.discussionListFiltersTitle || '讨论列表过滤' }}</h5>
                 <ul v-if="module.discussion_list_filters.length" class="ModuleList">
                   <li v-for="discussionListFilter in module.discussion_list_filters" :key="discussionListFilter.code">
                     <code>{{ discussionListFilter.code }}</code>
                     <span>{{ discussionListFilter.description || discussionListFilter.label }}</span>
                   </li>
                 </ul>
-                <p v-else class="ModuleEmpty">暂无讨论列表过滤</p>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noDiscussionListFiltersText || '暂无讨论列表过滤' }}</p>
               </div>
             </div>
           </article>
         </div>
-        <AdminStateBlock v-else tone="subtle">当前筛选下没有匹配的模块。</AdminStateBlock>
+        <AdminStateBlock v-else tone="subtle">{{ modulesCopy?.emptyFilteredModulesText || '当前筛选下没有匹配的模块。' }}</AdminStateBlock>
       </section>
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>后台注册入口</h3>
-          <p>按当前筛选结果列出后台页面，便于检查导航是否已经真正从模块注册元数据派生。</p>
+          <h3>{{ modulesCopy?.adminEntriesSectionTitle || '后台注册入口' }}</h3>
+          <p>{{ modulesCopy?.adminEntriesSectionDescription || '按当前筛选结果列出后台页面，便于检查导航是否已经真正从模块注册元数据派生。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>页面</th>
-                <th>路径</th>
-                <th>归属模块</th>
-                <th>导航分组</th>
+                <th>{{ modulesCopy?.adminPageHeader || '页面' }}</th>
+                <th>{{ modulesCopy?.pathHeader || '路径' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.navSectionHeader || '导航分组' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -326,7 +326,7 @@
                 </td>
                 <td><code>{{ page.path }}</code></td>
                 <td>{{ moduleNameMap[page.module_id] || page.module_id }}</td>
-                <td>{{ page.nav_section === 'core' ? '核心' : '功能' }}</td>
+                <td>{{ page.nav_section === 'core' ? (modulesCopy?.coreNavLabel || '核心') : (modulesCopy?.featureNavLabel || '功能') }}</td>
               </tr>
             </tbody>
           </table>
@@ -335,8 +335,8 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>通知类型与事件监听</h3>
-          <p>用于校验模块通知协议和领域事件挂接是否持续沿统一机制注册。</p>
+          <h3>{{ modulesCopy?.notificationEventsSectionTitle || '通知类型与事件监听' }}</h3>
+          <p>{{ modulesCopy?.notificationEventsSectionDescription || '用于校验模块通知协议和领域事件挂接是否持续沿统一机制注册。' }}</p>
         </div>
 
         <div class="ModulesPage-grid ModulesPage-grid--secondary">
@@ -344,9 +344,9 @@
             <div class="ModuleCard-header">
               <div>
                 <div class="ModuleCard-titleRow">
-                  <h4>通知类型</h4>
+                  <h4>{{ modulesCopy?.notificationTypesCardTitle || '通知类型' }}</h4>
                 </div>
-                <p>所有已在注册中心声明的站内通知类型。</p>
+                <p>{{ modulesCopy?.notificationTypesCardDescription || '所有已在注册中心声明的站内通知类型。' }}</p>
               </div>
             </div>
 
@@ -357,16 +357,16 @@
                 <small>{{ moduleNameMap[notificationType.module_id] || notificationType.module_id }}</small>
               </li>
             </ul>
-            <p v-else class="ModuleEmpty">暂无通知类型</p>
+            <p v-else class="ModuleEmpty">{{ modulesCopy?.noNotificationTypesText || '暂无通知类型' }}</p>
           </article>
 
           <article class="ModuleCard">
             <div class="ModuleCard-header">
               <div>
                 <div class="ModuleCard-titleRow">
-                  <h4>事件监听器</h4>
+                  <h4>{{ modulesCopy?.eventListenersCardTitle || '事件监听器' }}</h4>
                 </div>
-                <p>当前模块通过事件总线挂接的监听入口。</p>
+                <p>{{ modulesCopy?.eventListenersCardDescription || '当前模块通过事件总线挂接的监听入口。' }}</p>
               </div>
             </div>
 
@@ -380,26 +380,26 @@
                 <small>{{ moduleNameMap[listener.module_id] || listener.module_id }}</small>
               </li>
             </ul>
-            <p v-else class="ModuleEmpty">暂无事件监听器</p>
+            <p v-else class="ModuleEmpty">{{ modulesCopy?.noEventListenersCardText || '暂无事件监听器' }}</p>
           </article>
         </div>
       </section>
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>用户偏好注册</h3>
-          <p>这里检查模块是否通过统一注册协议声明通知和个性化偏好，而不是散落在页面局部状态中。</p>
+          <h3>{{ modulesCopy?.userPreferencesSectionTitle || '用户偏好注册' }}</h3>
+          <p>{{ modulesCopy?.userPreferencesSectionDescription || '这里检查模块是否通过统一注册协议声明通知和个性化偏好，而不是散落在页面局部状态中。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>偏好键</th>
-                <th>归属模块</th>
-                <th>分类</th>
-                <th>默认值</th>
-                <th>说明</th>
+                <th>{{ modulesCopy?.preferenceKeyHeader || '偏好键' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.preferenceCategoryHeader || '分类' }}</th>
+                <th>{{ modulesCopy?.preferenceDefaultHeader || '默认值' }}</th>
+                <th>{{ modulesCopy?.descriptionHeader || '说明' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -407,7 +407,7 @@
                 <td><code>{{ preference.key }}</code></td>
                 <td>{{ moduleNameMap[preference.module_id] || preference.module_id }}</td>
                 <td><code>{{ preference.category }}</code></td>
-                <td>{{ preference.default_value ? '开启' : '关闭' }}</td>
+                <td>{{ preference.default_value ? (modulesCopy?.enabledToggleText || '开启') : (modulesCopy?.disabledToggleText || '关闭') }}</td>
                 <td>{{ preference.description || preference.label }}</td>
               </tr>
             </tbody>
@@ -417,18 +417,18 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>帖子类型注册</h3>
-          <p>用于承接系统事件帖、状态变更帖和普通回复的统一协议。</p>
+          <h3>{{ modulesCopy?.postTypesSectionTitle || '帖子类型注册' }}</h3>
+          <p>{{ modulesCopy?.postTypesSectionDescription || '用于承接系统事件帖、状态变更帖和普通回复的统一协议。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>类型</th>
-                <th>归属模块</th>
-                <th>能力</th>
-                <th>说明</th>
+                <th>{{ modulesCopy?.postTypeCodeHeader || '类型' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.capabilitiesHeader || '能力' }}</th>
+                <th>{{ modulesCopy?.descriptionHeader || '说明' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -445,18 +445,18 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>资源字段注册</h3>
-          <p>汇总 Discussion、Post、Tag、Search 等资源上的扩展字段，作为统一 Resource 协议快照。</p>
+          <h3>{{ modulesCopy?.resourceFieldsSectionTitle || '资源字段注册' }}</h3>
+          <p>{{ modulesCopy?.resourceFieldsSectionDescription || '汇总 Discussion、Post、Tag、Search 等资源上的扩展字段，作为统一 Resource 协议快照。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>资源</th>
-                <th>字段</th>
-                <th>归属模块</th>
-                <th>说明</th>
+                <th>{{ modulesCopy?.resourceHeader || '资源' }}</th>
+                <th>{{ modulesCopy?.fieldHeader || '字段' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.descriptionHeader || '说明' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -467,7 +467,7 @@
                 <td><code>{{ resourceField.resource }}</code></td>
                 <td><code>{{ resourceField.field }}</code></td>
                 <td>{{ moduleNameMap[resourceField.module_id] || resourceField.module_id }}</td>
-                <td>{{ resourceField.description || '已注册资源扩展字段' }}</td>
+                <td>{{ resourceField.description || modulesCopy?.resourceFieldFallbackText || '已注册资源扩展字段' }}</td>
               </tr>
             </tbody>
           </table>
@@ -476,18 +476,18 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>搜索过滤器注册</h3>
-          <p>列出模块通过注册中心声明的搜索过滤语法，帮助检查搜索扩展点的覆盖度。</p>
+          <h3>{{ modulesCopy?.searchFiltersSectionTitle || '搜索过滤器注册' }}</h3>
+          <p>{{ modulesCopy?.searchFiltersSectionDescription || '列出模块通过注册中心声明的搜索过滤语法，帮助检查搜索扩展点的覆盖度。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>语法</th>
-                <th>目标资源</th>
-                <th>归属模块</th>
-                <th>说明</th>
+                <th>{{ modulesCopy?.syntaxHeader || '语法' }}</th>
+                <th>{{ modulesCopy?.targetHeader || '目标资源' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.descriptionHeader || '说明' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -507,19 +507,19 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>讨论排序注册</h3>
-          <p>列出模块通过注册中心声明的讨论列表排序能力，便于检查论坛首页和标签页的扩展面。</p>
+          <h3>{{ modulesCopy?.discussionSortsSectionTitle || '讨论排序注册' }}</h3>
+          <p>{{ modulesCopy?.discussionSortsSectionDescription || '列出模块通过注册中心声明的讨论列表排序能力，便于检查论坛首页和标签页的扩展面。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>排序码</th>
-                <th>名称</th>
-                <th>归属模块</th>
-                <th>默认</th>
-                <th>说明</th>
+                <th>{{ modulesCopy?.sortCodeHeader || '排序码' }}</th>
+                <th>{{ modulesCopy?.nameHeader || '名称' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.defaultHeader || '默认' }}</th>
+                <th>{{ modulesCopy?.descriptionHeader || '说明' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -530,7 +530,7 @@
                 <td><code>{{ discussionSort.code }}</code></td>
                 <td>{{ discussionSort.label }}</td>
                 <td>{{ moduleNameMap[discussionSort.module_id] || discussionSort.module_id }}</td>
-                <td>{{ discussionSort.is_default ? '是' : '否' }}</td>
+                <td>{{ discussionSort.is_default ? (modulesCopy?.yesText || '是') : (modulesCopy?.noText || '否') }}</td>
                 <td>{{ discussionSort.description || discussionSort.label }}</td>
               </tr>
             </tbody>
@@ -540,20 +540,20 @@
 
       <section class="ModulesPage-section">
         <div class="ModulesPage-sectionHeader">
-          <h3>讨论列表过滤注册</h3>
-          <p>列出模块通过注册中心声明的讨论列表过滤能力，帮助检查首页、关注页和用户列表是否正在共用统一协议。</p>
+          <h3>{{ modulesCopy?.discussionListFiltersSectionTitle || '讨论列表过滤注册' }}</h3>
+          <p>{{ modulesCopy?.discussionListFiltersSectionDescription || '列出模块通过注册中心声明的讨论列表过滤能力，帮助检查首页、关注页和用户列表是否正在共用统一协议。' }}</p>
         </div>
 
         <div class="AdminTableWrap">
           <table class="AdminTable">
             <thead>
               <tr>
-                <th>过滤码</th>
-                <th>名称</th>
-                <th>归属模块</th>
-                <th>需登录</th>
-                <th>默认</th>
-                <th>说明</th>
+                <th>{{ modulesCopy?.filterCodeHeader || '过滤码' }}</th>
+                <th>{{ modulesCopy?.nameHeader || '名称' }}</th>
+                <th>{{ modulesCopy?.moduleHeader || '归属模块' }}</th>
+                <th>{{ modulesCopy?.requiresAuthHeader || '需登录' }}</th>
+                <th>{{ modulesCopy?.defaultHeader || '默认' }}</th>
+                <th>{{ modulesCopy?.descriptionHeader || '说明' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -564,8 +564,8 @@
                 <td><code>{{ discussionListFilter.code }}</code></td>
                 <td>{{ discussionListFilter.label }}</td>
                 <td>{{ moduleNameMap[discussionListFilter.module_id] || discussionListFilter.module_id }}</td>
-                <td>{{ discussionListFilter.requires_authenticated_user ? '是' : '否' }}</td>
-                <td>{{ discussionListFilter.is_default ? '是' : '否' }}</td>
+                <td>{{ discussionListFilter.requires_authenticated_user ? (modulesCopy?.yesText || '是') : (modulesCopy?.noText || '否') }}</td>
+                <td>{{ discussionListFilter.is_default ? (modulesCopy?.yesText || '是') : (modulesCopy?.noText || '否') }}</td>
                 <td>{{ discussionListFilter.description || discussionListFilter.label }}</td>
               </tr>
             </tbody>
@@ -584,6 +584,11 @@ import AdminSummaryGrid from '../components/AdminSummaryGrid.vue'
 import AdminToolbar from '../components/AdminToolbar.vue'
 import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import api from '../../api'
+import {
+  getAdminModulesPageActionMeta,
+  getAdminModulesPageConfig,
+  getAdminModulesPageCopy,
+} from '../registry'
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -603,24 +608,24 @@ const discussionListFilters = ref([])
 const categoryFilter = ref('all')
 const statusFilter = ref('all')
 const searchQuery = ref('')
+const modulesCopy = computed(() => getAdminModulesPageCopy())
+const modulesConfig = computed(() => getAdminModulesPageConfig())
+const modulesActionMeta = computed(() => getAdminModulesPageActionMeta())
 
 const categoryFilterOptions = computed(() => {
-  const base = [{ value: 'all', label: '全部分类', icon: 'fas fa-layer-group' }]
+  const base = [modulesConfig.value?.categoryFilterBase || { value: 'all', label: '全部分类', icon: 'fas fa-layer-group' }]
   return base.concat(
     categorySummaries.value.map(category => ({
       value: category.id,
       label: category.label,
-      icon: category.id === 'core' ? 'fas fa-shield-alt' : 'fas fa-puzzle-piece',
+      icon: category.id === 'core'
+        ? (modulesConfig.value?.coreCategoryIcon || 'fas fa-shield-alt')
+        : (modulesConfig.value?.featureCategoryIcon || 'fas fa-puzzle-piece'),
     }))
   )
 })
 
-const statusFilterOptions = [
-  { value: 'all', label: '全部状态', icon: 'fas fa-border-all' },
-  { value: 'healthy', label: '依赖正常', icon: 'fas fa-check-circle' },
-  { value: 'attention', label: '需关注', icon: 'fas fa-exclamation-triangle' },
-  { value: 'enabled', label: '仅已启用', icon: 'fas fa-toggle-on' },
-]
+const statusFilterOptions = computed(() => modulesConfig.value?.statusFilterOptions || [])
 
 const filteredModules = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase()
@@ -672,29 +677,32 @@ const filteredSearchFilters = computed(() => searchFilters.value.filter(item => 
 const filteredDiscussionSorts = computed(() => discussionSorts.value.filter(item => filteredModuleIds.value.has(item.module_id)))
 const filteredDiscussionListFilters = computed(() => discussionListFilters.value.filter(item => filteredModuleIds.value.has(item.module_id)))
 
-const summaryItems = computed(() => [
-  { label: '模块总数', value: String(summary.value.module_count ?? modules.value.length) },
-  { label: '核心模块', value: String(summary.value.core_count ?? modules.value.filter(item => item.is_core).length) },
-  { label: '已启用', value: String(summary.value.enabled_count ?? modules.value.filter(item => item.enabled).length) },
-  { label: '依赖关注', value: String(summary.value.dependency_issue_count ?? dependencyAttention.value.length) },
-  { label: '权限声明', value: String(summary.value.permission_count ?? 0) },
-  { label: '后台入口', value: String(summary.value.admin_page_count ?? adminPages.value.length) },
-  { label: '通知类型', value: String(summary.value.notification_type_count ?? notificationTypes.value.length) },
-  { label: '用户偏好', value: String(summary.value.user_preference_count ?? userPreferences.value.length) },
-  { label: '事件监听', value: String(summary.value.event_listener_count ?? eventListeners.value.length) },
-  { label: '帖子类型', value: String(summary.value.post_type_count ?? postTypes.value.length) },
-  { label: '资源字段', value: String(summary.value.resource_field_count ?? resourceFields.value.length) },
-  { label: '搜索过滤', value: String(summary.value.search_filter_count ?? searchFilters.value.length) },
-  { label: '讨论排序', value: String(summary.value.discussion_sort_count ?? discussionSorts.value.length) },
-  { label: '列表过滤', value: String(summary.value.discussion_list_filter_count ?? discussionListFilters.value.length) },
-  { label: '设置组', value: String(summary.value.settings_group_count ?? 0) },
-  { label: '健康关注', value: String(summary.value.health_attention_count ?? 0) },
-])
+const summaryItems = computed(() => {
+  const labels = modulesConfig.value?.summaryLabels || {}
+  return [
+    { label: labels.module_count || '模块总数', value: String(summary.value.module_count ?? modules.value.length) },
+    { label: labels.core_count || '核心模块', value: String(summary.value.core_count ?? modules.value.filter(item => item.is_core).length) },
+    { label: labels.enabled_count || '已启用', value: String(summary.value.enabled_count ?? modules.value.filter(item => item.enabled).length) },
+    { label: labels.dependency_issue_count || '依赖关注', value: String(summary.value.dependency_issue_count ?? dependencyAttention.value.length) },
+    { label: labels.permission_count || '权限声明', value: String(summary.value.permission_count ?? 0) },
+    { label: labels.admin_page_count || '后台入口', value: String(summary.value.admin_page_count ?? adminPages.value.length) },
+    { label: labels.notification_type_count || '通知类型', value: String(summary.value.notification_type_count ?? notificationTypes.value.length) },
+    { label: labels.user_preference_count || '用户偏好', value: String(summary.value.user_preference_count ?? userPreferences.value.length) },
+    { label: labels.event_listener_count || '事件监听', value: String(summary.value.event_listener_count ?? eventListeners.value.length) },
+    { label: labels.post_type_count || '帖子类型', value: String(summary.value.post_type_count ?? postTypes.value.length) },
+    { label: labels.resource_field_count || '资源字段', value: String(summary.value.resource_field_count ?? resourceFields.value.length) },
+    { label: labels.search_filter_count || '搜索过滤', value: String(summary.value.search_filter_count ?? searchFilters.value.length) },
+    { label: labels.discussion_sort_count || '讨论排序', value: String(summary.value.discussion_sort_count ?? discussionSorts.value.length) },
+    { label: labels.discussion_list_filter_count || '列表过滤', value: String(summary.value.discussion_list_filter_count ?? discussionListFilters.value.length) },
+    { label: labels.settings_group_count || '设置组', value: String(summary.value.settings_group_count ?? 0) },
+    { label: labels.health_attention_count || '健康关注', value: String(summary.value.health_attention_count ?? 0) },
+  ]
+})
 
 const moduleNameMap = computed(() => Object.fromEntries(modules.value.map(item => [item.id, item.name])))
 
 function resolveCategoryLabel(category) {
-  if (category === 'core') return '核心'
+  if (category === 'core') return modulesCopy.value?.coreCategoryLabel || '核心'
   if (category === 'infrastructure') return '基础设施'
   return '功能模块'
 }
@@ -754,7 +762,7 @@ async function loadModules() {
     discussionListFilters.value = data.discussion_list_filters || []
   } catch (error) {
     console.error('加载模块信息失败:', error)
-    errorMessage.value = error.response?.data?.error || '加载模块信息失败，请稍后重试'
+    errorMessage.value = error.response?.data?.error || modulesActionMeta.value?.loadErrorText || '加载模块信息失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -762,30 +770,31 @@ async function loadModules() {
 
 function buildModuleSummary(module) {
   const counts = module.registration_counts || {}
+  const labels = modulesConfig.value?.moduleSummaryLabels || {}
   return [
-    { label: '权限数', value: String(counts.permissions ?? module.permissions?.length ?? 0) },
-    { label: '后台页数', value: String(counts.admin_pages ?? module.admin_pages?.length ?? 0) },
-    { label: '依赖数', value: String(module.dependencies?.length || 0) },
-    { label: '能力项', value: String(module.capabilities?.length || 0) },
-    { label: '通知数', value: String(counts.notification_types ?? module.notification_types?.length ?? 0) },
-    { label: '偏好项', value: String(counts.user_preferences ?? module.user_preferences?.length ?? 0) },
-    { label: '监听器', value: String(counts.event_listeners ?? module.event_listeners?.length ?? 0) },
-    { label: '帖子类型', value: String(counts.post_types ?? module.post_types?.length ?? 0) },
-    { label: '资源字段', value: String(counts.resource_fields ?? module.resource_fields?.length ?? 0) },
-    { label: '搜索过滤', value: String(counts.search_filters ?? module.search_filters?.length ?? 0) },
-    { label: '讨论排序', value: String(counts.discussion_sorts ?? module.discussion_sorts?.length ?? 0) },
-    { label: '列表过滤', value: String(counts.discussion_list_filters ?? module.discussion_list_filters?.length ?? 0) },
+    { label: labels.permissions || '权限数', value: String(counts.permissions ?? module.permissions?.length ?? 0) },
+    { label: labels.admin_pages || '后台页数', value: String(counts.admin_pages ?? module.admin_pages?.length ?? 0) },
+    { label: labels.dependencies || '依赖数', value: String(module.dependencies?.length || 0) },
+    { label: labels.capabilities || '能力项', value: String(module.capabilities?.length || 0) },
+    { label: labels.notification_types || '通知数', value: String(counts.notification_types ?? module.notification_types?.length ?? 0) },
+    { label: labels.user_preferences || '偏好项', value: String(counts.user_preferences ?? module.user_preferences?.length ?? 0) },
+    { label: labels.event_listeners || '监听器', value: String(counts.event_listeners ?? module.event_listeners?.length ?? 0) },
+    { label: labels.post_types || '帖子类型', value: String(counts.post_types ?? module.post_types?.length ?? 0) },
+    { label: labels.resource_fields || '资源字段', value: String(counts.resource_fields ?? module.resource_fields?.length ?? 0) },
+    { label: labels.search_filters || '搜索过滤', value: String(counts.search_filters ?? module.search_filters?.length ?? 0) },
+    { label: labels.discussion_sorts || '讨论排序', value: String(counts.discussion_sorts ?? module.discussion_sorts?.length ?? 0) },
+    { label: labels.discussion_list_filters || '列表过滤', value: String(counts.discussion_list_filters ?? module.discussion_list_filters?.length ?? 0) },
   ]
 }
 
 function formatPostTypeCapabilities(postType) {
   const labels = []
-  if (postType.is_default) labels.push('默认')
-  if (postType.is_stream_visible) labels.push('帖流可见')
-  if (postType.counts_toward_discussion) labels.push('计入讨论')
-  if (postType.counts_toward_user) labels.push('计入用户')
-  if (postType.searchable) labels.push('可搜索')
-  return labels.join(' / ') || '无'
+  if (postType.is_default) labels.push(modulesCopy.value?.defaultCapabilityLabel || '默认')
+  if (postType.is_stream_visible) labels.push(modulesCopy.value?.streamVisibleCapabilityLabel || '帖流可见')
+  if (postType.counts_toward_discussion) labels.push(modulesCopy.value?.countsDiscussionCapabilityLabel || '计入讨论')
+  if (postType.counts_toward_user) labels.push(modulesCopy.value?.countsUserCapabilityLabel || '计入用户')
+  if (postType.searchable) labels.push(modulesCopy.value?.searchableCapabilityLabel || '可搜索')
+  return labels.join(' / ') || modulesCopy.value?.noValueText || '无'
 }
 </script>
 

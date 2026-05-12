@@ -21,6 +21,9 @@ const adminDashboardQueueMetrics = []
 const adminDashboardCopies = []
 const adminDashboardActionsMeta = []
 const adminDashboardActions = []
+const adminModulesPageCopies = []
+const adminModulesPageConfig = []
+const adminModulesPageActionMeta = []
 const adminAuditLogsPageCopies = []
 const adminAuditLogsPageConfig = []
 const adminApprovalQueuePageCopies = []
@@ -299,6 +302,54 @@ export function getAdminDashboardAction(context = {}, key = '') {
 
   return [...adminDashboardActions]
     .filter(item => item.key === key)
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminModulesPageCopy(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminModulesPageCopies, normalizedItem)
+}
+
+export function getAdminModulesPageCopy(context = {}) {
+  return [...adminModulesPageCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminModulesPageConfig(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminModulesPageConfig, normalizedItem)
+}
+
+export function getAdminModulesPageConfig(context = {}) {
+  return [...adminModulesPageConfig]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminModulesPageActionMeta(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminModulesPageActionMeta, normalizedItem)
+}
+
+export function getAdminModulesPageActionMeta(context = {}) {
+  return [...adminModulesPageActionMeta]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -1013,6 +1064,176 @@ registerAdminDashboardAction({
         setPending(false)
       }
     },
+  }),
+})
+
+registerAdminModulesPageCopy({
+  key: 'core-modules-page-copy',
+  order: 10,
+  resolve: () => ({
+    pageTitle: '模块中心',
+    pageDescription: '围绕注册中心查看模块边界、依赖健康、扩展注入面与后台入口。',
+    loadingText: '加载模块信息中...',
+    dependencyAttentionTitle: '依赖关注项',
+    dependencyAttentionDescription: '模块依赖状态会直接影响后续扩展启用与注册结果，这里优先暴露需要处理的项。',
+    missingDependenciesPrefix: '缺少依赖',
+    disabledDependenciesPrefix: '未启用依赖',
+    categorySummaryTitle: '分类概览',
+    categorySummaryDescription: '按模块类别查看当前注册规模，优先识别哪些能力已经模块化，哪些区域仍需继续收口。',
+    categoryModuleCountText: count => `${count} 个模块`,
+    categoryEnabledText: count => `已启用 ${count}`,
+    categoryAttentionText: count => `需关注 ${count}`,
+    categoryHealthyText: '依赖健康',
+    moduleListTitle: '模块列表',
+    moduleListDescription: '这里展示内置模块注册结果。当前重点是注册覆盖面、依赖健康和后台接入，不再只是静态清单。',
+    searchLabel: '搜索模块',
+    searchPlaceholder: '搜索模块名、ID、能力或依赖',
+    coreCategoryLabel: '核心',
+    enabledStatusLabel: '已启用',
+    disabledStatusLabel: '未启用',
+    moduleIdLabel: '模块 ID',
+    versionLabel: '版本',
+    dependenciesLabel: '依赖',
+    bootModeLabel: '启动方式',
+    settingsGroupLabel: '设置组',
+    documentationLabel: '文档',
+    noValueText: '无',
+    staticBootModeLabel: '静态注册',
+    adminEntriesTitle: '后台入口',
+    permissionsTitle: '权限注册',
+    settingsRuntimeTitle: '设置与运行时',
+    notificationTypesTitle: '通知类型',
+    userPreferencesTitle: '用户偏好',
+    eventListenersTitle: '事件监听',
+    postTypesTitle: '帖子类型',
+    resourceFieldsTitle: '资源字段',
+    searchFiltersTitle: '搜索过滤器',
+    discussionSortsTitle: '讨论排序',
+    discussionListFiltersTitle: '讨论列表过滤',
+    settingsGroupItemLabel: '设置组',
+    configuredKeyCountLabel: '已配置键',
+    migrationStatusLabel: '迁移状态',
+    pageSettingsGroupText: group => `设置组: ${group}`,
+    noAdminEntriesText: '暂无后台入口',
+    noPermissionsText: '暂无权限声明',
+    noSettingsRuntimeText: '暂无设置或运行时元数据',
+    noNotificationTypesText: '暂无通知类型',
+    noUserPreferencesText: '暂无用户偏好',
+    noEventListenersText: '暂无事件监听',
+    noPostTypesText: '暂无帖子类型',
+    noResourceFieldsText: '暂无资源字段',
+    noSearchFiltersText: '暂无搜索过滤器',
+    noDiscussionSortsText: '暂无讨论排序',
+    noDiscussionListFiltersText: '暂无讨论列表过滤',
+    emptyFilteredModulesText: '当前筛选下没有匹配的模块。',
+    adminEntriesSectionTitle: '后台注册入口',
+    adminEntriesSectionDescription: '按当前筛选结果列出后台页面，便于检查导航是否已经真正从模块注册元数据派生。',
+    notificationEventsSectionTitle: '通知类型与事件监听',
+    notificationEventsSectionDescription: '用于校验模块通知协议和领域事件挂接是否持续沿统一机制注册。',
+    notificationTypesCardTitle: '通知类型',
+    notificationTypesCardDescription: '所有已在注册中心声明的站内通知类型。',
+    eventListenersCardTitle: '事件监听器',
+    eventListenersCardDescription: '当前模块通过事件总线挂接的监听入口。',
+    noEventListenersCardText: '暂无事件监听器',
+    userPreferencesSectionTitle: '用户偏好注册',
+    userPreferencesSectionDescription: '这里检查模块是否通过统一注册协议声明通知和个性化偏好，而不是散落在页面局部状态中。',
+    postTypesSectionTitle: '帖子类型注册',
+    postTypesSectionDescription: '用于承接系统事件帖、状态变更帖和普通回复的统一协议。',
+    resourceFieldsSectionTitle: '资源字段注册',
+    resourceFieldsSectionDescription: '汇总 Discussion、Post、Tag、Search 等资源上的扩展字段，作为统一 Resource 协议快照。',
+    searchFiltersSectionTitle: '搜索过滤器注册',
+    searchFiltersSectionDescription: '列出模块通过注册中心声明的搜索过滤语法，帮助检查搜索扩展点的覆盖度。',
+    discussionSortsSectionTitle: '讨论排序注册',
+    discussionSortsSectionDescription: '列出模块通过注册中心声明的讨论列表排序能力，便于检查论坛首页和标签页的扩展面。',
+    discussionListFiltersSectionTitle: '讨论列表过滤注册',
+    discussionListFiltersSectionDescription: '列出模块通过注册中心声明的讨论列表过滤能力，帮助检查首页、关注页和用户列表是否正在共用统一协议。',
+    adminPageHeader: '页面',
+    pathHeader: '路径',
+    moduleHeader: '归属模块',
+    navSectionHeader: '导航分组',
+    coreNavLabel: '核心',
+    featureNavLabel: '功能',
+    preferenceKeyHeader: '偏好键',
+    preferenceCategoryHeader: '分类',
+    preferenceDefaultHeader: '默认值',
+    descriptionHeader: '说明',
+    postTypeCodeHeader: '类型',
+    capabilitiesHeader: '能力',
+    resourceHeader: '资源',
+    fieldHeader: '字段',
+    syntaxHeader: '语法',
+    targetHeader: '目标资源',
+    sortCodeHeader: '排序码',
+    nameHeader: '名称',
+    defaultHeader: '默认',
+    filterCodeHeader: '过滤码',
+    requiresAuthHeader: '需登录',
+    enabledToggleText: '开启',
+    disabledToggleText: '关闭',
+    yesText: '是',
+    noText: '否',
+    resourceFieldFallbackText: '已注册资源扩展字段',
+    defaultCapabilityLabel: '默认',
+    streamVisibleCapabilityLabel: '帖流可见',
+    countsDiscussionCapabilityLabel: '计入讨论',
+    countsUserCapabilityLabel: '计入用户',
+    searchableCapabilityLabel: '可搜索',
+  }),
+})
+
+registerAdminModulesPageConfig({
+  key: 'core-modules-page-config',
+  order: 10,
+  resolve: () => ({
+    categoryFilterBase: { value: 'all', label: '全部分类', icon: 'fas fa-layer-group' },
+    coreCategoryIcon: 'fas fa-shield-alt',
+    featureCategoryIcon: 'fas fa-puzzle-piece',
+    statusFilterOptions: [
+      { value: 'all', label: '全部状态', icon: 'fas fa-border-all' },
+      { value: 'healthy', label: '依赖正常', icon: 'fas fa-check-circle' },
+      { value: 'attention', label: '需关注', icon: 'fas fa-exclamation-triangle' },
+      { value: 'enabled', label: '仅已启用', icon: 'fas fa-toggle-on' },
+    ],
+    summaryLabels: {
+      module_count: '模块总数',
+      core_count: '核心模块',
+      enabled_count: '已启用',
+      dependency_issue_count: '依赖关注',
+      permission_count: '权限声明',
+      admin_page_count: '后台入口',
+      notification_type_count: '通知类型',
+      user_preference_count: '用户偏好',
+      event_listener_count: '事件监听',
+      post_type_count: '帖子类型',
+      resource_field_count: '资源字段',
+      search_filter_count: '搜索过滤',
+      discussion_sort_count: '讨论排序',
+      discussion_list_filter_count: '列表过滤',
+      settings_group_count: '设置组',
+      health_attention_count: '健康关注',
+    },
+    moduleSummaryLabels: {
+      permissions: '权限数',
+      admin_pages: '后台页数',
+      dependencies: '依赖数',
+      capabilities: '能力项',
+      notification_types: '通知数',
+      user_preferences: '偏好项',
+      event_listeners: '监听器',
+      post_types: '帖子类型',
+      resource_fields: '资源字段',
+      search_filters: '搜索过滤',
+      discussion_sorts: '讨论排序',
+      discussion_list_filters: '列表过滤',
+    },
+  }),
+})
+
+registerAdminModulesPageActionMeta({
+  key: 'core-modules-page-actions-meta',
+  order: 10,
+  resolve: () => ({
+    loadErrorText: '加载模块信息失败，请稍后重试',
   }),
 })
 
