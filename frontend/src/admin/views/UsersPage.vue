@@ -62,7 +62,7 @@
                       v-for="group in getUserGroupBadges(user)"
                       :key="`${user.id}-${group.id}-${group.name}`"
                       class="UserGroupIcon"
-                      :style="{ backgroundColor: group.color || '#7f8c8d' }"
+                      :style="{ backgroundColor: group.color || usersConfig?.groupBadgeFallbackColor || '#7f8c8d' }"
                       :title="group.name"
                     >
                       <i v-if="group.icon" :class="group.icon"></i>
@@ -117,7 +117,7 @@
                     v-for="group in getUserGroupBadges(user)"
                     :key="`${user.id}-${group.id}-${group.name}-mobile`"
                     class="UserGroupIcon"
-                    :style="{ backgroundColor: group.color || '#7f8c8d' }"
+                    :style="{ backgroundColor: group.color || usersConfig?.groupBadgeFallbackColor || '#7f8c8d' }"
                     :title="group.name"
                   >
                     <i v-if="group.icon" :class="group.icon"></i>
@@ -327,7 +327,11 @@ import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useAuthStore } from '../../stores/auth'
 import { useModalStore } from '../../stores/modal'
-import { getAdminUsersPageActionMeta, getAdminUsersPageCopy } from '../registry'
+import {
+  getAdminUsersPageActionMeta,
+  getAdminUsersPageConfig,
+  getAdminUsersPageCopy,
+} from '../registry'
 
 const authStore = useAuthStore()
 const modalStore = useModalStore()
@@ -352,9 +356,11 @@ let searchTimeout = null
 const formData = ref(getEmptyForm())
 const currentAdminId = computed(() => authStore.user?.id ?? null)
 const usersCopy = computed(() => getAdminUsersPageCopy())
+const usersConfig = computed(() => getAdminUsersPageConfig())
 const usersActionMeta = computed(() => getAdminUsersPageActionMeta())
 
 onMounted(() => {
+  limit.value = usersConfig.value?.paginationLimit || 20
   loadGroups()
   loadUsers()
 })
@@ -385,7 +391,7 @@ function handleSearch() {
   searchTimeout = setTimeout(() => {
     page.value = 1
     loadUsers()
-  }, 500)
+  }, usersConfig.value?.searchDebounceMs || 500)
 }
 
 function changePage(newPage) {
@@ -398,6 +404,11 @@ async function loadGroups() {
     availableGroups.value = await api.get('/admin/groups')
   } catch (error) {
     console.error('加载用户组失败:', error)
+    await modalStore.alert({
+      title: usersActionMeta.value?.loadGroupsFailedTitle || '加载用户组失败',
+      message: error.response?.data?.error || error.message || usersActionMeta.value?.loadGroupsFailedMessage || '未知错误',
+      tone: 'danger'
+    })
   }
 }
 
@@ -625,13 +636,13 @@ function getUserGroupBadges(user) {
 }
 
 function getGroupFallbackLabel(group) {
-  return (group?.name || '?').slice(0, 1).toUpperCase()
+  return (group?.name || usersConfig.value?.groupFallbackUnknownLabel || '?').slice(0, 1).toUpperCase()
 }
 
 function formatDate(dateString) {
   if (!dateString) return ''
   const date = new Date(dateString)
-  return date.toLocaleDateString('zh-CN')
+  return date.toLocaleDateString(usersConfig.value?.dateLocale || 'zh-CN')
 }
 
 function formatDateTimeLocal(dateString) {

@@ -48,6 +48,7 @@ const adminPermissionsPageCopies = []
 const adminPermissionsPageConfig = []
 const adminPermissionsPageActionMeta = []
 const adminUsersPageCopies = []
+const adminUsersPageConfig = []
 const adminUsersPageActionMeta = []
 const adminTagsPageConfig = []
 const adminTagsPageCopies = []
@@ -746,6 +747,22 @@ export function registerAdminUsersPageCopy(item) {
 
 export function getAdminUsersPageCopy(context = {}) {
   return [...adminUsersPageCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminUsersPageConfig(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminUsersPageConfig, normalizedItem)
+}
+
+export function getAdminUsersPageConfig(context = {}) {
+  return [...adminUsersPageConfig]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -2449,11 +2466,25 @@ registerAdminUsersPageCopy({
   }),
 })
 
+registerAdminUsersPageConfig({
+  key: 'core-users-page-config',
+  order: 10,
+  resolve: () => ({
+    searchDebounceMs: 500,
+    paginationLimit: 20,
+    dateLocale: 'zh-CN',
+    groupBadgeFallbackColor: '#7f8c8d',
+    groupFallbackUnknownLabel: '?',
+  }),
+})
+
 registerAdminUsersPageActionMeta({
   key: 'core-users-page-actions-meta',
   order: 10,
   resolve: () => ({
     loadUsersFailedMessage: '加载用户失败，请稍后重试',
+    loadGroupsFailedTitle: '加载用户组失败',
+    loadGroupsFailedMessage: '未知错误',
     loadDetailFailedTitle: '加载用户详情失败',
     loadDetailFailedMessage: '未知错误',
     saveRiskConfirmTitle: '保存用户变更',
