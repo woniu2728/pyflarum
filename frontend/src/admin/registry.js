@@ -19,6 +19,7 @@ const adminDashboardStatusItems = []
 const adminDashboardAlerts = []
 const adminDashboardQueueMetrics = []
 const adminDashboardCopies = []
+const adminDashboardConfig = []
 const adminDashboardActionsMeta = []
 const adminDashboardActions = []
 const adminModulesPageCopies = []
@@ -280,6 +281,22 @@ export function registerAdminDashboardCopy(item) {
 
 export function getAdminDashboardCopy(context = {}) {
   return [...adminDashboardCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminDashboardConfig(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminDashboardConfig, normalizedItem)
+}
+
+export function getAdminDashboardConfig(context = {}) {
+  return [...adminDashboardConfig]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -995,9 +1012,9 @@ registerAdminDashboardStat({
   key: 'users',
   order: 10,
   icon: 'fas fa-users',
-  label: '用户总数',
   moduleId: 'users',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.usersStatLabel || '用户总数',
     value: stats?.totalUsers || 0,
   }),
 })
@@ -1006,9 +1023,9 @@ registerAdminDashboardStat({
   key: 'discussions',
   order: 20,
   icon: 'fas fa-comments',
-  label: '讨论总数',
   moduleId: 'core',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.discussionsStatLabel || '讨论总数',
     value: stats?.totalDiscussions || 0,
   }),
 })
@@ -1017,9 +1034,9 @@ registerAdminDashboardStat({
   key: 'posts',
   order: 30,
   icon: 'fas fa-comment',
-  label: '帖子总数',
   moduleId: 'core',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.postsStatLabel || '帖子总数',
     value: stats?.totalPosts || 0,
   }),
 })
@@ -1029,9 +1046,9 @@ registerAdminDashboardStat({
   order: 40,
   icon: 'fas fa-user-check',
   iconClass: 'StatsWidget-icon--info',
-  label: '待审核内容',
   moduleId: 'approval',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.pendingApprovalsStatLabel || '待审核内容',
     value: stats?.pendingApprovals || 0,
   }),
 })
@@ -1041,9 +1058,9 @@ registerAdminDashboardStat({
   order: 50,
   icon: 'fas fa-flag',
   iconClass: 'StatsWidget-icon--warning',
-  label: '待处理举报',
   moduleId: 'flags',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.openFlagsStatLabel || '待处理举报',
     value: stats?.openFlags || 0,
   }),
 })
@@ -1051,18 +1068,18 @@ registerAdminDashboardStat({
 registerAdminDashboardStatusSummary({
   key: 'runtime',
   order: 10,
-  resolve: ({ stats }) => ({
-    label: '运行时',
-    value: stats?.runtimeName || 'Python',
-    meta: `Python ${stats?.pythonVersion || '-'}`,
+  resolve: ({ stats, copy }) => ({
+    label: copy?.runtimeSummaryLabel || '运行时',
+    value: stats?.runtimeName || copy?.runtimeNameFallback || 'Python',
+    meta: `${copy?.pythonMetaPrefix || 'Python'} ${stats?.pythonVersion || copy?.emptyValueText || '-'}`,
   }),
 })
 
 registerAdminDashboardStatusBadge({
   key: 'debug-mode',
   order: 10,
-  resolve: ({ stats }) => ({
-    text: stats?.debugMode ? 'DEBUG' : 'PRODUCTION',
+  resolve: ({ stats, copy }) => ({
+    text: stats?.debugMode ? (copy?.debugModeOnText || 'DEBUG') : (copy?.debugModeOffText || 'PRODUCTION'),
     tone: stats?.debugMode ? 'warning' : 'success',
   }),
 })
@@ -1070,8 +1087,8 @@ registerAdminDashboardStatusBadge({
 registerAdminDashboardStatusBadge({
   key: 'maintenance-mode',
   order: 20,
-  resolve: ({ stats }) => ({
-    text: stats?.maintenanceMode ? '维护模式开启' : '维护模式关闭',
+  resolve: ({ stats, copy }) => ({
+    text: stats?.maintenanceMode ? (copy?.maintenanceModeOnText || '维护模式开启') : (copy?.maintenanceModeOffText || '维护模式关闭'),
     tone: stats?.maintenanceMode ? 'warning' : 'neutral',
   }),
 })
@@ -1079,8 +1096,8 @@ registerAdminDashboardStatusBadge({
 registerAdminDashboardStatusBadge({
   key: 'redis-status',
   order: 30,
-  resolve: ({ stats }) => ({
-    text: stats?.redisEnabled ? 'Redis 已启用' : 'Redis 未启用',
+  resolve: ({ stats, copy }) => ({
+    text: stats?.redisEnabled ? (copy?.redisEnabledText || 'Redis 已启用') : (copy?.redisDisabledText || 'Redis 未启用'),
     tone: stats?.redisEnabled ? 'success' : 'neutral',
   }),
 })
@@ -1088,8 +1105,8 @@ registerAdminDashboardStatusBadge({
 registerAdminDashboardStatusBadge({
   key: 'queue-worker-status',
   order: 40,
-  resolve: ({ stats }) => ({
-    text: stats?.queueWorkerLabel || '队列未检测',
+  resolve: ({ stats, copy }) => ({
+    text: stats?.queueWorkerLabel || copy?.queueWorkerUndetectedText || '队列未检测',
     tone: !stats?.queueEnabled || ['disabled', 'sync'].includes(stats?.queueWorkerStatus)
       ? 'neutral'
       : (stats?.queueWorkerAvailable ? 'success' : 'warning'),
@@ -1099,63 +1116,63 @@ registerAdminDashboardStatusBadge({
 registerAdminDashboardStatusItem({
   key: 'python-version',
   order: 10,
-  label: 'Python 版本',
-  resolve: ({ stats }) => ({
-    value: stats?.pythonVersion || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.pythonVersionLabel || 'Python 版本',
+    value: stats?.pythonVersion || copy?.emptyValueText || '-',
   }),
 })
 
 registerAdminDashboardStatusItem({
   key: 'django-version',
   order: 20,
-  label: 'Django 版本',
-  resolve: ({ stats }) => ({
-    value: stats?.djangoVersion || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.djangoVersionLabel || 'Django 版本',
+    value: stats?.djangoVersion || copy?.emptyValueText || '-',
   }),
 })
 
 registerAdminDashboardStatusItem({
   key: 'database',
   order: 30,
-  label: '数据库',
-  resolve: ({ stats }) => ({
-    value: stats?.databaseLabel || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.databaseLabel || '数据库',
+    value: stats?.databaseLabel || copy?.emptyValueText || '-',
   }),
 })
 
 registerAdminDashboardStatusItem({
   key: 'cache-driver',
   order: 40,
-  label: '缓存驱动',
-  resolve: ({ stats }) => ({
-    value: stats?.cacheDriver || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.cacheDriverLabel || '缓存驱动',
+    value: stats?.cacheDriver || copy?.emptyValueText || '-',
   }),
 })
 
 registerAdminDashboardStatusItem({
   key: 'realtime-driver',
   order: 50,
-  label: '实时层',
-  resolve: ({ stats }) => ({
-    value: stats?.realtimeDriver || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.realtimeDriverLabel || '实时层',
+    value: stats?.realtimeDriver || copy?.emptyValueText || '-',
   }),
 })
 
 registerAdminDashboardStatusItem({
   key: 'queue-driver',
   order: 60,
-  label: '队列执行',
-  resolve: ({ stats }) => ({
-    value: stats?.queueLabel || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.queueDriverLabel || '队列执行',
+    value: stats?.queueLabel || copy?.emptyValueText || '-',
   }),
 })
 
 registerAdminDashboardStatusItem({
   key: 'queue-worker',
   order: 70,
-  label: '队列 Worker',
-  resolve: ({ stats }) => ({
-    value: stats?.queueWorkerLabel || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.queueWorkerLabel || '队列 Worker',
+    value: stats?.queueWorkerLabel || copy?.emptyValueText || '-',
     help: stats?.queueWorkerMessage || '',
   }),
 })
@@ -1164,10 +1181,10 @@ registerAdminDashboardAlert({
   key: 'runtime-risks',
   order: 10,
   isVisible: ({ stats }) => Array.isArray(stats?.runtimeRisks) && stats.runtimeRisks.length > 0,
-  resolve: ({ stats }) => {
+  resolve: ({ stats, copy }) => {
     const risks = Array.isArray(stats?.runtimeRisks) ? stats.runtimeRisks : []
     return {
-      title: '运行时风险提示：',
+      title: copy?.runtimeRiskAlertTitle || '运行时风险提示：',
       tone: risks.some(item => item?.level === 'danger') ? 'danger' : 'warning',
       text: risks.map(item => item.title).join('；'),
     }
@@ -1178,8 +1195,8 @@ registerAdminDashboardQueueMetric({
   key: 'queue-enqueued',
   order: 10,
   variant: 'stat',
-  label: '入队',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.queueEnqueuedLabel || '入队',
     value: stats?.queueMetrics?.enqueued_count || 0,
   }),
 })
@@ -1188,8 +1205,8 @@ registerAdminDashboardQueueMetric({
   key: 'queue-sync',
   order: 20,
   variant: 'stat',
-  label: '同步',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.queueSyncLabel || '同步',
     value: stats?.queueMetrics?.sync_count || 0,
   }),
 })
@@ -1198,8 +1215,8 @@ registerAdminDashboardQueueMetric({
   key: 'queue-fallback',
   order: 30,
   variant: 'stat',
-  label: '回退',
-  resolve: ({ stats }) => ({
+  resolve: ({ stats, copy }) => ({
+    label: copy?.queueFallbackLabel || '回退',
     value: stats?.queueMetrics?.fallback_count || 0,
   }),
 })
@@ -1208,9 +1225,9 @@ registerAdminDashboardQueueMetric({
   key: 'queue-last-task',
   order: 40,
   variant: 'detail',
-  label: '最近任务',
-  resolve: ({ stats }) => ({
-    value: stats?.queueMetrics?.last_task || '-',
+  resolve: ({ stats, copy }) => ({
+    label: copy?.queueLastTaskLabel || '最近任务',
+    value: stats?.queueMetrics?.last_task || copy?.emptyValueText || '-',
     error: stats?.queueMetrics?.last_error || '',
   }),
 })
@@ -1221,9 +1238,78 @@ registerAdminDashboardCopy({
   resolve: () => ({
     pageTitle: '仪表盘',
     pageDescription: '查看论坛概况和系统状态',
+    loadingText: '加载中...',
     statusWidgetTitle: '系统状态',
     statsWidgetTitle: '论坛统计',
     actionsWidgetTitle: '快速操作',
+    runtimeRiskAlertTitle: '运行时风险提示：',
+    runtimeSummaryLabel: '运行时',
+    runtimeNameFallback: 'Python',
+    pythonMetaPrefix: 'Python',
+    debugModeOnText: 'DEBUG',
+    debugModeOffText: 'PRODUCTION',
+    maintenanceModeOnText: '维护模式开启',
+    maintenanceModeOffText: '维护模式关闭',
+    redisEnabledText: 'Redis 已启用',
+    redisDisabledText: 'Redis 未启用',
+    queueWorkerUndetectedText: '队列未检测',
+    usersStatLabel: '用户总数',
+    discussionsStatLabel: '讨论总数',
+    postsStatLabel: '帖子总数',
+    pendingApprovalsStatLabel: '待审核内容',
+    openFlagsStatLabel: '待处理举报',
+    pythonVersionLabel: 'Python 版本',
+    djangoVersionLabel: 'Django 版本',
+    databaseLabel: '数据库',
+    cacheDriverLabel: '缓存驱动',
+    realtimeDriverLabel: '实时层',
+    queueDriverLabel: '队列执行',
+    queueWorkerLabel: '队列 Worker',
+    queueEnqueuedLabel: '入队',
+    queueSyncLabel: '同步',
+    queueFallbackLabel: '回退',
+    queueLastTaskLabel: '最近任务',
+    emptyValueText: '-',
+  }),
+})
+
+registerAdminDashboardConfig({
+  key: 'core-dashboard-config',
+  order: 10,
+  resolve: () => ({
+    defaultStats: {
+      runtimeName: 'Python',
+      pythonVersion: null,
+      djangoVersion: null,
+      databaseLabel: null,
+      cacheDriver: null,
+      queueDriver: null,
+      queueEnabled: false,
+      queueLabel: null,
+      queueWorkerStatus: 'disabled',
+      queueWorkerLabel: null,
+      queueWorkerAvailable: false,
+      queueWorkerCount: 0,
+      queueWorkerMessage: '',
+      queueMetrics: {
+        enqueued_count: 0,
+        sync_count: 0,
+        fallback_count: 0,
+        last_task: '',
+        last_error: '',
+        last_event_at: '',
+      },
+      realtimeDriver: null,
+      redisEnabled: false,
+      runtimeRisks: [],
+      debugMode: false,
+      maintenanceMode: false,
+      totalUsers: 0,
+      totalDiscussions: 0,
+      totalPosts: 0,
+      pendingApprovals: 0,
+      openFlags: 0,
+    },
   }),
 })
 

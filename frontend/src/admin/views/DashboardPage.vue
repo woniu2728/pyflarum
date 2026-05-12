@@ -20,7 +20,7 @@
         <div class="Widget-header">
           <h3>{{ dashboardCopy?.statusWidgetTitle || '系统状态' }}</h3>
         </div>
-        <AdminStateBlock v-if="loading" class="Widget-state" tone="subtle">加载中...</AdminStateBlock>
+        <AdminStateBlock v-if="loading" class="Widget-state" tone="subtle">{{ dashboardCopy?.loadingText || '加载中...' }}</AdminStateBlock>
         <AdminStateBlock v-else-if="loadError" class="Widget-state" tone="danger">{{ loadError }}</AdminStateBlock>
         <div v-else class="Widget-content">
           <div
@@ -153,6 +153,7 @@ import {
   getAdminDashboardAction,
   getAdminDashboardActions,
   getAdminDashboardActionMeta,
+  getAdminDashboardConfig,
   getAdminDashboardCopy,
   getAdminDashboardQueueMetrics,
   getAdminDashboardStats,
@@ -161,39 +162,7 @@ import {
   getAdminDashboardStatusSummaries,
 } from '../registry'
 
-const stats = ref({
-  runtimeName: 'Python',
-  pythonVersion: null,
-  djangoVersion: null,
-  databaseLabel: null,
-  cacheDriver: null,
-  queueDriver: null,
-  queueEnabled: false,
-  queueLabel: null,
-  queueWorkerStatus: 'disabled',
-  queueWorkerLabel: null,
-  queueWorkerAvailable: false,
-  queueWorkerCount: 0,
-  queueWorkerMessage: '',
-  queueMetrics: {
-    enqueued_count: 0,
-    sync_count: 0,
-    fallback_count: 0,
-    last_task: '',
-    last_error: '',
-    last_event_at: '',
-  },
-  realtimeDriver: null,
-  redisEnabled: false,
-  runtimeRisks: [],
-  debugMode: false,
-  maintenanceMode: false,
-  totalUsers: 0,
-  totalDiscussions: 0,
-  totalPosts: 0,
-  pendingApprovals: 0,
-  openFlags: 0,
-})
+const stats = ref({})
 const loading = ref(true)
 const loadError = ref('')
 const resettingQueueMetrics = ref(false)
@@ -202,24 +171,31 @@ const queueMetricsMessageTone = ref('success')
 const modalStore = useModalStore()
 const dashboardActionMeta = computed(() => getAdminDashboardActionMeta())
 const dashboardCopy = computed(() => getAdminDashboardCopy())
+const dashboardConfig = computed(() => getAdminDashboardConfig())
 const dashboardAlerts = computed(() => getAdminDashboardAlerts({
   stats: stats.value,
+  copy: dashboardCopy.value,
 }))
 const dashboardActions = computed(() => getAdminDashboardActions())
 const dashboardStats = computed(() => getAdminDashboardStats({
   stats: stats.value,
+  copy: dashboardCopy.value,
 }))
 const dashboardQueueMetrics = computed(() => getAdminDashboardQueueMetrics({
   stats: stats.value,
+  copy: dashboardCopy.value,
 }))
 const dashboardStatusSummaries = computed(() => getAdminDashboardStatusSummaries({
   stats: stats.value,
+  copy: dashboardCopy.value,
 }))
 const dashboardStatusBadges = computed(() => getAdminDashboardStatusBadges({
   stats: stats.value,
+  copy: dashboardCopy.value,
 }))
 const dashboardStatusItems = computed(() => getAdminDashboardStatusItems({
   stats: stats.value,
+  copy: dashboardCopy.value,
 }))
 const queueResetIdleText = computed(() => dashboardActionMeta.value?.queueResetIdleText || '重置指标')
 const queueResetPendingText = computed(() => dashboardActionMeta.value?.queueResetPendingText || '重置中...')
@@ -246,7 +222,10 @@ async function loadStats() {
   try {
     loadError.value = ''
     const data = await api.get('/admin/stats')
-    stats.value = data
+    stats.value = {
+      ...(dashboardConfig.value?.defaultStats || {}),
+      ...data,
+    }
   } catch (error) {
     console.error('加载统计数据失败:', error)
     loadError.value = dashboardActionMeta.value?.loadingErrorText || '加载统计数据失败，请稍后重试'
@@ -268,6 +247,9 @@ async function resetQueueMetrics() {
 }
 
 onMounted(async () => {
+  stats.value = {
+    ...(dashboardConfig.value?.defaultStats || {}),
+  }
   await loadStats()
 })
 </script>
