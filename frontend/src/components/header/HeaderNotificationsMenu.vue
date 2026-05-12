@@ -55,7 +55,7 @@
           @click="$emit('open-type', item.type)"
         >
           <span>{{ item.label }}</span>
-          <strong>{{ item.unread > 0 ? `${item.unread} 未读` : item.total }}</strong>
+          <strong>{{ summaryCountText(item) }}</strong>
         </button>
       </div>
 
@@ -211,6 +211,15 @@ const clearReadTitleText = computed(() => getUiCopy({
 const openPageText = computed(() => getUiCopy({
   surface: 'notifications-menu-open-page',
 })?.text || '查看全部通知')
+
+function summaryCountText(item) {
+  return getUiCopy({
+    surface: 'notifications-menu-summary-count',
+    unread: Number(item?.unread || 0),
+    total: Number(item?.total || 0),
+    type: item?.type || '',
+  })?.text || (Number(item?.unread || 0) > 0 ? `${item.unread} 未读` : String(item?.total || 0))
+}
 
 function resolveNotificationPresentation(notification) {
   if (typeof props.getNotificationPresentation === 'function') {

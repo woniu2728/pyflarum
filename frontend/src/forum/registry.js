@@ -2531,6 +2531,24 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'notifications-menu-action-failed-title',
+  order: 479,
+  surfaces: ['notifications-menu-action-failed-title'],
+  resolve: () => ({
+    text: '操作失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-action-retry-message',
+  order: 479,
+  surfaces: ['notifications-menu-action-retry-message'],
+  resolve: () => ({
+    text: '请稍后重试',
+  }),
+})
+
+registerUiCopy({
   key: 'discussion-action-confirm-cancel',
   order: 479,
   surfaces: ['discussion-action-confirm-cancel'],
@@ -4904,6 +4922,78 @@ registerUiCopy({
   surfaces: ['notifications-menu-open-page'],
   resolve: () => ({
     text: '查看全部通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-mark-all-success',
+  order: 1245,
+  surfaces: ['notifications-menu-mark-all-success'],
+  resolve: () => ({
+    text: '已全部标记为已读',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-mark-all-error',
+  order: 1246,
+  surfaces: ['notifications-menu-mark-all-error'],
+  resolve: () => ({
+    text: '全部标记已读失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-clear-read-confirm-title',
+  order: 1247,
+  surfaces: ['notifications-menu-clear-read-confirm-title'],
+  resolve: () => ({
+    text: '清除已读通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-clear-read-confirm-message',
+  order: 1248,
+  surfaces: ['notifications-menu-clear-read-confirm-message'],
+  resolve: () => ({
+    text: '确定要清除所有已读通知吗？未读通知会保留。',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-clear-read-confirm-confirm',
+  order: 1249,
+  surfaces: ['notifications-menu-clear-read-confirm-confirm'],
+  resolve: () => ({
+    text: '清除',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-clear-read-success',
+  order: 1249,
+  surfaces: ['notifications-menu-clear-read-success'],
+  resolve: () => ({
+    text: '已清除已读通知',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-clear-read-error',
+  order: 1249,
+  surfaces: ['notifications-menu-clear-read-error'],
+  resolve: () => ({
+    text: '清除已读通知失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'notifications-menu-summary-count',
+  order: 1249,
+  surfaces: ['notifications-menu-summary-count'],
+  resolve: ({ unread, total }) => ({
+    text: Number(unread || 0) > 0 ? `${Number(unread || 0)} 未读` : String(Number(total || 0)),
   }),
 })
 

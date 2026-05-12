@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { getEmptyState, getStateBlock } from '@/forum/registry'
+import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import {
   getNotificationPresentationModel,
   resolveNotificationPath,
@@ -50,6 +50,27 @@ export function useHeaderNotifications({
     return stateBlock?.text || '加载中...'
   })
 
+  function getNotificationUiCopy(surface, context = {}, fallback = '') {
+    return getUiCopy({
+      surface,
+      ...context,
+    })?.text || fallback
+  }
+
+  function getNotificationErrorMessage(error, fallback = getNotificationUiCopy('notifications-menu-action-retry-message', {}, '请稍后重试')) {
+    return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
+  }
+
+  async function showHeaderNotificationError(error, fallback = '操作失败') {
+    if (!modalStore) return
+
+    await modalStore.alert({
+      title: getNotificationUiCopy('notifications-menu-action-failed-title', {}, fallback),
+      message: getNotificationErrorMessage(error),
+      tone: 'danger'
+    })
+  }
+
   function getNotificationPresentation(notification) {
     return getNotificationPresentationModel(notification)
   }
@@ -78,18 +99,15 @@ export function useHeaderNotifications({
       const result = await notificationStore.markAllAsRead()
       await refreshMenuNotifications()
       actionTone.value = 'success'
-      actionMessage.value = result?.message || '已全部标记为已读'
+      actionMessage.value = result?.message || getNotificationUiCopy('notifications-menu-mark-all-success', {}, '已全部标记为已读')
     } catch (error) {
       console.error('全部标记已读失败:', error)
       actionTone.value = 'danger'
-      actionMessage.value = error.response?.data?.error || error.message || '全部标记已读失败'
-      if (modalStore) {
-        await modalStore.alert({
-          title: '操作失败',
-          message: actionMessage.value,
-          tone: 'danger'
-        })
-      }
+      actionMessage.value = getNotificationErrorMessage(
+        error,
+        getNotificationUiCopy('notifications-menu-mark-all-error', {}, '全部标记已读失败')
+      )
+      await showHeaderNotificationError(error)
     } finally {
       markingAllRead.value = false
     }
@@ -100,9 +118,10 @@ export function useHeaderNotifications({
 
     const confirmed = modalStore
       ? await modalStore.confirm({
-        title: '清除已读通知',
-        message: '确定要清除所有已读通知吗？未读通知会保留。',
-        confirmText: '清除',
+        title: getNotificationUiCopy('notifications-menu-clear-read-confirm-title', {}, '清除已读通知'),
+        message: getNotificationUiCopy('notifications-menu-clear-read-confirm-message', {}, '确定要清除所有已读通知吗？未读通知会保留。'),
+        confirmText: getNotificationUiCopy('notifications-menu-clear-read-confirm-confirm', {}, '清除'),
+        cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
         tone: 'danger'
       })
       : true
@@ -113,18 +132,15 @@ export function useHeaderNotifications({
       const result = await notificationStore.clearReadNotifications()
       await refreshMenuNotifications()
       actionTone.value = 'success'
-      actionMessage.value = result?.message || '已清除已读通知'
+      actionMessage.value = result?.message || getNotificationUiCopy('notifications-menu-clear-read-success', {}, '已清除已读通知')
     } catch (error) {
       console.error('清除已读通知失败:', error)
       actionTone.value = 'danger'
-      actionMessage.value = error.response?.data?.error || error.message || '清除已读通知失败'
-      if (modalStore) {
-        await modalStore.alert({
-          title: '操作失败',
-          message: actionMessage.value,
-          tone: 'danger'
-        })
-      }
+      actionMessage.value = getNotificationErrorMessage(
+        error,
+        getNotificationUiCopy('notifications-menu-clear-read-error', {}, '清除已读通知失败')
+      )
+      await showHeaderNotificationError(error)
     } finally {
       clearingRead.value = false
     }
