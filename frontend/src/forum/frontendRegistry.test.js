@@ -1088,6 +1088,8 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
   const filterLabelKey = uniqueKey('ui-discussion-filter-label')
   const actionTitleKey = uniqueKey('ui-discussion-action-title')
   const retryMessageKey = uniqueKey('ui-discussion-action-retry')
+  const filterHeroKey = uniqueKey('ui-discussion-filter-hero')
+  const pageMetaKey = uniqueKey('ui-discussion-page-meta')
 
   registerUiCopy({
     key: pageTitleKey,
@@ -1143,6 +1145,24 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
     }),
   })
 
+  registerUiCopy({
+    key: filterHeroKey,
+    order: 70,
+    surfaces: ['discussion-list-filter-hero-title'],
+    resolve: ({ listFilter }) => ({
+      text: `hero:${listFilter}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: pageMetaKey,
+    order: 80,
+    surfaces: ['discussion-list-page-meta-title'],
+    resolve: ({ listFilter, currentTagName, hasSearchQuery }) => ({
+      text: `meta:${listFilter}:${currentTagName}:${hasSearchQuery}`,
+    }),
+  })
+
   const pageTitleResult = getUiCopy({
     surface: 'header-mobile-page-title',
     routeName: 'search',
@@ -1167,6 +1187,16 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
   const retryMessageResult = getUiCopy({
     surface: 'discussion-list-action-retry-message',
   })
+  const filterHeroResult = getUiCopy({
+    surface: 'discussion-list-filter-hero-title',
+    listFilter: 'unread',
+  })
+  const pageMetaResult = getUiCopy({
+    surface: 'discussion-list-page-meta-title',
+    listFilter: 'my',
+    currentTagName: '前端',
+    hasSearchQuery: true,
+  })
 
   assert.equal(pageTitleResult.key, pageTitleKey)
   assert.equal(pageTitleResult.text, 'page:search')
@@ -1180,6 +1210,10 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
   assert.equal(actionTitleResult.text, 'action:load-more')
   assert.equal(retryMessageResult.key, retryMessageKey)
   assert.equal(retryMessageResult.text, 'retry:later')
+  assert.equal(filterHeroResult.key, filterHeroKey)
+  assert.equal(filterHeroResult.text, 'hero:unread')
+  assert.equal(pageMetaResult.key, pageMetaKey)
+  assert.equal(pageMetaResult.text, 'meta:my:前端:true')
 })
 
 test('ui copy resolves discussion event post copy', () => {

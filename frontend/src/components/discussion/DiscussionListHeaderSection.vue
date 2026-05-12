@@ -1,5 +1,9 @@
 <template>
-  <DiscussionListHero :current-tag="currentTag" :is-following-page="isFollowingPage" />
+  <DiscussionListHero
+    :current-tag="currentTag"
+    :is-following-page="isFollowingPage"
+    :list-filter="listFilter"
+  />
   <DiscussionListToolbar
     :auth-store="authStore"
     :sort-by="sortBy"
@@ -34,6 +38,10 @@ defineProps({
     type: Boolean,
     default: false
   },
+  listFilter: {
+    type: String,
+    default: 'all'
+  },
   sortBy: {
     type: String,
     default: 'latest'
@@ -41,10 +49,6 @@ defineProps({
   sortOptions: {
     type: Array,
     default: () => []
-  },
-  listFilter: {
-    type: String,
-    default: 'all'
   },
   filterOptions: {
     type: Array,

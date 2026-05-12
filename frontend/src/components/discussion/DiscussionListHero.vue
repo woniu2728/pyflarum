@@ -1,12 +1,12 @@
 <template>
-  <section v-if="isFollowingPage" class="tag-hero following-hero">
+  <section v-if="showFilterHero" class="tag-hero following-hero">
     <div class="tag-hero-inner">
       <div class="tag-hero-pill following-pill">
-        <i class="fas fa-bell"></i>
-        {{ followingPillText }}
+        <i :class="filterHeroIcon"></i>
+        {{ filterHeroPillText }}
       </div>
-      <h1>{{ followingTitleText }}</h1>
-      <p>{{ followingDescriptionText }}</p>
+      <h1>{{ filterHeroTitleText }}</h1>
+      <p>{{ filterHeroDescriptionText }}</p>
     </div>
   </section>
 
@@ -34,25 +34,85 @@ const props = defineProps({
   isFollowingPage: {
     type: Boolean,
     default: false
+  },
+  listFilter: {
+    type: String,
+    default: 'all'
   }
 })
 
-const followingPillText = computed(() => getUiCopy({
-  surface: 'discussion-list-following-hero-pill',
-})?.text || '关注中')
+const activeFilterCode = computed(() => props.isFollowingPage ? 'following' : String(props.listFilter || 'all'))
+const showFilterHero = computed(() => !props.currentTag && activeFilterCode.value !== 'all')
 
-const followingTitleText = computed(() => getUiCopy({
-  surface: 'discussion-list-following-hero-title',
-})?.text || '关注的讨论')
+const filterHeroPillText = computed(() => getUiCopy({
+  surface: 'discussion-list-filter-hero-pill',
+  listFilter: activeFilterCode.value,
+})?.text || resolveDiscussionListFilterLabel(activeFilterCode.value))
 
-const followingDescriptionText = computed(() => getUiCopy({
-  surface: 'discussion-list-following-hero-description',
-})?.text || '这里会显示你已关注、并在后续收到新回复通知的讨论。')
+const filterHeroTitleText = computed(() => getUiCopy({
+  surface: 'discussion-list-filter-hero-title',
+  listFilter: activeFilterCode.value,
+})?.text || resolveDiscussionListFilterHeroTitle(activeFilterCode.value))
+
+const filterHeroDescriptionText = computed(() => getUiCopy({
+  surface: 'discussion-list-filter-hero-description',
+  listFilter: activeFilterCode.value,
+})?.text || resolveDiscussionListFilterHeroDescription(activeFilterCode.value))
+
+const filterHeroIcon = computed(() => {
+  switch (activeFilterCode.value) {
+    case 'unread':
+      return 'fas fa-inbox'
+    case 'my':
+      return 'fas fa-user-pen'
+    default:
+      return 'fas fa-bell'
+  }
+})
 
 const currentTagDescriptionText = computed(() => getUiCopy({
   surface: 'discussion-list-tag-hero-description',
   tagName: props.currentTag?.name || '',
 })?.text || '这个标签下的讨论会集中显示在这里。')
+
+function resolveDiscussionListFilterLabel(filterCode) {
+  switch (String(filterCode || 'all').trim()) {
+    case 'following':
+      return '关注中'
+    case 'unread':
+      return '未读'
+    case 'my':
+      return '我的讨论'
+    default:
+      return '全部讨论'
+  }
+}
+
+function resolveDiscussionListFilterHeroTitle(filterCode) {
+  switch (String(filterCode || 'all').trim()) {
+    case 'following':
+      return '关注的讨论'
+    case 'unread':
+      return '未读讨论'
+    case 'my':
+      return '我的讨论'
+    default:
+      return '全部讨论'
+  }
+}
+
+function resolveDiscussionListFilterHeroDescription(filterCode) {
+  switch (String(filterCode || 'all').trim()) {
+    case 'following':
+      return '这里会显示你已关注、并在后续收到新回复通知的讨论。'
+    case 'unread':
+      return '这里会集中显示你仍有未读回复的讨论，方便继续跟进。'
+    case 'my':
+      return '这里会集中展示你发起过的讨论与最近互动。'
+    default:
+      return '浏览论坛最新讨论、热门主题和社区回复。'
+  }
+}
 </script>
 
 <style scoped>
