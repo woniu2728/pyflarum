@@ -1086,6 +1086,8 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
   const leftActionKey = uniqueKey('ui-mobile-left-action')
   const rightActionKey = uniqueKey('ui-mobile-right-action')
   const filterLabelKey = uniqueKey('ui-discussion-filter-label')
+  const actionTitleKey = uniqueKey('ui-discussion-action-title')
+  const retryMessageKey = uniqueKey('ui-discussion-action-retry')
 
   registerUiCopy({
     key: pageTitleKey,
@@ -1123,9 +1125,28 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
     }),
   })
 
+  registerUiCopy({
+    key: actionTitleKey,
+    order: 50,
+    surfaces: ['discussion-list-action-failed-title'],
+    resolve: ({ actionType }) => ({
+      text: `action:${actionType}`,
+    }),
+  })
+
+  registerUiCopy({
+    key: retryMessageKey,
+    order: 60,
+    surfaces: ['discussion-list-action-retry-message'],
+    resolve: () => ({
+      text: 'retry:later',
+    }),
+  })
+
   const pageTitleResult = getUiCopy({
     surface: 'header-mobile-page-title',
     routeName: 'search',
+    listFilter: 'unread',
   })
   const leftActionResult = getUiCopy({
     surface: 'header-mobile-left-action-label',
@@ -1139,6 +1160,13 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
     surface: 'discussion-list-default-filter-label',
     code: 'following',
   })
+  const actionTitleResult = getUiCopy({
+    surface: 'discussion-list-action-failed-title',
+    actionType: 'load-more',
+  })
+  const retryMessageResult = getUiCopy({
+    surface: 'discussion-list-action-retry-message',
+  })
 
   assert.equal(pageTitleResult.key, pageTitleKey)
   assert.equal(pageTitleResult.text, 'page:search')
@@ -1148,6 +1176,10 @@ test('ui copy resolves mobile header and discussion list navigation copy', () =>
   assert.equal(rightActionResult.text, 'right:discussion-menu')
   assert.equal(filterLabelResult.key, filterLabelKey)
   assert.equal(filterLabelResult.text, 'filter:following')
+  assert.equal(actionTitleResult.key, actionTitleKey)
+  assert.equal(actionTitleResult.text, 'action:load-more')
+  assert.equal(retryMessageResult.key, retryMessageKey)
+  assert.equal(retryMessageResult.text, 'retry:later')
 })
 
 test('ui copy resolves discussion event post copy', () => {

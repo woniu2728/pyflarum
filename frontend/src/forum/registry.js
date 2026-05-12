@@ -337,6 +337,19 @@ function buildSearchTextHtml(value, query, limit) {
   return renderTwemojiHtml(highlightSearchText(value, query, limit))
 }
 
+function getDiscussionListDefaultFilterText(code) {
+  switch (String(code || 'all').trim()) {
+    case 'following':
+      return '关注中'
+    case 'unread':
+      return '未读'
+    case 'my':
+      return '我的讨论'
+    default:
+      return '全部讨论'
+  }
+}
+
 registerDefaultNotificationRenderer({
   type: 'discussionReply',
   label: '讨论新回复',
@@ -3311,19 +3324,21 @@ registerUiCopy({
   key: 'header-mobile-page-title',
   order: 479,
   surfaces: ['header-mobile-page-title'],
-  resolve: ({ routeName, forumTitle }) => ({
-    text: ({
-      home: '全部讨论',
-      following: '关注中',
-      tags: '标签',
-      profile: '个人主页',
-      'user-profile': '个人主页',
-      notifications: '通知',
-      search: '搜索结果',
-      'discussion-detail': '讨论详情',
-      login: '登录',
-      register: '注册',
-    })[routeName] || forumTitle || 'Bias',
+  resolve: ({ routeName, forumTitle, listFilter }) => ({
+    text: routeName === 'home'
+      ? getDiscussionListDefaultFilterText(listFilter)
+      : routeName === 'following'
+        ? getDiscussionListDefaultFilterText('following')
+        : ({
+          tags: '标签',
+          profile: '个人主页',
+          'user-profile': '个人主页',
+          notifications: '通知',
+          search: '搜索结果',
+          'discussion-detail': '讨论详情',
+          login: '登录',
+          register: '注册',
+        })[routeName] || forumTitle || 'Bias',
   }),
 })
 
@@ -3381,7 +3396,31 @@ registerUiCopy({
   order: 479,
   surfaces: ['discussion-list-default-filter-label'],
   resolve: ({ code }) => ({
-    text: code === 'following' ? '关注中' : '全部讨论',
+    text: getDiscussionListDefaultFilterText(code),
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-action-failed-title',
+  order: 479,
+  surfaces: ['discussion-list-action-failed-title'],
+  resolve: ({ actionType }) => ({
+    text: actionType === 'refresh'
+      ? '刷新失败'
+      : actionType === 'mark-all-read'
+        ? '标记已读失败'
+        : actionType === 'load-more'
+          ? '加载更多失败'
+          : '操作失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-list-action-retry-message',
+  order: 479,
+  surfaces: ['discussion-list-action-retry-message'],
+  resolve: () => ({
+    text: '请稍后重试',
   }),
 })
 

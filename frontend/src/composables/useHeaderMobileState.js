@@ -17,6 +17,8 @@ export function useHeaderMobileState({
   })
 
   const mobilePageTitle = computed(() => {
+    const listFilter = resolveMobileDiscussionListFilter(route)
+
     if (mobileHeaderOverride.value?.title) {
       return mobileHeaderOverride.value.title
     }
@@ -25,7 +27,8 @@ export function useHeaderMobileState({
       surface: 'header-mobile-page-title',
       routeName: route.name,
       forumTitle,
-    })?.text || resolveMobilePageTitle(route.name, forumTitle)
+      listFilter,
+    })?.text || resolveMobilePageTitle(route.name, forumTitle, listFilter)
   })
 
   const mobileLeftActionIcon = computed(() => mobileHeaderOverride.value?.leftAction === 'back' ? 'fas fa-angle-left' : 'fas fa-bars')
@@ -110,12 +113,12 @@ export function useHeaderMobileState({
   }
 }
 
-function resolveMobilePageTitle(routeName, forumTitle) {
+function resolveMobilePageTitle(routeName, forumTitle, listFilter = 'all') {
   switch (routeName) {
     case 'home':
-      return '全部讨论'
+      return resolveDiscussionListFilterLabel(listFilter)
     case 'following':
-      return '关注中'
+      return resolveDiscussionListFilterLabel('following')
     case 'tags':
       return '标签'
     case 'profile':
@@ -133,6 +136,25 @@ function resolveMobilePageTitle(routeName, forumTitle) {
       return '注册'
     default:
       return forumTitle || 'Bias'
+  }
+}
+
+function resolveMobileDiscussionListFilter(route) {
+  if (route?.name === 'following') return 'following'
+  if (route?.name !== 'home') return 'all'
+  return String(route?.query?.filter || 'all').trim() || 'all'
+}
+
+function resolveDiscussionListFilterLabel(filterCode) {
+  switch (String(filterCode || 'all').trim()) {
+    case 'following':
+      return '关注中'
+    case 'unread':
+      return '未读'
+    case 'my':
+      return '我的讨论'
+    default:
+      return '全部讨论'
   }
 }
 

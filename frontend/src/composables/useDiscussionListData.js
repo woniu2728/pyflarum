@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
+import { getUiCopy } from '@/forum/registry'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
 import { useResourceStore } from '@/stores/resource'
 import { normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
@@ -34,6 +35,25 @@ export function useDiscussionListData({
   const listFilter = routeState.listFilter
   const hasMore = computed(() => currentPage.value * pageSize < total.value)
   const isFollowingPage = computed(() => route.name === 'following' || listFilter.value === 'following')
+
+  function uiText(surface, fallback, context = {}) {
+    return getUiCopy({
+      surface,
+      ...context,
+    })?.text || fallback
+  }
+
+  function getDiscussionListErrorMessage(error, fallback = uiText('discussion-list-action-retry-message', '请稍后重试')) {
+    return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
+  }
+
+  async function showDiscussionListError(actionType, error, fallback = uiText('discussion-list-action-retry-message', '请稍后重试')) {
+    await modalStore.alert({
+      title: uiText('discussion-list-action-failed-title', '操作失败', { actionType }),
+      message: getDiscussionListErrorMessage(error, fallback),
+      tone: 'danger'
+    })
+  }
 
   onMounted(async () => {
     await refreshPageData()
@@ -76,11 +96,7 @@ export function useDiscussionListData({
       await loadDiscussions(false)
     } catch (error) {
       console.error('刷新讨论列表失败:', error)
-      await modalStore.alert({
-        title: '刷新失败',
-        message: '请稍后重试',
-        tone: 'danger'
-      })
+      await showDiscussionListError('refresh', error)
     } finally {
       refreshing.value = false
     }
@@ -171,6 +187,10 @@ export function useDiscussionListData({
     currentPage.value += 1
     try {
       await loadDiscussions(true)
+    } catch (error) {
+      currentPage.value = Math.max(1, currentPage.value - 1)
+      console.error('加载更多讨论失败:', error)
+      await showDiscussionListError('load-more', error)
     } finally {
       loadingMore.value = false
     }
@@ -195,11 +215,7 @@ export function useDiscussionListData({
       })
     } catch (error) {
       console.error('标记已读失败:', error)
-      await modalStore.alert({
-        title: '标记已读失败',
-        message: '请稍后重试',
-        tone: 'danger'
-      })
+      await showDiscussionListError('mark-all-read', error)
     } finally {
       markingAllRead.value = false
     }
