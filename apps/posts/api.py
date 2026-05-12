@@ -37,14 +37,12 @@ def _serialize_post(post, user=None):
         "id": post.id,
         "discussion_id": post.discussion_id,
         "number": post.number,
-        "user": serialize_user_payload(post.user, resource="post_user"),
         "type": post.type,
         "content": post.content,
         "content_html": post.content_html,
         "created_at": post.created_at,
         "updated_at": post.updated_at,
         "edited_at": post.edited_at,
-        "edited_user": serialize_user_payload(post.edited_user, resource="post_user"),
         "discussion": {
             "id": post.discussion.id,
             "title": post.discussion.title,
@@ -56,7 +54,14 @@ def _serialize_post(post, user=None):
         "like_count": getattr(post, "like_count", 0),
         "is_liked": getattr(post, "is_liked", False),
     }
-    response.update(RESOURCE_REGISTRY.serialize("post", post, {"user": user}))
+    response.update(
+        RESOURCE_REGISTRY.serialize(
+            "post",
+            post,
+            {"user": user},
+            include=("user", "edited_user"),
+        )
+    )
     return response
 
 

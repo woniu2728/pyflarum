@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from apps.core.resource_registry import ResourceFieldDefinition, get_resource_registry
+from apps.core.resource_registry import (
+    ResourceDefinition,
+    ResourceFieldDefinition,
+    ResourceRelationshipDefinition,
+    get_resource_registry,
+)
 
 
 _resources_bootstrapped = False
@@ -12,6 +17,100 @@ def bootstrap_forum_resource_fields() -> None:
         return
 
     registry = get_resource_registry()
+
+    registry.register_resource(
+        ResourceDefinition(
+            resource="user_summary",
+            module_id="users",
+            resolver=_serialize_user_summary_base,
+            description="论坛内通用用户摘要资源。",
+        )
+    )
+    registry.register_resource(
+        ResourceDefinition(
+            resource="user_detail",
+            module_id="users",
+            resolver=_serialize_user_detail_base,
+            description="论坛内通用用户详情资源。",
+        )
+    )
+    registry.register_resource(
+        ResourceDefinition(
+            resource="discussion_user",
+            module_id="users",
+            resolver=_serialize_user_summary_base,
+            description="讨论作者摘要资源。",
+        )
+    )
+    registry.register_resource(
+        ResourceDefinition(
+            resource="post_user",
+            module_id="users",
+            resolver=_serialize_user_summary_base,
+            description="帖子作者摘要资源。",
+        )
+    )
+    registry.register_resource(
+        ResourceDefinition(
+            resource="search_user",
+            module_id="users",
+            resolver=_serialize_user_search_base,
+            description="搜索用户结果资源。",
+        )
+    )
+    registry.register_resource(
+        ResourceDefinition(
+            resource="search_discussion",
+            module_id="discussions",
+            resolver=_serialize_search_discussion_base,
+            description="搜索讨论结果资源。",
+        )
+    )
+    registry.register_resource(
+        ResourceDefinition(
+            resource="search_post",
+            module_id="posts",
+            resolver=_serialize_search_post_base,
+            description="搜索帖子结果资源。",
+        )
+    )
+
+    registry.register_relationship(
+        ResourceRelationshipDefinition(
+            resource="discussion",
+            relationship="user",
+            module_id="discussions",
+            resolver=_resolve_discussion_user,
+            description="讨论作者摘要。",
+        )
+    )
+    registry.register_relationship(
+        ResourceRelationshipDefinition(
+            resource="discussion",
+            relationship="last_posted_user",
+            module_id="discussions",
+            resolver=_resolve_discussion_last_posted_user,
+            description="讨论最后回复用户摘要。",
+        )
+    )
+    registry.register_relationship(
+        ResourceRelationshipDefinition(
+            resource="post",
+            relationship="user",
+            module_id="posts",
+            resolver=_resolve_post_user,
+            description="帖子作者摘要。",
+        )
+    )
+    registry.register_relationship(
+        ResourceRelationshipDefinition(
+            resource="post",
+            relationship="edited_user",
+            module_id="posts",
+            resolver=_resolve_post_edited_user,
+            description="帖子编辑者摘要。",
+        )
+    )
 
     registry.register_field(
         ResourceFieldDefinition(
@@ -207,6 +306,15 @@ def bootstrap_forum_resource_fields() -> None:
     )
     registry.register_field(
         ResourceFieldDefinition(
+            resource="user_detail",
+            field="primary_group",
+            module_id="users",
+            resolver=_resolve_user_primary_group,
+            description="用户详情中的主用户组徽章。",
+        )
+    )
+    registry.register_field(
+        ResourceFieldDefinition(
             resource="search_user",
             field="primary_group",
             module_id="users",
@@ -240,33 +348,65 @@ def serialize_user_summary(user) -> dict | None:
     if not user:
         return None
 
-    payload = {
+    return get_resource_registry().serialize("user_summary", user)
+
+
+def serialize_user_payload(user, resource: str = "user_detail") -> dict | None:
+    if not user:
+        return None
+
+    return get_resource_registry().serialize(resource, user)
+
+
+def _serialize_user_summary_base(user, context: dict) -> dict:
+    return {
         "id": user.id,
         "username": user.username,
         "display_name": user.display_name,
         "avatar_url": user.avatar_url,
     }
-    payload.update(get_resource_registry().serialize("user_summary", user))
-    return payload
 
 
-def serialize_user_payload(user, resource: str = "user_summary") -> dict | None:
-    if not user:
-        return None
-
-    payload = {
-        "id": user.id,
-        "username": user.username,
-        "display_name": user.display_name,
-        "avatar_url": user.avatar_url,
+def _serialize_user_detail_base(user, context: dict) -> dict:
+    return {
+        **_serialize_user_summary_base(user, context),
         "bio": getattr(user, "bio", ""),
         "discussion_count": getattr(user, "discussion_count", 0),
         "comment_count": getattr(user, "comment_count", 0),
         "joined_at": getattr(user, "joined_at", None),
         "last_seen_at": getattr(user, "last_seen_at", None),
     }
-    payload.update(get_resource_registry().serialize(resource, user))
-    return payload
+
+
+def _serialize_user_search_base(user, context: dict) -> dict:
+    return _serialize_user_detail_base(user, context)
+
+
+def _serialize_search_discussion_base(discussion, context: dict) -> dict:
+    return {
+        "id": discussion.id,
+        "title": discussion.title,
+        "slug": discussion.slug,
+        "comment_count": discussion.comment_count,
+        "view_count": discussion.view_count,
+        "is_sticky": discussion.is_sticky,
+        "is_locked": discussion.is_locked,
+        "created_at": discussion.created_at,
+        "last_posted_at": discussion.last_posted_at,
+        "excerpt": discussion.excerpt,
+    }
+
+
+def _serialize_search_post_base(post, context: dict) -> dict:
+    return {
+        "id": post.id,
+        "discussion_id": post.discussion_id,
+        "discussion_title": post.discussion_title,
+        "number": post.number,
+        "content": post.content,
+        "created_at": post.created_at,
+        "excerpt": post.excerpt,
+    }
 
 
 def _resolve_discussion_tags(discussion, context: dict) -> list[dict]:
@@ -571,6 +711,22 @@ def _resolve_search_discussion_user(discussion, context: dict) -> dict | None:
 
 def _resolve_search_post_user(post, context: dict) -> dict | None:
     return serialize_user_summary(getattr(post, "user", None))
+
+
+def _resolve_discussion_user(discussion, context: dict) -> dict | None:
+    return serialize_user_payload(getattr(discussion, "user", None), resource="discussion_user")
+
+
+def _resolve_discussion_last_posted_user(discussion, context: dict) -> dict | None:
+    return serialize_user_payload(getattr(discussion, "last_posted_user", None), resource="discussion_user")
+
+
+def _resolve_post_user(post, context: dict) -> dict | None:
+    return serialize_user_payload(getattr(post, "user", None), resource="post_user")
+
+
+def _resolve_post_edited_user(post, context: dict) -> dict | None:
+    return serialize_user_payload(getattr(post, "edited_user", None), resource="post_user")
 
 
 def _resolve_user_primary_group(user, context: dict) -> dict | None:

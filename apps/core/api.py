@@ -95,34 +95,11 @@ def upload_attachment(request):
 
 
 def serialize_discussion_search_result(discussion):
-    payload = {
-        'id': discussion.id,
-        'title': discussion.title,
-        'slug': discussion.slug,
-        'comment_count': discussion.comment_count,
-        'view_count': discussion.view_count,
-        'is_sticky': discussion.is_sticky,
-        'is_locked': discussion.is_locked,
-        'created_at': discussion.created_at,
-        'last_posted_at': discussion.last_posted_at,
-        'excerpt': discussion.excerpt,
-    }
-    payload.update(RESOURCE_REGISTRY.serialize("search_discussion", discussion))
-    return payload
+    return RESOURCE_REGISTRY.serialize("search_discussion", discussion)
 
 
 def serialize_post_search_result(post):
-    payload = {
-        'id': post.id,
-        'discussion_id': post.discussion_id,
-        'discussion_title': post.discussion_title,
-        'number': post.number,
-        'content': post.content,
-        'created_at': post.created_at,
-        'excerpt': post.excerpt,
-    }
-    payload.update(RESOURCE_REGISTRY.serialize("search_post", post))
-    return payload
+    return RESOURCE_REGISTRY.serialize("search_post", post)
 
 
 def serialize_user_search_result(user):

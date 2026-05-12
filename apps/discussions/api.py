@@ -31,16 +31,14 @@ RESOURCE_REGISTRY = get_resource_registry()
 
 def _serialize_discussion_payload(discussion, user=None):
     payload = DiscussionOutSchema.from_orm(discussion).dict()
-    payload["user"] = serialize_user_payload(getattr(discussion, "user", None), resource="discussion_user")
-    payload["last_posted_user"] = serialize_user_payload(
-        getattr(discussion, "last_posted_user", None),
-        resource="discussion_user",
+    payload.update(
+        RESOURCE_REGISTRY.serialize(
+            "discussion",
+            discussion,
+            {"user": user},
+            include=("user", "last_posted_user"),
+        )
     )
-    payload["tags"] = RESOURCE_REGISTRY.serialize(
-        "discussion",
-        discussion,
-        {"user": user},
-    ).get("tags", [])
     return payload
 
 

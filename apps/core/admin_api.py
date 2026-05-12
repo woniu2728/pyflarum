@@ -330,6 +330,23 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
         for definition in RESOURCE_REGISTRY.get_all_fields()
         if definition.module_id == module.module_id
     ]
+    resource_definitions = [
+        {
+            "resource": definition.resource,
+            "description": definition.description,
+        }
+        for definition in RESOURCE_REGISTRY.get_resources()
+        if definition.module_id == module.module_id
+    ]
+    resource_relationships = [
+        {
+            "resource": definition.resource,
+            "relationship": definition.relationship,
+            "description": definition.description,
+        }
+        for definition in RESOURCE_REGISTRY.get_all_relationships()
+        if definition.module_id == module.module_id
+    ]
     return {
         "id": module.module_id,
         "name": module.name,
@@ -431,6 +448,8 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
             }
             for discussion_list_filter in module.discussion_list_filters
         ],
+        "resource_definitions": resource_definitions,
+        "resource_relationships": resource_relationships,
         "resource_fields": resource_fields,
         "permissions": [
             {
@@ -466,6 +485,8 @@ def serialize_module_definition(module, module_map: Dict[str, Any]) -> Dict[str,
             "search_filters": len(module.search_filters),
             "discussion_sorts": len(module.discussion_sorts),
             "discussion_list_filters": len(module.discussion_list_filters),
+            "resource_definitions": len(resource_definitions),
+            "resource_relationships": len(resource_relationships),
             "resource_fields": len(resource_fields),
             "settings_groups": len(module.settings_groups),
         },
@@ -1296,6 +1317,23 @@ def list_admin_modules(request):
         }
         for definition in RESOURCE_REGISTRY.get_all_fields()
     ]
+    resource_definitions = [
+        {
+            "resource": definition.resource,
+            "module_id": definition.module_id,
+            "description": definition.description,
+        }
+        for definition in RESOURCE_REGISTRY.get_resources()
+    ]
+    resource_relationships = [
+        {
+            "resource": definition.resource,
+            "relationship": definition.relationship,
+            "module_id": definition.module_id,
+            "description": definition.description,
+        }
+        for definition in RESOURCE_REGISTRY.get_all_relationships()
+    ]
     user_preferences = [
         {
             "key": preference.key,
@@ -1330,6 +1368,8 @@ def list_admin_modules(request):
         "user_preference_count": len(user_preferences),
         "event_listener_count": len(event_listeners),
         "post_type_count": len(post_types),
+        "resource_definition_count": len(resource_definitions),
+        "resource_relationship_count": len(resource_relationships),
         "resource_field_count": len(resource_fields),
         "search_filter_count": len(search_filters),
         "discussion_sort_count": len(discussion_sorts),
@@ -1351,6 +1391,8 @@ def list_admin_modules(request):
         "search_filters": search_filters,
         "discussion_sorts": discussion_sorts,
         "discussion_list_filters": discussion_list_filters,
+        "resource_definitions": resource_definitions,
+        "resource_relationships": resource_relationships,
         "resource_fields": resource_fields,
         "permission_aliases": REGISTRY.get_permission_aliases(),
     }

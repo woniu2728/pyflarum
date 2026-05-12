@@ -27,7 +27,12 @@ from apps.core.forum_events import (
     UserUnsuspendedEvent,
 )
 from apps.core.forum_registry import get_forum_registry
-from apps.core.resource_registry import ResourceFieldDefinition, ResourceRegistry
+from apps.core.resource_registry import (
+    ResourceDefinition,
+    ResourceFieldDefinition,
+    ResourceRelationshipDefinition,
+    ResourceRegistry,
+)
 from apps.core.bootstrap_config import load_site_bootstrap, read_site_config
 from apps.core.models import AuditLog, Setting
 from apps.core.file_service import FileUploadService
@@ -134,6 +139,80 @@ class ResourceRegistryTests(TestCase):
 
         payload = registry.serialize("discussion", Target(), {"suffix": "ok"})
         self.assertEqual(payload, {"summary": "3:ok"})
+
+    def test_serializes_base_resource_and_relationship_includes(self):
+        registry = ResourceRegistry()
+
+        class Target:
+            id = 8
+            title = "hello"
+            owner = type("Owner", (), {"username": "neo"})()
+
+        registry.register_resource(
+            ResourceDefinition(
+                resource="discussion",
+                module_id="test",
+                resolver=lambda instance, context: {"id": instance.id, "title": instance.title},
+            )
+        )
+        registry.register_field(
+            ResourceFieldDefinition(
+                resource="discussion",
+                field="summary",
+                module_id="test",
+                resolver=lambda instance, context: f"{instance.id}:{context['suffix']}",
+            )
+        )
+        registry.register_relationship(
+            ResourceRelationshipDefinition(
+                resource="discussion",
+                relationship="owner",
+                module_id="test",
+                resolver=lambda instance, context: {"username": instance.owner.username},
+            )
+        )
+
+        payload = registry.serialize(
+            "discussion",
+            Target(),
+            {"suffix": "ok"},
+            include=("owner",),
+        )
+        self.assertEqual(
+            payload,
+            {
+                "id": 8,
+                "title": "hello",
+                "summary": "8:ok",
+                "owner": {"username": "neo"},
+            },
+        )
+
+    def test_can_select_only_specific_resource_fields(self):
+        registry = ResourceRegistry()
+
+        class Target:
+            id = 2
+
+        registry.register_field(
+            ResourceFieldDefinition(
+                resource="discussion",
+                field="first",
+                module_id="test",
+                resolver=lambda instance, context: "a",
+            )
+        )
+        registry.register_field(
+            ResourceFieldDefinition(
+                resource="discussion",
+                field="second",
+                module_id="test",
+                resolver=lambda instance, context: "b",
+            )
+        )
+
+        payload = registry.serialize("discussion", Target(), only=("second",))
+        self.assertEqual(payload, {"second": "b"})
 
 
 class ForumRegistryTests(TestCase):
@@ -3582,6 +3661,8 @@ class AdminPermissionsApiTests(TestCase):
         self.assertIn("search_filters", payload)
         self.assertIn("discussion_sorts", payload)
         self.assertIn("discussion_list_filters", payload)
+        self.assertIn("resource_definitions", payload)
+        self.assertIn("resource_relationships", payload)
         self.assertIn("resource_fields", payload)
         module_ids = {module["id"] for module in payload["modules"]}
         self.assertIn("core", module_ids)
@@ -3608,6 +3689,8 @@ class AdminPermissionsApiTests(TestCase):
         self.assertIn("registration_counts", core_module)
         self.assertIn("permissions", core_module)
         self.assertIn("documentation_url", core_module)
+        self.assertIn("resource_definitions", posts_module)
+        self.assertIn("resource_relationships", posts_module)
         self.assertIn("resource_fields", tags_module)
         self.assertIn("search_filters", tags_module)
         self.assertEqual(core_module["dependency_status"], "healthy")
@@ -3631,6 +3714,8 @@ class AdminPermissionsApiTests(TestCase):
         self.assertTrue(any(item["code"] == "following" and item["route_path"] == "/following" for item in payload["discussion_list_filters"]))
         self.assertTrue(any(item["code"] == "my" and item["sidebar_visible"] is False for item in payload["discussion_list_filters"]))
         self.assertTrue(any(item["field"] == "can_start_discussion" for item in tags_module["resource_fields"]))
+        self.assertTrue(any(item["resource"] == "search_discussion" for item in payload["resource_definitions"]))
+        self.assertTrue(any(item["relationship"] == "user" and item["resource"] == "post" for item in payload["resource_relationships"]))
         self.assertTrue(any(item["resource"] == "search_post" and item["field"] == "user" for item in payload["resource_fields"]))
         self.assertTrue(any(item["module_id"] == "notifications" for item in payload["user_preferences"]))
         self.assertTrue(any(item["id"] == "core" for item in payload["category_summaries"]))

@@ -99,7 +99,7 @@ def _attach_current_user_context(user):
 
 
 def _serialize_user_detail_payload(user, include_forum_permissions: bool = False):
-    payload = serialize_user_payload(user, resource="user_summary") or {}
+    payload = serialize_user_payload(user, resource="user_detail") or {}
     payload.update(
         {
             "email": user.email,
