@@ -2,13 +2,12 @@
   <AdminPage
     class-name="PermissionsPage"
     icon="fas fa-key"
-    title="权限管理"
-    description="配置用户组和权限，并检查权限来源与依赖关系"
+    :title="permissionsCopy?.pageTitle || '权限管理'"
+    :description="permissionsCopy?.pageDescription || '配置用户组和权限，并检查权限来源与依赖关系'"
   >
     <div class="PermissionsPage-content">
       <AdminInlineMessage v-if="permissionMetaSummary" tone="neutral">
-        当前共注册 {{ permissionMetaSummary.permissionCount }} 项权限，来自 {{ permissionMetaSummary.moduleCount }} 个模块。
-        保存时会自动补齐依赖权限，避免出现“子权限已勾选但前置权限缺失”的配置。
+        {{ permissionsCopy?.metaSummaryText?.(permissionMetaSummary) || `当前共注册 ${permissionMetaSummary.permissionCount} 项权限，来自 ${permissionMetaSummary.moduleCount} 个模块。保存时会自动补齐依赖权限，避免出现“子权限已勾选但前置权限缺失”的配置。` }}
       </AdminInlineMessage>
 
       <!-- 用户组管理 -->
@@ -25,7 +24,7 @@
             <button
               type="button"
               class="GroupBar-edit"
-              title="编辑用户组"
+              :title="permissionsCopy?.editGroupTitle || '编辑用户组'"
               @click="editGroup(group)"
             >
               <i class="fas fa-edit"></i>
@@ -33,7 +32,7 @@
           </div>
           <button type="button" class="GroupBar-add" @click="createGroup">
             <i class="fas fa-plus"></i>
-            添加用户组
+            {{ permissionsCopy?.addGroupLabel || '添加用户组' }}
           </button>
         </div>
       </div>
@@ -44,7 +43,7 @@
           <table class="PermissionGrid">
             <thead>
               <tr>
-                <th class="PermissionGrid-permission">权限</th>
+                <th class="PermissionGrid-permission">{{ permissionsCopy?.permissionHeaderLabel || '权限' }}</th>
                 <th
                   v-for="group in groups"
                   :key="group.id"
@@ -78,7 +77,7 @@
                       </div>
                       <p v-if="permission.description" class="PermissionCell-description">{{ permission.description }}</p>
                       <p v-if="permission.required_permissions?.length" class="PermissionCell-dependencies">
-                        依赖: <code>{{ permission.required_permissions.join(', ') }}</code>
+                        {{ permissionsCopy?.dependencyPrefix || '依赖' }}: <code>{{ permission.required_permissions.join(', ') }}</code>
                       </p>
                     </div>
                   </td>
@@ -103,7 +102,7 @@
           <section v-for="section in permissionSections" :key="`${section.name}-mobile`" class="PermissionMobileSection">
             <header class="PermissionMobileSection-header">
               <h4>{{ section.label }}</h4>
-              <span>{{ section.permissions.length }} 项权限</span>
+              <span>{{ permissionsCopy?.mobilePermissionCountText?.(section.permissions.length) || `${section.permissions.length} 项权限` }}</span>
             </header>
 
             <article
@@ -123,7 +122,7 @@
               </div>
               <p v-if="permission.description" class="PermissionMobileCard-description">{{ permission.description }}</p>
               <p v-if="permission.required_permissions?.length" class="PermissionMobileCard-dependencies">
-                依赖: <code>{{ permission.required_permissions.join(', ') }}</code>
+                {{ permissionsCopy?.dependencyPrefix || '依赖' }}: <code>{{ permission.required_permissions.join(', ') }}</code>
               </p>
 
               <div class="PermissionMobileMatrix">
@@ -156,16 +155,16 @@
           :disabled="saving"
           @click="savePermissions"
         >
-          {{ saving ? '保存中...' : '保存权限' }}
+          {{ saving ? (permissionsCopy?.savingPermissionsLabel || '保存中...') : (permissionsCopy?.savePermissionsLabel || '保存权限') }}
         </button>
       </div>
-      <AdminInlineMessage v-if="saveSuccess" tone="success">保存成功</AdminInlineMessage>
+      <AdminInlineMessage v-if="saveSuccess" tone="success">{{ permissionsCopy?.saveSuccessText || '保存成功' }}</AdminInlineMessage>
       <AdminInlineMessage v-if="errorMessage" tone="danger">{{ errorMessage }}</AdminInlineMessage>
 
       <div v-if="showGroupModal" class="Modal" @click.self="closeGroupModal">
         <div class="Modal-content Modal-content--group">
           <div class="Modal-header">
-            <h3>{{ editingGroup ? '编辑用户组' : '创建用户组' }}</h3>
+            <h3>{{ editingGroup ? (permissionsCopy?.updateGroupTitle || '编辑用户组') : (permissionsCopy?.createGroupTitle || '创建用户组') }}</h3>
             <button type="button" class="Modal-close" @click="closeGroupModal">
               <i class="fas fa-times"></i>
             </button>
@@ -173,31 +172,31 @@
 
           <div class="Modal-body">
             <div class="Form-group Form-group--groupName">
-              <label for="group-name">名称</label>
+              <label for="group-name">{{ permissionsCopy?.groupNameLabel || '名称' }}</label>
               <input
                 id="group-name"
                 v-model="groupForm.name"
                 name="group_name"
                 type="text"
                 class="FormControl"
-                placeholder="例如：Moderator"
+                :placeholder="permissionsCopy?.groupNamePlaceholder || '例如：Moderator'"
               />
             </div>
 
             <div class="FormRow">
               <div class="Form-group">
-                <label for="group-icon">图标</label>
+                <label for="group-icon">{{ permissionsCopy?.groupIconLabel || '图标' }}</label>
                 <input
                   id="group-icon"
                   v-model="groupForm.icon"
                   name="group_icon"
                   type="text"
                   class="FormControl"
-                  placeholder="例如：fas fa-shield-alt"
+                  :placeholder="permissionsCopy?.groupIconPlaceholder || '例如：fas fa-shield-alt'"
                 />
               </div>
               <div class="Form-group">
-                <label for="group-color-text">颜色</label>
+                <label for="group-color-text">{{ permissionsCopy?.groupColorLabel || '颜色' }}</label>
                 <div class="ColorField">
                   <input
                     id="group-color-picker"
@@ -205,7 +204,7 @@
                     name="group_color_picker"
                     type="color"
                     class="ColorField-picker"
-                    aria-label="用户组颜色选择器"
+                    :aria-label="permissionsCopy?.groupColorPickerAriaLabel || '用户组颜色选择器'"
                   />
                   <input
                     id="group-color-text"
@@ -213,7 +212,7 @@
                     name="group_color"
                     type="text"
                     class="FormControl"
-                    placeholder="#4d698e"
+                    :placeholder="permissionsCopy?.groupColorPlaceholder || '#4d698e'"
                   />
                 </div>
               </div>
@@ -226,7 +225,7 @@
                 name="group_is_hidden"
                 type="checkbox"
               />
-              <span>隐藏用户组</span>
+              <span>{{ permissionsCopy?.groupHiddenLabel || '隐藏用户组' }}</span>
             </label>
           </div>
 
@@ -238,16 +237,16 @@
               :disabled="groupSaving || deletingGroup"
               @click="deleteGroup"
             >
-              {{ deletingGroup ? '删除中...' : '删除用户组' }}
+              {{ deletingGroup ? (permissionsCopy?.deletingGroupLabel || '删除中...') : (permissionsCopy?.deleteGroupLabel || '删除用户组') }}
             </button>
-            <span v-else-if="editingGroup" class="Modal-footerNote">系统默认用户组不允许删除</span>
+            <span v-else-if="editingGroup" class="Modal-footerNote">{{ permissionsCopy?.deleteGroupBlockedText || '系统默认用户组不允许删除' }}</span>
             <span v-else class="Modal-footerNote"></span>
             <div class="Modal-footerActions">
               <button type="button" class="Button Button--secondary" @click="closeGroupModal">
-                取消
+                {{ permissionsCopy?.cancelLabel || '取消' }}
               </button>
               <button type="button" class="Button Button--primary" :disabled="groupSaving || deletingGroup" @click="saveGroup">
-                {{ groupSaving ? '保存中...' : '保存' }}
+                {{ groupSaving ? (permissionsCopy?.savingGroupLabel || '保存中...') : (permissionsCopy?.saveGroupLabel || '保存') }}
               </button>
             </div>
           </div>
@@ -264,6 +263,11 @@ import AdminPage from '../components/AdminPage.vue'
 import { useAdminSaveFeedback } from '../composables/useAdminSaveFeedback'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
+import {
+  getAdminPermissionsPageActionMeta,
+  getAdminPermissionsPageConfig,
+  getAdminPermissionsPageCopy,
+} from '../registry'
 
 const groups = ref([])
 const permissions = ref({})
@@ -278,6 +282,9 @@ const editingGroup = ref(null)
 const groupForm = ref(getEmptyGroupForm())
 const modalStore = useModalStore()
 const { saveSuccess, resetSaveFeedback, showSaveSuccess } = useAdminSaveFeedback()
+const permissionsCopy = computed(() => getAdminPermissionsPageCopy())
+const permissionsConfig = computed(() => getAdminPermissionsPageConfig())
+const permissionsActionMeta = computed(() => getAdminPermissionsPageActionMeta())
 
 onMounted(async () => {
   await loadGroups()
@@ -292,7 +299,7 @@ async function loadGroups() {
     errorMessage.value = ''
   } catch (error) {
     console.error('加载用户组失败:', error)
-    errorMessage.value = '加载用户组失败'
+    errorMessage.value = permissionsActionMeta.value?.loadGroupsFailedMessage || '加载用户组失败'
   }
 }
 
@@ -303,7 +310,7 @@ async function loadPermissions() {
     errorMessage.value = ''
   } catch (error) {
     console.error('加载权限失败:', error)
-    errorMessage.value = '加载权限失败'
+    errorMessage.value = permissionsActionMeta.value?.loadPermissionsFailedMessage || '加载权限失败'
   }
 }
 
@@ -315,7 +322,7 @@ async function loadPermissionMeta() {
     errorMessage.value = ''
   } catch (error) {
     console.error('加载权限定义失败:', error)
-    errorMessage.value = '加载权限定义失败'
+    errorMessage.value = permissionsActionMeta.value?.loadPermissionMetaFailedMessage || '加载权限定义失败'
   }
 }
 
@@ -338,7 +345,7 @@ function hasPermission(groupId, permissionName) {
 }
 
 function getGroupColor(group) {
-  return group?.color || '#6b7c93'
+  return group?.color || permissionsConfig.value?.groupColorFallback || '#6b7c93'
 }
 
 function togglePermission(groupId, permissionName, event) {
@@ -358,15 +365,15 @@ function togglePermission(groupId, permissionName, event) {
 }
 
 function resolveModuleName(moduleId) {
-  return moduleNameMap.value[moduleId] || moduleId || '未知模块'
+  return moduleNameMap.value[moduleId] || moduleId || permissionsCopy.value?.unknownModuleLabel || '未知模块'
 }
 
 async function savePermissions() {
   const confirmed = await modalStore.confirm({
-    title: '保存权限配置',
-    message: '权限变更会立即影响用户操作能力。确定保存当前配置吗？',
-    confirmText: '保存',
-    cancelText: '取消',
+    title: permissionsActionMeta.value?.savePermissionsConfirmTitle || '保存权限配置',
+    message: permissionsActionMeta.value?.savePermissionsConfirmMessage || '权限变更会立即影响用户操作能力。确定保存当前配置吗？',
+    confirmText: permissionsActionMeta.value?.savePermissionsConfirmText || '保存',
+    cancelText: permissionsActionMeta.value?.savePermissionsCancelText || '取消',
     tone: 'warning'
   })
   if (!confirmed) {
@@ -382,7 +389,7 @@ async function savePermissions() {
     showSaveSuccess()
   } catch (error) {
     console.error('保存权限失败:', error)
-    errorMessage.value = error.response?.data?.error || '保存权限失败'
+    errorMessage.value = error.response?.data?.error || permissionsActionMeta.value?.savePermissionsFailedMessage || '保存权限失败'
   } finally {
     saving.value = false
   }
@@ -399,7 +406,7 @@ function editGroup(group) {
   groupForm.value = {
     name: group.name || '',
     icon: group.icon || '',
-    color: group.color || '#4d698e',
+    color: group.color || permissionsConfig.value?.groupColorDefault || '#4d698e',
     is_hidden: Boolean(group.is_hidden),
   }
   showGroupModal.value = true
@@ -408,8 +415,8 @@ function editGroup(group) {
 async function saveGroup() {
   if (!groupForm.value.name.trim()) {
     await modalStore.alert({
-      title: '信息不完整',
-      message: '请输入用户组名称',
+      title: permissionsActionMeta.value?.groupIncompleteTitle || '信息不完整',
+      message: permissionsActionMeta.value?.groupIncompleteMessage || '请输入用户组名称',
       tone: 'warning'
     })
     return
@@ -434,8 +441,8 @@ async function saveGroup() {
   } catch (error) {
     console.error('保存用户组失败:', error)
     await modalStore.alert({
-      title: '保存失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: permissionsActionMeta.value?.saveGroupFailedTitle || '保存失败',
+      message: error.response?.data?.error || error.message || permissionsActionMeta.value?.saveGroupFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
@@ -453,10 +460,10 @@ async function deleteGroup() {
   }
 
   const confirmed = await modalStore.confirm({
-    title: '删除用户组',
-    message: `确定删除用户组“${editingGroup.value.name}”吗？现有成员会失去该用户组权限。`,
-    confirmText: '删除',
-    cancelText: '取消',
+    title: permissionsActionMeta.value?.deleteGroupConfirmTitle || '删除用户组',
+    message: permissionsActionMeta.value?.deleteGroupConfirmMessage?.(editingGroup.value.name) || `确定删除用户组“${editingGroup.value.name}”吗？现有成员会失去该用户组权限。`,
+    confirmText: permissionsActionMeta.value?.deleteGroupConfirmText || '删除',
+    cancelText: permissionsActionMeta.value?.deleteGroupCancelText || '取消',
     tone: 'danger'
   })
   if (!confirmed) {
@@ -471,15 +478,15 @@ async function deleteGroup() {
     await loadGroups()
     await loadPermissions()
     await modalStore.alert({
-      title: '用户组已删除',
-      message: `用户组“${deletedGroupName}”已删除。`,
+      title: permissionsActionMeta.value?.deleteGroupSuccessTitle || '用户组已删除',
+      message: permissionsActionMeta.value?.deleteGroupSuccessMessage?.(deletedGroupName) || `用户组“${deletedGroupName}”已删除。`,
       tone: 'success'
     })
   } catch (error) {
     console.error('删除用户组失败:', error)
     await modalStore.alert({
-      title: '删除失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: permissionsActionMeta.value?.deleteGroupFailedTitle || '删除失败',
+      message: error.response?.data?.error || error.message || permissionsActionMeta.value?.deleteGroupFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
@@ -499,7 +506,7 @@ function getEmptyGroupForm() {
   return {
     name: '',
     icon: '',
-    color: '#4d698e',
+    color: permissionsConfig.value?.groupColorDefault || '#4d698e',
     is_hidden: false,
   }
 }
