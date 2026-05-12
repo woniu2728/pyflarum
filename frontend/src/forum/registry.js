@@ -3842,6 +3842,15 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-composer-unsaved-exit-message',
+  order: 626,
+  surfaces: ['discussion-composer-unsaved-exit-message'],
+  resolve: () => ({
+    text: '你有未发布的讨论内容。确定要离开当前页面吗？',
+  }),
+})
+
+registerUiCopy({
   key: 'discussion-composer-edit-pending-title',
   order: 627,
   surfaces: ['discussion-composer-edit-pending-title'],
@@ -4050,6 +4059,17 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'post-composer-unsaved-exit-message',
+  order: 642,
+  surfaces: ['post-composer-unsaved-exit-message'],
+  resolve: ({ isEditing }) => ({
+    text: isEditing
+      ? '你有未保存的帖子编辑内容。确定要离开当前页面吗？'
+      : '你有未发布的回复内容。确定要离开当前页面吗？',
+  }),
+})
+
+registerUiCopy({
   key: 'post-composer-edit-pending-title',
   order: 643,
   surfaces: ['post-composer-edit-pending-title'],
@@ -4082,6 +4102,122 @@ registerUiCopy({
   surfaces: ['post-composer-create-pending-message'],
   resolve: () => ({
     text: '管理员通过后，这条回复才会显示给其他用户。',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-notice-draft-label',
+  order: 646,
+  surfaces: ['composer-notice-draft-label'],
+  resolve: () => ({
+    text: '草稿',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-notice-upload-label',
+  order: 646,
+  surfaces: ['composer-notice-upload-label'],
+  resolve: () => ({
+    text: '上传',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-notice-preview-label',
+  order: 646,
+  surfaces: ['composer-notice-preview-label'],
+  resolve: () => ({
+    text: '预览',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-notice-submit-label',
+  order: 646,
+  surfaces: ['composer-notice-submit-label'],
+  resolve: ({ isEditing, isEditingDiscussion, type }) => {
+    if (type === 'discussion') {
+      return {
+        text: isEditingDiscussion ? '保存' : '发布',
+      }
+    }
+
+    return {
+      text: isEditing ? '保存' : '发布',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'composer-upload-progress',
+  order: 646,
+  surfaces: ['composer-upload-progress'],
+  resolve: ({ asImage, fileName }) => ({
+    text: `正在上传${asImage ? '图片' : '附件'}：${fileName || ''}`,
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-upload-inserted',
+  order: 646,
+  surfaces: ['composer-upload-inserted'],
+  resolve: ({ asImage }) => ({
+    text: `${asImage ? '图片' : '附件'}已插入编辑器`,
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-upload-failed',
+  order: 646,
+  surfaces: ['composer-upload-failed'],
+  resolve: ({ asImage }) => ({
+    text: asImage ? '图片上传失败' : '附件上传失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-preview-load-failed',
+  order: 646,
+  surfaces: ['composer-preview-load-failed'],
+  resolve: () => ({
+    text: '预览加载失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-submit-blocked',
+  order: 646,
+  surfaces: ['composer-submit-blocked'],
+  resolve: () => ({
+    text: '当前内容未通过校验。',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-submit-failed',
+  order: 646,
+  surfaces: ['composer-submit-failed'],
+  resolve: () => ({
+    text: '提交失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-draft-time-fallback',
+  order: 646,
+  surfaces: ['composer-draft-time-fallback'],
+  resolve: () => ({
+    text: '刚刚',
+  }),
+})
+
+registerUiCopy({
+  key: 'composer-date-fallback',
+  order: 646,
+  surfaces: ['composer-date-fallback'],
+  resolve: () => ({
+    text: '未知时间',
   }),
 })
 

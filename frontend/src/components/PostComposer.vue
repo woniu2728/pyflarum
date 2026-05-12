@@ -350,25 +350,35 @@ const composerNotices = computed(() => {
   return [
     {
       key: 'draft',
-      label: '草稿',
+      label: getUiCopy({
+        surface: 'composer-notice-draft-label',
+      })?.text || '草稿',
       tone: draftNoticeTone.value,
       message: draftNotice.value
     },
     {
       key: 'upload',
-      label: '上传',
+      label: getUiCopy({
+        surface: 'composer-notice-upload-label',
+      })?.text || '上传',
       tone: uploadNoticeTone.value,
       message: uploadNotice.value
     },
     {
       key: 'preview',
-      label: '预览',
+      label: getUiCopy({
+        surface: 'composer-notice-preview-label',
+      })?.text || '预览',
       tone: 'error',
       message: previewError.value
     },
     {
       key: 'submit',
-      label: isEditing.value ? '保存' : '发布',
+      label: getUiCopy({
+        surface: 'composer-notice-submit-label',
+        isEditing: isEditing.value,
+        type: 'post',
+      })?.text || (isEditing.value ? '保存' : '发布'),
       tone: submitNoticeTone.value,
       message: submitNotice.value
     },
@@ -424,9 +434,12 @@ const emojiAutocompleteStyle = computed(() => {
   }
 })
 const unsavedExitMessage = computed(() => {
-  return isEditing.value
+  return getUiCopy({
+    surface: 'post-composer-unsaved-exit-message',
+    isEditing: isEditing.value,
+  })?.text || (isEditing.value
     ? '你有未保存的帖子编辑内容。确定要离开当前页面吗？'
-    : '你有未发布的回复内容。确定要离开当前页面吗？'
+    : '你有未发布的回复内容。确定要离开当前页面吗？')
 })
 const suspensionNotice = computed(() => {
   if (!isSuspended.value) return ''
@@ -953,7 +966,11 @@ async function handleImageSelected(event) {
 async function uploadAndInsertFile(file, asImage) {
   uploading.value = true
   uploadNoticeTone.value = 'info'
-  uploadNotice.value = `正在上传${asImage ? '图片' : '附件'}：${file.name}`
+  uploadNotice.value = getUiCopy({
+    surface: 'composer-upload-progress',
+    asImage,
+    fileName: file.name,
+  })?.text || `正在上传${asImage ? '图片' : '附件'}：${file.name}`
   submitNotice.value = ''
   showEmojiPicker.value = false
 
@@ -966,9 +983,15 @@ async function uploadAndInsertFile(file, asImage) {
     })
     await insertComposerText(markdown)
     uploadNoticeTone.value = 'success'
-    uploadNotice.value = `${asImage ? '图片' : '附件'}已插入编辑器`
+    uploadNotice.value = getUiCopy({
+      surface: 'composer-upload-inserted',
+      asImage,
+    })?.text || `${asImage ? '图片' : '附件'}已插入编辑器`
   } catch (error) {
-    const message = getComposerErrorMessage(error, asImage ? '图片上传失败' : '附件上传失败')
+    const message = getComposerErrorMessage(error, getUiCopy({
+      surface: 'composer-upload-failed',
+      asImage,
+    })?.text || (asImage ? '图片上传失败' : '附件上传失败'))
     uploadNoticeTone.value = 'error'
     uploadNotice.value = message
   } finally {
@@ -1103,7 +1126,9 @@ async function requestPreview() {
     if (!showPreview.value) return
     previewHtml.value = renderTwemojiHtml(data.html || '')
   } catch (error) {
-    previewError.value = getComposerErrorMessage(error, '预览加载失败')
+    previewError.value = getComposerErrorMessage(error, getUiCopy({
+      surface: 'composer-preview-load-failed',
+    })?.text || '预览加载失败')
   } finally {
     previewLoading.value = false
   }
@@ -1176,7 +1201,9 @@ async function submitReply() {
     })
     if (blocked) {
       submitNoticeTone.value = blocked.tone || 'error'
-      submitNotice.value = blocked.message || '当前内容未通过校验。'
+      submitNotice.value = blocked.message || (getUiCopy({
+        surface: 'composer-submit-blocked',
+      })?.text || '当前内容未通过校验。')
       return
     }
 
@@ -1241,7 +1268,9 @@ async function submitReply() {
   } catch (error) {
     console.error('提交失败:', error)
     submitNoticeTone.value = 'error'
-    submitNotice.value = error.response?.data?.error || error.message || '提交失败，请稍后重试'
+    submitNotice.value = error.response?.data?.error || error.message || (getUiCopy({
+      surface: 'composer-submit-failed',
+    })?.text || '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }
@@ -1253,7 +1282,9 @@ function isViewingCurrentDiscussion() {
 
 function formatDraftTime(value) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '刚刚'
+  if (Number.isNaN(date.getTime())) return getUiCopy({
+    surface: 'composer-draft-time-fallback',
+  })?.text || '刚刚'
 
   return date.toLocaleTimeString([], {
     hour: '2-digit',
@@ -1300,7 +1331,9 @@ function clearComposerViewportEffects() {
 
 function formatAbsoluteDate(value) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '未知时间'
+  if (Number.isNaN(date.getTime())) return getUiCopy({
+    surface: 'composer-date-fallback',
+  })?.text || '未知时间'
   return date.toLocaleString('zh-CN')
 }
 
