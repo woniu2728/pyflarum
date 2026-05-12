@@ -23,6 +23,12 @@ const adminDashboardActionsMeta = []
 const adminDashboardActions = []
 const adminAuditLogsPageCopies = []
 const adminAuditLogsPageConfig = []
+const adminApprovalQueuePageCopies = []
+const adminApprovalQueuePageConfig = []
+const adminApprovalQueuePageActionMeta = []
+const adminFlagsPageCopies = []
+const adminFlagsPageConfig = []
+const adminFlagsPageActionMeta = []
 const adminUsersPageCopies = []
 const adminUsersPageActionMeta = []
 const adminTagsPageConfig = []
@@ -322,6 +328,102 @@ export function registerAdminAuditLogsPageConfig(item) {
 
 export function getAdminAuditLogsPageConfig(context = {}) {
   return [...adminAuditLogsPageConfig]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminApprovalQueuePageCopy(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminApprovalQueuePageCopies, normalizedItem)
+}
+
+export function getAdminApprovalQueuePageCopy(context = {}) {
+  return [...adminApprovalQueuePageCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminApprovalQueuePageConfig(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminApprovalQueuePageConfig, normalizedItem)
+}
+
+export function getAdminApprovalQueuePageConfig(context = {}) {
+  return [...adminApprovalQueuePageConfig]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminApprovalQueuePageActionMeta(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminApprovalQueuePageActionMeta, normalizedItem)
+}
+
+export function getAdminApprovalQueuePageActionMeta(context = {}) {
+  return [...adminApprovalQueuePageActionMeta]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminFlagsPageCopy(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminFlagsPageCopies, normalizedItem)
+}
+
+export function getAdminFlagsPageCopy(context = {}) {
+  return [...adminFlagsPageCopies]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminFlagsPageConfig(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminFlagsPageConfig, normalizedItem)
+}
+
+export function getAdminFlagsPageConfig(context = {}) {
+  return [...adminFlagsPageConfig]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .find(Boolean) || null
+}
+
+export function registerAdminFlagsPageActionMeta(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminFlagsPageActionMeta, normalizedItem)
+}
+
+export function getAdminFlagsPageActionMeta(context = {}) {
+  return [...adminFlagsPageActionMeta]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
@@ -1125,6 +1227,122 @@ registerAdminAuditLogsPageConfig({
       tag: '标签',
       user: '用户',
     },
+  }),
+})
+
+registerAdminApprovalQueuePageCopy({
+  key: 'core-approval-queue-page-copy',
+  order: 10,
+  resolve: () => ({
+    pageTitle: '审核队列',
+    pageDescription: '审核未验证邮箱用户提交的讨论和回复',
+    loadingText: '加载中...',
+    emptyText: '当前没有待审核内容',
+    discussionTypeLabel: '讨论',
+    postTypeLabel: '回复',
+    unknownAuthorLabel: '未知',
+    authorPrefix: '作者',
+    submittedAtPrefix: '提交于',
+    floorPrefix: '楼层',
+    viewContentLabel: '查看内容',
+    emptyContentText: '暂无正文内容',
+    approveLabel: '审核通过',
+    rejectLabel: '拒绝并隐藏',
+    modalApproveTitle: '审核通过',
+    modalRejectTitle: '拒绝内容',
+    modalApproveDescription: '通过后内容会对有权限的用户可见。',
+    modalRejectDescription: '拒绝后作者仍可看到审核反馈。',
+    noteLabel: '审核备注',
+    approveNotePlaceholder: '例如：内容符合社区规范，已放行',
+    rejectNotePlaceholder: '例如：内容质量不足，已拒绝',
+    confirmApproveText: '通过审核',
+    confirmRejectText: '拒绝并隐藏',
+    unknownTimeText: '未知时间',
+  }),
+})
+
+registerAdminApprovalQueuePageConfig({
+  key: 'core-approval-queue-page-config',
+  order: 10,
+  resolve: () => ({
+    filters: [
+      { value: 'all', label: '全部', icon: 'fas fa-layer-group' },
+      { value: 'discussion', label: '讨论', icon: 'fas fa-comments' },
+      { value: 'post', label: '回复', icon: 'fas fa-reply' },
+    ],
+  }),
+})
+
+registerAdminApprovalQueuePageActionMeta({
+  key: 'core-approval-queue-page-actions-meta',
+  order: 10,
+  resolve: () => ({
+    loadErrorText: '加载审核队列失败，请稍后重试',
+    approveSuccessTitle: '审核已通过',
+    approveSuccessMessage: '内容已放行，用户现在可以正常查看。',
+    rejectSuccessTitle: '内容已拒绝',
+    rejectSuccessMessage: '内容已拒绝并隐藏。',
+    submitFailedTitle: '提交失败',
+    submitFailedMessage: '未知错误',
+  }),
+})
+
+registerAdminFlagsPageCopy({
+  key: 'core-flags-page-copy',
+  order: 10,
+  resolve: () => ({
+    pageTitle: '举报管理',
+    pageDescription: '处理用户提交的帖子举报',
+    loadingText: '加载中...',
+    emptyText: '暂无举报记录',
+    reporterPrefix: '举报人',
+    discussionPrefix: '讨论',
+    postPrefix: '帖子',
+    viewPostLabel: '查看帖子',
+    reasonBlockTitle: '举报说明',
+    postBlockTitle: '帖子内容',
+    emptyReasonText: '用户未填写补充说明',
+    resolveLabel: '标记已处理',
+    ignoreLabel: '忽略举报',
+    resolverPrefix: '处理人',
+    resolutionNotePrefix: '备注',
+    unknownResolverLabel: '未知',
+    statusOpenLabel: '待处理',
+    statusResolvedLabel: '已处理',
+    statusIgnoredLabel: '已忽略',
+    modalResolveTitle: '标记举报已处理',
+    modalIgnoreTitle: '忽略举报',
+    modalResolveDescription: '标记后这条举报会从待处理列表移出。',
+    modalIgnoreDescription: '忽略后举报会进入已忽略列表，便于后续追溯。',
+    noteLabel: '处理备注',
+    resolveNotePlaceholder: '例如：已隐藏帖子并警告用户',
+    ignoreNotePlaceholder: '例如：举报理由不足，暂不处理',
+  }),
+})
+
+registerAdminFlagsPageConfig({
+  key: 'core-flags-page-config',
+  order: 10,
+  resolve: () => ({
+    filters: [
+      { value: 'open', label: '待处理', icon: 'fas fa-inbox' },
+      { value: 'resolved', label: '已处理', icon: 'fas fa-check-circle' },
+      { value: 'ignored', label: '已忽略', icon: 'fas fa-ban' },
+    ],
+  }),
+})
+
+registerAdminFlagsPageActionMeta({
+  key: 'core-flags-page-actions-meta',
+  order: 10,
+  resolve: () => ({
+    loadErrorText: '加载举报失败，请稍后重试',
+    resolveSuccessTitle: '举报已处理',
+    resolveSuccessMessage: '举报状态已更新为已处理。',
+    ignoreSuccessTitle: '举报已忽略',
+    ignoreSuccessMessage: '举报状态已更新为已忽略。',
+    resolveFailedTitle: '处理失败',
+    resolveFailedMessage: '未知错误',
   }),
 })
 

@@ -2,43 +2,43 @@
   <AdminPage
     class-name="ApprovalQueuePage"
     icon="fas fa-user-check"
-    title="审核队列"
-    description="审核未验证邮箱用户提交的讨论和回复"
+    :title="approvalCopy?.pageTitle || '审核队列'"
+    :description="approvalCopy?.pageDescription || '审核未验证邮箱用户提交的讨论和回复'"
   >
-    <AdminFilterTabs v-model="contentType" :options="filters" @change="loadItems" />
+    <AdminFilterTabs v-model="contentType" :options="approvalFilters" @change="loadItems" />
 
     <div class="ApprovalQueue-list">
-      <AdminStateBlock v-if="loading" class="ApprovalQueue-empty" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-if="loading" class="ApprovalQueue-empty" tone="subtle">{{ approvalCopy?.loadingText || '加载中...' }}</AdminStateBlock>
       <AdminStateBlock v-else-if="loadError" class="ApprovalQueue-empty" tone="danger">
         {{ loadError }}
       </AdminStateBlock>
-      <AdminStateBlock v-else-if="items.length === 0" class="ApprovalQueue-empty">当前没有待审核内容</AdminStateBlock>
+      <AdminStateBlock v-else-if="items.length === 0" class="ApprovalQueue-empty">{{ approvalCopy?.emptyText || '当前没有待审核内容' }}</AdminStateBlock>
       <div v-else class="ApprovalList">
         <article v-for="item in items" :key="`${item.type}-${item.id}`" class="ApprovalCard">
           <div class="ApprovalCard-header">
             <div>
               <div class="ApprovalCard-title">
                 <span class="ApprovalType" :class="`ApprovalType--${item.type}`">
-                  {{ item.type === 'discussion' ? '讨论' : '回复' }}
+                  {{ item.type === 'discussion' ? (approvalCopy?.discussionTypeLabel || '讨论') : (approvalCopy?.postTypeLabel || '回复') }}
                 </span>
                 {{ item.title }}
               </div>
               <div class="ApprovalCard-meta">
-                作者：{{ item.author?.display_name || item.author?.username || '未知' }}
-                · 提交于 {{ formatDate(item.created_at) }}
-                <span v-if="item.post?.number"> · 楼层 #{{ item.post.number }}</span>
+                {{ approvalCopy?.authorPrefix || '作者' }}：{{ item.author?.display_name || item.author?.username || approvalCopy?.unknownAuthorLabel || '未知' }}
+                · {{ approvalCopy?.submittedAtPrefix || '提交于' }} {{ formatDate(item.created_at) }}
+                <span v-if="item.post?.number"> · {{ approvalCopy?.floorPrefix || '楼层' }} #{{ item.post.number }}</span>
               </div>
             </div>
-            <a :href="itemLink(item)" class="ApprovalCard-link">查看内容</a>
+            <a :href="itemLink(item)" class="ApprovalCard-link">{{ approvalCopy?.viewContentLabel || '查看内容' }}</a>
           </div>
 
           <div class="ApprovalCard-body">
-            <p>{{ item.content || '暂无正文内容' }}</p>
+            <p>{{ item.content || approvalCopy?.emptyContentText || '暂无正文内容' }}</p>
           </div>
 
           <div class="ApprovalCard-actions">
-            <button type="button" class="Button Button--primary" @click="openAction(item, 'approve')">审核通过</button>
-            <button type="button" class="Button Button--secondary" @click="openAction(item, 'reject')">拒绝并隐藏</button>
+            <button type="button" class="Button Button--primary" @click="openAction(item, 'approve')">{{ approvalCopy?.approveLabel || '审核通过' }}</button>
+            <button type="button" class="Button Button--secondary" @click="openAction(item, 'reject')">{{ approvalCopy?.rejectLabel || '拒绝并隐藏' }}</button>
           </div>
         </article>
       </div>
@@ -47,11 +47,11 @@
     <AdminActionNoteModal
       v-model:note="actionNote"
       :show="showModal"
-      :title="pendingAction === 'approve' ? '审核通过' : '拒绝内容'"
-      :description="pendingAction === 'approve' ? '通过后内容会对有权限的用户可见。' : '拒绝后作者仍可看到审核反馈。'"
-      note-label="审核备注"
-      :placeholder="pendingAction === 'approve' ? '例如：内容符合社区规范，已放行' : '例如：内容质量不足，已拒绝'"
-      :confirm-text="pendingAction === 'approve' ? '通过审核' : '拒绝并隐藏'"
+      :title="pendingAction === 'approve' ? (approvalCopy?.modalApproveTitle || '审核通过') : (approvalCopy?.modalRejectTitle || '拒绝内容')"
+      :description="pendingAction === 'approve' ? (approvalCopy?.modalApproveDescription || '通过后内容会对有权限的用户可见。') : (approvalCopy?.modalRejectDescription || '拒绝后作者仍可看到审核反馈。')"
+      :note-label="approvalCopy?.noteLabel || '审核备注'"
+      :placeholder="pendingAction === 'approve' ? (approvalCopy?.approveNotePlaceholder || '例如：内容符合社区规范，已放行') : (approvalCopy?.rejectNotePlaceholder || '例如：内容质量不足，已拒绝')"
+      :confirm-text="pendingAction === 'approve' ? (approvalCopy?.confirmApproveText || '通过审核') : (approvalCopy?.confirmRejectText || '拒绝并隐藏')"
       :confirm-tone="pendingAction === 'approve' ? 'primary' : 'danger'"
       :saving="saving"
       @close="closeModal"
@@ -61,13 +61,18 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AdminActionNoteModal from '../components/AdminActionNoteModal.vue'
 import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import AdminPage from '../components/AdminPage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
+import {
+  getAdminApprovalQueuePageActionMeta,
+  getAdminApprovalQueuePageConfig,
+  getAdminApprovalQueuePageCopy,
+} from '../registry'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -79,12 +84,10 @@ const selectedItem = ref(null)
 const pendingAction = ref('approve')
 const actionNote = ref('')
 const modalStore = useModalStore()
-
-const filters = [
-  { value: 'all', label: '全部', icon: 'fas fa-layer-group' },
-  { value: 'discussion', label: '讨论', icon: 'fas fa-comments' },
-  { value: 'post', label: '回复', icon: 'fas fa-reply' },
-]
+const approvalCopy = computed(() => getAdminApprovalQueuePageCopy())
+const approvalConfig = computed(() => getAdminApprovalQueuePageConfig())
+const approvalActionMeta = computed(() => getAdminApprovalQueuePageActionMeta())
+const approvalFilters = computed(() => approvalConfig.value?.filters || [])
 
 onMounted(() => {
   loadItems()
@@ -100,7 +103,7 @@ async function loadItems() {
     items.value = data.data || []
   } catch (error) {
     console.error('加载审核队列失败:', error)
-    loadError.value = error.response?.data?.error || error.message || '加载审核队列失败，请稍后重试'
+    loadError.value = error.response?.data?.error || error.message || approvalActionMeta.value?.loadErrorText || '加载审核队列失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -141,15 +144,19 @@ async function submitAction() {
     closeModal()
     await loadItems()
     await modalStore.alert({
-      title: action === 'approve' ? '审核已通过' : '内容已拒绝',
-      message: action === 'approve' ? '内容已放行，用户现在可以正常查看。' : '内容已拒绝并隐藏。',
+      title: action === 'approve'
+        ? (approvalActionMeta.value?.approveSuccessTitle || '审核已通过')
+        : (approvalActionMeta.value?.rejectSuccessTitle || '内容已拒绝'),
+      message: action === 'approve'
+        ? (approvalActionMeta.value?.approveSuccessMessage || '内容已放行，用户现在可以正常查看。')
+        : (approvalActionMeta.value?.rejectSuccessMessage || '内容已拒绝并隐藏。'),
       tone: 'success'
     })
   } catch (error) {
     console.error('审核提交失败:', error)
     await modalStore.alert({
-      title: '提交失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: approvalActionMeta.value?.submitFailedTitle || '提交失败',
+      message: error.response?.data?.error || error.message || approvalActionMeta.value?.submitFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
@@ -159,7 +166,7 @@ async function submitAction() {
 
 function formatDate(value) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '未知时间'
+  if (Number.isNaN(date.getTime())) return approvalCopy.value?.unknownTimeText || '未知时间'
   return date.toLocaleString('zh-CN')
 }
 </script>

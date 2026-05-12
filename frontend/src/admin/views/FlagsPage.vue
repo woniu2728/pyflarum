@@ -2,17 +2,17 @@
   <AdminPage
     class-name="FlagsPage"
     icon="fas fa-flag"
-    title="举报管理"
-    description="处理用户提交的帖子举报"
+    :title="flagsCopy?.pageTitle || '举报管理'"
+    :description="flagsCopy?.pageDescription || '处理用户提交的帖子举报'"
   >
-    <AdminFilterTabs v-model="status" :options="filters" @change="loadFlags" />
+    <AdminFilterTabs v-model="status" :options="flagFilters" @change="loadFlags" />
 
     <div class="FlagsPage-list">
-      <AdminStateBlock v-if="loading" class="FlagsPage-empty" tone="subtle">加载中...</AdminStateBlock>
+      <AdminStateBlock v-if="loading" class="FlagsPage-empty" tone="subtle">{{ flagsCopy?.loadingText || '加载中...' }}</AdminStateBlock>
       <AdminStateBlock v-else-if="loadError" class="FlagsPage-empty" tone="danger">
         {{ loadError }}
       </AdminStateBlock>
-      <AdminStateBlock v-else-if="flags.length === 0" class="FlagsPage-empty">暂无举报记录</AdminStateBlock>
+      <AdminStateBlock v-else-if="flags.length === 0" class="FlagsPage-empty">{{ flagsCopy?.emptyText || '暂无举报记录' }}</AdminStateBlock>
       <div v-else class="FlagList">
         <article v-for="flag in flags" :key="flag.id" class="FlagCard">
           <div class="FlagCard-header">
@@ -24,34 +24,34 @@
                 </span>
               </div>
               <div class="FlagCard-meta">
-                举报人：{{ flag.user.display_name || flag.user.username }}
-                · 讨论：{{ flag.post.discussion_title }}
-                · 帖子 #{{ flag.post.number }}
+                {{ flagsCopy?.reporterPrefix || '举报人' }}：{{ flag.user.display_name || flag.user.username }}
+                · {{ flagsCopy?.discussionPrefix || '讨论' }}：{{ flag.post.discussion_title }}
+                · {{ flagsCopy?.postPrefix || '帖子' }} #{{ flag.post.number }}
               </div>
             </div>
             <a :href="`/d/${flag.post.discussion_id}?near=${flag.post.number}`" class="FlagCard-link">
-              查看帖子
+              {{ flagsCopy?.viewPostLabel || '查看帖子' }}
             </a>
           </div>
 
           <div class="FlagCard-body">
             <div class="FlagBlock">
-              <strong>举报说明</strong>
-              <p>{{ flag.message || '用户未填写补充说明' }}</p>
+              <strong>{{ flagsCopy?.reasonBlockTitle || '举报说明' }}</strong>
+              <p>{{ flag.message || flagsCopy?.emptyReasonText || '用户未填写补充说明' }}</p>
             </div>
             <div class="FlagBlock">
-              <strong>帖子内容</strong>
+              <strong>{{ flagsCopy?.postBlockTitle || '帖子内容' }}</strong>
               <p>{{ flag.post.content }}</p>
             </div>
           </div>
 
           <div v-if="flag.status === 'open'" class="FlagCard-actions">
-            <button type="button" class="Button Button--primary" @click="openResolve(flag, 'resolved')">标记已处理</button>
-            <button type="button" class="Button Button--secondary" @click="openResolve(flag, 'ignored')">忽略举报</button>
+            <button type="button" class="Button Button--primary" @click="openResolve(flag, 'resolved')">{{ flagsCopy?.resolveLabel || '标记已处理' }}</button>
+            <button type="button" class="Button Button--secondary" @click="openResolve(flag, 'ignored')">{{ flagsCopy?.ignoreLabel || '忽略举报' }}</button>
           </div>
           <div v-else class="FlagCard-footer">
-            处理人：{{ flag.resolved_by?.display_name || flag.resolved_by?.username || '未知' }}
-            <span v-if="flag.resolution_note"> · 备注：{{ flag.resolution_note }}</span>
+            {{ flagsCopy?.resolverPrefix || '处理人' }}：{{ flag.resolved_by?.display_name || flag.resolved_by?.username || flagsCopy?.unknownResolverLabel || '未知' }}
+            <span v-if="flag.resolution_note"> · {{ flagsCopy?.resolutionNotePrefix || '备注' }}：{{ flag.resolution_note }}</span>
           </div>
         </article>
       </div>
@@ -60,11 +60,11 @@
     <AdminActionNoteModal
       v-model:note="resolutionNote"
       :show="showResolveModal"
-      :title="pendingStatus === 'resolved' ? '标记举报已处理' : '忽略举报'"
-      :description="pendingStatus === 'resolved' ? '标记后这条举报会从待处理列表移出。' : '忽略后举报会进入已忽略列表，便于后续追溯。'"
-      note-label="处理备注"
-      :placeholder="pendingStatus === 'resolved' ? '例如：已隐藏帖子并警告用户' : '例如：举报理由不足，暂不处理'"
-      :confirm-text="pendingStatus === 'resolved' ? '标记已处理' : '忽略举报'"
+      :title="pendingStatus === 'resolved' ? (flagsCopy?.modalResolveTitle || '标记举报已处理') : (flagsCopy?.modalIgnoreTitle || '忽略举报')"
+      :description="pendingStatus === 'resolved' ? (flagsCopy?.modalResolveDescription || '标记后这条举报会从待处理列表移出。') : (flagsCopy?.modalIgnoreDescription || '忽略后举报会进入已忽略列表，便于后续追溯。')"
+      :note-label="flagsCopy?.noteLabel || '处理备注'"
+      :placeholder="pendingStatus === 'resolved' ? (flagsCopy?.resolveNotePlaceholder || '例如：已隐藏帖子并警告用户') : (flagsCopy?.ignoreNotePlaceholder || '例如：举报理由不足，暂不处理')"
+      :confirm-text="pendingStatus === 'resolved' ? (flagsCopy?.resolveLabel || '标记已处理') : (flagsCopy?.ignoreLabel || '忽略举报')"
       :saving="saving"
       @close="closeResolveModal"
       @submit="resolveFlag"
@@ -73,13 +73,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AdminActionNoteModal from '../components/AdminActionNoteModal.vue'
 import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import AdminPage from '../components/AdminPage.vue'
 import AdminStateBlock from '../components/AdminStateBlock.vue'
 import api from '../../api'
 import { useModalStore } from '../../stores/modal'
+import {
+  getAdminFlagsPageActionMeta,
+  getAdminFlagsPageConfig,
+  getAdminFlagsPageCopy,
+} from '../registry'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -91,12 +96,10 @@ const pendingStatus = ref('resolved')
 const selectedFlag = ref(null)
 const resolutionNote = ref('')
 const modalStore = useModalStore()
-
-const filters = [
-  { value: 'open', label: '待处理', icon: 'fas fa-inbox' },
-  { value: 'resolved', label: '已处理', icon: 'fas fa-check-circle' },
-  { value: 'ignored', label: '已忽略', icon: 'fas fa-ban' },
-]
+const flagsCopy = computed(() => getAdminFlagsPageCopy())
+const flagsConfig = computed(() => getAdminFlagsPageConfig())
+const flagsActionMeta = computed(() => getAdminFlagsPageActionMeta())
+const flagFilters = computed(() => flagsConfig.value?.filters || [])
 
 onMounted(() => {
   loadFlags()
@@ -112,16 +115,16 @@ async function loadFlags() {
     flags.value = data.data || []
   } catch (error) {
     console.error('加载举报失败:', error)
-    loadError.value = error.response?.data?.error || error.message || '加载举报失败，请稍后重试'
+    loadError.value = error.response?.data?.error || error.message || flagsActionMeta.value?.loadErrorText || '加载举报失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
 function statusLabel(value) {
-  if (value === 'resolved') return '已处理'
-  if (value === 'ignored') return '已忽略'
-  return '待处理'
+  if (value === 'resolved') return flagsCopy.value?.statusResolvedLabel || '已处理'
+  if (value === 'ignored') return flagsCopy.value?.statusIgnoredLabel || '已忽略'
+  return flagsCopy.value?.statusOpenLabel || '待处理'
 }
 
 function openResolve(flag, nextStatus) {
@@ -152,15 +155,19 @@ async function resolveFlag() {
     closeResolveModal()
     await loadFlags()
     await modalStore.alert({
-      title: nextStatus === 'resolved' ? '举报已处理' : '举报已忽略',
-      message: nextStatus === 'resolved' ? '举报状态已更新为已处理。' : '举报状态已更新为已忽略。',
+      title: nextStatus === 'resolved'
+        ? (flagsActionMeta.value?.resolveSuccessTitle || '举报已处理')
+        : (flagsActionMeta.value?.ignoreSuccessTitle || '举报已忽略'),
+      message: nextStatus === 'resolved'
+        ? (flagsActionMeta.value?.resolveSuccessMessage || '举报状态已更新为已处理。')
+        : (flagsActionMeta.value?.ignoreSuccessMessage || '举报状态已更新为已忽略。'),
       tone: 'success'
     })
   } catch (error) {
     console.error('处理举报失败:', error)
     await modalStore.alert({
-      title: '处理失败',
-      message: error.response?.data?.error || error.message || '未知错误',
+      title: flagsActionMeta.value?.resolveFailedTitle || '处理失败',
+      message: error.response?.data?.error || error.message || flagsActionMeta.value?.resolveFailedMessage || '未知错误',
       tone: 'danger'
     })
   } finally {
