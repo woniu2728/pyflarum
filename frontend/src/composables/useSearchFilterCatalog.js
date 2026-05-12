@@ -1,4 +1,5 @@
 import { computed, ref, watch } from 'vue'
+import { getUiCopy } from '@/forum/registry'
 import {
   buildSearchFilterQuery,
   buildSearchFilterSuggestions,
@@ -17,6 +18,13 @@ export function useSearchFilterCatalog(target = '') {
 
   const filterSuggestions = computed(() => buildSearchFilterSuggestions(activeTarget.value))
 
+  function getSearchUiCopy(surface, context = {}, fallback = '') {
+    return getUiCopy({
+      surface,
+      ...context,
+    })?.text || fallback
+  }
+
   watch(
     activeTarget,
     async nextTarget => {
@@ -29,7 +37,11 @@ export function useSearchFilterCatalog(target = '') {
         ready.value = true
       } catch (error) {
         console.error('加载搜索过滤目录失败:', error)
-        loadError.value = error.response?.data?.error || error.message || '加载搜索过滤目录失败'
+        loadError.value = error.response?.data?.error || error.response?.data?.detail || error.message || getSearchUiCopy(
+          'search-filter-catalog-load-error',
+          {},
+          '加载搜索过滤目录失败'
+        )
       } finally {
         loading.value = false
       }

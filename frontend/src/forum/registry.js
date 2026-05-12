@@ -2282,6 +2282,42 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-filter-catalog-load-error',
+  order: 479,
+  surfaces: ['search-filter-catalog-load-error'],
+  resolve: () => ({
+    text: '加载搜索过滤目录失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-results-load-error',
+  order: 479,
+  surfaces: ['search-results-load-error'],
+  resolve: () => ({
+    text: '加载搜索结果失败，请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-results-total-count',
+  order: 479,
+  surfaces: ['search-results-total-count'],
+  resolve: ({ count }) => ({
+    text: String(Number(count || 0)),
+  }),
+})
+
+registerUiCopy({
+  key: 'search-results-source-count',
+  order: 479,
+  surfaces: ['search-results-source-count'],
+  resolve: ({ count }) => ({
+    text: String(Number(count || 0)),
+  }),
+})
+
+registerUiCopy({
   key: 'notification-filter-all-label',
   order: 479,
   surfaces: ['notification-filter-all-label'],

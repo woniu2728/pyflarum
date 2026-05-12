@@ -45,6 +45,10 @@
           </template>
         </ForumHeroPanel>
 
+        <ForumInlineMessage v-if="filterCatalogLoadError" tone="danger">
+          {{ filterCatalogLoadError }}
+        </ForumInlineMessage>
+
         <ForumStateBlock v-if="!normalizedQuery">
           {{ idleStateText }}
         </ForumStateBlock>
@@ -97,6 +101,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useForumStore } from '@/stores/forum'
 import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
+import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
 import ForumPagination from '@/components/forum/ForumPagination.vue'
 import ForumPageWithSidebar from '@/components/forum/ForumPageWithSidebar.vue'
 import ForumSearchFilterNav from '@/components/forum/ForumSearchFilterNav.vue'
@@ -125,6 +130,7 @@ const {
   discussionTotal,
   emptyStateText,
   filterItems,
+  filterCatalogLoadError,
   applySyntax,
   heroText,
   idleStateText,

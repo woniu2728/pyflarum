@@ -65,6 +65,14 @@ export function useSearchResultsPage({ route, router }) {
   const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
   const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
   const showUsers = computed(() => searchType.value === 'all' || searchType.value === 'users')
+
+  function getSearchUiCopy(surface, context = {}, fallback = '') {
+    return getUiCopy({
+      surface,
+      ...context,
+    })?.text || fallback
+  }
+
   const filterItems = computed(() => {
     const counts = {
       discussions: discussionTotal.value,
@@ -79,12 +87,23 @@ export function useSearchResultsPage({ route, router }) {
           surface: 'search-filter-all-label',
           count: discussionTotal.value + postTotal.value + userTotal.value,
         })?.text || '全部',
-        count: discussionTotal.value + postTotal.value + userTotal.value
+        count: getSearchUiCopy(
+          'search-results-total-count',
+          { count: discussionTotal.value + postTotal.value + userTotal.value },
+          String(discussionTotal.value + postTotal.value + userTotal.value)
+        )
       },
       ...searchSources.map(item => ({
         value: item.routeType || item.type,
         label: item.label,
-        count: Number(counts[item.routeType || item.type] || 0),
+        count: getSearchUiCopy(
+          'search-results-source-count',
+          {
+            count: Number(counts[item.routeType || item.type] || 0),
+            type: item.routeType || item.type,
+          },
+          String(Number(counts[item.routeType || item.type] || 0))
+        ),
       })),
     ]
   })
@@ -205,6 +224,10 @@ export function useSearchResultsPage({ route, router }) {
         return
       }
       console.error('加载搜索结果失败:', error)
+      searchFilterCatalog.loadError.value = error.response?.data?.error
+        || error.response?.data?.detail
+        || error.message
+        || getSearchUiCopy('search-results-load-error', {}, '加载搜索结果失败，请稍后重试')
       resetResults()
     } finally {
       if (requestId === activeRequestId) {
@@ -269,6 +292,7 @@ export function useSearchResultsPage({ route, router }) {
     discussions,
     emptyStateText,
     filterItems,
+    filterCatalogLoadError: searchFilterCatalog.loadError,
     applySyntax,
     heroText,
     idleStateText,
