@@ -2925,6 +2925,261 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'discussion-detail-suspension-alert-title',
+  order: 479,
+  surfaces: ['discussion-detail-suspension-alert-title'],
+  resolve: () => ({
+    text: '账号已被封禁',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-suspension-notice',
+  order: 479,
+  surfaces: ['discussion-detail-suspension-notice'],
+  resolve: ({ user, fallbackMessage, suspendedUntilText }) => {
+    if (!user?.is_suspended) {
+      return {
+        text: '',
+      }
+    }
+
+    if (user.suspend_message) {
+      return {
+        text: suspendedUntilText
+          ? `账号已被封禁至 ${suspendedUntilText}。${user.suspend_message}`
+          : `账号当前已被封禁。${user.suspend_message}`,
+      }
+    }
+
+    return {
+      text: suspendedUntilText
+        ? `账号已被封禁至 ${suspendedUntilText}，${fallbackMessage}`
+        : `账号当前已被封禁，${fallbackMessage}`,
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-action-error-title',
+  order: 479,
+  surfaces: ['discussion-detail-action-error-title'],
+  resolve: ({ actionLabel }) => ({
+    text: actionLabel ? `${actionLabel}失败` : '操作失败',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-action-retry-message',
+  order: 479,
+  surfaces: ['discussion-detail-action-retry-message'],
+  resolve: () => ({
+    text: '请稍后重试',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-moderation-title',
+  order: 479,
+  surfaces: ['discussion-detail-moderation-title'],
+  resolve: ({ targetType, action, postNumber }) => {
+    if (targetType === 'post') {
+      return {
+        text: action === 'approve' ? `审核通过 #${postNumber}` : `拒绝 #${postNumber}`,
+      }
+    }
+
+    return {
+      text: action === 'approve' ? '审核通过讨论' : '拒绝讨论',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-moderation-description',
+  order: 479,
+  surfaces: ['discussion-detail-moderation-description'],
+  resolve: ({ targetType, action }) => {
+    if (targetType === 'post') {
+      return {
+        text: action === 'approve'
+          ? '通过后，这条回复会立刻出现在讨论流中。'
+          : '拒绝后，回复作者仍可在前台看到你的审核反馈。',
+      }
+    }
+
+    return {
+      text: action === 'approve'
+        ? '通过后，这条讨论会立即对其他用户可见。'
+        : '拒绝后，讨论作者仍可在前台看到你的审核反馈。',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-moderation-confirm',
+  order: 479,
+  surfaces: ['discussion-detail-moderation-confirm'],
+  resolve: ({ action }) => ({
+    text: action === 'approve' ? '通过审核' : '确认拒绝',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-moderation-placeholder',
+  order: 479,
+  surfaces: ['discussion-detail-moderation-placeholder'],
+  resolve: ({ targetType, action }) => {
+    if (action === 'approve') {
+      return {
+        text: '例如：内容符合社区规范，已放行',
+      }
+    }
+
+    return {
+      text: targetType === 'post'
+        ? '例如：回复缺少上下文，请补充后重新提交'
+        : '例如：标题与正文需要补充后再发布',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-moderation-success-title',
+  order: 479,
+  surfaces: ['discussion-detail-moderation-success-title'],
+  resolve: ({ targetType, action }) => {
+    if (targetType === 'post') {
+      return {
+        text: action === 'approve' ? '回复已通过' : '回复已拒绝',
+      }
+    }
+
+    return {
+      text: action === 'approve' ? '讨论已通过' : '讨论已拒绝',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-moderation-success-message',
+  order: 479,
+  surfaces: ['discussion-detail-moderation-success-message'],
+  resolve: ({ targetType, action }) => {
+    if (targetType === 'post') {
+      return {
+        text: action === 'approve'
+          ? '这条回复现在已经加入讨论流。'
+          : '作者现在可以在前台看到你的审核反馈。',
+      }
+    }
+
+    return {
+      text: action === 'approve'
+        ? '这条讨论现在已经对其他用户可见。'
+        : '作者现在可以在前台看到你的审核反馈。',
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-report-success-title',
+  order: 479,
+  surfaces: ['discussion-detail-report-success-title'],
+  resolve: () => ({
+    text: '举报已提交',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-report-success-message',
+  order: 479,
+  surfaces: ['discussion-detail-report-success-message'],
+  resolve: () => ({
+    text: '版主会尽快查看并处理。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-flag-resolve-confirm-title',
+  order: 479,
+  surfaces: ['discussion-detail-flag-resolve-confirm-title'],
+  resolve: ({ isIgnoring }) => ({
+    text: isIgnoring ? '忽略举报' : '处理举报',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-flag-resolve-confirm-message',
+  order: 479,
+  surfaces: ['discussion-detail-flag-resolve-confirm-message'],
+  resolve: ({ isIgnoring, openFlagCount }) => ({
+    text: isIgnoring
+      ? `确定忽略这条回复的 ${openFlagCount} 条举报吗？`
+      : `确定将这条回复的 ${openFlagCount} 条举报标记为已处理吗？`,
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-flag-resolve-confirm-confirm',
+  order: 479,
+  surfaces: ['discussion-detail-flag-resolve-confirm-confirm'],
+  resolve: ({ isIgnoring }) => ({
+    text: isIgnoring ? '忽略' : '已处理',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-flag-resolve-success-title',
+  order: 479,
+  surfaces: ['discussion-detail-flag-resolve-success-title'],
+  resolve: ({ isIgnoring }) => ({
+    text: isIgnoring ? '举报已忽略' : '举报已处理',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-flag-resolve-success-message',
+  order: 479,
+  surfaces: ['discussion-detail-flag-resolve-success-message'],
+  resolve: ({ isIgnoring }) => ({
+    text: isIgnoring ? '这条回复的待处理举报已关闭。' : '这条回复的待处理举报已标记为已处理。',
+  }),
+})
+
+registerUiCopy({
+  key: 'discussion-detail-like-summary',
+  order: 479,
+  surfaces: ['discussion-detail-like-summary'],
+  resolve: ({ count, isLiked }) => {
+    if (Number(count || 0) <= 0) {
+      return {
+        text: '',
+      }
+    }
+
+    if (isLiked) {
+      return {
+        text: Number(count) === 1 ? '你赞了这条回复' : `你和其他 ${Number(count) - 1} 人赞了这条回复`,
+      }
+    }
+
+    return {
+      text: `${Number(count)} 人赞了这条回复`,
+    }
+  },
+})
+
+registerUiCopy({
+  key: 'discussion-detail-unknown-time',
+  order: 479,
+  surfaces: ['discussion-detail-unknown-time'],
+  resolve: () => ({
+    text: '未知时间',
+  }),
+})
+
+registerUiCopy({
   key: 'forum-action-menu-item-title',
   order: 479,
   surfaces: ['forum-action-menu-item-title'],
