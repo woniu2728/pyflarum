@@ -189,6 +189,28 @@ class PostFlagApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["user"]["primary_group"]["name"], group.name)
 
+    def test_post_detail_supports_resource_field_selection(self):
+        response = self.client.get(
+            f"/api/posts/{self.post.id}",
+            {"fields[post]": "post_type"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("post_type", payload)
+        self.assertNotIn("can_edit", payload)
+        self.assertNotIn("open_flags", payload)
+
+    def test_post_detail_supports_explicit_relationship_includes(self):
+        response = self.client.get(
+            f"/api/posts/{self.post.id}",
+            {"include": "edited_user"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("edited_user", payload)
+
     def test_report_post_creates_flag(self):
         response = self.client.post(
             f"/api/posts/{self.post.id}/report",

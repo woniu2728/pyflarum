@@ -98,6 +98,42 @@ class DiscussionApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["user"]["primary_group"]["name"], group.name)
 
+    def test_discussion_detail_supports_resource_field_selection(self):
+        discussion = DiscussionService.create_discussion(
+            title="字段裁剪讨论",
+            content="用于验证 fields",
+            user=self.author,
+        )
+
+        response = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            {"fields[discussion]": "can_reply"},
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("can_reply", payload)
+        self.assertNotIn("can_edit", payload)
+        self.assertIn("tags", payload)
+
+    def test_discussion_detail_supports_explicit_relationship_includes(self):
+        discussion = DiscussionService.create_discussion(
+            title="关系包含讨论",
+            content="用于验证 include",
+            user=self.author,
+        )
+
+        response = self.client.get(
+            f"/api/discussions/{discussion.id}",
+            {"include": "user,last_posted_user"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["user"]["id"], self.author.id)
+        self.assertEqual(payload["last_posted_user"]["id"], self.author.id)
+
     def test_create_discussion_retries_on_transient_sqlite_lock(self):
         original_create = Discussion.objects.create
         state = {"failed": False}

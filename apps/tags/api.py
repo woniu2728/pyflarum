@@ -5,6 +5,7 @@ from typing import Optional
 from ninja import Router
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
+from django.http import JsonResponse
 
 from apps.tags.models import Tag
 from apps.tags.schemas import (
@@ -17,6 +18,7 @@ from apps.tags.schemas import (
 from apps.tags.services import TagService
 from apps.core.api_errors import api_error
 from apps.core.auth import AuthBearer, get_optional_user
+from apps.core.resource_api import ResourceQueryOptions, parse_resource_query_options
 from apps.core.resource_registry import get_resource_registry
 
 router = Router()
@@ -35,13 +37,22 @@ def _get_prefetched_children(tag):
     return tag.children.all().order_by("position", "name")
 
 
-def _serialize_tag(tag, user=None, include_children=False, action="view", context=None):
+def _serialize_tag(
+    tag,
+    user=None,
+    include_children=False,
+    action="view",
+    context=None,
+    resource_options=None,
+):
     context = context or _build_tag_serialize_context(user, action=action)
     forbidden_tag_ids = context["forbidden_tag_ids"]
+    resource_options = resource_options or ResourceQueryOptions()
     resource_fields = RESOURCE_REGISTRY.serialize(
         "tag",
         tag,
         {"user": user, "action": action},
+        only=resource_options.fields,
     )
     children = []
     if include_children:
@@ -52,6 +63,7 @@ def _serialize_tag(tag, user=None, include_children=False, action="view", contex
                 include_children=True,
                 action=action,
                 context=context,
+                resource_options=resource_options,
             )
             for child in _get_prefetched_children(tag)
             if not child.is_hidden and child.id not in forbidden_tag_ids
@@ -122,7 +134,7 @@ def create_tag(request, payload: TagCreateSchema):
         )
 
 
-@router.get("/tags", response=TagListSchema, tags=["Tags"])
+@router.get("/tags", tags=["Tags"])
 def list_tags(
     request,
     parent_id: Optional[int] = None,
@@ -139,6 +151,7 @@ def list_tags(
     """
     # 只有管理员可以查看隐藏标签
     user = get_optional_user(request)
+    resource_options = parse_resource_query_options(request, "tag")
     if include_hidden and (not user or not user.is_staff):
         include_hidden = False
     if purpose not in {"view", "start_discussion", "reply"}:
@@ -168,7 +181,7 @@ def list_tags(
     tags = queryset.order_by('position', 'name')
 
     context = _build_tag_serialize_context(user, action=purpose)
-    return {
+    response_payload = {
         "data": [
             _serialize_tag(
                 tag,
@@ -176,13 +189,15 @@ def list_tags(
                 include_children=include_children,
                 action=purpose,
                 context=context,
+                resource_options=resource_options,
             )
             for tag in tags
         ]
     }
+    return JsonResponse(response_payload)
 
 
-@router.get("/tags/popular", response=TagListSchema, tags=["Tags"])
+@router.get("/tags/popular", tags=["Tags"])
 def get_popular_tags(request, limit: int = 10):
     """
     获取热门标签
@@ -191,6 +206,7 @@ def get_popular_tags(request, limit: int = 10):
     - limit: 返回数量（默认10）
     """
     user = get_optional_user(request)
+    resource_options = parse_resource_query_options(request, "tag")
     tags = TagService.filter_tags_for_user(
         Tag.objects.filter(is_hidden=False),
         user,
@@ -198,10 +214,16 @@ def get_popular_tags(request, limit: int = 10):
     ).order_by('-discussion_count', '-last_posted_at')[:limit]
 
     context = _build_tag_serialize_context(user, action="view")
-    return {"data": [_serialize_tag(tag, user=user, context=context) for tag in tags]}
+    response_payload = {
+        "data": [
+            _serialize_tag(tag, user=user, context=context, resource_options=resource_options)
+            for tag in tags
+        ]
+    }
+    return JsonResponse(response_payload)
 
 
-@router.get("/tags/{tag_id}", response=TagOutSchema, tags=["Tags"])
+@router.get("/tags/{tag_id}", tags=["Tags"])
 def get_tag(request, tag_id: int):
     """
     获取标签详情
@@ -216,13 +238,16 @@ def get_tag(request, tag_id: int):
         )
 
     user = get_optional_user(request)
+    resource_options = parse_resource_query_options(request, "tag")
     tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
     if not TagService.can_view_tag(tag, user):
         return api_error("没有权限查看此标签", status=403)
-    return _serialize_tag(tag, user=user, include_children=True)
+    return JsonResponse(
+        _serialize_tag(tag, user=user, include_children=True, resource_options=resource_options),
+    )
 
 
-@router.get("/tags/slug/{slug}", response=TagOutSchema, tags=["Tags"])
+@router.get("/tags/slug/{slug}", tags=["Tags"])
 def get_tag_by_slug(request, slug: str):
     """
     通过slug获取标签
@@ -237,10 +262,13 @@ def get_tag_by_slug(request, slug: str):
         )
 
     user = get_optional_user(request)
+    resource_options = parse_resource_query_options(request, "tag")
     tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
     if not TagService.can_view_tag(tag, user):
         return api_error("没有权限查看此标签", status=403)
-    return _serialize_tag(tag, user=user, include_children=True)
+    return JsonResponse(
+        _serialize_tag(tag, user=user, include_children=True, resource_options=resource_options),
+    )
 
 
 @router.patch("/tags/{tag_id}", response=TagOutSchema, auth=AuthBearer(), tags=["Tags"])

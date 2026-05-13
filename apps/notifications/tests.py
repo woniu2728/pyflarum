@@ -521,6 +521,46 @@ class NotificationServiceTests(TestCase):
         self.assertEqual(payload["data"][0]["from_user"]["username"], self.replier.username)
         self.assertEqual(payload["data"][0]["from_user"]["primary_group"]["name"], group.name)
 
+    def test_notification_detail_supports_resource_field_selection(self):
+        notification = Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            data={"post_id": self.initial_reply.id},
+        )
+
+        response = self.client.get(
+            f"/api/notifications/{notification.id}",
+            {"fields[notification]": "from_user"},
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("from_user", payload)
+
+    def test_notification_detail_omits_registered_fields_when_not_selected(self):
+        notification = Notification.objects.create(
+            user=self.author,
+            from_user=self.replier,
+            type="postLiked",
+            subject_type="post",
+            subject_id=self.initial_reply.id,
+            data={"post_id": self.initial_reply.id},
+        )
+
+        response = self.client.get(
+            f"/api/notifications/{notification.id}",
+            {"fields[notification]": "unknown_field"},
+            **self.auth_header(self.author),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertNotIn("from_user", payload)
+
     def test_notification_list_normalizes_page_and_limit(self):
         response = self.client.get(
             "/api/notifications",

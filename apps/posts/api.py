@@ -5,6 +5,7 @@ from typing import Optional
 from ninja import Router
 from django.db.models import Count
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 
 from apps.posts.models import Post, PostLike, PostFlag
 from apps.posts.schemas import (
@@ -22,6 +23,11 @@ from apps.core.audit import log_admin_action
 from apps.core.auth import AuthBearer, get_optional_user
 from apps.core.forum_resources import serialize_user_payload
 from apps.core.forum_registry import get_forum_registry
+from apps.core.resource_api import (
+    ResourceQueryOptions,
+    merge_resource_includes,
+    parse_resource_query_options,
+)
 from apps.core.resource_registry import get_resource_registry
 from apps.core.services import PaginationService
 from apps.core.api_errors import api_error
@@ -32,7 +38,8 @@ FORUM_REGISTRY = get_forum_registry()
 STREAM_POST_TYPES = FORUM_REGISTRY.get_stream_post_type_codes()
 
 
-def _serialize_post(post, user=None):
+def _serialize_post(post, user=None, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
     response = {
         "id": post.id,
         "discussion_id": post.discussion_id,
@@ -59,7 +66,8 @@ def _serialize_post(post, user=None):
             "post",
             post,
             {"user": user},
-            include=("user", "edited_user"),
+            only=resource_options.fields,
+            include=merge_resource_includes(("user", "edited_user"), resource_options.includes),
         )
     )
     return response
@@ -99,7 +107,7 @@ def _serialize_flag(flag):
     }
 
 
-@router.get("/posts", response=PostListSchema, tags=["Posts"])
+@router.get("/posts", tags=["Posts"])
 def list_all_posts(
     request,
     author: Optional[str] = None,
@@ -118,6 +126,7 @@ def list_all_posts(
     """
     user = get_optional_user(request)
     page, limit = PaginationService.normalize(page, limit)
+    resource_options = parse_resource_query_options(request, "post")
 
     queryset = Post.objects.select_related(
         "discussion",
@@ -154,12 +163,13 @@ def list_all_posts(
         for post in posts:
             post.is_liked = post.id in liked_post_ids
 
-    return {
+    response_payload = {
         "total": total,
         "page": page,
         "limit": limit,
-        "data": [_serialize_post(post, user) for post in posts],
+        "data": [_serialize_post(post, user, resource_options=resource_options) for post in posts],
     }
+    return JsonResponse(response_payload)
 
 
 @router.post("/discussions/{discussion_id}/posts", response=PostOutSchema, auth=AuthBearer(), tags=["Posts"])
@@ -185,7 +195,7 @@ def create_post(request, discussion_id: int, payload: PostCreateSchema):
         return api_error(str(e), status=400)
 
 
-@router.get("/discussions/{discussion_id}/posts", response=PostListSchema, tags=["Posts"])
+@router.get("/discussions/{discussion_id}/posts", tags=["Posts"])
 def list_posts(
     request,
     discussion_id: int,
@@ -202,6 +212,7 @@ def list_posts(
     """
     user = get_optional_user(request)
     page, limit = PaginationService.normalize(page, limit)
+    resource_options = parse_resource_query_options(request, "post")
     if near:
         page = PostService.get_page_for_near_post(
             discussion_id=discussion_id,
@@ -217,26 +228,28 @@ def list_posts(
         user=user,
     )
 
-    return {
+    response_payload = {
         "total": total,
         "page": page,
         "limit": limit,
-        "data": [_serialize_post(post, user) for post in posts],
+        "data": [_serialize_post(post, user, resource_options=resource_options) for post in posts],
     }
+    return JsonResponse(response_payload)
 
 
-@router.get("/posts/{post_id}", response=PostOutSchema, tags=["Posts"])
+@router.get("/posts/{post_id}", tags=["Posts"])
 def get_post(request, post_id: int):
     """
     获取帖子详情
     """
     user = get_optional_user(request)
+    resource_options = parse_resource_query_options(request, "post")
     post = PostService.get_post_by_id(post_id, user)
 
     if not post:
         return api_error("帖子不存在", status=404)
 
-    return _serialize_post(post, user)
+    return JsonResponse(_serialize_post(post, user, resource_options=resource_options))
 
 
 @router.patch("/posts/{post_id}", response=PostOutSchema, auth=AuthBearer(), tags=["Posts"])

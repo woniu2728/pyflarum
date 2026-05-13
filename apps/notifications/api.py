@@ -3,6 +3,7 @@
 """
 from typing import Optional
 from ninja import Router
+from django.http import JsonResponse
 
 from apps.notifications.schemas import (
     NotificationOutSchema,
@@ -11,6 +12,7 @@ from apps.notifications.schemas import (
 )
 from apps.notifications.services import NotificationService
 from apps.core.auth import AuthBearer
+from apps.core.resource_api import ResourceQueryOptions, parse_resource_query_options
 from apps.core.resource_registry import get_resource_registry
 from apps.core.services import PaginationService
 from apps.core.api_errors import api_error
@@ -26,7 +28,8 @@ def _normalize_notification_type(type_value: Optional[str]) -> Optional[str]:
     return normalized or None
 
 
-def _serialize_notification(notification):
+def _serialize_notification(notification, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
     payload = {
         "id": notification.id,
         "user_id": notification.user_id,
@@ -38,11 +41,17 @@ def _serialize_notification(notification):
         "read_at": notification.read_at,
         "created_at": notification.created_at,
     }
-    payload.update(RESOURCE_REGISTRY.serialize("notification", notification))
+    payload.update(
+        RESOURCE_REGISTRY.serialize(
+            "notification",
+            notification,
+            only=resource_options.fields,
+        )
+    )
     return payload
 
 
-@router.get("/notifications", response=NotificationListSchema, auth=AuthBearer(), tags=["Notifications"])
+@router.get("/notifications", auth=AuthBearer(), tags=["Notifications"])
 def list_notifications(
     request,
     is_read: Optional[bool] = None,
@@ -62,6 +71,7 @@ def list_notifications(
     - limit: 每页数量
     """
     page, limit = PaginationService.normalize(page, limit)
+    resource_options = parse_resource_query_options(request, "notification")
     notifications, total, unread_count, type_counts, unread_type_counts = NotificationService.get_notification_list(
         user=request.auth,
         is_read=is_read,
@@ -70,15 +80,16 @@ def list_notifications(
         limit=limit,
     )
 
-    return {
+    response_payload = {
         "total": total,
         "unread_count": unread_count,
         "page": page,
         "limit": limit,
         "type_counts": type_counts,
         "unread_type_counts": unread_type_counts,
-        "data": [_serialize_notification(notification) for notification in notifications],
+        "data": [_serialize_notification(notification, resource_options=resource_options) for notification in notifications],
     }
+    return JsonResponse(response_payload)
 
 
 @router.get("/notifications/stats", response=NotificationStatsSchema, auth=AuthBearer(), tags=["Notifications"])
@@ -181,19 +192,20 @@ def mark_filtered_as_read(
     }
 
 
-@router.get("/notifications/{notification_id}", response=NotificationOutSchema, auth=AuthBearer(), tags=["Notifications"])
+@router.get("/notifications/{notification_id}", auth=AuthBearer(), tags=["Notifications"])
 def get_notification(request, notification_id: int):
     """
     获取通知详情
 
     需要认证
     """
+    resource_options = parse_resource_query_options(request, "notification")
     notification = NotificationService.get_notification_by_id(notification_id, request.auth)
 
     if not notification:
         return api_error("通知不存在", status=404)
 
-    return _serialize_notification(notification)
+    return JsonResponse(_serialize_notification(notification, resource_options=resource_options))
 
 
 @router.delete("/notifications/{notification_id}", auth=AuthBearer(), tags=["Notifications"])

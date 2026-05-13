@@ -207,6 +207,26 @@ class TagAccessApiTests(TestCase):
         self.assertTrue(payload["can_reply"])
         self.assertEqual(payload["last_posted_discussion"]["id"], discussion.id)
 
+    def test_tag_detail_supports_resource_field_selection(self):
+        DiscussionService.create_discussion(
+            title="标签字段裁剪",
+            content="用于裁剪",
+            user=self.admin,
+            tag_ids=[self.members_tag.id],
+        )
+
+        response = self.client.get(
+            f"/api/tags/{self.members_tag.id}",
+            {"fields[tag]": "can_reply"},
+            **self.auth_header(self.admin),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertIn("can_reply", payload)
+        self.assertNotIn("can_start_discussion", payload)
+        self.assertNotIn("last_posted_discussion", payload)
+
     def test_guest_cannot_view_staff_tag_detail(self):
         response = self.client.get(f"/api/tags/{self.staff_tag.id}")
 

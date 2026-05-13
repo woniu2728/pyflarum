@@ -3,6 +3,7 @@
 """
 from typing import Optional
 from ninja import Router
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 
@@ -21,6 +22,11 @@ from apps.posts.models import Post
 from apps.core.audit import log_admin_action
 from apps.core.auth import AuthBearer, get_optional_user
 from apps.core.forum_resources import serialize_user_payload, serialize_user_summary
+from apps.core.resource_api import (
+    ResourceQueryOptions,
+    merge_resource_includes,
+    parse_resource_query_options,
+)
 from apps.core.resource_registry import get_resource_registry
 from apps.core.services import PaginationService
 from apps.core.api_errors import api_error
@@ -29,14 +35,16 @@ router = Router()
 RESOURCE_REGISTRY = get_resource_registry()
 
 
-def _serialize_discussion_payload(discussion, user=None):
+def _serialize_discussion_payload(discussion, user=None, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
     payload = DiscussionOutSchema.from_orm(discussion).dict()
     payload.update(
         RESOURCE_REGISTRY.serialize(
             "discussion",
             discussion,
             {"user": user},
-            include=("user", "last_posted_user"),
+            only=resource_options.fields,
+            include=merge_resource_includes(("user", "last_posted_user"), resource_options.includes),
         )
     )
     return payload
@@ -89,7 +97,7 @@ def create_discussion(request, payload: DiscussionCreateSchema):
         return api_error(str(e), status=400)
 
 
-@router.get("/", response=DiscussionListSchema, tags=["Discussions"])
+@router.get("/", tags=["Discussions"])
 def list_discussions(
     request,
     q: Optional[str] = None,
@@ -114,6 +122,7 @@ def list_discussions(
     """
     user = get_optional_user(request)
     page, limit = PaginationService.normalize(page, limit)
+    resource_options = parse_resource_query_options(request, "discussion")
 
     normalized_filter = filter
     if subscription == "following" and normalized_filter == "all":
@@ -132,7 +141,7 @@ def list_discussions(
     active_filter = DiscussionService.normalize_discussion_list_filter(normalized_filter)
     active_sort = DiscussionService.normalize_discussion_sort(sort)
 
-    return {
+    response_payload = {
         "total": total,
         "page": page,
         "limit": limit,
@@ -146,8 +155,12 @@ def list_discussions(
             _serialize_discussion_sort(item)
             for item in DiscussionService.get_discussion_sort_catalog()
         ],
-        "data": [_serialize_discussion_payload(discussion, user=user) for discussion in discussions],
+        "data": [
+            _serialize_discussion_payload(discussion, user=user, resource_options=resource_options)
+            for discussion in discussions
+        ],
     }
+    return JsonResponse(response_payload)
 
 
 @router.post("/read-all", auth=AuthBearer(), tags=["Discussions"])
@@ -183,12 +196,13 @@ def update_discussion_read_state(request, discussion_id: int, payload: Discussio
         return api_error(str(e), status=403)
 
 
-@router.get("/{discussion_id}", response=DiscussionDetailSchema, tags=["Discussions"])
+@router.get("/{discussion_id}", tags=["Discussions"])
 def get_discussion(request, discussion_id: int):
     """
     获取讨论详情
     """
     user = get_optional_user(request)
+    resource_options = parse_resource_query_options(request, "discussion")
     discussion = DiscussionService.get_discussion_by_id(discussion_id, user)
 
     if not discussion:
@@ -217,14 +231,16 @@ def get_discussion(request, discussion_id: int):
         "discussion",
         discussion,
         {"user": user},
+        only=resource_options.fields,
+        include=resource_options.includes,
     )
 
     # 构建响应
-    response_data = _serialize_discussion_payload(discussion, user=user)
+    response_data = _serialize_discussion_payload(discussion, user=user, resource_options=resource_options)
     response_data['first_post'] = first_post
     response_data.update(resource_fields)
 
-    return response_data
+    return JsonResponse(response_data)
 
 
 @router.patch("/{discussion_id}", response=DiscussionOutSchema, auth=AuthBearer(), tags=["Discussions"])
