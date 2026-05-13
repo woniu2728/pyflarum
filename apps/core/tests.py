@@ -1244,10 +1244,16 @@ class DiscussionRealtimeTests(TestCase):
             email="realtime-admin@example.com",
             password="password123",
         )
+        self.tag = Tag.objects.create(
+            name="实时标签",
+            slug="realtime-tag",
+            color="#4d698e",
+        )
         self.discussion = DiscussionService.create_discussion(
             title="实时讨论",
             content="首帖内容",
             user=self.author,
+            tag_ids=[self.tag.id],
         )
 
     def test_hidden_discussion_is_not_visible_to_anonymous_realtime_viewer(self):
@@ -1276,6 +1282,40 @@ class DiscussionRealtimeTests(TestCase):
         self.assertEqual(payload["discussion"]["last_post_number"], post.number)
         self.assertEqual(payload["post"]["id"], post.id)
         self.assertEqual(payload["post"]["discussion_id"], self.discussion.id)
+        self.assertEqual([item["id"] for item in payload["users"]], [self.author.id])
+        self.assertEqual([item["id"] for item in payload["tags"]], [self.tag.id])
+        self.assertEqual(payload["tags"][0]["last_posted_discussion"]["id"], self.discussion.id)
+        self.assertEqual(payload["tags"][0]["last_posted_discussion"]["last_post_number"], post.number)
+
+    @patch.object(WebSocketService, "broadcast_discussion_event")
+    def test_discussion_created_event_broadcasts_related_resources(self, broadcast_discussion_event):
+        child_tag = Tag.objects.create(
+            name="实时子标签",
+            slug="realtime-child-tag",
+            color="#e67e22",
+            parent=self.tag,
+        )
+
+        discussion = DiscussionService.create_discussion(
+            title="第二个实时讨论",
+            content="讨论内容",
+            user=self.author,
+            tag_ids=[self.tag.id, child_tag.id],
+        )
+
+        discussion_id, event_type, payload = broadcast_discussion_event.call_args.args
+        self.assertEqual(discussion_id, discussion.id)
+        self.assertEqual(event_type, "discussion.created")
+        self.assertEqual(payload["discussion"]["id"], discussion.id)
+        self.assertEqual(payload["post"]["discussion_id"], discussion.id)
+        self.assertEqual([item["id"] for item in payload["users"]], [self.author.id])
+        self.assertEqual(
+            sorted(item["id"] for item in payload["tags"]),
+            sorted([self.tag.id, child_tag.id]),
+        )
+        self.assertTrue(
+            all(item["last_posted_discussion"]["id"] == discussion.id for item in payload["tags"])
+        )
 
     @patch.object(WebSocketService, "broadcast_discussion_event")
     def test_hidden_post_event_broadcasts_minimal_signal_only(self, broadcast_discussion_event):

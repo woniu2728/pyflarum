@@ -5,7 +5,6 @@ import { useResourceStore } from '@/stores/resource'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
 import {
   FORUM_REALTIME_REFRESH_EVENT_TYPES,
-  applyDiscussionResourceAssociations,
   getTrackedDiscussionIdsFromDiscussionItems,
   hasTrackedDiscussionId,
 } from '@/utils/forumRealtime'
@@ -74,9 +73,7 @@ export function useTagsPage() {
     }
 
     const payload = detail.payload || {}
-    if (payload.discussion) {
-      applyDiscussionResourceAssociations(resourceStore, payload.discussion)
-    }
+    resourceStore.mergePayload(payload)
   }
 
   return {

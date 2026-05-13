@@ -165,8 +165,6 @@ import {
 } from '@/utils/forum'
 import {
   FORUM_REALTIME_REFRESH_EVENT_TYPES,
-  applyDiscussionResourceAssociations,
-  applyPostResourceAssociations,
   getTrackedDiscussionIdsFromDiscussionItems,
   getTrackedDiscussionIdsFromPostItems,
   hasTrackedDiscussionId,
@@ -483,13 +481,7 @@ async function handleForumEvent(event) {
   }
 
   const payload = detail.payload || {}
-  if (payload.discussion) {
-    applyDiscussionResourceAssociations(resourceStore, payload.discussion)
-  }
-  if (payload.post) {
-    applyPostResourceAssociations(resourceStore, payload.post)
-    resourceStore.upsert('posts', payload.post)
-  }
+  resourceStore.mergePayload(payload)
 }
 
 function clearQuery() {

@@ -13,7 +13,7 @@ from datetime import timedelta
 from io import StringIO
 from ninja_jwt.tokens import RefreshToken
 
-from apps.core.forum_events import TagStatsRefreshRequestedEvent
+from apps.core.forum_events import DiscussionTaggedEvent, TagStatsRefreshRequestedEvent
 from apps.core.models import AuditLog
 from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
@@ -66,6 +66,44 @@ class DiscussionApiTests(TestCase):
             event for event in events if isinstance(event, TagStatsRefreshRequestedEvent)
         )
         self.assertEqual(tag_refresh_event.tag_ids, tuple(sorted((tag_a.id, tag_b.id))))
+
+    def test_update_discussion_dispatches_discussion_tagged_event_with_all_affected_tag_ids(self):
+        parent_tag = Tag.objects.create(name="父标签", slug="parent-tag", color="#3498db")
+        old_child_tag = Tag.objects.create(
+            name="旧子标签",
+            slug="old-child-tag",
+            color="#2ecc71",
+            parent=parent_tag,
+        )
+        new_child_tag = Tag.objects.create(
+            name="新子标签",
+            slug="new-child-tag",
+            color="#e67e22",
+            parent=parent_tag,
+        )
+        discussion = DiscussionService.create_discussion(
+            title="Discussion tagged event",
+            content="Initial post",
+            user=self.author,
+            tag_ids=[parent_tag.id, old_child_tag.id],
+        )
+
+        mocked_bus = Mock()
+        with patch("apps.discussions.services.get_forum_event_bus", return_value=mocked_bus):
+            DiscussionService.update_discussion(
+                discussion_id=discussion.id,
+                user=self.author,
+                tag_ids=[parent_tag.id, new_child_tag.id],
+            )
+
+        events = [call.args[0] for call in mocked_bus.dispatch.call_args_list]
+        tagged_event = next(
+            event for event in events if isinstance(event, DiscussionTaggedEvent)
+        )
+        self.assertEqual(
+            tagged_event.tag_ids,
+            tuple(sorted((parent_tag.id, old_child_tag.id, new_child_tag.id))),
+        )
 
     def test_create_discussion_accepts_bearer_token(self):
         response = self.client.post(

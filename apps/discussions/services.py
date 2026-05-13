@@ -699,6 +699,9 @@ class DiscussionService:
                     .order_by("tag__name")
                     .values_list("tag__name", flat=True)
                 )
+                current_tag_ids = list(
+                    discussion.discussion_tags.order_by("tag_id").values_list("tag_id", flat=True)
+                )
                 added_tags = [name for name in current_tag_names if name not in previous_tag_names]
                 removed_tags = [name for name in previous_tag_names if name not in current_tag_names]
                 if added_tags or removed_tags:
@@ -708,6 +711,7 @@ class DiscussionService:
                             actor_user_id=user.id,
                             added_tags=tuple(added_tags),
                             removed_tags=tuple(removed_tags),
+                            tag_ids=tuple(sorted(set(previous_tag_ids) | set(current_tag_ids))),
                         )
                     )
             if is_hidden is not None or tag_ids is not None:

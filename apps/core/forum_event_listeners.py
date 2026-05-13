@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from types import SimpleNamespace
 
 from apps.core.domain_events import get_forum_event_bus
@@ -74,6 +75,11 @@ def bootstrap_forum_event_listeners() -> None:
 
 
 def handle_discussion_created(event: DiscussionCreatedEvent) -> None:
+    if event.tag_ids:
+        from apps.tags.services import TagService
+
+        TagService.refresh_tag_stats(list(event.tag_ids))
+
     if event.is_approved:
         _broadcast_discussion_event(
             event.discussion_id,
@@ -82,13 +88,6 @@ def handle_discussion_created(event: DiscussionCreatedEvent) -> None:
             include_post=True,
             post_id_getter=lambda discussion: discussion.first_post_id,
         )
-    if not event.tag_ids:
-        return
-
-    from apps.tags.services import TagService
-
-    TagService.dispatch_refresh_tag_stats(list(event.tag_ids))
-
 
 def handle_discussion_approved(event: DiscussionApprovedEvent) -> None:
     from apps.discussions.models import Discussion
@@ -135,7 +134,18 @@ def handle_discussion_renamed(event: DiscussionRenamedEvent) -> None:
 
 
 def handle_discussion_tagged(event: DiscussionTaggedEvent) -> None:
-    _broadcast_discussion_event(event.discussion_id, "discussion.tagged", include_discussion=True)
+    from apps.tags.services import TagService
+
+    if event.tag_ids:
+        TagService.refresh_tag_stats(list(event.tag_ids))
+    else:
+        TagService.refresh_discussion_tag_stats(event.discussion_id)
+    _broadcast_discussion_event(
+        event.discussion_id,
+        "discussion.tagged",
+        include_discussion=True,
+        tag_ids=list(event.tag_ids) if event.tag_ids else None,
+    )
     _create_timeline_from_builder(
         _make_timeline_context(event, post_type="discussionTagged"),
         build_discussion_tagged_content,
@@ -207,7 +217,10 @@ def handle_discussion_resubmitted(event: DiscussionResubmittedEvent) -> None:
 
 
 def handle_post_created(event: PostCreatedEvent) -> None:
+    from apps.tags.services import TagService
+
     if event.is_approved:
+        TagService.refresh_discussion_tag_stats(event.discussion_id)
         _broadcast_discussion_event(
             event.discussion_id,
             "post.created",
@@ -219,7 +232,6 @@ def handle_post_created(event: PostCreatedEvent) -> None:
         return
 
     from apps.notifications.services import NotificationService
-    from apps.tags.services import TagService
     from apps.users.models import User
 
     try:
@@ -238,8 +250,6 @@ def handle_post_created(event: PostCreatedEvent) -> None:
             post_id=event.post_id,
             from_user=from_user,
         )
-    TagService.refresh_discussion_tag_stats(event.discussion_id)
-
 
 def handle_post_approved(event: PostApprovedEvent) -> None:
     from apps.notifications.services import NotificationService
@@ -443,6 +453,7 @@ def _broadcast_discussion_event(
     include_post: bool = False,
     post_id: int | None = None,
     post_id_getter=None,
+    tag_ids: list[int] | None = None,
 ) -> None:
     payload = {}
     discussion = _load_discussion_for_realtime(discussion_id) if include_discussion or post_id_getter else None
@@ -457,6 +468,14 @@ def _broadcast_discussion_event(
         post_payload = _serialize_post_for_realtime(resolved_post_id)
         if post_payload is not None:
             payload["post"] = post_payload
+
+    payload.update(
+        _build_realtime_included_payload(
+            discussion=discussion,
+            post_payload=payload.get("post"),
+            tag_ids=tag_ids,
+        )
+    )
 
     WebSocketService.broadcast_discussion_event(
         discussion_id,
@@ -503,3 +522,91 @@ def _serialize_post_for_realtime(post_id: int):
         return None
     post.is_liked = False
     return _serialize_post(post, user=None)
+
+
+def _build_realtime_included_payload(
+    *,
+    discussion=None,
+    post_payload: dict | None = None,
+    tag_ids: list[int] | None = None,
+) -> dict:
+    users = OrderedDict()
+    tags = OrderedDict()
+
+    if discussion is not None:
+        _collect_discussion_users(users, discussion)
+        _collect_discussion_tags(tags, discussion)
+    elif tag_ids:
+        _collect_tags_by_ids(tags, tag_ids)
+
+    if post_payload:
+        _collect_post_users(users, post_payload)
+
+    payload = {}
+    if users:
+        payload["users"] = list(users.values())
+    if tags:
+        payload["tags"] = list(tags.values())
+    return payload
+
+
+def _collect_discussion_users(target: OrderedDict, discussion) -> None:
+    from apps.core.forum_resources import serialize_user_payload
+
+    for user in (
+        getattr(discussion, "user", None),
+        getattr(discussion, "last_posted_user", None),
+    ):
+        payload = serialize_user_payload(user, resource="discussion_user")
+        if payload and payload.get("id") is not None:
+            _merge_included_resource(target, payload)
+
+
+def _collect_post_users(target: OrderedDict, post_payload: dict) -> None:
+    for key in ("user", "edited_user"):
+        payload = post_payload.get(key)
+        if payload and payload.get("id") is not None:
+            _merge_included_resource(target, payload)
+
+
+def _collect_discussion_tags(target: OrderedDict, discussion) -> None:
+    from apps.tags.api import _serialize_tag
+
+    for tag in _iter_discussion_tags(discussion):
+        _merge_tag_payload(target, tag)
+
+
+def _collect_tags_by_ids(target: OrderedDict, tag_ids: list[int]) -> None:
+    from apps.tags.models import Tag
+
+    for tag in Tag.objects.select_related("last_posted_discussion").filter(id__in=tag_ids):
+        _merge_tag_payload(target, tag)
+
+
+def _iter_discussion_tags(discussion):
+    links = getattr(discussion, "discussion_tags", None)
+    if links is None:
+        return []
+    resolved = []
+    for link in links.all() if hasattr(links, "all") else links:
+        tag = getattr(link, "tag", None)
+        if tag is not None:
+            resolved.append(tag)
+    return resolved
+
+
+def _merge_included_resource(target: OrderedDict, payload: dict) -> None:
+    resource_id = int(payload["id"])
+    target[resource_id] = {
+        **(target.get(resource_id) or {}),
+        **payload,
+    }
+
+
+def _merge_tag_payload(target: OrderedDict, tag) -> None:
+    from apps.tags.api import _serialize_tag
+
+    payload = _serialize_tag(tag, user=None, include_children=False)
+    if not payload or payload.get("id") is None:
+        return
+    target[int(payload["id"])] = payload

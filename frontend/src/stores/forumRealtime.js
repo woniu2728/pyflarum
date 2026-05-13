@@ -1,11 +1,6 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useResourceStore } from '@/stores/resource'
-import { normalizeDiscussion, normalizePost } from '@/utils/forum'
-import {
-  applyDiscussionResourceAssociations,
-  applyPostResourceAssociations,
-} from '@/utils/forumRealtime'
 
 function resolveWsBaseUrl() {
   const configured = import.meta.env.VITE_WS_BASE_URL?.trim()
@@ -201,16 +196,7 @@ export const useForumRealtimeStore = defineStore('forumRealtime', () => {
     if (!event) return
 
     const payload = event.payload || {}
-    if (payload.discussion) {
-      const normalizedDiscussion = normalizeDiscussion(payload.discussion)
-      resourceStore.upsert('discussions', normalizedDiscussion)
-      applyDiscussionResourceAssociations(resourceStore, normalizedDiscussion)
-    }
-    if (payload.post) {
-      const normalizedPost = normalizePost(payload.post)
-      resourceStore.upsert('posts', normalizedPost)
-      applyPostResourceAssociations(resourceStore, normalizedPost)
-    }
+    resourceStore.mergePayload(payload)
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('bias:forum-event', {
