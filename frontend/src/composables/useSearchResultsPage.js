@@ -1,14 +1,22 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
+import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
+import {
+  FORUM_REALTIME_REFRESH_EVENT_TYPES,
+  getTrackedDiscussionIdsFromDiscussionItems,
+  getTrackedDiscussionIdsFromPostItems,
+  hasTrackedDiscussionId,
+} from '@/utils/forumRealtime'
 import { unwrapList } from '@/utils/forum'
 
 export function useSearchResultsPage({ route, router }) {
   const routeState = useSearchRouteState({ route, router })
   const resourceStore = useResourceStore()
+  const forumRealtimeStore = useForumRealtimeStore()
   const searchSources = getSearchSources()
   const sourceMap = Object.fromEntries(searchSources.map(item => [item.routeType || item.type, item]))
   const loading = ref(false)
@@ -34,6 +42,10 @@ export function useSearchResultsPage({ route, router }) {
   const page = routeState.page
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
   const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
+  const trackedDiscussionIds = computed(() => [
+    ...getTrackedDiscussionIdsFromDiscussionItems(discussions.value),
+    ...getTrackedDiscussionIdsFromPostItems(posts.value),
+  ])
   const emptyStateText = computed(() => {
     const emptyState = getEmptyState({
       surface: 'search-page-empty',
@@ -177,8 +189,22 @@ export function useSearchResultsPage({ route, router }) {
     { immediate: true }
   )
 
+  watch(
+    () => trackedDiscussionIds.value,
+    (nextTrackedIds, previousTrackedIds = []) => {
+      forumRealtimeStore.untrackDiscussionIds(previousTrackedIds)
+      forumRealtimeStore.trackDiscussionIds(nextTrackedIds)
+    }
+  )
+
+  onMounted(() => {
+    window.addEventListener('bias:forum-event', handleForumEvent)
+  })
+
   onBeforeUnmount(() => {
     activeController?.abort()
+    forumRealtimeStore.untrackDiscussionIds(trackedDiscussionIds.value)
+    window.removeEventListener('bias:forum-event', handleForumEvent)
   })
 
   async function loadResults() {
@@ -245,6 +271,27 @@ export function useSearchResultsPage({ route, router }) {
     discussionIds.value = []
     postIds.value = []
     userIds.value = []
+  }
+
+  async function handleForumEvent(event) {
+    const detail = event.detail || {}
+    const discussionId = Number(detail.discussion_id)
+    if (!hasTrackedDiscussionId(trackedDiscussionIds.value, discussionId)) {
+      return
+    }
+
+    if (FORUM_REALTIME_REFRESH_EVENT_TYPES.has(detail.event_type)) {
+      await loadResults()
+      return
+    }
+
+    const payload = detail.payload || {}
+    if (payload.discussion) {
+      resourceStore.upsert('discussions', payload.discussion)
+    }
+    if (payload.post) {
+      resourceStore.upsert('posts', payload.post)
+    }
   }
 
   function changeType(type) {

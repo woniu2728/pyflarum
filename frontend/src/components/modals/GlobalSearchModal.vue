@@ -156,15 +156,19 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
+import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
 import {
-  normalizeDiscussion,
-  normalizePost,
-  normalizeUser,
   unwrapList
 } from '@/utils/forum'
+import {
+  FORUM_REALTIME_REFRESH_EVENT_TYPES,
+  getTrackedDiscussionIdsFromDiscussionItems,
+  getTrackedDiscussionIdsFromPostItems,
+  hasTrackedDiscussionId,
+} from '@/utils/forumRealtime'
 
 const props = defineProps({
   showing: {
@@ -184,6 +188,7 @@ const props = defineProps({
 const router = useRouter()
 const modalStore = useModalStore()
 const resourceStore = useResourceStore()
+const forumRealtimeStore = useForumRealtimeStore()
 const searchSources = getSearchSources()
 const searchSourceMap = Object.fromEntries(searchSources.map(item => [item.type, item]))
 const root = ref(null)
@@ -215,6 +220,10 @@ const searchResults = computed(() => ({
   posts: resourceStore.list('posts', postIds.value),
   users: resourceStore.list('users', userIds.value),
 }))
+const trackedDiscussionIds = computed(() => [
+  ...getTrackedDiscussionIdsFromDiscussionItems(searchResults.value.discussions),
+  ...getTrackedDiscussionIdsFromPostItems(searchResults.value.posts),
+])
 const tabs = computed(() => [
   { value: 'all', label: '全部', count: totals.value.discussions + totals.value.posts + totals.value.users },
   ...searchSources.map(item => ({
@@ -394,11 +403,20 @@ watch(
   }
 )
 
+watch(
+  () => trackedDiscussionIds.value,
+  (nextTrackedIds, previousTrackedIds = []) => {
+    forumRealtimeStore.untrackDiscussionIds(previousTrackedIds)
+    forumRealtimeStore.trackDiscussionIds(nextTrackedIds)
+  }
+)
+
 onMounted(() => {
   nextTick(() => {
     inputRef.value?.focus()
     inputRef.value?.select?.()
   })
+  window.addEventListener('bias:forum-event', handleForumEvent)
 })
 
 onBeforeUnmount(() => {
@@ -406,6 +424,8 @@ onBeforeUnmount(() => {
     clearTimeout(searchTimer)
     searchTimer = null
   }
+  forumRealtimeStore.untrackDiscussionIds(trackedDiscussionIds.value)
+  window.removeEventListener('bias:forum-event', handleForumEvent)
 })
 
 async function fetchResults() {
@@ -427,15 +447,12 @@ async function fetchResults() {
       posts: data.post_total ?? 0,
       users: data.user_total ?? 0,
     }
-    discussionIds.value = unwrapList(data.discussions || [])
-      .map(normalizeDiscussion)
-      .map(item => resourceStore.upsert('discussions', item).id)
-    postIds.value = unwrapList(data.posts || [])
-      .map(normalizePost)
-      .map(item => resourceStore.upsert('posts', item).id)
-    userIds.value = unwrapList(data.users || [])
-      .map(normalizeUser)
-      .map(item => resourceStore.upsert('users', item).id)
+    discussionIds.value = resourceStore.upsertMany('discussions', unwrapList(data.discussions || []))
+      .map(item => item.id)
+    postIds.value = resourceStore.upsertMany('posts', unwrapList(data.posts || []))
+      .map(item => item.id)
+    userIds.value = resourceStore.upsertMany('users', unwrapList(data.users || []))
+      .map(item => item.id)
   } catch (error) {
     if (currentRequestId !== requestId) return
 
@@ -448,6 +465,27 @@ async function fetchResults() {
     if (currentRequestId === requestId) {
       loading.value = false
     }
+  }
+}
+
+async function handleForumEvent(event) {
+  const detail = event.detail || {}
+  const discussionId = Number(detail.discussion_id)
+  if (!hasTrackedDiscussionId(trackedDiscussionIds.value, discussionId)) {
+    return
+  }
+
+  if (FORUM_REALTIME_REFRESH_EVENT_TYPES.has(detail.event_type)) {
+    await fetchResults()
+    return
+  }
+
+  const payload = detail.payload || {}
+  if (payload.discussion) {
+    resourceStore.upsert('discussions', payload.discussion)
+  }
+  if (payload.post) {
+    resourceStore.upsert('posts', payload.post)
   }
 }
 

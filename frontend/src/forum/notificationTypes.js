@@ -1,4 +1,5 @@
 import api from '@/api'
+import { useResourceStore } from '@/stores/resource'
 import { buildDiscussionPath } from '@/utils/forum'
 import { getNotificationRenderers, registerNotificationRenderer } from '@/forum/registry'
 
@@ -163,7 +164,10 @@ export function getNotificationText(notification, fallbackMessage = '') {
 export function getNotificationPresentation(notification, fallbackMessage = '') {
   const definition = getNotificationTypeDefinition(notification?.type)
   const messageText = getNotificationText(notification, fallbackMessage)
-  const discussionTitle = notification?.data?.discussion_title || ''
+  const resourceStore = useResourceStore()
+  const discussionId = normalizeDiscussionId(notification)
+  const discussion = discussionId ? resourceStore.get('discussions', discussionId) : null
+  const discussionTitle = discussion?.title || notification?.data?.discussion_title || ''
   const metaText = typeof definition.getMeta === 'function'
     ? definition.getMeta(notification)
     : (discussionTitle || definition.groupLabel || definition.label || '')
@@ -189,6 +193,7 @@ export function getNotificationPresentation(notification, fallbackMessage = '') 
 
 export function resolveNotificationGroup(notification, fallbackTitle = '论坛') {
   const definition = getNotificationTypeDefinition(notification?.type)
+  const resourceStore = useResourceStore()
 
   if (typeof definition.getGroup === 'function') {
     const resolvedGroup = definition.getGroup(notification, fallbackTitle)
@@ -203,10 +208,11 @@ export function resolveNotificationGroup(notification, fallbackTitle = '论坛')
 
   const discussionId = normalizeDiscussionId(notification)
   if (discussionId) {
+    const discussion = resourceStore.get('discussions', discussionId)
     return {
       discussionId,
       key: `discussion-${discussionId}`,
-      title: notification?.data?.discussion_title || definition.label || fallbackTitle,
+      title: discussion?.title || notification?.data?.discussion_title || definition.label || fallbackTitle,
     }
   }
 
