@@ -1,13 +1,21 @@
 """
 WebSocket工具函数
 """
-from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from typing import Dict, Any
+from channels.layers import get_channel_layer
+from typing import Any, Dict
 
 
 class WebSocketService:
     """WebSocket服务"""
+
+    @staticmethod
+    def _group_send(group_name: str, payload: Dict[str, Any]):
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+
+        async_to_sync(channel_layer.group_send)(group_name, payload)
 
     @staticmethod
     def send_notification_to_user(user_id: int, notification_data: Dict[Any, Any]):
@@ -18,10 +26,8 @@ class WebSocketService:
             user_id: 用户ID
             notification_data: 通知数据
         """
-        channel_layer = get_channel_layer()
         group_name = f'notifications_{user_id}'
-
-        async_to_sync(channel_layer.group_send)(
+        WebSocketService._group_send(
             group_name,
             {
                 'type': 'notification_message',
@@ -39,10 +45,8 @@ class WebSocketService:
             username: 用户名
             status: 状态 (online/offline)
         """
-        channel_layer = get_channel_layer()
         group_name = 'online_users'
-
-        async_to_sync(channel_layer.group_send)(
+        WebSocketService._group_send(
             group_name,
             {
                 'type': 'user_status',
@@ -63,15 +67,29 @@ class WebSocketService:
             username: 用户名
             is_typing: 是否正在输入
         """
-        channel_layer = get_channel_layer()
         group_name = f'discussion_{discussion_id}'
-
-        async_to_sync(channel_layer.group_send)(
+        WebSocketService._group_send(
             group_name,
             {
                 'type': 'typing_indicator',
                 'user_id': user_id,
                 'username': username,
                 'is_typing': is_typing
+            }
+        )
+
+    @staticmethod
+    def broadcast_discussion_event(discussion_id: int, event_type: str, payload: Dict[str, Any]):
+        """广播讨论实时事件。"""
+        WebSocketService._group_send(
+            f'discussion_{discussion_id}',
+            {
+                'type': 'forum_event_message',
+                'event': {
+                    'scope': 'discussion',
+                    'discussion_id': discussion_id,
+                    'event_type': event_type,
+                    'payload': payload,
+                }
             }
         )

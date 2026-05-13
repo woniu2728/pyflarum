@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from apps.core.domain_events import get_forum_event_bus
+from apps.core.websocket_service import WebSocketService
 from apps.core.forum_events import (
     DiscussionApprovedEvent,
     DiscussionCreatedEvent,
@@ -73,6 +74,14 @@ def bootstrap_forum_event_listeners() -> None:
 
 
 def handle_discussion_created(event: DiscussionCreatedEvent) -> None:
+    if event.is_approved:
+        _broadcast_discussion_event(
+            event.discussion_id,
+            "discussion.created",
+            include_discussion=True,
+            include_post=True,
+            post_id_getter=lambda discussion: discussion.first_post_id,
+        )
     if not event.tag_ids:
         return
 
@@ -95,6 +104,13 @@ def handle_discussion_approved(event: DiscussionApprovedEvent) -> None:
 
     NotificationService.notify_discussion_approved(discussion, admin_user, note=event.note)
     TagService.refresh_discussion_tag_stats(discussion.id)
+    _broadcast_discussion_event(
+        event.discussion_id,
+        "discussion.approved",
+        include_discussion=True,
+        include_post=True,
+        post_id_getter=lambda current_discussion: current_discussion.first_post_id,
+    )
     create_timeline_event_post(
         discussion_id=discussion.id,
         actor_user_id=admin_user.id,
@@ -111,6 +127,7 @@ def handle_discussion_approved(event: DiscussionApprovedEvent) -> None:
 
 
 def handle_discussion_renamed(event: DiscussionRenamedEvent) -> None:
+    _broadcast_discussion_event(event.discussion_id, "discussion.renamed", include_discussion=True)
     _create_timeline_from_builder(
         _make_timeline_context(event, post_type="discussionRenamed"),
         build_discussion_renamed_content,
@@ -118,6 +135,7 @@ def handle_discussion_renamed(event: DiscussionRenamedEvent) -> None:
 
 
 def handle_discussion_tagged(event: DiscussionTaggedEvent) -> None:
+    _broadcast_discussion_event(event.discussion_id, "discussion.tagged", include_discussion=True)
     _create_timeline_from_builder(
         _make_timeline_context(event, post_type="discussionTagged"),
         build_discussion_tagged_content,
@@ -125,6 +143,7 @@ def handle_discussion_tagged(event: DiscussionTaggedEvent) -> None:
 
 
 def handle_discussion_locked(event: DiscussionLockedEvent) -> None:
+    _broadcast_discussion_event(event.discussion_id, "discussion.locked", include_discussion=True)
     _create_timeline_from_builder(
         _make_timeline_context(event, post_type="discussionLocked"),
         build_discussion_locked_content,
@@ -132,6 +151,7 @@ def handle_discussion_locked(event: DiscussionLockedEvent) -> None:
 
 
 def handle_discussion_sticky_changed(event: DiscussionStickyChangedEvent) -> None:
+    _broadcast_discussion_event(event.discussion_id, "discussion.sticky_changed", include_discussion=True)
     _create_timeline_from_builder(
         _make_timeline_context(event, post_type="discussionSticky"),
         build_discussion_sticky_content,
@@ -139,6 +159,7 @@ def handle_discussion_sticky_changed(event: DiscussionStickyChangedEvent) -> Non
 
 
 def handle_discussion_hidden(event: DiscussionHiddenEvent) -> None:
+    _broadcast_discussion_event(event.discussion_id, "discussion.hidden")
     _create_timeline_from_builder(
         _make_timeline_context(event, post_type="discussionHidden"),
         build_discussion_hidden_content,
@@ -157,6 +178,10 @@ def handle_discussion_rejected(event: DiscussionRejectedEvent) -> None:
         return
 
     NotificationService.notify_discussion_rejected(discussion, admin_user, note=event.note)
+    _broadcast_discussion_event(
+        event.discussion_id,
+        "discussion.rejected",
+    )
     _create_timeline_from_builder(
         _make_timeline_context(
             event,
@@ -168,6 +193,10 @@ def handle_discussion_rejected(event: DiscussionRejectedEvent) -> None:
 
 
 def handle_discussion_resubmitted(event: DiscussionResubmittedEvent) -> None:
+    _broadcast_discussion_event(
+        event.discussion_id,
+        "discussion.resubmitted",
+    )
     _create_timeline_from_builder(
         _make_timeline_context(
             event,
@@ -178,6 +207,14 @@ def handle_discussion_resubmitted(event: DiscussionResubmittedEvent) -> None:
 
 
 def handle_post_created(event: PostCreatedEvent) -> None:
+    if event.is_approved:
+        _broadcast_discussion_event(
+            event.discussion_id,
+            "post.created",
+            include_discussion=True,
+            include_post=True,
+            post_id=event.post_id,
+        )
     if not event.is_approved:
         return
 
@@ -230,6 +267,7 @@ def handle_post_approved(event: PostApprovedEvent) -> None:
 
     NotificationService.notify_post_approved(post, admin_user, note=event.note)
     TagService.refresh_discussion_tag_stats(event.discussion_id)
+    _broadcast_discussion_event(event.discussion_id, "post.approved", include_discussion=True, post_id=event.post_id)
     enriched_event = _make_timeline_context(
         event,
         actor_user_id=event.admin_user_id,
@@ -251,6 +289,7 @@ def handle_post_rejected(event: PostRejectedEvent) -> None:
         return
 
     NotificationService.notify_post_rejected(post, admin_user, note=event.note)
+    _broadcast_discussion_event(event.discussion_id, "post.rejected")
     enriched_event = _make_timeline_context(
         event,
         actor_user_id=event.admin_user_id,
@@ -273,10 +312,12 @@ def handle_post_resubmitted(event: PostResubmittedEvent) -> None:
         post_type="postResubmitted",
         post_number=getattr(post, "number", None),
     )
+    _broadcast_discussion_event(event.discussion_id, "post.resubmitted")
     _create_timeline_from_builder(enriched_event, build_post_resubmitted_content)
 
 
 def handle_post_hidden(event: PostHiddenEvent) -> None:
+    _broadcast_discussion_event(event.discussion_id, "post.hidden")
     _create_timeline_from_builder(
         _make_timeline_context(
             event,
@@ -392,3 +433,73 @@ def _make_timeline_context(event, **extra):
     payload = dict(getattr(event, "__dict__", {}))
     payload.update(extra)
     return SimpleNamespace(**payload)
+
+
+def _broadcast_discussion_event(
+    discussion_id: int,
+    event_type: str,
+    *,
+    include_discussion: bool = False,
+    include_post: bool = False,
+    post_id: int | None = None,
+    post_id_getter=None,
+) -> None:
+    payload = {}
+    discussion = _load_discussion_for_realtime(discussion_id) if include_discussion or post_id_getter else None
+    if include_discussion and discussion is not None:
+        payload["discussion"] = _serialize_discussion_for_realtime(discussion)
+
+    resolved_post_id = post_id
+    if resolved_post_id is None and discussion is not None and post_id_getter is not None:
+        resolved_post_id = post_id_getter(discussion)
+
+    if include_post and resolved_post_id:
+        post_payload = _serialize_post_for_realtime(resolved_post_id)
+        if post_payload is not None:
+            payload["post"] = post_payload
+
+    WebSocketService.broadcast_discussion_event(
+        discussion_id,
+        event_type,
+        payload,
+    )
+
+
+def _load_discussion_for_realtime(discussion_id: int):
+    from apps.discussions.models import Discussion
+    from apps.discussions.api import _apply_discussion_resource_preloads
+
+    discussion = (
+        _apply_discussion_resource_preloads(Discussion.objects.all(), user=None)
+        .filter(id=discussion_id)
+        .first()
+    )
+    return discussion
+
+
+def _serialize_discussion_for_realtime(discussion):
+    from apps.discussions.api import _serialize_discussion_payload
+
+    return _serialize_discussion_payload(discussion, user=None)
+
+
+def _serialize_post_for_realtime(post_id: int):
+    from django.db.models import Count
+
+    from apps.posts.api import _apply_post_resource_preloads, _serialize_post
+    from apps.posts.models import Post
+
+    post = (
+        _apply_post_resource_preloads(
+            Post.objects.select_related("discussion").annotate(
+                like_count=Count("likes", distinct=True)
+            ),
+            user=None,
+        )
+        .filter(id=post_id)
+        .first()
+    )
+    if post is None:
+        return None
+    post.is_liked = False
+    return _serialize_post(post, user=None)

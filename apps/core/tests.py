@@ -44,6 +44,7 @@ from apps.core.search_index_service import SEARCH_INDEX_DEFINITIONS
 from apps.core.settings_service import clear_runtime_setting_caches, get_setting_group
 from apps.core.services import PaginationService, SearchService
 from apps.core.test_runner import BiasDiscoverRunner
+from apps.core.websocket_service import WebSocketService
 from apps.core.websocket_auth import (
     REFRESH_TOKEN_COOKIE_NAME,
     _parse_cookie_header,
@@ -1212,6 +1213,85 @@ class WebSocketJwtAuthTests(TestCase):
         cookies = _parse_cookie_header(scope)
 
         self.assertEqual(cookies[REFRESH_TOKEN_COOKIE_NAME], "refresh-token-value")
+
+
+@override_settings(
+    CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}},
+)
+class DiscussionRealtimeTests(TestCase):
+    def setUp(self):
+        trusted_group = Group.objects.create(
+            name="RealtimeTrusted",
+            name_singular="RealtimeTrusted",
+            name_plural="RealtimeTrusted",
+            color="#4d698e",
+        )
+        Permission.objects.create(group=trusted_group, permission="startDiscussion")
+        Permission.objects.create(group=trusted_group, permission="startDiscussionWithoutApproval")
+        Permission.objects.create(group=trusted_group, permission="viewForum")
+        Permission.objects.create(group=trusted_group, permission="discussion.reply")
+        Permission.objects.create(group=trusted_group, permission="replyWithoutApproval")
+
+        self.author = User.objects.create_user(
+            username="realtime-author",
+            email="realtime-author@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        self.author.user_groups.add(trusted_group)
+        self.admin = User.objects.create_superuser(
+            username="realtime-admin",
+            email="realtime-admin@example.com",
+            password="password123",
+        )
+        self.discussion = DiscussionService.create_discussion(
+            title="实时讨论",
+            content="首帖内容",
+            user=self.author,
+        )
+
+    def test_hidden_discussion_is_not_visible_to_anonymous_realtime_viewer(self):
+        DiscussionService.set_hidden_state(self.discussion, self.admin, True)
+
+        self.discussion.refresh_from_db()
+        self.assertFalse(DiscussionService._can_view_discussion(self.discussion, None))
+
+    def test_visible_discussion_is_accessible_to_authenticated_realtime_viewer(self):
+        self.discussion.refresh_from_db()
+        self.assertTrue(DiscussionService._can_view_discussion(self.discussion, self.author))
+
+    @patch.object(WebSocketService, "broadcast_discussion_event")
+    def test_visible_post_event_broadcasts_discussion_and_post_payload(self, broadcast_discussion_event):
+        post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="新增回复",
+            user=self.author,
+        )
+
+        self.assertTrue(broadcast_discussion_event.called)
+        discussion_id, event_type, payload = broadcast_discussion_event.call_args.args
+        self.assertEqual(discussion_id, self.discussion.id)
+        self.assertEqual(event_type, "post.created")
+        self.assertEqual(payload["discussion"]["id"], self.discussion.id)
+        self.assertEqual(payload["discussion"]["last_post_number"], post.number)
+        self.assertEqual(payload["post"]["id"], post.id)
+        self.assertEqual(payload["post"]["discussion_id"], self.discussion.id)
+
+    @patch.object(WebSocketService, "broadcast_discussion_event")
+    def test_hidden_post_event_broadcasts_minimal_signal_only(self, broadcast_discussion_event):
+        post = PostService.create_post(
+            discussion_id=self.discussion.id,
+            content="待隐藏回复",
+            user=self.author,
+        )
+        broadcast_discussion_event.reset_mock()
+
+        PostService.set_hidden_state(post, self.admin, True)
+
+        discussion_id, event_type, payload = broadcast_discussion_event.call_args.args
+        self.assertEqual(discussion_id, self.discussion.id)
+        self.assertEqual(event_type, "post.hidden")
+        self.assertEqual(payload, {})
 
 
 class AdminSettingsApiTests(TestCase):

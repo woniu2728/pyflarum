@@ -39,6 +39,10 @@ export function useDiscussionDetailPage({
   const scrubberTrackMaxHeight = ref(null)
   const scrubberDragging = ref(false)
   const scrubberPreviewNumber = ref(null)
+  const realtimeWs = ref(null)
+  let realtimeHeartbeatTimer = null
+  let realtimeReconnectTimer = null
+  let realtimeShouldReconnect = false
 
   let scrollFrame = null
   let nearUrlTimer = null
@@ -158,6 +162,7 @@ export function useDiscussionDetailPage({
 
   onMounted(async () => {
     await refreshDiscussion()
+    connectRealtime()
     window.addEventListener('scroll', handlePostScroll, { passive: true })
     window.addEventListener('resize', handlePostScroll, { passive: true })
     window.addEventListener('resize', syncScrubberTrackMetrics, { passive: true })
@@ -184,6 +189,7 @@ export function useDiscussionDetailPage({
     document.removeEventListener('mousedown', handleDocumentMouseDown)
     detachScrubberDragListeners()
     detachScrubberObserver()
+    disconnectRealtime()
     resetMobileHeader()
     if (scrollFrame) {
       cancelAnimationFrame(scrollFrame)
@@ -200,9 +206,11 @@ export function useDiscussionDetailPage({
     () => [route.params.id, route.query.near],
     async () => {
       resetMobileHeader()
+      disconnectRealtime()
       resetPostStream()
       loading.value = true
       await refreshDiscussion()
+      connectRealtime()
     }
   )
 
@@ -221,6 +229,98 @@ export function useDiscussionDetailPage({
   async function refreshDiscussion() {
     await loadDiscussion()
     await loadInitialPosts()
+  }
+
+  function resolveWsBaseUrl() {
+    const configured = import.meta.env.VITE_WS_BASE_URL?.trim()
+    if (configured) {
+      return configured.replace(/\/$/, '')
+    }
+
+    if (typeof window !== 'undefined') {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      return `${protocol}//${window.location.host}`
+    }
+
+    return 'ws://localhost:8000'
+  }
+
+  function connectRealtime() {
+    const currentDiscussionId = Number(route.params.id)
+    if (!Number.isInteger(currentDiscussionId) || currentDiscussionId <= 0) return
+
+    if (realtimeWs.value && [WebSocket.OPEN, WebSocket.CONNECTING].includes(realtimeWs.value.readyState)) {
+      return
+    }
+
+    const baseUrl = resolveWsBaseUrl()
+    const ws = new WebSocket(`${baseUrl}/ws/discussions/${currentDiscussionId}/`)
+    realtimeWs.value = ws
+    realtimeShouldReconnect = true
+
+    ws.onopen = () => {
+      if (realtimeReconnectTimer) {
+        clearTimeout(realtimeReconnectTimer)
+        realtimeReconnectTimer = null
+      }
+
+      if (realtimeHeartbeatTimer) {
+        clearInterval(realtimeHeartbeatTimer)
+      }
+
+      realtimeHeartbeatTimer = setInterval(() => {
+        if (realtimeWs.value?.readyState === WebSocket.OPEN) {
+          realtimeWs.value.send(JSON.stringify({ type: 'ping' }))
+        }
+      }, 30000)
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'forum_event') {
+          applyRealtimeEvent(data.event)
+        }
+      } catch (error) {
+        console.error('解析讨论实时消息失败:', error)
+      }
+    }
+
+    ws.onclose = () => {
+      if (realtimeHeartbeatTimer) {
+        clearInterval(realtimeHeartbeatTimer)
+        realtimeHeartbeatTimer = null
+      }
+
+      if (!realtimeShouldReconnect) {
+        return
+      }
+
+      const activeDiscussionId = Number(route.params.id)
+      if (activeDiscussionId !== currentDiscussionId) {
+        return
+      }
+
+      realtimeReconnectTimer = setTimeout(() => {
+        connectRealtime()
+      }, 5000)
+    }
+  }
+
+  function disconnectRealtime() {
+    realtimeShouldReconnect = false
+    if (realtimeReconnectTimer) {
+      clearTimeout(realtimeReconnectTimer)
+      realtimeReconnectTimer = null
+    }
+    if (realtimeHeartbeatTimer) {
+      clearInterval(realtimeHeartbeatTimer)
+      realtimeHeartbeatTimer = null
+    }
+    if (realtimeWs.value) {
+      realtimeWs.value.close()
+      realtimeWs.value = null
+    }
   }
 
   async function loadDiscussion() {
@@ -796,6 +896,56 @@ export function useDiscussionDetailPage({
     await scrollToPost(newPost.number)
   }
 
+  function applyRealtimeEvent(event) {
+    if (!event || Number(event.discussion_id) !== Number(route.params.id)) return
+
+    const payload = event.payload || {}
+    const refreshEventTypes = new Set([
+      'discussion.hidden',
+      'discussion.rejected',
+      'discussion.resubmitted',
+      'post.hidden',
+      'post.rejected',
+      'post.resubmitted',
+    ])
+
+    if (refreshEventTypes.has(event.event_type)) {
+      refreshDiscussion().catch(error => {
+        console.error('刷新讨论详情失败:', error)
+      })
+      return
+    }
+
+    if (payload.discussion) {
+      patchDiscussion(normalizeDiscussion(payload.discussion))
+    }
+
+    if (payload.post) {
+      const normalizedPost = normalizePost(payload.post)
+      switch (event.event_type) {
+        case 'post.created':
+        case 'post.approved':
+        case 'post.resubmitted':
+          upsertPost(normalizedPost)
+          sortPostIds()
+          break
+        case 'post.hidden':
+        case 'post.rejected':
+          upsertPost(normalizedPost)
+          break
+        case 'discussion.created':
+        case 'discussion.approved':
+        case 'discussion.rejected':
+        case 'discussion.resubmitted':
+          upsertPost(normalizedPost)
+          sortPostIds()
+          break
+        default:
+          upsertPost(normalizedPost)
+      }
+    }
+  }
+
   function handlePostUpdated(event) {
     const detail = event.detail || {}
     if (!discussion.value || Number(detail.discussionId) !== Number(discussion.value.id)) return
@@ -816,6 +966,14 @@ export function useDiscussionDetailPage({
     if (!postIds.value.includes(updatedPost.id)) {
       mergePostIds([updatedPost.id])
     }
+  }
+
+  function sortPostIds() {
+    postIds.value = [...postIds.value].sort((leftId, rightId) => {
+      const left = resourceStore.get('posts', leftId)
+      const right = resourceStore.get('posts', rightId)
+      return Number(left?.number || 0) - Number(right?.number || 0)
+    })
   }
 
   function patchDiscussion(patch) {

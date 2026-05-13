@@ -2,11 +2,13 @@
 WebSocket消费者
 """
 import json
-from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from django.contrib.auth.models import AnonymousUser
 from typing import Optional
 
+from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django.contrib.auth.models import AnonymousUser
+
+from apps.discussions.services import DiscussionService
 from apps.core.online_service import OnlineUserService
 
 
@@ -182,3 +184,77 @@ class OnlineUsersConsumer(AsyncWebsocketConsumer):
     def get_online_users(self):
         """获取在线用户列表"""
         return OnlineUserService.get_online_users(limit=50)
+
+
+class DiscussionConsumer(AsyncWebsocketConsumer):
+    """讨论详情实时事件消费者"""
+
+    async def connect(self):
+        raw_discussion_id = self.scope.get("url_route", {}).get("kwargs", {}).get("discussion_id")
+        try:
+            self.discussion_id = int(raw_discussion_id)
+        except (TypeError, ValueError):
+            await self.close()
+            return
+
+        self.user = self.scope["user"]
+        can_view = await self.can_view_discussion()
+        if not can_view:
+            await self.close()
+            return
+
+        self.discussion_group_name = f"discussion_{self.discussion_id}"
+        await self.channel_layer.group_add(
+            self.discussion_group_name,
+            self.channel_name,
+        )
+        await self.accept()
+        await self.send(text_data=json.dumps({
+            "type": "connection_established",
+            "discussion_id": self.discussion_id,
+            "message": "已连接到讨论实时流",
+        }))
+
+    async def disconnect(self, close_code):
+        if hasattr(self, "discussion_group_name"):
+            await self.channel_layer.group_discard(
+                self.discussion_group_name,
+                self.channel_name,
+            )
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            return
+
+        message_type = data.get("type")
+        if message_type == "ping":
+            await self.send(text_data=json.dumps({"type": "pong"}))
+
+    async def forum_event_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "forum_event",
+            "event": event["event"],
+        }))
+
+    async def typing_indicator(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "typing_indicator",
+            "discussion_id": self.discussion_id,
+            "user_id": event["user_id"],
+            "username": event["username"],
+            "is_typing": event["is_typing"],
+        }))
+
+    @database_sync_to_async
+    def can_view_discussion(self):
+        from apps.discussions.models import Discussion
+
+        user = self.user
+        if isinstance(user, AnonymousUser):
+            user = None
+        discussion = Discussion.objects.filter(id=self.discussion_id).first()
+        if discussion is None:
+            return False
+        return DiscussionService._can_view_discussion(discussion, user)
