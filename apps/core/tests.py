@@ -14,6 +14,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command, CommandError
 from django.db import OperationalError
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
+from django.db import connection
 from django.utils import timezone
 from ninja_jwt.tokens import RefreshToken
 from unittest.mock import patch
@@ -539,6 +541,57 @@ class ChineseSearchTests(TestCase):
         self.assertEqual(len(payload["users"]), 1)
         self.assertEqual(payload["users"][0]["username"], "isolated-user")
         self.assertEqual(payload["users"][0]["primary_group"]["name"], group.name)
+
+    def test_search_api_users_type_supports_resource_field_selection(self):
+        unique_keyword = "用户字段裁剪搜索键67890"
+        matched_user = User.objects.create_user(
+            username="isolated-user-fields",
+            email="search-user-fields@example.com",
+            password="password123",
+            bio=f"这是一个{unique_keyword}",
+            is_email_confirmed=True,
+        )
+        group = Group.objects.create(name="SearchUserFieldsGroup", color="#16a085", icon="fas fa-user-tag")
+        matched_user.user_groups.add(group)
+
+        response = self.client.get(
+            "/api/search",
+            {"q": unique_keyword, "type": "users", "fields[search_user]": "primary_group"},
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["users"][0]["primary_group"]["name"], group.name)
+        self.assertIn("bio", payload["users"][0])
+
+    def test_search_api_user_results_avoid_n_plus_one_for_primary_group(self):
+        keyword = "搜索预加载用户"
+        for index in range(3):
+            candidate = User.objects.create_user(
+                username=f"search-preload-user-{index}",
+                email=f"search-preload-user-{index}@example.com",
+                password="password123",
+                bio=keyword,
+                is_email_confirmed=True,
+            )
+            group = Group.objects.create(name=f"SearchPreloadGroup{index}", color="#16a085")
+            candidate.user_groups.add(group)
+
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(
+                "/api/search",
+                {"q": keyword, "type": "users"},
+                **self.auth_header(),
+            )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        select_group_queries = [
+            query["sql"]
+            for query in context.captured_queries
+            if "user_groups" in query["sql"].lower()
+        ]
+        self.assertLessEqual(len(select_group_queries), 2)
 
     def test_search_api_users_type_requires_search_permission(self):
         restricted_user = User.objects.create_user(

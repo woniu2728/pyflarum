@@ -42,6 +42,25 @@ def merge_resource_includes(*include_groups: Iterable[str]) -> tuple[str, ...]:
     return tuple(ordered)
 
 
+def apply_resource_preloads(
+    registry,
+    queryset,
+    resource: str,
+    *,
+    context: dict | None = None,
+    resource_options: ResourceQueryOptions | None = None,
+    default_includes: Iterable[str] = (),
+):
+    resource_options = resource_options or ResourceQueryOptions()
+    return registry.apply_preload_plan(
+        queryset,
+        resource,
+        context,
+        only=resource_options.fields,
+        include=merge_resource_includes(default_includes, resource_options.includes),
+    )
+
+
 def _get_query_param(request, key: str) -> str | None:
     getter = getattr(getattr(request, "GET", None), "get", None)
     if getter is None:

@@ -326,6 +326,7 @@ class SearchService:
         limit: int = 20,
         user=None,
         context: SearchContext | None = None,
+        preload=None,
     ) -> Tuple[List[Discussion], int]:
         """
         搜索讨论
@@ -340,6 +341,8 @@ class SearchService:
         """
         context = context or SearchService.build_search_context(query, user=user, include_users=False)
         queryset = context.discussion_queryset
+        if preload is not None:
+            queryset = preload(queryset)
         discussions = SearchService._search_discussions_queryset(queryset, query, page, limit)
         return discussions, context.discussion_total
 
@@ -371,6 +374,7 @@ class SearchService:
         limit: int = 20,
         user=None,
         context: SearchContext | None = None,
+        preload=None,
     ) -> Tuple[List[Post], int]:
         """
         搜索帖子
@@ -385,6 +389,8 @@ class SearchService:
         """
         context = context or SearchService.build_search_context(query, user=user, include_users=False)
         queryset = context.post_queryset
+        if preload is not None:
+            queryset = preload(queryset)
         posts = SearchService._search_posts_queryset(queryset, query, page, limit)
         return posts, context.post_total
 
@@ -415,6 +421,7 @@ class SearchService:
         page: int = 1,
         limit: int = 20,
         context: SearchContext | None = None,
+        preload=None,
     ) -> Tuple[List[User], int]:
         """
         搜索用户
@@ -428,7 +435,10 @@ class SearchService:
             Tuple[List[User], int]: (用户列表, 总数)
         """
         context = context or SearchService.build_search_context(query, include_users=True)
-        users = SearchService._search_users_queryset(context.user_queryset, page, limit)
+        queryset = context.user_queryset
+        if preload is not None:
+            queryset = preload(queryset)
+        users = SearchService._search_users_queryset(queryset, page, limit)
         return users, context.user_total
 
     @staticmethod

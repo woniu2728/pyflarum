@@ -14,6 +14,8 @@ from typing import List
 from apps.core.auth import get_optional_user
 from apps.core.api_errors import api_error
 from apps.core.forum_resources import serialize_user_payload
+from apps.core.resource_api import ResourceQueryOptions, apply_resource_preloads, parse_resource_query_options
+from apps.core.resource_registry import get_resource_registry
 from apps.core.human_verification import HumanVerificationError, verify_human_verification
 from apps.core.jwt_auth import (
     ACCESS_TOKEN_COOKIE_NAME,
@@ -46,6 +48,7 @@ from .schemas import (
 from .services import UserService
 
 router = Router()
+RESOURCE_REGISTRY = get_resource_registry()
 
 
 def _set_refresh_token_cookie(response: JsonResponse, refresh: RefreshToken) -> JsonResponse:
@@ -98,8 +101,13 @@ def _attach_current_user_context(user):
     return user
 
 
-def _serialize_user_detail_payload(user, include_forum_permissions: bool = False):
-    payload = serialize_user_payload(user, resource="user_detail") or {}
+def _serialize_user_detail_payload(user, include_forum_permissions: bool = False, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    payload = RESOURCE_REGISTRY.serialize(
+        "user_detail",
+        user,
+        only=resource_options.fields,
+    ) or {}
     payload.update(
         {
             "email": user.email,
@@ -108,8 +116,17 @@ def _serialize_user_detail_payload(user, include_forum_permissions: bool = False
             "is_staff": user.is_staff,
         }
     )
-    if hasattr(user, "groups"):
-        payload["groups"] = user.groups
+    if hasattr(user, "user_groups"):
+        payload["groups"] = [
+            {
+                "id": group.id,
+                "name": group.name,
+                "color": group.color,
+                "icon": group.icon,
+                "is_hidden": group.is_hidden,
+            }
+            for group in user.user_groups.all()
+        ]
     if hasattr(user, "preferences"):
         payload["preferences"] = user.preferences or {}
     if include_forum_permissions:
@@ -118,6 +135,23 @@ def _serialize_user_detail_payload(user, include_forum_permissions: bool = False
         payload["suspend_reason"] = user.suspend_reason
         payload["suspend_message"] = user.suspend_message
     return payload
+
+
+def _serialize_user_groups_for_schema(user):
+    if not hasattr(user, "user_groups"):
+        return []
+    return [
+        {
+            "id": group.id,
+            "name": group.name,
+            "name_singular": group.name,
+            "name_plural": group.name,
+            "color": group.color,
+            "icon": group.icon,
+            "is_hidden": group.is_hidden,
+        }
+        for group in user.user_groups.all()
+    ]
 
 
 def _serialize_user_out_payload(user):
@@ -254,7 +288,9 @@ def reset_password(request, payload: PasswordResetSchema):
 def get_current_user(request):
     """获取当前用户信息"""
     user = _attach_current_user_context(request.auth)
-    return _serialize_user_detail_payload(user, include_forum_permissions=True)
+    payload = _serialize_user_detail_payload(user, include_forum_permissions=True)
+    payload["groups"] = _serialize_user_groups_for_schema(user)
+    return payload
 
 
 @router.get("/me/preferences", response=UserPreferencesSchema, auth=AccessTokenAuth(), tags=["Users"])
@@ -272,7 +308,7 @@ def update_preferences(request, payload: UserPreferencesUpdateSchema):
     return serialize_user_preferences(request.auth)
 
 
-@router.get("", response=List[UserOutSchema], tags=["Users"])
+@router.get("", tags=["Users"])
 def list_users(request, page: int = 1, limit: int = 20, q: str = None):
     """获取用户列表"""
     user = get_optional_user(request)
@@ -286,7 +322,13 @@ def list_users(request, page: int = 1, limit: int = 20, q: str = None):
     elif not UserService.has_forum_permission(user, "viewUserList"):
         return api_error("没有权限查看用户列表", status=403)
 
-    queryset = User.objects.prefetch_related("user_groups").all()
+    resource_options = parse_resource_query_options(request, "user_detail")
+    queryset = apply_resource_preloads(
+        RESOURCE_REGISTRY,
+        User.objects.all(),
+        "user_detail",
+        resource_options=resource_options,
+    )
 
     # 搜索
     if q:
@@ -297,21 +339,40 @@ def list_users(request, page: int = 1, limit: int = 20, q: str = None):
     end = start + limit
 
     users = list(queryset[start:end])
-    return [_serialize_user_out_payload(item) for item in users]
+    return JsonResponse(
+        [_serialize_user_detail_payload(item, resource_options=resource_options) for item in users],
+        safe=False,
+    )
 
 
-@router.get("/by-username/{username}", response=UserDetailSchema, tags=["Users"])
+@router.get("/by-username/{username}", tags=["Users"])
 def get_user_by_username(request, username: str):
     """按用户名获取用户详情，兼容旧版 @提及 链接"""
-    user = get_object_or_404(User.objects.prefetch_related("user_groups"), username=username)
-    return _serialize_user_detail_payload(user)
+    resource_options = parse_resource_query_options(request, "user_detail")
+    user = get_object_or_404(
+        apply_resource_preloads(
+            RESOURCE_REGISTRY,
+            User.objects.filter(username=username),
+            "user_detail",
+            resource_options=resource_options,
+        )
+    )
+    return JsonResponse(_serialize_user_detail_payload(user, resource_options=resource_options))
 
 
-@router.get("/{user_id}", response=UserDetailSchema, tags=["Users"])
+@router.get("/{user_id}", tags=["Users"])
 def get_user(request, user_id: int):
     """获取用户详情"""
-    user = get_object_or_404(User.objects.prefetch_related("user_groups"), id=user_id)
-    return _serialize_user_detail_payload(user)
+    resource_options = parse_resource_query_options(request, "user_detail")
+    user = get_object_or_404(
+        apply_resource_preloads(
+            RESOURCE_REGISTRY,
+            User.objects.filter(id=user_id),
+            "user_detail",
+            resource_options=resource_options,
+        )
+    )
+    return JsonResponse(_serialize_user_detail_payload(user, resource_options=resource_options))
 
 
 @router.patch("/{user_id}", response=UserOutSchema, auth=AccessTokenAuth(), tags=["Users"])

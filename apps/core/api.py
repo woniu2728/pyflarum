@@ -4,6 +4,7 @@
 import os
 from typing import Optional
 from django.middleware.csrf import get_token
+from django.http import JsonResponse
 from ninja import Router
 from apps.core.api_errors import api_error
 from apps.core.schemas import (
@@ -25,6 +26,11 @@ from apps.core.forum_resources import serialize_user_payload
 from apps.core.markdown_service import MarkdownService
 from apps.core.runtime_state import get_runtime_status
 from apps.core.settings_service import get_public_forum_settings
+from apps.core.resource_api import (
+    ResourceQueryOptions,
+    apply_resource_preloads,
+    parse_resource_query_options,
+)
 from apps.core.resource_registry import get_resource_registry
 from apps.core.services import SearchService
 from apps.users.services import UserService
@@ -94,16 +100,31 @@ def upload_attachment(request):
     }
 
 
-def serialize_discussion_search_result(discussion):
-    return RESOURCE_REGISTRY.serialize("search_discussion", discussion)
+def serialize_discussion_search_result(discussion, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.serialize(
+        "search_discussion",
+        discussion,
+        only=resource_options.fields,
+    )
 
 
-def serialize_post_search_result(post):
-    return RESOURCE_REGISTRY.serialize("search_post", post)
+def serialize_post_search_result(post, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.serialize(
+        "search_post",
+        post,
+        only=resource_options.fields,
+    )
 
 
-def serialize_user_search_result(user):
-    return serialize_user_payload(user, resource="search_user")
+def serialize_user_search_result(user, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.serialize(
+        "search_user",
+        user,
+        only=resource_options.fields,
+    )
 
 
 def serialize_search_filter(definition):
@@ -117,7 +138,7 @@ def serialize_search_filter(definition):
     }
 
 
-@router.get("/search", response=SearchResultSchema, tags=["Search"])
+@router.get("/search", tags=["Search"])
 def search(
     request,
     q: str,
@@ -154,6 +175,9 @@ def search(
     query = q.strip()
     user = get_optional_user(request)
     can_search_users = bool(user and UserService.has_forum_permission(user, "searchUsers"))
+    discussion_resource_options = parse_resource_query_options(request, "search_discussion")
+    post_resource_options = parse_resource_query_options(request, "search_post")
+    user_resource_options = parse_resource_query_options(request, "search_user")
     context = SearchService.build_search_context(query, user=user, include_users=can_search_users)
 
     if type == 'all':
@@ -165,17 +189,43 @@ def search(
             include_users=can_search_users,
             context=context,
         )
-        return {
+        response_payload = {
             **result,
-            'discussions': [serialize_discussion_search_result(item) for item in result['discussions']],
-            'posts': [serialize_post_search_result(item) for item in result['posts']],
+            'discussions': [
+                serialize_discussion_search_result(item, resource_options=discussion_resource_options)
+                for item in result['discussions']
+            ],
+            'posts': [
+                serialize_post_search_result(item, resource_options=post_resource_options)
+                for item in result['posts']
+            ],
+            'users': [
+                serialize_user_search_result(item, resource_options=user_resource_options)
+                for item in result['users']
+            ],
         }
+        return JsonResponse(response_payload)
 
     elif type == 'discussions':
-        discussions, total = SearchService.search_discussions(query, page, limit, user=user, context=context)
-        discussion_data = [serialize_discussion_search_result(discussion) for discussion in discussions]
+        discussions, total = SearchService.search_discussions(
+            query,
+            page,
+            limit,
+            user=user,
+            context=context,
+            preload=lambda queryset: apply_resource_preloads(
+                RESOURCE_REGISTRY,
+                queryset,
+                "search_discussion",
+                resource_options=discussion_resource_options,
+            ),
+        )
+        discussion_data = [
+            serialize_discussion_search_result(discussion, resource_options=discussion_resource_options)
+            for discussion in discussions
+        ]
 
-        return {
+        return JsonResponse({
             'total': total,
             'page': page,
             'limit': limit,
@@ -186,13 +236,28 @@ def search(
             'discussions': discussion_data,
             'posts': [],
             'users': [],
-        }
+        })
 
     elif type == 'posts':
-        posts, total = SearchService.search_posts(query, page, limit, user=user, context=context)
-        post_data = [serialize_post_search_result(post) for post in posts]
+        posts, total = SearchService.search_posts(
+            query,
+            page,
+            limit,
+            user=user,
+            context=context,
+            preload=lambda queryset: apply_resource_preloads(
+                RESOURCE_REGISTRY,
+                queryset,
+                "search_post",
+                resource_options=post_resource_options,
+            ),
+        )
+        post_data = [
+            serialize_post_search_result(post, resource_options=post_resource_options)
+            for post in posts
+        ]
 
-        return {
+        return JsonResponse({
             'total': total,
             'page': page,
             'limit': limit,
@@ -203,15 +268,26 @@ def search(
             'discussions': [],
             'posts': post_data,
             'users': [],
-        }
+        })
 
     elif type == 'users':
         if not can_search_users:
             return api_error("没有权限搜索用户", status=403)
 
-        users, total = SearchService.search_users(query, page, limit, context=context)
+        users, total = SearchService.search_users(
+            query,
+            page,
+            limit,
+            context=context,
+            preload=lambda queryset: apply_resource_preloads(
+                RESOURCE_REGISTRY,
+                queryset,
+                "search_user",
+                resource_options=user_resource_options,
+            ),
+        )
 
-        return {
+        return JsonResponse({
             'total': total,
             'page': page,
             'limit': limit,
@@ -221,8 +297,8 @@ def search(
             'user_total': total,
             'discussions': [],
             'posts': [],
-            'users': [serialize_user_search_result(item) for item in users],
-        }
+            'users': [serialize_user_search_result(item, resource_options=user_resource_options) for item in users],
+        })
 
     else:
         return api_error("无效的搜索类型", status=400)

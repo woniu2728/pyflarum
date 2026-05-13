@@ -4,7 +4,9 @@ import httpx
 from unittest.mock import patch
 
 from django.core import mail
+from django.db import connection
 from django.test import Client, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from datetime import timedelta
@@ -223,6 +225,23 @@ class UserProfileApiTests(TestCase):
         self.assertEqual(payload["primary_group"]["name"], "Support")
         self.assertEqual(payload["primary_group"]["icon"], "fas fa-life-ring")
 
+    def test_user_detail_supports_resource_field_selection(self):
+        user = User.objects.create_user(
+            username="group-profile-fields",
+            email="group-profile-fields@example.com",
+            password="password123",
+            bio="这段简介不应返回",
+        )
+        group = Group.objects.create(name="SupportFields", color="#27ae60", icon="fas fa-life-ring")
+        user.user_groups.add(group)
+
+        response = self.client.get(f"/api/users/{user.id}", {"fields[user_detail]": "primary_group"})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["primary_group"]["name"], "SupportFields")
+        self.assertIn("bio", payload)
+
     def test_current_user_exposes_forum_permissions(self):
         user = User.objects.create_user(
             username="permission-profile",
@@ -320,6 +339,42 @@ class UserProfileApiTests(TestCase):
         payload = response.json()
         listed_payload = next(item for item in payload if item["username"] == "listed-user")
         self.assertEqual(listed_payload["primary_group"]["name"], support_group.name)
+
+    def test_list_users_avoids_n_plus_one_for_primary_group(self):
+        viewer = User.objects.create_user(
+            username="user-list-preload-viewer",
+            email="user-list-preload-viewer@example.com",
+            password="password123",
+            is_email_confirmed=True,
+        )
+        viewer_group = Group.objects.create(name="PreloadViewers", color="#2ecc71")
+        Permission.objects.create(group=viewer_group, permission="viewUserList")
+        viewer.user_groups.add(viewer_group)
+
+        for index in range(3):
+            listed_user = User.objects.create_user(
+                username=f"listed-user-preload-{index}",
+                email=f"listed-user-preload-{index}@example.com",
+                password="password123",
+                is_email_confirmed=True,
+            )
+            support_group = Group.objects.create(name=f"SupportPreload{index}", color="#3498db")
+            listed_user.user_groups.add(support_group)
+
+        token = str(RefreshToken.for_user(viewer).access_token)
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(
+                "/api/users",
+                HTTP_AUTHORIZATION=f"Bearer {token}",
+            )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        select_group_queries = [
+            query["sql"]
+            for query in context.captured_queries
+            if "user_groups" in query["sql"].lower()
+        ]
+        self.assertLessEqual(len(select_group_queries), 2)
 
     def test_search_users_exposes_primary_group(self):
         viewer = User.objects.create_user(
