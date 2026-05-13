@@ -1,5 +1,7 @@
 from django.core.cache import cache
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
+from django.db import connection
 from ninja_jwt.tokens import RefreshToken
 from unittest.mock import patch
 
@@ -560,6 +562,32 @@ class NotificationServiceTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
         self.assertNotIn("from_user", payload)
+
+    def test_notification_list_avoids_n_plus_one_for_registered_from_user_summary(self):
+        for index in range(3):
+            Notification.objects.create(
+                user=self.author,
+                from_user=self.replier,
+                type="postReply",
+                subject_type="post",
+                subject_id=self.initial_reply.id,
+                data={"post_id": self.initial_reply.id, "index": index},
+                is_read=bool(index % 2),
+            )
+
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(
+                "/api/notifications",
+                **self.auth_header(self.author),
+            )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        select_group_queries = [
+            query["sql"]
+            for query in context.captured_queries
+            if "user_groups" in query["sql"].lower()
+        ]
+        self.assertLessEqual(len(select_group_queries), 2)
 
     def test_notification_list_normalizes_page_and_limit(self):
         response = self.client.get(

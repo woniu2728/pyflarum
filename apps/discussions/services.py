@@ -319,6 +319,7 @@ class DiscussionService:
         page: int = 1,
         limit: int = 20,
         user: Optional[User] = None,
+        preload=None,
     ) -> Tuple[List[Discussion], int]:
         """
         获取讨论列表
@@ -335,9 +336,9 @@ class DiscussionService:
             Tuple[List[Discussion], int]: (讨论列表, 总数)
         """
         page, limit = PaginationService.normalize(page, limit)
-        queryset = Discussion.objects.select_related(
-            'user', 'last_posted_user'
-        ).prefetch_related('discussion_tags__tag', 'user__user_groups', 'last_posted_user__user_groups')
+        queryset = Discussion.objects.all()
+        if preload is not None:
+            queryset = preload(queryset)
 
         queryset = DiscussionService.apply_visibility_filters(queryset, user)
         queryset = TagService.filter_discussions_for_user(queryset, user)
@@ -391,7 +392,11 @@ class DiscussionService:
         return discussions, total
 
     @staticmethod
-    def get_discussion_by_id(discussion_id: int, user: Optional[User] = None) -> Optional[Discussion]:
+    def get_discussion_by_id(
+        discussion_id: int,
+        user: Optional[User] = None,
+        preload=None,
+    ) -> Optional[Discussion]:
         """
         获取讨论详情
 
@@ -403,9 +408,10 @@ class DiscussionService:
             Optional[Discussion]: 讨论对象
         """
         try:
-            discussion = Discussion.objects.select_related(
-                'user', 'last_posted_user'
-            ).prefetch_related('discussion_tags__tag', 'user__user_groups', 'last_posted_user__user_groups').get(id=discussion_id)
+            queryset = Discussion.objects.all()
+            if preload is not None:
+                queryset = preload(queryset)
+            discussion = queryset.get(id=discussion_id)
 
             if not DiscussionService._can_view_discussion(discussion, user):
                 return None

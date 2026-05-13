@@ -6,6 +6,8 @@ from django.core.management import call_command
 from django.test import TestCase, Client
 from django.test import override_settings
 from django.db import OperationalError
+from django.test.utils import CaptureQueriesContext
+from django.db import connection
 from django.utils import timezone
 from datetime import timedelta
 from io import StringIO
@@ -133,6 +135,25 @@ class DiscussionApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["user"]["id"], self.author.id)
         self.assertEqual(payload["last_posted_user"]["id"], self.author.id)
+
+    def test_discussion_list_avoids_n_plus_one_for_registered_user_and_tags(self):
+        for index in range(3):
+            DiscussionService.create_discussion(
+                title=f"预加载讨论 {index}",
+                content="预加载内容",
+                user=self.author,
+            )
+
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get("/api/discussions/")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        select_group_queries = [
+            query["sql"]
+            for query in context.captured_queries
+            if "user_groups" in query["sql"].lower()
+        ]
+        self.assertLessEqual(len(select_group_queries), 2)
 
     def test_create_discussion_retries_on_transient_sqlite_lock(self):
         original_create = Discussion.objects.create

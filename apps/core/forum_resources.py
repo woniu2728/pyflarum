@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from django.db.models import Prefetch
+
+from apps.posts.models import PostFlag
 from apps.core.resource_registry import (
     ResourceDefinition,
     ResourceFieldDefinition,
@@ -82,6 +85,8 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="discussions",
             resolver=_resolve_discussion_user,
             description="讨论作者摘要。",
+            select_related=("user",),
+            prefetch_related=("user__user_groups",),
         )
     )
     registry.register_relationship(
@@ -91,6 +96,8 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="discussions",
             resolver=_resolve_discussion_last_posted_user,
             description="讨论最后回复用户摘要。",
+            select_related=("last_posted_user",),
+            prefetch_related=("last_posted_user__user_groups",),
         )
     )
     registry.register_relationship(
@@ -100,6 +107,8 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="posts",
             resolver=_resolve_post_user,
             description="帖子作者摘要。",
+            select_related=("user",),
+            prefetch_related=("user__user_groups",),
         )
     )
     registry.register_relationship(
@@ -109,6 +118,8 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="posts",
             resolver=_resolve_post_edited_user,
             description="帖子编辑者摘要。",
+            select_related=("edited_user",),
+            prefetch_related=("edited_user__user_groups",),
         )
     )
 
@@ -119,6 +130,7 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="tags",
             resolver=_resolve_discussion_tags,
             description="讨论关联的标签列表。",
+            prefetch_related=("discussion_tags__tag",),
         )
     )
     registry.register_field(
@@ -265,6 +277,7 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="tags",
             resolver=_resolve_tag_last_posted_discussion,
             description="标签下最后活跃讨论摘要。",
+            select_related=("last_posted_discussion",),
         )
     )
 
@@ -302,6 +315,8 @@ def bootstrap_forum_resource_fields() -> None:
             module_id="notifications",
             resolver=_resolve_notification_from_user,
             description="通知来源用户摘要。",
+            select_related=("from_user",),
+            prefetch_related=("from_user__user_groups",),
         )
     )
     registry.register_field(
@@ -500,6 +515,8 @@ def _resolve_post_open_flags(post, context: dict) -> list[dict]:
 def _resolve_post_can_moderate_flags(post, context: dict) -> bool:
     user = context.get("user")
     return bool(user and user.is_staff)
+
+
 
 
 def _resolve_post_type_definition(post, context: dict) -> dict | None:

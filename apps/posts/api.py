@@ -73,6 +73,17 @@ def _serialize_post(post, user=None, resource_options=None):
     return response
 
 
+def _apply_post_resource_preloads(queryset, user=None, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.apply_preload_plan(
+        queryset,
+        "post",
+        {"user": user},
+        only=resource_options.fields,
+        include=merge_resource_includes(("user", "edited_user"), resource_options.includes),
+    )
+
+
 def _serialize_flag(flag):
     return {
         "id": flag.id,
@@ -130,13 +141,12 @@ def list_all_posts(
 
     queryset = Post.objects.select_related(
         "discussion",
-        "user",
-        "edited_user",
     ).annotate(
         like_count=Count("likes", distinct=True)
     ).filter(
         type__in=STREAM_POST_TYPES,
     )
+    queryset = _apply_post_resource_preloads(queryset, user=user, resource_options=resource_options)
 
     queryset = PostService.apply_visibility_filters(queryset, user)
     queryset = PostService.annotate_flag_state(queryset, user)
@@ -226,6 +236,11 @@ def list_posts(
         page=page,
         limit=limit,
         user=user,
+        preload=lambda queryset: _apply_post_resource_preloads(
+            queryset,
+            user=user,
+            resource_options=resource_options,
+        ),
     )
 
     response_payload = {
@@ -244,7 +259,15 @@ def get_post(request, post_id: int):
     """
     user = get_optional_user(request)
     resource_options = parse_resource_query_options(request, "post")
-    post = PostService.get_post_by_id(post_id, user)
+    post = PostService.get_post_by_id(
+        post_id,
+        user,
+        preload=lambda queryset: _apply_post_resource_preloads(
+            queryset,
+            user=user,
+            resource_options=resource_options,
+        ),
+    )
 
     if not post:
         return api_error("帖子不存在", status=404)

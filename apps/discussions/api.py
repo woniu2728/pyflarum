@@ -50,6 +50,17 @@ def _serialize_discussion_payload(discussion, user=None, resource_options=None):
     return payload
 
 
+def _apply_discussion_resource_preloads(queryset, user=None, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.apply_preload_plan(
+        queryset,
+        "discussion",
+        {"user": user},
+        only=resource_options.fields,
+        include=merge_resource_includes(("user", "last_posted_user"), resource_options.includes),
+    )
+
+
 def _serialize_discussion_sort(definition):
     return {
         "code": definition.code,
@@ -137,6 +148,11 @@ def list_discussions(
         page=page,
         limit=limit,
         user=user,
+        preload=lambda queryset: _apply_discussion_resource_preloads(
+            queryset,
+            user=user,
+            resource_options=resource_options,
+        ),
     )
     active_filter = DiscussionService.normalize_discussion_list_filter(normalized_filter)
     active_sort = DiscussionService.normalize_discussion_sort(sort)
@@ -203,7 +219,15 @@ def get_discussion(request, discussion_id: int):
     """
     user = get_optional_user(request)
     resource_options = parse_resource_query_options(request, "discussion")
-    discussion = DiscussionService.get_discussion_by_id(discussion_id, user)
+    discussion = DiscussionService.get_discussion_by_id(
+        discussion_id,
+        user,
+        preload=lambda queryset: _apply_discussion_resource_preloads(
+            queryset,
+            user=user,
+            resource_options=resource_options,
+        ),
+    )
 
     if not discussion:
         return api_error("讨论不存在", status=404)

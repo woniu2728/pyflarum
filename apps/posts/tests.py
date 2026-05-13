@@ -1,5 +1,7 @@
 from django.db import OperationalError
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
+from django.db import connection
 from django.utils import timezone
 from datetime import timedelta
 from ninja_jwt.tokens import RefreshToken
@@ -210,6 +212,25 @@ class PostFlagApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
         self.assertIn("edited_user", payload)
+
+    def test_post_list_avoids_n_plus_one_for_registered_user_summary(self):
+        for index in range(3):
+            PostService.create_post(
+                discussion_id=self.discussion.id,
+                content=f"额外回复 {index}",
+                user=self.author,
+            )
+
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(f"/api/discussions/{self.discussion.id}/posts")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        select_group_queries = [
+            query["sql"]
+            for query in context.captured_queries
+            if "user_groups" in query["sql"].lower()
+        ]
+        self.assertLessEqual(len(select_group_queries), 2)
 
     def test_report_post_creates_flag(self):
         response = self.client.post(

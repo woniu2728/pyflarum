@@ -51,6 +51,15 @@ def _serialize_notification(notification, resource_options=None):
     return payload
 
 
+def _apply_notification_resource_preloads(queryset, resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.apply_preload_plan(
+        queryset,
+        "notification",
+        only=resource_options.fields,
+    )
+
+
 @router.get("/notifications", auth=AuthBearer(), tags=["Notifications"])
 def list_notifications(
     request,
@@ -78,6 +87,10 @@ def list_notifications(
         type=_normalize_notification_type(type),
         page=page,
         limit=limit,
+        preload=lambda queryset: _apply_notification_resource_preloads(
+            queryset,
+            resource_options=resource_options,
+        ),
     )
 
     response_payload = {
@@ -200,7 +213,14 @@ def get_notification(request, notification_id: int):
     需要认证
     """
     resource_options = parse_resource_query_options(request, "notification")
-    notification = NotificationService.get_notification_by_id(notification_id, request.auth)
+    notification = NotificationService.get_notification_by_id(
+        notification_id,
+        request.auth,
+        preload=lambda queryset: _apply_notification_resource_preloads(
+            queryset,
+            resource_options=resource_options,
+        ),
+    )
 
     if not notification:
         return api_error("通知不存在", status=404)

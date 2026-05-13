@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Tuple
 ResourceFieldResolver = Callable[[Any, dict], Any]
 ResourceBaseFieldResolver = Callable[[Any, dict], dict]
 ResourceRelationshipResolver = Callable[[Any, dict], Any]
+ResourcePreloadResolver = Callable[[dict], tuple[tuple[str, ...], tuple[Any, ...]]]
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,9 @@ class ResourceFieldDefinition:
     module_id: str
     resolver: ResourceFieldResolver
     description: str = ""
+    select_related: Tuple[str, ...] = ()
+    prefetch_related: Tuple[Any, ...] = ()
+    preload_resolver: ResourcePreloadResolver | None = None
 
 
 @dataclass(frozen=True)
@@ -33,6 +37,15 @@ class ResourceRelationshipDefinition:
     module_id: str
     resolver: ResourceRelationshipResolver
     description: str = ""
+    select_related: Tuple[str, ...] = ()
+    prefetch_related: Tuple[Any, ...] = ()
+    preload_resolver: ResourcePreloadResolver | None = None
+
+
+@dataclass(frozen=True)
+class ResourcePreloadPlan:
+    select_related: tuple[str, ...] = ()
+    prefetch_related: tuple[Any, ...] = ()
 
 
 class ResourceRegistry:
@@ -102,6 +115,74 @@ class ResourceRegistry:
             definitions.extend(self.get_relationships(resource))
         return definitions
 
+    def build_preload_plan(
+        self,
+        resource: str,
+        context: dict | None = None,
+        *,
+        only: Tuple[str, ...] | List[str] | None = None,
+        include: Tuple[str, ...] | List[str] | None = None,
+    ) -> ResourcePreloadPlan:
+        resolved_context = context or {}
+        select_related: list[str] = []
+        prefetch_related: list[Any] = []
+        seen_select: set[str] = set()
+        seen_prefetch: set[str] = set()
+
+        selected_fields = set(only or [])
+        for definition in self.get_fields(resource):
+            if selected_fields and definition.field not in selected_fields:
+                continue
+            self._merge_preload_definition(
+                definition,
+                resolved_context,
+                select_related,
+                prefetch_related,
+                seen_select,
+                seen_prefetch,
+            )
+
+        include_set = set(include or [])
+        for definition in self.get_relationships(resource):
+            if include_set and definition.relationship not in include_set:
+                continue
+            if not include_set and definition.relationship not in set():
+                continue
+            self._merge_preload_definition(
+                definition,
+                resolved_context,
+                select_related,
+                prefetch_related,
+                seen_select,
+                seen_prefetch,
+            )
+
+        return ResourcePreloadPlan(
+            select_related=tuple(select_related),
+            prefetch_related=tuple(prefetch_related),
+        )
+
+    def apply_preload_plan(
+        self,
+        queryset,
+        resource: str,
+        context: dict | None = None,
+        *,
+        only: Tuple[str, ...] | List[str] | None = None,
+        include: Tuple[str, ...] | List[str] | None = None,
+    ):
+        plan = self.build_preload_plan(
+            resource,
+            context,
+            only=only,
+            include=include,
+        )
+        if plan.select_related:
+            queryset = queryset.select_related(*plan.select_related)
+        if plan.prefetch_related:
+            queryset = queryset.prefetch_related(*plan.prefetch_related)
+        return queryset
+
     def serialize(
         self,
         resource: str,
@@ -131,6 +212,51 @@ class ResourceRegistry:
                     continue
                 payload[definition.relationship] = definition.resolver(instance, resolved_context)
         return payload
+
+    def _merge_preload_definition(
+        self,
+        definition,
+        context: dict,
+        select_related: list[str],
+        prefetch_related: list[Any],
+        seen_select: set[str],
+        seen_prefetch: set[str],
+    ) -> None:
+        for item in getattr(definition, "select_related", ()) or ():
+            if item and item not in seen_select:
+                seen_select.add(item)
+                select_related.append(item)
+
+        for item in getattr(definition, "prefetch_related", ()) or ():
+            prefetch_key = self._prefetch_key(item)
+            if prefetch_key and prefetch_key not in seen_prefetch:
+                seen_prefetch.add(prefetch_key)
+                prefetch_related.append(item)
+
+        preload_resolver = getattr(definition, "preload_resolver", None)
+        if preload_resolver is None:
+            return
+
+        extra_select, extra_prefetch = preload_resolver(context)
+        for item in extra_select or ():
+            if item and item not in seen_select:
+                seen_select.add(item)
+                select_related.append(item)
+
+        for item in extra_prefetch or ():
+            prefetch_key = self._prefetch_key(item)
+            if prefetch_key and prefetch_key not in seen_prefetch:
+                seen_prefetch.add(prefetch_key)
+                prefetch_related.append(item)
+
+    @staticmethod
+    def _prefetch_key(item: Any) -> str:
+        if isinstance(item, str):
+            return item
+        lookup = getattr(item, "prefetch_to", None) or getattr(item, "lookup", None)
+        if lookup:
+            return str(lookup)
+        return repr(item)
 
 
 _resource_registry: ResourceRegistry | None = None

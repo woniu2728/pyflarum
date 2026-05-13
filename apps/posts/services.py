@@ -238,6 +238,7 @@ class PostService:
         page: int = 1,
         limit: int = 20,
         user: Optional[User] = None,
+        preload=None,
     ) -> Tuple[List[Post], int]:
         """
         获取帖子列表
@@ -254,13 +255,11 @@ class PostService:
         queryset = Post.objects.filter(
             discussion_id=discussion_id,
             type__in=STREAM_POST_TYPES,
-        ).select_related(
-            'user', 'edited_user'
-        ).prefetch_related(
-            'user__user_groups', 'edited_user__user_groups'
         ).annotate(
             like_count=Count('likes', distinct=True)
         )
+        if preload is not None:
+            queryset = preload(queryset)
         queryset = PostService.annotate_flag_state(queryset, user)
 
         queryset = PostService.apply_visibility_filters(queryset, user)
@@ -314,7 +313,11 @@ class PostService:
         return max(1, ceil(position / limit))
 
     @staticmethod
-    def get_post_by_id(post_id: int, user: Optional[User] = None) -> Optional[Post]:
+    def get_post_by_id(
+        post_id: int,
+        user: Optional[User] = None,
+        preload=None,
+    ) -> Optional[Post]:
         """
         获取帖子详情
 
@@ -327,12 +330,12 @@ class PostService:
         """
         try:
             post = Post.objects.select_related(
-                'user', 'edited_user', 'discussion'
-            ).prefetch_related(
-                'user__user_groups', 'edited_user__user_groups'
+                'discussion'
             ).annotate(
                 like_count=Count('likes', distinct=True)
             )
+            if preload is not None:
+                post = preload(post)
             post = PostService.annotate_flag_state(post, user).get(id=post_id)
 
             if not PostService._can_view_post(post, user):

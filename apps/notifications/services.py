@@ -194,6 +194,7 @@ class NotificationService:
         type: Optional[str] = None,
         page: int = 1,
         limit: int = 20,
+        preload=None,
     ) -> Tuple[List[Notification], int, int, dict, dict]:
         """
         获取通知列表
@@ -213,7 +214,9 @@ class NotificationService:
             user=user,
             is_read=is_read,
             type=type,
-        ).select_related('from_user')
+        )
+        if preload is not None:
+            queryset = preload(queryset)
 
         type_counts = NotificationService._collect_type_counts(base_queryset)
         unread_type_counts = NotificationService._collect_type_counts(base_queryset.filter(is_read=False))
@@ -232,7 +235,7 @@ class NotificationService:
         return notifications, total, unread_count, type_counts, unread_type_counts
 
     @staticmethod
-    def get_notification_by_id(notification_id: int, user: User) -> Optional[Notification]:
+    def get_notification_by_id(notification_id: int, user: User, preload=None) -> Optional[Notification]:
         """
         获取通知详情
 
@@ -244,10 +247,10 @@ class NotificationService:
             Optional[Notification]: 通知对象
         """
         try:
-            notification = Notification.objects.select_related('from_user').get(
-                id=notification_id,
-                user=user
-            )
+            queryset = Notification.objects.filter(user=user)
+            if preload is not None:
+                queryset = preload(queryset)
+            notification = queryset.get(id=notification_id)
             return notification
         except Notification.DoesNotExist:
             return None

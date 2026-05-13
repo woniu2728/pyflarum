@@ -94,6 +94,16 @@ def _serialize_tag(
     return payload
 
 
+def _apply_tag_resource_preloads(queryset, user=None, action="view", resource_options=None):
+    resource_options = resource_options or ResourceQueryOptions()
+    return RESOURCE_REGISTRY.apply_preload_plan(
+        queryset,
+        "tag",
+        {"user": user, "action": action},
+        only=resource_options.fields,
+    )
+
+
 @router.post("/tags", response=TagOutSchema, auth=AuthBearer(), tags=["Tags"])
 def create_tag(request, payload: TagCreateSchema):
     """
@@ -168,6 +178,12 @@ def list_tags(
     queryset = Tag.objects.select_related('last_posted_discussion').prefetch_related(
         Prefetch("children", queryset=visible_child_queryset, to_attr="visible_children")
     ).all()
+    queryset = _apply_tag_resource_preloads(
+        queryset,
+        user=user,
+        action=purpose,
+        resource_options=resource_options,
+    )
 
     if parent_id is None:
         queryset = queryset.filter(parent__isnull=True)
@@ -211,6 +227,12 @@ def get_popular_tags(request, limit: int = 10):
         Tag.objects.filter(is_hidden=False),
         user,
         action="view",
+    )
+    tags = _apply_tag_resource_preloads(
+        tags,
+        user=user,
+        action="view",
+        resource_options=resource_options,
     ).order_by('-discussion_count', '-last_posted_at')[:limit]
 
     context = _build_tag_serialize_context(user, action="view")
@@ -239,7 +261,12 @@ def get_tag(request, tag_id: int):
 
     user = get_optional_user(request)
     resource_options = parse_resource_query_options(request, "tag")
-    tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
+    tag = _apply_tag_resource_preloads(
+        Tag.objects.select_related('last_posted_discussion').prefetch_related('children').filter(id=tag.id),
+        user=user,
+        action="view",
+        resource_options=resource_options,
+    ).get()
     if not TagService.can_view_tag(tag, user):
         return api_error("没有权限查看此标签", status=403)
     return JsonResponse(
@@ -263,7 +290,12 @@ def get_tag_by_slug(request, slug: str):
 
     user = get_optional_user(request)
     resource_options = parse_resource_query_options(request, "tag")
-    tag = Tag.objects.select_related('last_posted_discussion').prefetch_related('children').get(id=tag.id)
+    tag = _apply_tag_resource_preloads(
+        Tag.objects.select_related('last_posted_discussion').prefetch_related('children').filter(id=tag.id),
+        user=user,
+        action="view",
+        resource_options=resource_options,
+    ).get()
     if not TagService.can_view_tag(tag, user):
         return api_error("没有权限查看此标签", status=403)
     return JsonResponse(
