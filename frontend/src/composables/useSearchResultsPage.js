@@ -7,6 +7,8 @@ import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import {
   FORUM_REALTIME_REFRESH_EVENT_TYPES,
+  applyDiscussionResourceAssociations,
+  applyPostResourceAssociations,
   getTrackedDiscussionIdsFromDiscussionItems,
   getTrackedDiscussionIdsFromPostItems,
   hasTrackedDiscussionId,
@@ -287,9 +289,10 @@ export function useSearchResultsPage({ route, router }) {
 
     const payload = detail.payload || {}
     if (payload.discussion) {
-      resourceStore.upsert('discussions', payload.discussion)
+      applyDiscussionResourceAssociations(resourceStore, payload.discussion)
     }
     if (payload.post) {
+      applyPostResourceAssociations(resourceStore, payload.post)
       resourceStore.upsert('posts', payload.post)
     }
   }
