@@ -8,8 +8,37 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 
+from apps.discussions.models import Discussion
 from apps.discussions.services import DiscussionService
 from apps.core.online_service import OnlineUserService
+
+
+def resolve_visible_discussion_ids(discussion_ids, user) -> list[int]:
+    normalized_ids = []
+    seen = set()
+    for raw_id in discussion_ids or []:
+        try:
+            discussion_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if discussion_id <= 0 or discussion_id in seen:
+            continue
+        seen.add(discussion_id)
+        normalized_ids.append(discussion_id)
+
+    if isinstance(user, AnonymousUser):
+        user = None
+
+    discussions = {
+        discussion.id: discussion
+        for discussion in Discussion.objects.filter(id__in=normalized_ids)
+    }
+    return [
+        discussion_id
+        for discussion_id in normalized_ids
+        if discussions.get(discussion_id) is not None
+        and DiscussionService._can_view_discussion(discussions[discussion_id], user)
+    ]
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -258,3 +287,87 @@ class DiscussionConsumer(AsyncWebsocketConsumer):
         if discussion is None:
             return False
         return DiscussionService._can_view_discussion(discussion, user)
+
+
+class ForumRealtimeConsumer(AsyncWebsocketConsumer):
+    """统一论坛实时流消费者。"""
+
+    async def connect(self):
+        self.user = self.scope["user"]
+        self.discussion_group_names = set()
+        await self.accept()
+        await self.send(text_data=json.dumps({
+            "type": "connection_established",
+            "message": "已连接到论坛实时服务",
+        }))
+
+    async def disconnect(self, close_code):
+        for group_name in list(self.discussion_group_names):
+            await self.channel_layer.group_discard(group_name, self.channel_name)
+        self.discussion_group_names.clear()
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            return
+
+        message_type = data.get("type")
+        if message_type == "ping":
+            await self.send(text_data=json.dumps({"type": "pong"}))
+            return
+
+        if message_type == "subscribe_discussions":
+            subscribed_ids = await self.subscribe_discussions(data.get("discussion_ids"))
+            await self.send(text_data=json.dumps({
+                "type": "subscribed",
+                "discussion_ids": subscribed_ids,
+            }))
+            return
+
+        if message_type == "unsubscribe_discussions":
+            unsubscribed_ids = await self.unsubscribe_discussions(data.get("discussion_ids"))
+            await self.send(text_data=json.dumps({
+                "type": "unsubscribed",
+                "discussion_ids": unsubscribed_ids,
+            }))
+
+    async def forum_event_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "forum_event",
+            "event": event["event"],
+        }))
+
+    async def typing_indicator(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "typing_indicator",
+            "discussion_id": event.get("discussion_id"),
+            "user_id": event["user_id"],
+            "username": event["username"],
+            "is_typing": event["is_typing"],
+        }))
+
+    async def subscribe_discussions(self, discussion_ids):
+        visible_ids = await self.get_visible_discussion_ids(discussion_ids)
+        for discussion_id in visible_ids:
+            group_name = f"discussion_{discussion_id}"
+            if group_name in self.discussion_group_names:
+                continue
+            await self.channel_layer.group_add(group_name, self.channel_name)
+            self.discussion_group_names.add(group_name)
+        return visible_ids
+
+    async def unsubscribe_discussions(self, discussion_ids):
+        removed_ids = []
+        for discussion_id in resolve_visible_discussion_ids(discussion_ids, self.user):
+            group_name = f"discussion_{discussion_id}"
+            if group_name not in self.discussion_group_names:
+                continue
+            await self.channel_layer.group_discard(group_name, self.channel_name)
+            self.discussion_group_names.remove(group_name)
+            removed_ids.append(discussion_id)
+        return removed_ids
+
+    @database_sync_to_async
+    def get_visible_discussion_ids(self, discussion_ids):
+        return resolve_visible_discussion_ids(discussion_ids, self.user)

@@ -1,6 +1,7 @@
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
+import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import {
   normalizeDiscussion,
@@ -15,6 +16,7 @@ export function useProfilePage({
   route
 }) {
   const resourceStore = useResourceStore()
+  const forumRealtimeStore = useForumRealtimeStore()
   const userId = ref(null)
   const discussionIds = ref([])
   const postIds = ref([])
@@ -62,9 +64,16 @@ export function useProfilePage({
 
   onMounted(async () => {
     await refreshProfile()
+    window.addEventListener('bias:forum-event', handleForumEvent)
+  })
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('bias:forum-event', handleForumEvent)
+    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
   })
 
   watch(() => route.params.id, async () => {
+    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
     postIds.value = []
     discussionIds.value = []
     userId.value = null
@@ -143,6 +152,7 @@ export function useProfilePage({
       discussionIds.value = unwrapList(data)
         .map(normalizeDiscussion)
         .map(item => resourceStore.upsert('discussions', item).id)
+      forumRealtimeStore.trackDiscussionIds(discussionIds.value)
     } catch (error) {
       console.error('加载讨论失败:', error)
       settingsError.value = getProfileErrorMessage(
@@ -377,6 +387,38 @@ export function useProfilePage({
       avatarUploading.value = false
       if (avatarInput.value) {
         avatarInput.value.value = ''
+      }
+    }
+  }
+
+  async function handleForumEvent(event) {
+    const detail = event.detail || {}
+    const discussionId = Number(detail.discussion_id)
+    const payload = detail.payload || {}
+    const visibleDiscussionIds = new Set(discussionIds.value.map(id => String(id)))
+    const refreshEventTypes = new Set([
+      'discussion.hidden',
+      'discussion.rejected',
+      'discussion.resubmitted',
+      'post.hidden',
+      'post.rejected',
+      'post.resubmitted',
+    ])
+
+    if (discussionId && visibleDiscussionIds.has(String(discussionId))) {
+      if (refreshEventTypes.has(detail.event_type)) {
+        await loadDiscussions()
+        if (activeTab.value === 'posts' && posts.value.length) {
+          await loadPosts()
+        }
+        return
+      }
+
+      if (payload.discussion) {
+        resourceStore.upsert('discussions', normalizeDiscussion(payload.discussion))
+      }
+      if (payload.post && posts.value.some(post => Number(post?.discussion_id) === discussionId)) {
+        resourceStore.upsert('posts', normalizePost(payload.post))
       }
     }
   }

@@ -1,6 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
 import { useResourceStore } from '@/stores/resource'
+import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import {
   formatRelativeTime,
   normalizeDiscussion,
@@ -15,6 +16,7 @@ export function useDiscussionDetailPage({
   router
 }) {
   const resourceStore = useResourceStore()
+  const forumRealtimeStore = useForumRealtimeStore()
   const discussionId = ref(null)
   const postIds = ref([])
   const discussion = computed(() => (discussionId.value ? resourceStore.get('discussions', discussionId.value) : null))
@@ -39,10 +41,6 @@ export function useDiscussionDetailPage({
   const scrubberTrackMaxHeight = ref(null)
   const scrubberDragging = ref(false)
   const scrubberPreviewNumber = ref(null)
-  const realtimeWs = ref(null)
-  let realtimeHeartbeatTimer = null
-  let realtimeReconnectTimer = null
-  let realtimeShouldReconnect = false
 
   let scrollFrame = null
   let nearUrlTimer = null
@@ -162,7 +160,6 @@ export function useDiscussionDetailPage({
 
   onMounted(async () => {
     await refreshDiscussion()
-    connectRealtime()
     window.addEventListener('scroll', handlePostScroll, { passive: true })
     window.addEventListener('resize', handlePostScroll, { passive: true })
     window.addEventListener('resize', syncScrubberTrackMetrics, { passive: true })
@@ -170,6 +167,7 @@ export function useDiscussionDetailPage({
     window.addEventListener('bias:reply-created', handleReplyCreated)
     window.addEventListener('bias:post-updated', handlePostUpdated)
     window.addEventListener('bias:discussion-updated', handleDiscussionUpdated)
+    window.addEventListener('bias:forum-event', handleForumEvent)
     document.addEventListener('mousedown', handleDocumentMouseDown)
     await nextTick()
     syncScrubberTrackMetrics()
@@ -186,10 +184,13 @@ export function useDiscussionDetailPage({
     window.removeEventListener('bias:reply-created', handleReplyCreated)
     window.removeEventListener('bias:post-updated', handlePostUpdated)
     window.removeEventListener('bias:discussion-updated', handleDiscussionUpdated)
+    window.removeEventListener('bias:forum-event', handleForumEvent)
     document.removeEventListener('mousedown', handleDocumentMouseDown)
     detachScrubberDragListeners()
     detachScrubberObserver()
-    disconnectRealtime()
+    if (discussionId.value) {
+      forumRealtimeStore.untrackDiscussionIds([discussionId.value])
+    }
     resetMobileHeader()
     if (scrollFrame) {
       cancelAnimationFrame(scrollFrame)
@@ -206,11 +207,12 @@ export function useDiscussionDetailPage({
     () => [route.params.id, route.query.near],
     async () => {
       resetMobileHeader()
-      disconnectRealtime()
+      if (discussionId.value) {
+        forumRealtimeStore.untrackDiscussionIds([discussionId.value])
+      }
       resetPostStream()
       loading.value = true
       await refreshDiscussion()
-      connectRealtime()
     }
   )
 
@@ -229,97 +231,8 @@ export function useDiscussionDetailPage({
   async function refreshDiscussion() {
     await loadDiscussion()
     await loadInitialPosts()
-  }
-
-  function resolveWsBaseUrl() {
-    const configured = import.meta.env.VITE_WS_BASE_URL?.trim()
-    if (configured) {
-      return configured.replace(/\/$/, '')
-    }
-
-    if (typeof window !== 'undefined') {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      return `${protocol}//${window.location.host}`
-    }
-
-    return 'ws://localhost:8000'
-  }
-
-  function connectRealtime() {
-    const currentDiscussionId = Number(route.params.id)
-    if (!Number.isInteger(currentDiscussionId) || currentDiscussionId <= 0) return
-
-    if (realtimeWs.value && [WebSocket.OPEN, WebSocket.CONNECTING].includes(realtimeWs.value.readyState)) {
-      return
-    }
-
-    const baseUrl = resolveWsBaseUrl()
-    const ws = new WebSocket(`${baseUrl}/ws/discussions/${currentDiscussionId}/`)
-    realtimeWs.value = ws
-    realtimeShouldReconnect = true
-
-    ws.onopen = () => {
-      if (realtimeReconnectTimer) {
-        clearTimeout(realtimeReconnectTimer)
-        realtimeReconnectTimer = null
-      }
-
-      if (realtimeHeartbeatTimer) {
-        clearInterval(realtimeHeartbeatTimer)
-      }
-
-      realtimeHeartbeatTimer = setInterval(() => {
-        if (realtimeWs.value?.readyState === WebSocket.OPEN) {
-          realtimeWs.value.send(JSON.stringify({ type: 'ping' }))
-        }
-      }, 30000)
-    }
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'forum_event') {
-          applyRealtimeEvent(data.event)
-        }
-      } catch (error) {
-        console.error('解析讨论实时消息失败:', error)
-      }
-    }
-
-    ws.onclose = () => {
-      if (realtimeHeartbeatTimer) {
-        clearInterval(realtimeHeartbeatTimer)
-        realtimeHeartbeatTimer = null
-      }
-
-      if (!realtimeShouldReconnect) {
-        return
-      }
-
-      const activeDiscussionId = Number(route.params.id)
-      if (activeDiscussionId !== currentDiscussionId) {
-        return
-      }
-
-      realtimeReconnectTimer = setTimeout(() => {
-        connectRealtime()
-      }, 5000)
-    }
-  }
-
-  function disconnectRealtime() {
-    realtimeShouldReconnect = false
-    if (realtimeReconnectTimer) {
-      clearTimeout(realtimeReconnectTimer)
-      realtimeReconnectTimer = null
-    }
-    if (realtimeHeartbeatTimer) {
-      clearInterval(realtimeHeartbeatTimer)
-      realtimeHeartbeatTimer = null
-    }
-    if (realtimeWs.value) {
-      realtimeWs.value.close()
-      realtimeWs.value = null
+    if (discussionId.value) {
+      forumRealtimeStore.trackDiscussionIds([discussionId.value])
     }
   }
 
@@ -944,6 +857,10 @@ export function useDiscussionDetailPage({
           upsertPost(normalizedPost)
       }
     }
+  }
+
+  function handleForumEvent(event) {
+    applyRealtimeEvent(event.detail)
   }
 
   function handlePostUpdated(event) {

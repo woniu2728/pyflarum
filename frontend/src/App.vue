@@ -42,12 +42,14 @@ import PostComposer from './components/PostComposer.vue'
 import { useAuthStore } from './stores/auth'
 import { useComposerStore } from './stores/composer'
 import { useForumStore } from './stores/forum'
+import { useForumRealtimeStore } from './stores/forumRealtime'
 import { useNotificationStore } from './stores/notification'
 import { openLoginModal } from './utils/authModal'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const forumStore = useForumStore()
+const forumRealtimeStore = useForumRealtimeStore()
 const notificationStore = useNotificationStore()
 const route = useRoute()
 const dismissedAnnouncementKey = ref('')
@@ -98,6 +100,7 @@ async function syncNotificationState() {
   }
 
   notificationStore.connect()
+  forumRealtimeStore.connect()
 }
 
 function handleAuthRequired(event) {
@@ -139,6 +142,7 @@ watch(
     if (showMaintenance.value) {
       notificationStore.disconnect()
       notificationStore.resetState()
+      forumRealtimeStore.disconnect()
       return
     }
 
@@ -149,6 +153,7 @@ watch(
 
     notificationStore.disconnect()
     notificationStore.resetState()
+    forumRealtimeStore.disconnect()
   }
 )
 

@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
+import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import { normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
 
@@ -12,6 +13,7 @@ export function useDiscussionListData({
   router,
 }) {
   const resourceStore = useResourceStore()
+  const forumRealtimeStore = useForumRealtimeStore()
   const routeState = useDiscussionListRouteState({ route, router })
   const discussionIds = ref([])
   const tagIds = ref([])
@@ -58,15 +60,19 @@ export function useDiscussionListData({
   onMounted(async () => {
     await refreshPageData()
     window.addEventListener('bias:discussion-read-state-updated', handleDiscussionReadStateUpdated)
+    window.addEventListener('bias:forum-event', handleForumEvent)
   })
 
   onBeforeUnmount(() => {
     window.removeEventListener('bias:discussion-read-state-updated', handleDiscussionReadStateUpdated)
+    window.removeEventListener('bias:forum-event', handleForumEvent)
+    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
   })
 
   watch(
     () => [route.name, route.params.slug, route.query.q, route.query.sort, route.query.filter],
     async () => {
+      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
       discussionIds.value = []
       currentTagId.value = null
       currentPage.value = 1
@@ -149,6 +155,7 @@ export function useDiscussionListData({
     } else {
       discussionIds.value = ids
     }
+    forumRealtimeStore.trackDiscussionIds(ids)
 
     total.value = response.total || items.length
     sortOptions.value = Array.isArray(response.available_sorts) ? response.available_sorts : []
@@ -242,6 +249,34 @@ export function useDiscussionListData({
       unread_count: unreadCount,
       is_unread: unreadCount > 0
     })
+  }
+
+  async function handleForumEvent(event) {
+    const detail = event.detail || {}
+    const discussionId = Number(detail.discussion_id)
+    const visibleDiscussionIds = new Set(discussionIds.value.map(id => String(id)))
+    if (!discussionId || !visibleDiscussionIds.has(String(discussionId))) {
+      return
+    }
+
+    const refreshEventTypes = new Set([
+      'discussion.hidden',
+      'discussion.rejected',
+      'discussion.resubmitted',
+      'post.hidden',
+      'post.rejected',
+      'post.resubmitted',
+    ])
+
+    if (refreshEventTypes.has(detail.event_type)) {
+      await refreshDiscussionList()
+      return
+    }
+
+    const payload = detail.payload || {}
+    if (payload.discussion) {
+      resourceStore.upsert('discussions', normalizeDiscussion(payload.discussion))
+    }
   }
 
   return {
