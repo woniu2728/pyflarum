@@ -24,3 +24,15 @@ export function hasTrackedDiscussionId(targetIds, discussionId) {
   const trackedIds = new Set((targetIds || []).map(value => String(value)))
   return trackedIds.has(String(discussionId))
 }
+
+export function shouldRefreshForumEvent(eventType) {
+  return FORUM_REALTIME_REFRESH_EVENT_TYPES.has(String(eventType || ''))
+}
+
+export function mergeForumEventPayload(resourceStore, event) {
+  if (!resourceStore || !event || typeof event !== 'object') {
+    return
+  }
+
+  resourceStore.mergePayload(event.payload || {})
+}

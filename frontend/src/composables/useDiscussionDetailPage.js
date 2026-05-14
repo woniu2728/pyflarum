@@ -8,6 +8,10 @@ import {
   normalizePost,
   unwrapList
 } from '@/utils/forum'
+import {
+  mergeForumEventPayload,
+  shouldRefreshForumEvent,
+} from '@/utils/forumRealtime'
 
 export function useDiscussionDetailPage({
   authStore,
@@ -812,29 +816,21 @@ export function useDiscussionDetailPage({
   function applyRealtimeEvent(event) {
     if (!event || Number(event.discussion_id) !== Number(route.params.id)) return
 
-    const payload = event.payload || {}
-    const refreshEventTypes = new Set([
-      'discussion.hidden',
-      'discussion.rejected',
-      'discussion.resubmitted',
-      'post.hidden',
-      'post.rejected',
-      'post.resubmitted',
-    ])
-
-    if (refreshEventTypes.has(event.event_type)) {
+    if (shouldRefreshForumEvent(event.event_type)) {
       refreshDiscussion().catch(error => {
         console.error('刷新讨论详情失败:', error)
       })
       return
     }
 
-    if (payload.discussion) {
-      patchDiscussion(normalizeDiscussion(payload.discussion))
-    }
+    const payload = event.payload || {}
+    mergeForumEventPayload(resourceStore, event)
 
     if (payload.post) {
-      const normalizedPost = normalizePost(payload.post)
+      const postId = Number(payload.post.id || 0)
+      const normalizedPost = postId > 0
+        ? resourceStore.get('posts', postId) || normalizePost(payload.post)
+        : normalizePost(payload.post)
       switch (event.event_type) {
         case 'post.created':
         case 'post.approved':

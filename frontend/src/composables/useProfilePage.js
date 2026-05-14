@@ -9,6 +9,10 @@ import {
   normalizeUser,
   unwrapList
 } from '@/utils/forum'
+import {
+  mergeForumEventPayload,
+  shouldRefreshForumEvent,
+} from '@/utils/forumRealtime'
 
 export function useProfilePage({
   authStore,
@@ -187,6 +191,18 @@ export function useProfilePage({
     } finally {
       loadingPosts.value = false
     }
+  }
+
+  function mergePostIds(ids = []) {
+    const seen = new Set()
+    postIds.value = [...postIds.value, ...ids].filter(id => {
+      const key = String(id)
+      if (seen.has(key)) {
+        return false
+      }
+      seen.add(key)
+      return true
+    })
   }
 
   function switchTab(tab) {
@@ -394,19 +410,10 @@ export function useProfilePage({
   async function handleForumEvent(event) {
     const detail = event.detail || {}
     const discussionId = Number(detail.discussion_id)
-    const payload = detail.payload || {}
     const visibleDiscussionIds = new Set(discussionIds.value.map(id => String(id)))
-    const refreshEventTypes = new Set([
-      'discussion.hidden',
-      'discussion.rejected',
-      'discussion.resubmitted',
-      'post.hidden',
-      'post.rejected',
-      'post.resubmitted',
-    ])
 
     if (discussionId && visibleDiscussionIds.has(String(discussionId))) {
-      if (refreshEventTypes.has(detail.event_type)) {
+      if (shouldRefreshForumEvent(detail.event_type)) {
         await loadDiscussions()
         if (activeTab.value === 'posts' && posts.value.length) {
           await loadPosts()
@@ -414,11 +421,12 @@ export function useProfilePage({
         return
       }
 
-      if (payload.discussion) {
-        resourceStore.upsert('discussions', normalizeDiscussion(payload.discussion))
-      }
-      if (payload.post && posts.value.some(post => Number(post?.discussion_id) === discussionId)) {
-        resourceStore.upsert('posts', normalizePost(payload.post))
+      mergeForumEventPayload(resourceStore, detail)
+      if (detail.payload?.post && posts.value.some(post => Number(post?.discussion_id) === discussionId)) {
+        const postId = Number(detail.payload.post.id || 0)
+        if (postId > 0) {
+          mergePostIds([postId])
+        }
       }
     }
   }

@@ -5,6 +5,10 @@ import { useDiscussionListRouteState } from '@/composables/useDiscussionListRout
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import { normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
+import {
+  mergeForumEventPayload,
+  shouldRefreshForumEvent,
+} from '@/utils/forumRealtime'
 
 export function useDiscussionListData({
   authStore,
@@ -259,24 +263,12 @@ export function useDiscussionListData({
       return
     }
 
-    const refreshEventTypes = new Set([
-      'discussion.hidden',
-      'discussion.rejected',
-      'discussion.resubmitted',
-      'post.hidden',
-      'post.rejected',
-      'post.resubmitted',
-    ])
-
-    if (refreshEventTypes.has(detail.event_type)) {
+    if (shouldRefreshForumEvent(detail.event_type)) {
       await refreshDiscussionList()
       return
     }
 
-    const payload = detail.payload || {}
-    if (payload.discussion) {
-      resourceStore.upsert('discussions', normalizeDiscussion(payload.discussion))
-    }
+    mergeForumEventPayload(resourceStore, detail)
   }
 
   return {
