@@ -3,6 +3,7 @@ import { buildDiscussionPath, buildUserPath, formatRelativeTime, getUserInitial 
 import {
   getComposerNotices,
   getComposerSecondaryActions,
+  getComposerDraftMeta,
   getComposerStatusItems,
   getComposerTools,
   getForumNavItems,
@@ -42,7 +43,9 @@ import {
   registerPostReviewBanner,
   registerComposerNotice,
   registerComposerSecondaryAction,
+  registerComposerDraftMeta,
   registerComposerStatusItem,
+  registerComposerSubmitSuccess,
   registerComposerSubmitGuard,
   registerComposerTool,
   registerHeaderItem,
@@ -54,6 +57,7 @@ import {
   registerSearchSource,
   registerUserBadge,
   runComposerSubmitGuards,
+  runComposerSubmitSuccess,
 } from '@/forum/frontendRegistry'
 import { highlightSearchText } from '@/utils/search'
 import { renderTwemojiHtml } from '@/utils/twemoji'
@@ -63,6 +67,7 @@ export {
   getForumNavSections,
   getComposerNotices,
   getComposerSecondaryActions,
+  getComposerDraftMeta,
   getComposerStatusItems,
   getComposerTools,
   getDiscussionActions,
@@ -97,7 +102,9 @@ export {
   registerPostReviewBanner,
   registerComposerNotice,
   registerComposerSecondaryAction,
+  registerComposerDraftMeta,
   registerComposerStatusItem,
+  registerComposerSubmitSuccess,
   registerComposerSubmitGuard,
   registerComposerTool,
   registerHeaderItem,
@@ -109,6 +116,7 @@ export {
   registerSearchSource,
   registerUserBadge,
   runComposerSubmitGuards,
+  runComposerSubmitSuccess,
   getProfilePanels,
   getSearchSources,
   getUserBadges,
@@ -5865,7 +5873,7 @@ registerComposerStatusItem({
   }),
 })
 
-registerComposerStatusItem({
+registerComposerDraftMeta({
   key: 'discussion-draft-saved-at',
   order: 30,
   isVisible: ({ type, draftSavedAt, minimized }) => type === 'discussion' && Boolean(draftSavedAt) && !minimized,
@@ -5895,7 +5903,7 @@ registerComposerStatusItem({
   }),
 })
 
-registerComposerStatusItem({
+registerComposerDraftMeta({
   key: 'post-draft-saved-at',
   order: 30,
   isVisible: ({ type, draftSavedAt, isEditing, minimized }) => {

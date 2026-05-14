@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  getComposerDraftMeta,
   getApprovalNote,
   getDiscussionReplyState,
   getDiscussionReviewBanner,
@@ -12,6 +13,8 @@ import {
   getPostFlagPanel,
   getPostReviewBanner,
   getPostStateBadges,
+  registerComposerDraftMeta,
+  registerComposerSubmitSuccess,
   registerApprovalNote,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
@@ -23,6 +26,7 @@ import {
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
+  runComposerSubmitSuccess,
 } from './frontendRegistry.js'
 
 function uniqueKey(prefix) {
@@ -1611,6 +1615,85 @@ test('ui copy resolves discussion composer copy', () => {
   assert.equal(statusResult.text, 'status:产品 / 发布')
   assert.equal(pendingResult.key, pendingKey)
   assert.equal(pendingResult.text, 'discussion pending')
+})
+
+test('composer draft meta returns ordered visible items', () => {
+  const discussionKey = uniqueKey('composer-draft-discussion')
+  const postKey = uniqueKey('composer-draft-post')
+
+  registerComposerDraftMeta({
+    key: discussionKey,
+    order: 30,
+    isVisible: ({ type, minimized }) => type === 'discussion' && !minimized,
+    resolve: ({ draftSavedAt }) => ({
+      label: '草稿',
+      value: `discussion:${draftSavedAt}`,
+    }),
+  })
+
+  registerComposerDraftMeta({
+    key: postKey,
+    order: 10,
+    isVisible: ({ type, minimized }) => type === 'post' && !minimized,
+    resolve: ({ draftSavedAt }) => ({
+      label: '草稿',
+      value: `post:${draftSavedAt}`,
+    }),
+  })
+
+  const postItems = getComposerDraftMeta({
+    type: 'post',
+    minimized: false,
+    draftSavedAt: '10:00',
+  })
+  const hiddenItems = getComposerDraftMeta({
+    type: 'discussion',
+    minimized: true,
+    draftSavedAt: '11:00',
+  })
+
+  assert.equal(postItems.length > 0, true)
+  assert.equal(postItems[0].key, postKey)
+  assert.equal(postItems[0].value, 'post:10:00')
+  assert.deepEqual(hiddenItems, [])
+})
+
+test('composer submit success handlers run in order and respect visibility', async () => {
+  const calls = []
+  const firstKey = uniqueKey('composer-submit-success-first')
+  const secondKey = uniqueKey('composer-submit-success-second')
+
+  registerComposerSubmitSuccess({
+    key: firstKey,
+    order: 20,
+    isVisible: ({ type }) => type === 'discussion',
+    async run({ data }) {
+      calls.push(`second:${data.id}`)
+    },
+  })
+
+  registerComposerSubmitSuccess({
+    key: secondKey,
+    order: 10,
+    isVisible: ({ mode }) => mode === 'create',
+    async run({ data }) {
+      calls.push(`first:${data.id}`)
+    },
+  })
+
+  await runComposerSubmitSuccess({
+    type: 'discussion',
+    mode: 'create',
+    data: { id: 7 },
+  })
+
+  await runComposerSubmitSuccess({
+    type: 'post',
+    mode: 'edit',
+    data: { id: 9 },
+  })
+
+  assert.deepEqual(calls, ['first:7', 'second:7'])
 })
 
 test('ui copy resolves profile feedback copy', () => {

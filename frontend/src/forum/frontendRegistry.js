@@ -8,6 +8,8 @@ const composerNotices = []
 const composerSubmitGuards = []
 const composerSecondaryActions = []
 const composerStatusItems = []
+const composerDraftMetaItems = []
+const composerSubmitSuccessHandlers = []
 const profilePanels = []
 const notificationRenderers = []
 const searchSources = []
@@ -228,6 +230,23 @@ export function getComposerStatusItems(context = {}) {
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveRegisteredItem(item, context))
     .filter(Boolean)
+}
+
+export function registerComposerDraftMeta(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerDraftMetaItems, normalizedItem.key, normalizedItem)
+}
+
+export function getComposerDraftMeta(context = {}) {
+  return [...composerDraftMetaItems]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveRegisteredItem(item, context))
+    .filter(Boolean)
+}
+
+export function registerComposerSubmitSuccess(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerSubmitSuccessHandlers, normalizedItem.key, normalizedItem)
 }
 
 export function registerProfilePanel(item) {
@@ -579,4 +598,20 @@ export async function runComposerSubmitGuards(context = {}) {
   }
 
   return null
+}
+
+export async function runComposerSubmitSuccess(context = {}) {
+  const handlers = [...composerSubmitSuccessHandlers]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+
+  for (const handler of handlers) {
+    const isVisible = typeof handler.isVisible === 'function' ? handler.isVisible(context) : true
+    if (!isVisible) {
+      continue
+    }
+
+    if (typeof handler.run === 'function') {
+      await handler.run(context)
+    }
+  }
 }

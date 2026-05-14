@@ -190,42 +190,22 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ComposerEmojiAutocomplete from '@/components/ComposerEmojiAutocomplete.vue'
 import ComposerEmojiPicker from '@/components/ComposerEmojiPicker.vue'
 import ComposerActionBar from '@/components/composer/ComposerActionBar.vue'
 import ComposerHeaderBar from '@/components/composer/ComposerHeaderBar.vue'
+import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
 import ComposerNoticeStack from '@/components/composer/ComposerNoticeStack.vue'
 import ComposerPreviewPanel from '@/components/composer/ComposerPreviewPanel.vue'
 import ComposerStatusBar from '@/components/composer/ComposerStatusBar.vue'
-import ComposerMentionPicker from '@/components/ComposerMentionPicker.vue'
-import { runComposerSecondaryAction } from '@/forum/composerRuntime'
-import { getComposerNotices, getComposerSecondaryActions, getComposerStatusItems, getComposerTools, getUiCopy, runComposerSubmitGuards } from '@/forum/registry'
+import { useComposerRuntime } from '@/composables/useComposerRuntime'
+import { getUiCopy, runComposerSubmitGuards, runComposerSubmitSuccess } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useModalStore } from '@/stores/modal'
 import api from '@/api'
-import {
-  BASE_COMPOSER_TOOLS,
-  COMPOSER_EMOJI_PICKER_WIDTH,
-  EMOJI_GROUPS,
-  buildEmojiReplacement,
-  buildMentionTrigger,
-  buildMentionReplacement,
-  buildComposerToolReplacement,
-  buildUploadedFileMarkdown,
-  detectEmojiQuery,
-  detectMentionQuery,
-  defaultToolCursorOffset,
-  fetchComposerPreview,
-  getComposerErrorMessage,
-  getTextareaCaretCoordinates,
-  replaceSelection,
-  searchEmojiItems,
-  uploadComposerFile
-} from '@/utils/composer'
-import { renderTwemojiHtml } from '@/utils/twemoji'
 import { flattenTags, normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
 
 const router = useRouter()
@@ -233,53 +213,30 @@ const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const modalStore = useModalStore()
 
-const form = ref({
+const EMPTY_FORM = {
   title: '',
   content: '',
   primary_tag_id: '',
-  secondary_tag_id: ''
+  secondary_tag_id: '',
+}
+
+const form = ref({ ...EMPTY_FORM })
+const editorContent = computed({
+  get: () => form.value.content,
+  set: value => {
+    form.value.content = value
+  },
 })
 const tags = ref([])
 const loadingTags = ref(false)
 const submitting = ref(false)
-const uploading = ref(false)
 const titleInput = ref(null)
-const composerTextarea = ref(null)
-const attachmentInput = ref(null)
-const imageInput = ref(null)
-const emojiToolRef = ref(null)
 const draftSavedAt = ref('')
 const draftMessage = ref('')
 const draftNoticeTone = ref('info')
-const uploadNotice = ref('')
-const uploadNoticeTone = ref('info')
 const submitNotice = ref('')
 const submitNoticeTone = ref('info')
-const showEmojiPicker = ref(false)
-const emojiSuggestions = ref([])
-const emojiAutocompleteState = ref(null)
-const emojiAutocompleteCaret = ref(null)
-const emojiAutocompleteActiveIndex = ref(0)
-const mentionUsers = ref([])
-const mentionState = ref(null)
-const mentionCaret = ref(null)
-const mentionLoading = ref(false)
-const mentionActiveIndex = ref(0)
-const showPreview = ref(false)
-const previewHtml = ref('')
-const previewLoading = ref(false)
-const previewError = ref('')
 let draftTimer = null
-let previewTimer = null
-let mentionTimer = null
-let mentionRequestId = 0
-const composerHeight = ref(loadComposerHeight())
-const resizing = ref(false)
-const viewportWidth = ref(typeof window === 'undefined' ? 1280 : window.innerWidth)
-let resizeStartY = 0
-let resizeStartHeight = composerHeight.value
-
-const emojiGroups = EMOJI_GROUPS
 
 const availableTags = computed(() => flattenTags(tags.value))
 const primaryTags = computed(() => tags.value.filter(tag => !tag.parent_id))
@@ -311,6 +268,77 @@ const hasDraftContent = computed(() => {
     || form.value.secondary_tag_id
   )
 })
+const isSuspended = computed(() => Boolean(authStore.user?.is_suspended))
+
+const runtime = useComposerRuntime({
+  composerStore,
+  showComposer,
+  content: editorContent,
+  submitting,
+  submit: submitDiscussion,
+  closeComposer,
+  buildBaseContext,
+  focusEditor,
+  openComposer: () => composerStore.showComposer(),
+  saveRequestType: 'discussion',
+  onSaveRequest: saveDraft,
+  height: {
+    storageKey: 'bias:composer-height:discussion',
+    defaultValue: 520,
+    min: 360,
+    maxDefault: 760,
+    maxFloor: 420,
+    windowOffset: 72,
+  },
+})
+
+const {
+  attachmentInput,
+  applyComposerTool,
+  buildExtensionContext,
+  clearRuntimeState,
+  composerExtensionNotices,
+  composerInlineStyle,
+  composerSecondaryActions,
+  composerStatusItems,
+  composerTextarea,
+  composerTools,
+  emojiSuggestions,
+  emojiAutocompleteActiveIndex,
+  emojiAutocompleteStyle,
+  emojiGroups,
+  emojiPickerStyle,
+  handleAttachmentSelected,
+  handleComposerSecondaryAction,
+  handleEditorInteraction,
+  handleEditorKeydown,
+  handleEmojiAutocompleteSelect,
+  handleEmojiSelect,
+  handleImageSelected,
+  handleMentionSelect,
+  imageInput,
+  isPhoneOverlay,
+  mentionActiveIndex,
+  mentionLoading,
+  mentionPickerStyle,
+  mentionUsers,
+  previewError,
+  previewHtml,
+  previewLoading,
+  setEmojiToolRef,
+  showBackdrop,
+  showEmojiAutocomplete,
+  showEmojiPicker,
+  showMentionPicker,
+  showPreview,
+  startResize,
+  syncInlineSuggestions,
+  togglePreview,
+  uploadNotice,
+  uploadNoticeTone,
+  uploading,
+} = runtime
+
 const canSubmit = computed(() => {
   return Boolean(
     authStore.isAuthenticated &&
@@ -324,7 +352,6 @@ const canSubmit = computed(() => {
     !isSuspended.value
   )
 })
-const isSuspended = computed(() => Boolean(authStore.user?.is_suspended))
 const selectedTagName = computed(() => {
   const primaryTag = primaryTags.value.find(item => String(item.id) === String(form.value.primary_tag_id))
   const secondaryTag = secondaryTagOptions.value.find(item => String(item.id) === String(form.value.secondary_tag_id))
@@ -362,8 +389,6 @@ const composerHeading = computed(() => getUiCopy({
   surface: 'discussion-composer-heading',
   isEditingDiscussion: isEditingDiscussion.value,
 })?.text || (isEditingDiscussion.value ? '编辑讨论' : '发起讨论'))
-const composerSubmitText = computed(() => (isEditingDiscussion.value ? '保存讨论' : '发布讨论'))
-const composerSubmittingText = computed(() => (isEditingDiscussion.value ? '保存中...' : '发布中...'))
 const titlePlaceholderText = computed(() => getUiCopy({
   surface: 'discussion-composer-title-placeholder',
 })?.text || '讨论标题')
@@ -378,23 +403,10 @@ const submitButtonText = computed(() => getUiCopy({
   submitting: submitting.value,
   uploading: uploading.value,
   isEditingDiscussion: isEditingDiscussion.value,
-})?.text || (submitting.value ? composerSubmittingText.value : (uploading.value ? '上传中...' : composerSubmitText.value)))
+})?.text || (submitting.value ? (isEditingDiscussion.value ? '保存中...' : '发布中...') : (uploading.value ? '上传中...' : (isEditingDiscussion.value ? '保存讨论' : '发布讨论'))))
 const unsavedExitMessage = computed(() => getUiCopy({
   surface: 'discussion-composer-unsaved-exit-message',
 })?.text || '你有未发布的讨论内容。确定要离开当前页面吗？')
-const isPhoneViewport = computed(() => viewportWidth.value <= 768)
-const isPhoneOverlay = computed(() => isPhoneViewport.value && showComposer.value && !composerStore.isMinimized)
-const showBackdrop = computed(() => isPhoneOverlay.value)
-const showMentionPicker = computed(() => {
-  return Boolean(mentionState.value) && (mentionLoading.value || mentionUsers.value.length > 0)
-})
-const showEmojiAutocomplete = computed(() => {
-  return Boolean(emojiAutocompleteState.value) && emojiSuggestions.value.length > 0
-})
-const composerInlineStyle = computed(() => {
-  if (composerStore.isMinimized || composerStore.isExpanded || isPhoneOverlay.value) return {}
-  return { height: `${composerHeight.value}px` }
-})
 const primaryTagPlaceholderText = computed(() => {
   return getUiCopy({
     surface: 'discussion-composer-primary-tag-placeholder',
@@ -415,16 +427,6 @@ const previewStatusText = computed(() => {
     hasContent: Boolean(form.value.content.trim()),
   })?.text || '按论坛最终渲染效果预览'
 })
-const composerTools = computed(() => {
-  return [...BASE_COMPOSER_TOOLS, ...getComposerTools(buildComposerExtensionContext())]
-    .sort((left, right) => (left.order || 100) - (right.order || 100))
-})
-const composerSecondaryActions = computed(() => {
-  return getComposerSecondaryActions(buildComposerExtensionContext())
-})
-const composerStatusItems = computed(() => {
-  return getComposerStatusItems(buildComposerExtensionContext())
-})
 const composerNotices = computed(() => {
   return [
     {
@@ -433,7 +435,7 @@ const composerNotices = computed(() => {
         surface: 'composer-notice-draft-label',
       })?.text || '草稿',
       tone: draftNoticeTone.value,
-      message: draftMessage.value
+      message: draftMessage.value,
     },
     {
       key: 'upload',
@@ -441,7 +443,7 @@ const composerNotices = computed(() => {
         surface: 'composer-notice-upload-label',
       })?.text || '上传',
       tone: uploadNoticeTone.value,
-      message: uploadNotice.value
+      message: uploadNotice.value,
     },
     {
       key: 'preview',
@@ -449,7 +451,7 @@ const composerNotices = computed(() => {
         surface: 'composer-notice-preview-label',
       })?.text || '预览',
       tone: 'error',
-      message: previewError.value
+      message: previewError.value,
     },
     {
       key: 'submit',
@@ -459,59 +461,12 @@ const composerNotices = computed(() => {
         type: 'discussion',
       })?.text || (isEditingDiscussion.value ? '保存' : '发布'),
       tone: submitNoticeTone.value,
-      message: submitNotice.value
+      message: submitNotice.value,
     },
-    ...getComposerNotices(buildComposerExtensionContext())
-  ]
-    .filter(item => item?.message)
+    ...composerExtensionNotices.value,
+  ].filter(item => item?.message)
 })
-const emojiPickerStyle = computed(() => {
-  const anchor = emojiToolRef.value
-  if (!anchor) return {}
 
-  const rect = anchor.getBoundingClientRect()
-  const pickerWidth = Math.min(COMPOSER_EMOJI_PICKER_WIDTH, Math.max(280, window.innerWidth - 32))
-  const left = Math.max(16, Math.min(rect.right - pickerWidth, window.innerWidth - pickerWidth - 16))
-  const top = Math.max(16, rect.top - 12)
-
-  return {
-    left: `${left}px`,
-    top: `${top}px`,
-    transform: 'translateY(-100%)'
-  }
-})
-const mentionPickerStyle = computed(() => {
-  const anchor = mentionCaret.value
-  if (!anchor) return {}
-
-  const pickerWidth = Math.min(320, Math.max(240, window.innerWidth - 32))
-  const pickerHeight = Math.min(280, Math.max(180, window.innerHeight - 32))
-  const left = Math.max(16, Math.min(anchor.left, window.innerWidth - pickerWidth - 16))
-  const belowTop = anchor.top + anchor.lineHeight + 8
-  const openAbove = belowTop + pickerHeight > window.innerHeight - 16 && anchor.top > pickerHeight + 24
-
-  return {
-    left: `${left}px`,
-    top: openAbove ? `${anchor.top - 8}px` : `${belowTop}px`,
-    transform: openAbove ? 'translateY(-100%)' : 'none'
-  }
-})
-const emojiAutocompleteStyle = computed(() => {
-  const anchor = emojiAutocompleteCaret.value
-  if (!anchor) return {}
-
-  const pickerWidth = Math.min(320, Math.max(240, window.innerWidth - 32))
-  const pickerHeight = Math.min(320, Math.max(180, window.innerHeight - 32))
-  const left = Math.max(16, Math.min(anchor.left, window.innerWidth - pickerWidth - 16))
-  const belowTop = anchor.top + anchor.lineHeight + 8
-  const openAbove = belowTop + pickerHeight > window.innerHeight - 16 && anchor.top > pickerHeight + 24
-
-  return {
-    left: `${left}px`,
-    top: openAbove ? `${anchor.top - 8}px` : `${belowTop}px`,
-    transform: openAbove ? 'translateY(-100%)' : 'none'
-  }
-})
 watch(
   () => composerStore.current.requestId,
   async () => {
@@ -525,7 +480,6 @@ watch(
   () => {
     if (!composerStore.isOpen) return
     scheduleDraftSave()
-    schedulePreview()
   },
   { deep: true }
 )
@@ -540,89 +494,52 @@ watch(
 
 watch(
   () => authStore.isAuthenticated,
-  isAuthenticated => {
-    if (!isAuthenticated) {
+  value => {
+    if (!value) {
       composerStore.closeComposer()
     }
   }
 )
 
-watch(
-  [
-    () => composerStore.isOpen,
-    () => composerStore.isMinimized,
-    () => composerStore.isExpanded,
-    composerHeight,
-    isPhoneViewport
-  ],
-  () => {
-    syncComposerViewportEffects()
-  },
-  { immediate: true }
-)
-
-onBeforeUnmount(() => {
-  if (draftTimer) {
-    clearTimeout(draftTimer)
-  }
-  if (previewTimer) {
-    clearTimeout(previewTimer)
-  }
-  if (mentionTimer) {
-    clearTimeout(mentionTimer)
-  }
-  window.removeEventListener('resize', handleViewportResize)
-  window.removeEventListener('mousemove', handleResizeMove)
-  window.removeEventListener('mouseup', stopResize)
-  document.removeEventListener('mousedown', handleDocumentMouseDown)
-  window.removeEventListener('bias:composer-save-request', handleComposerSaveRequest)
-  clearComposerViewportEffects()
-})
-
-onMounted(() => {
-  window.addEventListener('resize', handleViewportResize)
-  window.addEventListener('mousemove', handleResizeMove)
-  window.addEventListener('mouseup', stopResize)
-  document.addEventListener('mousedown', handleDocumentMouseDown)
-  window.addEventListener('bias:composer-save-request', handleComposerSaveRequest)
-})
-
 async function prepareComposer() {
   if (!authStore.isAuthenticated) {
     composerStore.closeComposer()
-    router.push({
+    await router.push({
       name: 'login',
       query: {
-        redirect: router.currentRoute.value.fullPath
-      }
+        redirect: router.currentRoute.value.fullPath,
+      },
     })
     return
   }
 
   await ensureTagsLoaded()
+  clearRuntimeState()
+  submitNotice.value = ''
+  submitNoticeTone.value = 'info'
 
   if (isEditingDiscussion.value) {
     form.value = {
       title: composerStore.current.initialTitle || '',
       content: composerStore.current.initialContent || '',
       primary_tag_id: composerStore.current.initialPrimaryTagId || '',
-      secondary_tag_id: composerStore.current.initialSecondaryTagId || ''
+      secondary_tag_id: composerStore.current.initialSecondaryTagId || '',
     }
     handlePrimaryTagChange()
     draftSavedAt.value = ''
     draftMessage.value = ''
     draftNoticeTone.value = 'info'
-    submitNotice.value = ''
-  } else if (!hasDraftContent.value) {
-    restoreDraft()
   } else {
-    draftMessage.value = ''
-    draftNoticeTone.value = 'info'
-  }
-
-  if (!isEditingDiscussion.value) {
+    const restored = restoreDraft()
+    if (!restored) {
+      form.value = { ...EMPTY_FORM }
+      draftSavedAt.value = ''
+      draftMessage.value = ''
+      draftNoticeTone.value = 'info'
+    }
     applyRequestedTag()
   }
+
   await focusPreferredField()
 }
 
@@ -634,8 +551,8 @@ async function ensureTagsLoaded() {
     const response = await api.get('/tags', {
       params: {
         include_children: true,
-        purpose: 'start_discussion'
-      }
+        purpose: 'start_discussion',
+      },
     })
     tags.value = unwrapList(response).map(normalizeTag)
   } catch (error) {
@@ -675,9 +592,7 @@ function applyTagSelection(tag) {
   }
 
   form.value.primary_tag_id = String(tag.id)
-  if (!secondaryTagOptions.value.some(option => String(option.id) === String(form.value.secondary_tag_id))) {
-    form.value.secondary_tag_id = ''
-  }
+  handlePrimaryTagChange()
 }
 
 function handlePrimaryTagChange() {
@@ -701,14 +616,14 @@ async function focusPreferredField() {
 function focusEditor() {
   showPreview.value = false
   composerTextarea.value?.focus()
-  handleEditorInteraction()
+  syncInlineSuggestions()
 }
 
 function toggleMinimized() {
   composerStore.toggleMinimized()
   if (!composerStore.isMinimized) {
     focusPreferredField()
-    handleEditorInteraction()
+    syncInlineSuggestions()
   }
 }
 
@@ -717,57 +632,11 @@ function toggleExpanded() {
   focusPreferredField()
 }
 
-function togglePreview() {
-  showPreview.value = !showPreview.value
-  previewError.value = ''
-  submitNotice.value = ''
-  showEmojiPicker.value = false
-  clearMentionSuggestions()
-  clearEmojiAutocomplete()
-
-  if (showPreview.value) {
-    requestPreview()
-    return
-  }
-
-  nextTick(() => composerTextarea.value?.focus())
-}
-
 function handleHeaderSummaryClick() {
   if (!composerStore.isMinimized) return
   composerStore.showComposer()
   focusPreferredField()
-  handleEditorInteraction()
-}
-
-function handleViewportResize() {
-  viewportWidth.value = window.innerWidth
-  if (mentionState.value || emojiAutocompleteState.value) {
-    nextTick(() => {
-      syncInlineSuggestions()
-    })
-  }
-}
-
-function startResize(event) {
-  if (composerStore.isExpanded || composerStore.isMinimized || window.innerWidth <= 768) return
-
-  resizing.value = true
-  resizeStartY = event.clientY
-  resizeStartHeight = composerHeight.value
-}
-
-function handleResizeMove(event) {
-  if (!resizing.value) return
-
-  const delta = resizeStartY - event.clientY
-  composerHeight.value = clampComposerHeight(resizeStartHeight + delta)
-}
-
-function stopResize() {
-  if (!resizing.value) return
-  resizing.value = false
-  persistComposerHeight(composerHeight.value)
+  syncInlineSuggestions()
 }
 
 async function closeComposer() {
@@ -784,15 +653,12 @@ async function closeComposer() {
       })?.text || '关闭',
       cancelText: getUiCopy({
         surface: 'discussion-composer-close-cancel',
-      })?.text || '继续编辑'
+      })?.text || '继续编辑',
     })
     if (!confirmed) return
   }
-  showEmojiPicker.value = false
-  showPreview.value = false
-  clearMentionSuggestions()
-  clearEmojiAutocomplete()
-  uploadNotice.value = ''
+
+  clearRuntimeState()
   submitNotice.value = ''
   saveDraft(false)
   composerStore.closeComposer()
@@ -818,7 +684,7 @@ function restoreDraft() {
       title: draft.title || '',
       content: draft.content || '',
       primary_tag_id: draft.primary_tag_id || '',
-      secondary_tag_id: draft.secondary_tag_id || ''
+      secondary_tag_id: draft.secondary_tag_id || '',
     }
     if (!form.value.primary_tag_id && draft.tag_id) {
       const legacyTag = availableTags.value.find(tag => String(tag.id) === String(draft.tag_id))
@@ -876,7 +742,7 @@ function saveDraft(showMessage = true) {
       content: form.value.content,
       primary_tag_id: form.value.primary_tag_id,
       secondary_tag_id: form.value.secondary_tag_id,
-      updatedAt
+      updatedAt,
     })
   )
   draftSavedAt.value = updatedAt
@@ -903,28 +769,17 @@ async function clearDraft(options = {}) {
       cancelText: getUiCopy({
         surface: 'discussion-composer-clear-draft-cancel',
       })?.text || '取消',
-      tone: 'danger'
+      tone: 'danger',
     })
     if (!confirmed) return
   }
 
-  form.value = {
-    title: '',
-    content: '',
-    primary_tag_id: '',
-    secondary_tag_id: ''
-  }
+  form.value = { ...EMPTY_FORM }
+  clearRuntimeState()
   clearDraftStorage(getUiCopy({
     surface: 'discussion-composer-draft-cleared-local',
   })?.text || '已清除本地草稿。')
   focusPreferredField()
-}
-
-function handleComposerSaveRequest(event) {
-  const detail = event?.detail || {}
-  if (detail.composerType !== 'discussion') return
-  if (Number(detail.requestId || 0) !== Number(composerStore.current.requestId || 0)) return
-  saveDraft(true)
 }
 
 function clearDraftStorage(message = '') {
@@ -936,10 +791,18 @@ function clearDraftStorage(message = '') {
   draftMessage.value = message
 }
 
+function resetComposer() {
+  clearDraftStorage()
+  clearRuntimeState()
+  form.value = { ...EMPTY_FORM }
+  submitNotice.value = ''
+  submitNoticeTone.value = 'info'
+  composerStore.closeComposer()
+}
+
 async function submitDiscussion() {
   if (!canSubmit.value) return
 
-  showEmojiPicker.value = false
   submitting.value = true
   draftMessage.value = ''
   submitNotice.value = ''
@@ -947,7 +810,7 @@ async function submitDiscussion() {
 
   try {
     const blocked = await runComposerSubmitGuards({
-      ...buildComposerExtensionContext(),
+      ...buildExtensionContext(),
       modalStore,
       submitKind: isEditingDiscussion.value ? 'edit-discussion' : 'discussion',
     })
@@ -964,14 +827,14 @@ async function submitDiscussion() {
       data = await api.patch(`/discussions/${composerStore.current.discussionId}`, {
         title: form.value.title,
         content: form.value.content,
-        tag_ids: selectedTagIds.value
+        tag_ids: selectedTagIds.value,
       })
 
       window.dispatchEvent(new CustomEvent('bias:discussion-updated', {
         detail: {
           discussionId: data.id,
-          discussion: normalizeDiscussion(data)
-        }
+          discussion: normalizeDiscussion(data),
+        },
       }))
 
       if (data.approval_status === 'pending') {
@@ -981,7 +844,7 @@ async function submitDiscussion() {
           })?.text || '讨论已重新提交审核',
           message: getUiCopy({
             surface: 'discussion-composer-edit-pending-message',
-          })?.text || '请根据审核反馈继续完善内容，管理员通过后会重新公开显示。'
+          })?.text || '请根据审核反馈继续完善内容，管理员通过后会重新公开显示。',
         })
       } else {
         await modalStore.alert({
@@ -990,14 +853,14 @@ async function submitDiscussion() {
           })?.text || '讨论已更新',
           message: getUiCopy({
             surface: 'discussion-composer-updated-message',
-          })?.text || '新的讨论内容已经保存。'
+          })?.text || '新的讨论内容已经保存。',
         })
       }
     } else {
       data = await api.post('/discussions/', {
         title: form.value.title,
         content: form.value.content,
-        tag_ids: selectedTagIds.value
+        tag_ids: selectedTagIds.value,
       })
 
       if (data.approval_status === 'pending') {
@@ -1007,442 +870,36 @@ async function submitDiscussion() {
           })?.text || '讨论已进入审核队列',
           message: getUiCopy({
             surface: 'discussion-composer-create-pending-message',
-          })?.text || '管理员通过后，这条讨论才会显示在论坛列表中。'
+          })?.text || '管理员通过后，这条讨论才会显示在论坛列表中。',
         })
       }
     }
+
+    await runComposerSubmitSuccess({
+      ...buildExtensionContext(),
+      data,
+      mode: isEditingDiscussion.value ? 'edit' : 'create',
+      submitKind: isEditingDiscussion.value ? 'edit-discussion' : 'discussion',
+      type: 'discussion',
+    })
 
     resetComposer()
     await router.push(`/d/${data.id}`)
   } catch (error) {
     console.error(isEditingDiscussion.value ? '更新讨论失败:' : '创建讨论失败:', error)
-    const message =
-      error.response?.data?.title?.[0] ||
-      error.response?.data?.content?.[0] ||
-      error.response?.data?.error ||
-      error.response?.data?.detail ||
-      error.message ||
-      (getUiCopy({
-        surface: 'composer-submit-failed',
-      })?.text || '提交失败，请稍后重试')
     submitNoticeTone.value = 'error'
-    submitNotice.value = message
+    submitNotice.value =
+      error.response?.data?.title?.[0]
+      || error.response?.data?.content?.[0]
+      || error.response?.data?.error
+      || error.response?.data?.detail
+      || error.message
+      || (getUiCopy({
+          surface: 'composer-submit-failed',
+        })?.text || '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }
-}
-
-async function applyComposerTool(tool) {
-  composerStore.isMinimized = false
-  await nextTick()
-
-  if (typeof tool.run === 'function') {
-    await tool.run(buildComposerToolContext(tool))
-    return
-  }
-
-  if (tool.key === 'upload') {
-    showEmojiPicker.value = false
-    clearMentionSuggestions()
-    clearEmojiAutocomplete()
-    attachmentInput.value?.click()
-    return
-  }
-  if (tool.key === 'image') {
-    showEmojiPicker.value = false
-    clearMentionSuggestions()
-    clearEmojiAutocomplete()
-    imageInput.value?.click()
-    return
-  }
-  if (tool.key === 'emoji') {
-    clearMentionSuggestions()
-    clearEmojiAutocomplete()
-    if (showPreview.value) {
-      showPreview.value = false
-      await nextTick()
-    }
-    showEmojiPicker.value = !showEmojiPicker.value
-    if (showEmojiPicker.value) {
-      composerTextarea.value?.focus()
-    }
-    return
-  }
-
-  const textarea = composerTextarea.value
-  if (!textarea) return
-
-  const start = textarea.selectionStart ?? form.value.content.length
-  const end = textarea.selectionEnd ?? form.value.content.length
-  if (tool.key === 'mention') {
-    const replacement = buildMentionTrigger(form.value.content, start)
-    await insertComposerText(replacement, {
-      start,
-      end,
-      cursor: start + replacement.length
-    })
-    return
-  }
-  const selected = form.value.content.slice(start, end)
-  const replacement = buildComposerToolReplacement(tool, selected)
-  const cursor = selected ? start + replacement.length : start + defaultToolCursorOffset(tool)
-
-  await insertComposerText(replacement, { start, end, cursor })
-}
-
-function handleEditorInteraction(event) {
-  if (
-    event?.type === 'keyup' &&
-    ['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(event.key)
-  ) {
-    return
-  }
-  syncInlineSuggestions()
-}
-
-function handleEditorKeydown(event) {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-    event.preventDefault()
-    submitDiscussion()
-    return
-  }
-
-  if (event.key === 'Escape') {
-    if (showMentionPicker.value) {
-      event.preventDefault()
-      clearMentionSuggestions()
-      return
-    }
-    if (showEmojiAutocomplete.value) {
-      event.preventDefault()
-      clearEmojiAutocomplete()
-      return
-    }
-    if (showEmojiPicker.value) {
-      event.preventDefault()
-      showEmojiPicker.value = false
-      return
-    }
-    if (showPreview.value) {
-      event.preventDefault()
-      showPreview.value = false
-      nextTick(() => composerTextarea.value?.focus())
-      return
-    }
-    event.preventDefault()
-    closeComposer()
-    return
-  }
-
-  if (showEmojiAutocomplete.value) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      emojiAutocompleteActiveIndex.value =
-        (emojiAutocompleteActiveIndex.value + 1) % Math.max(emojiSuggestions.value.length, 1)
-      return
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      emojiAutocompleteActiveIndex.value =
-        (emojiAutocompleteActiveIndex.value - 1 + Math.max(emojiSuggestions.value.length, 1)) % Math.max(emojiSuggestions.value.length, 1)
-      return
-    }
-
-    if (
-      (event.key === 'Enter' || event.key === 'Tab') &&
-      !event.shiftKey &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey
-    ) {
-      const activeEmoji = emojiSuggestions.value[emojiAutocompleteActiveIndex.value]
-      if (!activeEmoji) return
-      event.preventDefault()
-      handleEmojiAutocompleteSelect(activeEmoji)
-      return
-    }
-  }
-
-  if (!showMentionPicker.value) return
-
-  if (event.key === 'ArrowDown') {
-    event.preventDefault()
-    mentionActiveIndex.value = (mentionActiveIndex.value + 1) % Math.max(mentionUsers.value.length, 1)
-    return
-  }
-
-  if (event.key === 'ArrowUp') {
-    event.preventDefault()
-    mentionActiveIndex.value =
-      (mentionActiveIndex.value - 1 + Math.max(mentionUsers.value.length, 1)) % Math.max(mentionUsers.value.length, 1)
-    return
-  }
-
-  if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
-    const activeUser = mentionUsers.value[mentionActiveIndex.value]
-    if (!activeUser) return
-    event.preventDefault()
-    handleMentionSelect(activeUser)
-    return
-  }
-
-  if (event.key === 'Escape') {
-    clearMentionSuggestions()
-  }
-}
-
-async function handleAttachmentSelected(event) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-  await uploadAndInsertFile(file, false)
-}
-
-async function handleImageSelected(event) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-  await uploadAndInsertFile(file, true)
-}
-
-async function uploadAndInsertFile(file, asImage) {
-  uploading.value = true
-  uploadNoticeTone.value = 'info'
-  uploadNotice.value = getUiCopy({
-    surface: 'composer-upload-progress',
-    asImage,
-    fileName: file.name,
-  })?.text || `正在上传${asImage ? '图片' : '附件'}：${file.name}`
-  submitNotice.value = ''
-  showEmojiPicker.value = false
-
-  try {
-    const uploaded = await uploadComposerFile(file)
-    if (!showComposer.value) return
-
-    const markdown = buildUploadedFileMarkdown(uploaded.original_name || file.name, uploaded.url, {
-      image: asImage
-    })
-    await insertComposerText(markdown)
-    uploadNoticeTone.value = 'success'
-    uploadNotice.value = getUiCopy({
-      surface: 'composer-upload-inserted',
-      asImage,
-    })?.text || `${asImage ? '图片' : '附件'}已插入编辑器`
-  } catch (error) {
-    const message = getComposerErrorMessage(error, getUiCopy({
-      surface: 'composer-upload-failed',
-      asImage,
-    })?.text || (asImage ? '图片上传失败' : '附件上传失败'))
-    uploadNoticeTone.value = 'error'
-    uploadNotice.value = message
-  } finally {
-    uploading.value = false
-  }
-}
-
-async function handleEmojiSelect(emoji) {
-  showEmojiPicker.value = false
-  await insertComposerText(emoji)
-}
-
-async function handleEmojiAutocompleteSelect(item) {
-  if (!emojiAutocompleteState.value || !item?.emoji) return
-
-  const replacement = buildEmojiReplacement(item.emoji)
-  await insertComposerText(replacement, {
-    start: emojiAutocompleteState.value.start,
-    end: emojiAutocompleteState.value.end,
-    cursor: emojiAutocompleteState.value.start + replacement.length
-  })
-  clearEmojiAutocomplete()
-}
-
-function syncInlineSuggestions() {
-  if (showPreview.value) {
-    clearMentionSuggestions()
-    clearEmojiAutocomplete()
-    return
-  }
-
-  const textarea = composerTextarea.value
-  if (!textarea || textarea.selectionStart !== textarea.selectionEnd) {
-    clearMentionSuggestions()
-    clearEmojiAutocomplete()
-    return
-  }
-
-  const detected = detectMentionQuery(form.value.content, textarea.selectionStart)
-  if (detected) {
-    clearEmojiAutocomplete()
-    mentionState.value = detected
-    mentionCaret.value = getTextareaCaretCoordinates(textarea, detected.start)
-    scheduleMentionSearch(detected.query)
-    return
-  }
-
-  clearMentionSuggestions()
-
-  const detectedEmoji = detectEmojiQuery(form.value.content, textarea.selectionStart)
-  if (!detectedEmoji) {
-    clearEmojiAutocomplete()
-    return
-  }
-
-  emojiAutocompleteState.value = detectedEmoji
-  emojiAutocompleteCaret.value = getTextareaCaretCoordinates(textarea, detectedEmoji.start)
-  emojiSuggestions.value = searchEmojiItems(detectedEmoji.query, {
-    limit: 8,
-    includeCommonWhenEmpty: true
-  })
-  emojiAutocompleteActiveIndex.value = 0
-}
-
-function scheduleMentionSearch(query) {
-  if (mentionTimer) {
-    clearTimeout(mentionTimer)
-  }
-
-  mentionLoading.value = true
-  const requestId = ++mentionRequestId
-  mentionTimer = setTimeout(async () => {
-    try {
-      const users = await api.get('/users', {
-        params: {
-          q: query,
-          limit: 5
-        }
-      })
-      if (requestId !== mentionRequestId || !mentionState.value) return
-      mentionUsers.value = Array.isArray(users) ? users.slice(0, 5) : []
-      mentionActiveIndex.value = 0
-    } catch (error) {
-      if (requestId !== mentionRequestId) return
-      mentionUsers.value = []
-    } finally {
-      if (requestId === mentionRequestId) {
-        mentionLoading.value = false
-      }
-    }
-  }, 150)
-}
-
-async function handleMentionSelect(user) {
-  if (!mentionState.value || !user?.username) return
-
-  const replacement = buildMentionReplacement(user.username)
-  await insertComposerText(replacement, {
-    start: mentionState.value.start,
-    end: mentionState.value.end,
-    cursor: mentionState.value.start + replacement.length
-  })
-  clearMentionSuggestions()
-}
-
-function schedulePreview() {
-  if (!showPreview.value) return
-
-  if (previewTimer) {
-    clearTimeout(previewTimer)
-  }
-
-  previewTimer = setTimeout(() => {
-    requestPreview()
-  }, 220)
-}
-
-async function requestPreview() {
-  if (!showPreview.value) return
-
-  const content = form.value.content.trim()
-  previewError.value = ''
-  if (!content) {
-    previewHtml.value = ''
-    previewLoading.value = false
-    return
-  }
-
-  previewLoading.value = true
-  try {
-    const data = await fetchComposerPreview(form.value.content)
-    if (!showPreview.value) return
-    previewHtml.value = renderTwemojiHtml(data.html || '')
-  } catch (error) {
-    previewError.value = getComposerErrorMessage(error, getUiCopy({
-      surface: 'composer-preview-load-failed',
-    })?.text || '预览加载失败')
-  } finally {
-    previewLoading.value = false
-  }
-}
-
-async function insertComposerText(replacement, options = {}) {
-  await nextTick()
-
-  const textarea = composerTextarea.value
-  const content = form.value.content
-  const start = options.start ?? textarea?.selectionStart ?? content.length
-  const end = options.end ?? textarea?.selectionEnd ?? content.length
-  const cursor = options.cursor ?? start + replacement.length
-
-  form.value.content = replaceSelection(content, start, end, replacement)
-
-  await nextTick()
-  composerTextarea.value?.focus()
-  composerTextarea.value?.setSelectionRange(cursor, cursor)
-  syncInlineSuggestions()
-}
-
-function handleDocumentMouseDown(event) {
-  if (showEmojiPicker.value && !emojiToolRef.value?.contains(event.target)) {
-    showEmojiPicker.value = false
-  }
-  if (event.target !== composerTextarea.value) {
-    clearMentionSuggestions()
-    clearEmojiAutocomplete()
-  }
-}
-
-function setEmojiToolRef(element) {
-  emojiToolRef.value = element
-}
-
-function clearMentionSuggestions() {
-  if (mentionTimer) {
-    clearTimeout(mentionTimer)
-  }
-  mentionLoading.value = false
-  mentionUsers.value = []
-  mentionState.value = null
-  mentionCaret.value = null
-  mentionActiveIndex.value = 0
-}
-
-function clearEmojiAutocomplete() {
-  emojiSuggestions.value = []
-  emojiAutocompleteState.value = null
-  emojiAutocompleteCaret.value = null
-  emojiAutocompleteActiveIndex.value = 0
-}
-
-function resetComposer() {
-  clearDraftStorage()
-  form.value = {
-    title: '',
-    content: '',
-    primary_tag_id: '',
-    secondary_tag_id: ''
-  }
-  uploadNotice.value = ''
-  submitNotice.value = ''
-  showEmojiPicker.value = false
-  showPreview.value = false
-  previewHtml.value = ''
-  previewError.value = ''
-  clearMentionSuggestions()
-  clearEmojiAutocomplete()
-  composerStore.closeComposer()
 }
 
 function formatDraftTime(value) {
@@ -1454,107 +911,38 @@ function formatDraftTime(value) {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
-function loadComposerHeight() {
-  if (typeof window === 'undefined') return 520
-  const value = Number(window.localStorage.getItem('bias:composer-height:discussion') || 520)
-  return clampComposerHeight(value)
-}
-
-function persistComposerHeight(value) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem('bias:composer-height:discussion', String(clampComposerHeight(value)))
-}
-
-function clampComposerHeight(value) {
-  const min = 360
-  const max = typeof window === 'undefined' ? 760 : Math.max(420, window.innerHeight - 72)
-  return Math.max(min, Math.min(value, max))
-}
-
-function syncComposerViewportEffects() {
-  if (typeof document === 'undefined') return
-  if (composerStore.isOpen && !showComposer.value) return
-
-  const activeDesktopComposer =
-    showComposer.value &&
-    !composerStore.isMinimized &&
-    !composerStore.isExpanded &&
-    !isPhoneViewport.value
-
-  document.documentElement.style.setProperty('--composer-offset', activeDesktopComposer ? `${composerHeight.value + 24}px` : '0px')
-  document.body.style.overflow = showBackdrop.value ? 'hidden' : ''
-}
-
-function clearComposerViewportEffects() {
-  if (typeof document === 'undefined') return
-  document.documentElement.style.setProperty('--composer-offset', '0px')
-  document.body.style.overflow = ''
-}
-
-function buildComposerExtensionContext() {
+function buildBaseContext() {
   return {
     approvalNote: composerStore.current.approvalNote || '',
     approvalStatus: composerStore.current.approvalStatus || '',
     availablePrimaryTagCount: primaryTags.value.length,
     authStore,
     canSubmit: canSubmit.value,
-    composerStore,
-    content: form.value.content,
     draftSavedAt: draftSavedAt.value,
     discussionId: Number(composerStore.current.discussionId || 0),
     discussionTitle: form.value.title.trim() || composerStore.current.discussionTitle || '',
     formatDraftTime,
     hasDraftContent: hasDraftContent.value,
     isEditing: isEditingDiscussion.value,
-    isExpanded: composerStore.isExpanded,
-    isMinimized: composerStore.isMinimized,
-    minimized: composerStore.isMinimized,
     mode: isEditingDiscussion.value ? 'edit' : 'create',
     modalStore,
     primaryTagId: form.value.primary_tag_id,
+    route: null,
+    router,
     secondaryActionHandlers: {
       'clear-draft': () => clearDraft({ skipConfirm: true }),
     },
+    secondaryTagId: form.value.secondary_tag_id,
     selectedTagIds: selectedTagIds.value,
     selectedTagLabel: selectedTagName.value,
     source: composerStore.current.source || '',
-    submitting: submitting.value,
-    route: null,
-    router,
-    secondaryTagId: form.value.secondary_tag_id,
-    showPreview: showPreview.value,
     title: form.value.title,
     type: 'discussion',
-    uploading: uploading.value,
   }
-}
-
-function buildComposerToolContext(tool) {
-  const textarea = composerTextarea.value
-  return {
-    ...buildComposerExtensionContext(),
-    tool,
-    insertText: insertComposerText,
-    focusEditor: () => composerTextarea.value?.focus(),
-    openAttachmentPicker: () => attachmentInput.value?.click(),
-    openImagePicker: () => imageInput.value?.click(),
-    selectionEnd: textarea?.selectionEnd ?? form.value.content.length,
-    selectionStart: textarea?.selectionStart ?? form.value.content.length,
-    setEmojiPickerVisible(value) {
-      showEmojiPicker.value = Boolean(value)
-    },
-    setPreviewVisible(value) {
-      showPreview.value = Boolean(value)
-    },
-  }
-}
-
-async function handleComposerSecondaryAction(item) {
-  await runComposerSecondaryAction(item, buildComposerExtensionContext())
 }
 </script>
 
