@@ -1,5 +1,6 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
+import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
 import { resolveNotificationPath, useNotificationGroups } from '@/composables/useNotificationPresentation'
@@ -11,8 +12,6 @@ export function useNotificationPage({
   router
 }) {
   const routeState = useNotificationRouteState({ route, router })
-  const loading = ref(true)
-  const loadError = ref('')
   const marking = ref(false)
   const totalPages = ref(1)
   const totalCount = ref(0)
@@ -25,6 +24,22 @@ export function useNotificationPage({
   const filteredUnreadCount = computed(() => notifications.value.filter(item => !item.is_read).length)
   const filteredReadCount = computed(() => notifications.value.length - filteredUnreadCount.value)
   const hasActiveFilter = computed(() => unreadOnly.value || Boolean(activeType.value))
+  const listState = usePaginatedListState({
+    watchSources: () => [currentPage.value, activeType.value, unreadOnly.value],
+    initialLoading: true,
+    async load() {
+      const data = await notificationStore.fetchNotifications({
+        page: currentPage.value,
+        ...(activeType.value ? { type: activeType.value } : {}),
+        ...(unreadOnly.value ? { is_read: false } : {})
+      })
+      totalCount.value = Number(data.total || notifications.value.length || 0)
+      totalPages.value = Math.max(1, Math.ceil((data.total || notifications.value.length) / (data.limit || 20)))
+      return data
+    },
+  })
+  const loading = listState.loading
+  const loadError = listState.loadError
   const emptyStateText = computed(() => {
     const emptyState = getEmptyState({
       surface: 'notifications-page-empty',
@@ -123,40 +138,6 @@ export function useNotificationPage({
     }, unread > 0 ? `${total} / ${unread} 未读` : String(total))
   }
 
-  watch(
-    () => [currentPage.value, activeType.value, unreadOnly.value],
-    async () => {
-      await loadNotifications()
-    },
-    { immediate: true }
-  )
-
-  async function loadNotifications() {
-    loading.value = true
-    loadError.value = ''
-
-    try {
-      const data = await notificationStore.fetchNotifications({
-        page: currentPage.value,
-        ...(activeType.value ? { type: activeType.value } : {}),
-        ...(unreadOnly.value ? { is_read: false } : {})
-      })
-      totalCount.value = Number(data.total || notifications.value.length || 0)
-      totalPages.value = Math.max(1, Math.ceil((data.total || notifications.value.length) / (data.limit || 20)))
-    } catch (error) {
-      console.error('加载通知失败:', error)
-      loadError.value = getNotificationErrorMessage(
-        error,
-        getNotificationUiCopy('notification-load-error', {}, '加载通知失败，请稍后重试')
-      )
-      totalCount.value = 0
-      notificationStore.typeCounts = {}
-      notificationStore.unreadTypeCounts = {}
-    } finally {
-      loading.value = false
-    }
-  }
-
   async function changeType(type) {
     const nextType = typeof type === 'string' ? type.trim() : ''
     if (nextType === activeType.value) {
@@ -233,7 +214,10 @@ export function useNotificationPage({
       } else {
         await notificationStore.markAllAsRead()
       }
-      await loadNotifications()
+      await listState.refresh({
+        mode: 'initial',
+        forceLoading: true,
+      })
       await modalStore.alert({
         title: getNotificationUiCopy('notification-alert-mark-all-success-title', {}, '已全部标记为已读'),
         message: getNotificationUiCopy(
@@ -284,7 +268,10 @@ export function useNotificationPage({
       } else {
         await notificationStore.clearReadNotifications()
       }
-      await loadNotifications()
+      await listState.refresh({
+        mode: 'initial',
+        forceLoading: true,
+      })
       await modalStore.alert({
         title: getNotificationUiCopy('notification-alert-clear-read-success-title', {}, '已清除已读通知'),
         message: getNotificationUiCopy('notification-alert-clear-read-success-message', {}, '当前范围内的已读通知已清除。'),
@@ -322,7 +309,10 @@ export function useNotificationPage({
         type: activeType.value,
         discussionId,
       })
-      await loadNotifications()
+      await listState.refresh({
+        mode: 'initial',
+        forceLoading: true,
+      })
     } catch (error) {
       console.error('分组标记失败:', error)
       await showNotificationActionError(error)
@@ -355,7 +345,10 @@ export function useNotificationPage({
         type: activeType.value,
         discussionId,
       })
-      await loadNotifications()
+      await listState.refresh({
+        mode: 'initial',
+        forceLoading: true,
+      })
     } catch (error) {
       console.error('分组清除失败:', error)
       await showNotificationActionError(error)

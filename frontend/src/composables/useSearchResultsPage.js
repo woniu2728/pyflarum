@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
+import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
@@ -19,7 +20,6 @@ export function useSearchResultsPage({ route, router }) {
   const forumRealtimeStore = useForumRealtimeStore()
   const searchSources = getSearchSources()
   const sourceMap = Object.fromEntries(searchSources.map(item => [item.routeType || item.type, item]))
-  const loading = ref(false)
   const total = ref(0)
   const discussionTotal = ref(0)
   const postTotal = ref(0)
@@ -77,6 +77,63 @@ export function useSearchResultsPage({ route, router }) {
   const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
   const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
   const showUsers = computed(() => searchType.value === 'all' || searchType.value === 'users')
+  const listState = usePaginatedListState({
+    watchSources: () => [normalizedQuery.value, searchType.value, page.value],
+    initialLoading: false,
+    reset: resetResults,
+    async load() {
+      if (!normalizedQuery.value) {
+        activeController?.abort()
+        resetResults()
+        return null
+      }
+
+      activeController?.abort()
+      const requestId = activeRequestId + 1
+      activeRequestId = requestId
+      const controller = new AbortController()
+      activeController = controller
+
+      try {
+        const data = await api.get('/search', {
+          params: {
+            q: normalizedQuery.value,
+            type: activeSource.value?.apiType || searchType.value,
+            page: page.value,
+            limit: 20
+          },
+          signal: controller.signal
+        })
+
+        if (requestId !== activeRequestId) {
+          return null
+        }
+
+        total.value = data.total || 0
+        discussionTotal.value = data.discussion_total ?? (data.discussions || []).length
+        postTotal.value = data.post_total ?? (data.posts || []).length
+        userTotal.value = data.user_total ?? (data.users || []).length
+        discussionIds.value = resourceStore.upsertMany('discussions', unwrapList(data.discussions || []))
+          .map(item => item.id)
+        postIds.value = resourceStore.upsertMany('posts', unwrapList(data.posts || []))
+          .map(item => item.id)
+        userIds.value = resourceStore.upsertMany('users', unwrapList(data.users || []))
+          .map(item => item.id)
+        searchFilterCatalog.loadError.value = ''
+        return data
+      } catch (error) {
+        if (isCanceledRequest(error)) {
+          return null
+        }
+        throw error
+      } finally {
+        if (requestId === activeRequestId) {
+          activeController = null
+        }
+      }
+    },
+  })
+  const loading = listState.loading
 
   function getSearchUiCopy(surface, context = {}, fallback = '') {
     return getUiCopy({
@@ -182,14 +239,6 @@ export function useSearchResultsPage({ route, router }) {
   })
 
   watch(
-    () => [normalizedQuery.value, searchType.value, page.value],
-    async () => {
-      await loadResults()
-    },
-    { immediate: true }
-  )
-
-  watch(
     () => trackedDiscussionIds.value,
     (nextTrackedIds, previousTrackedIds = []) => {
       forumRealtimeStore.untrackDiscussionIds(previousTrackedIds)
@@ -208,58 +257,18 @@ export function useSearchResultsPage({ route, router }) {
   })
 
   async function loadResults() {
-    if (!normalizedQuery.value) {
-      activeController?.abort()
-      resetResults()
-      return
-    }
-
-    activeController?.abort()
-    const requestId = activeRequestId + 1
-    activeRequestId = requestId
-    const controller = new AbortController()
-    activeController = controller
-    loading.value = true
     try {
-      const data = await api.get('/search', {
-        params: {
-          q: normalizedQuery.value,
-          type: activeSource.value?.apiType || searchType.value,
-          page: page.value,
-          limit: 20
-        },
-        signal: controller.signal
+      await listState.refresh({
+        mode: 'initial',
+        forceLoading: Boolean(normalizedQuery.value),
       })
-
-      if (requestId !== activeRequestId) {
-        return
-      }
-
-      total.value = data.total || 0
-      discussionTotal.value = data.discussion_total ?? (data.discussions || []).length
-      postTotal.value = data.post_total ?? (data.posts || []).length
-      userTotal.value = data.user_total ?? (data.users || []).length
-      discussionIds.value = resourceStore.upsertMany('discussions', unwrapList(data.discussions || []))
-        .map(item => item.id)
-      postIds.value = resourceStore.upsertMany('posts', unwrapList(data.posts || []))
-        .map(item => item.id)
-      userIds.value = resourceStore.upsertMany('users', unwrapList(data.users || []))
-        .map(item => item.id)
     } catch (error) {
-      if (isCanceledRequest(error)) {
-        return
-      }
       console.error('加载搜索结果失败:', error)
       searchFilterCatalog.loadError.value = error.response?.data?.error
         || error.response?.data?.detail
         || error.message
         || getSearchUiCopy('search-results-load-error', {}, '加载搜索结果失败，请稍后重试')
       resetResults()
-    } finally {
-      if (requestId === activeRequestId) {
-        loading.value = false
-        activeController = null
-      }
     }
   }
 

@@ -1,7 +1,8 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
+import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import { normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
@@ -25,9 +26,6 @@ export function useDiscussionListData({
   const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
   const tags = computed(() => resourceStore.list('tags', tagIds.value))
   const currentTag = computed(() => (currentTagId.value ? resourceStore.get('tags', currentTagId.value) : null))
-  const loading = ref(true)
-  const refreshing = ref(false)
-  const loadingMore = ref(false)
   const sortOptions = ref([])
   const filterOptions = ref([])
   const currentPage = ref(1)
@@ -41,6 +39,40 @@ export function useDiscussionListData({
   const listFilter = routeState.listFilter
   const hasMore = computed(() => currentPage.value * pageSize < total.value)
   const isFollowingPage = computed(() => route.name === 'following' || listFilter.value === 'following')
+  const listState = usePaginatedListState({
+    watchSources: () => [route.name, route.params.slug, searchQuery.value, sortBy.value, listFilter.value],
+    initialLoading: true,
+    reset() {
+      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
+      discussionIds.value = []
+      currentTagId.value = null
+      currentPage.value = 1
+      total.value = 0
+    },
+    async load({ mode }) {
+      if (mode === 'initial') {
+        await Promise.all([loadTags(), loadCurrentTag(), loadDiscussions(false)])
+        return null
+      }
+
+      if (mode === 'append') {
+        currentPage.value += 1
+        try {
+          await loadDiscussions(true)
+        } catch (error) {
+          currentPage.value = Math.max(1, currentPage.value - 1)
+          throw error
+        }
+        return null
+      }
+
+      await loadDiscussions(false)
+      return null
+    },
+  })
+  const loading = listState.loading
+  const refreshing = listState.refreshing
+  const loadingMore = listState.loadingMore
 
   function uiText(surface, fallback, context = {}) {
     return getUiCopy({
@@ -73,42 +105,27 @@ export function useDiscussionListData({
     forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
   })
 
-  watch(
-    () => [route.name, route.params.slug, route.query.q, route.query.sort, route.query.filter],
-    async () => {
-      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
-      discussionIds.value = []
-      currentTagId.value = null
-      currentPage.value = 1
-      await refreshPageData()
-    }
-  )
-
   async function refreshPageData() {
-    loading.value = true
-    refreshing.value = false
     try {
-      await Promise.all([loadTags(), loadCurrentTag(), loadDiscussions(false)])
+      await listState.refresh({
+        mode: 'initial',
+        forceLoading: true,
+      })
     } catch (error) {
       discussionIds.value = []
       currentTagId.value = null
       console.error('加载首页列表失败:', error)
-    } finally {
-      loading.value = false
     }
   }
 
   async function refreshDiscussionList() {
-    if (loading.value || refreshing.value) return
-
-    refreshing.value = true
     try {
-      await loadDiscussions(false)
+      await listState.refresh({
+        mode: 'refresh',
+      })
     } catch (error) {
       console.error('刷新讨论列表失败:', error)
       await showDiscussionListError('refresh', error)
-    } finally {
-      refreshing.value = false
     }
   }
 
@@ -194,16 +211,13 @@ export function useDiscussionListData({
   }
 
   async function loadMore() {
-    loadingMore.value = true
-    currentPage.value += 1
     try {
-      await loadDiscussions(true)
+      await listState.refresh({
+        mode: 'append',
+      })
     } catch (error) {
-      currentPage.value = Math.max(1, currentPage.value - 1)
       console.error('加载更多讨论失败:', error)
       await showDiscussionListError('load-more', error)
-    } finally {
-      loadingMore.value = false
     }
   }
 
