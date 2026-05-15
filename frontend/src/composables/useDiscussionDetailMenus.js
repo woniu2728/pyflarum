@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { getUiCopy } from '@/forum/registry'
+import { runDiscussionAction, runPostAction } from '@/forum/registry'
 import { getDiscussionMenuItems, getPostMenuItems } from '@/forum/discussionActions'
 
 export function useDiscussionDetailMenus({
@@ -13,63 +13,28 @@ export function useDiscussionDetailMenus({
   canModerateDiscussionSettings,
   canReplyFromMenu,
   discussion,
-  deleteDiscussion,
-  editDiscussion,
-  goToLoginForReply,
   hasActiveComposer,
   isSuspended,
-  openComposer,
-  openReportModal,
   showDiscussionMenu,
   togglingSubscription,
-  toggleHide,
-  toggleLock,
-  togglePin,
-  toggleSubscription,
-  togglePostHidden,
-  deletePost,
-  editPost,
+  discussionActionHandlers,
+  postActionHandlers,
   modalStore
 }) {
-  async function maybeConfirmAction(item) {
-    if (!item?.confirm || !modalStore) {
-      return true
-    }
-
-    return modalStore.confirm({
-      cancelText: getUiCopy({
-        surface: 'discussion-action-confirm-cancel',
-      })?.text || '取消',
-      confirmText: getUiCopy({
-        surface: 'discussion-action-confirm-default',
-      })?.text || '继续',
-      tone: item.tone === 'danger' ? 'danger' : 'primary',
-      ...item.confirm,
-    })
-  }
-
   async function handleDiscussionMenuSelection(action) {
     const item = discussionMenuItems.value.find(entry => entry.key === action)
     if (!item || item.disabled) return
 
-    const confirmed = await maybeConfirmAction(item)
-    if (!confirmed) return
-
-    const actionMap = {
-      reply: openComposer,
-      login: goToLoginForReply,
-      'toggle-subscription': toggleSubscription,
-      edit: editDiscussion,
-      'toggle-pin': togglePin,
-      'toggle-lock': toggleLock,
-      'toggle-hide': toggleHide,
-      delete: deleteDiscussion
+    const ran = await runDiscussionAction(item, {
+      action: item.key,
+      authStore,
+      discussion: discussion.value || {},
+      discussionActionHandlers,
+      modalStore,
+    })
+    if (ran) {
+      showDiscussionMenu.value = false
     }
-    const handler = actionMap[action]
-    if (!handler) return
-
-    showDiscussionMenu.value = false
-    await handler()
   }
 
   const discussionMenuItems = computed(() => getDiscussionMenuItems({
@@ -110,29 +75,21 @@ export function useDiscussionDetailMenus({
     })
   }
 
-  async function handleOpenReportModal(post) {
-    activePostMenuId.value = null
-    await openReportModal(post)
-  }
-
   async function handlePostMenuSelection(post, action) {
     const item = getPostMenuOptions(post).find(entry => entry.key === action)
     if (!item || item.disabled) return
 
-    const confirmed = await maybeConfirmAction(item)
-    if (!confirmed) return
-
-    const actionMap = {
-      'edit-post': editPost,
-      'delete-post': deletePost,
-      'toggle-hide-post': togglePostHidden,
-      'open-report-modal': handleOpenReportModal,
+    const ran = await runPostAction(item, {
+      action: item.key,
+      authStore,
+      discussion: discussion.value || {},
+      modalStore,
+      post,
+      postActionHandlers,
+    })
+    if (ran) {
+      activePostMenuId.value = null
     }
-    const handler = actionMap[action]
-    if (!handler) return
-
-    activePostMenuId.value = null
-    await handler(post)
   }
 
   return {
@@ -142,6 +99,5 @@ export function useDiscussionDetailMenus({
     handleDiscussionMenuSelection,
     handlePostMenuSelection,
     hasPostControls,
-    handleOpenReportModal
   }
 }

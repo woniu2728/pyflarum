@@ -8,6 +8,7 @@ import {
   getEmptyState,
   getHeroMetaItems,
   getPageState,
+  getPostActions,
   getStateBlock,
   getUiCopy,
   getPostFlagPanel,
@@ -16,6 +17,7 @@ import {
   registerComposerDraftMeta,
   registerComposerSubmitSuccess,
   registerApprovalNote,
+  registerDiscussionAction,
   registerDiscussionReplyState,
   registerDiscussionReviewBanner,
   registerEmptyState,
@@ -23,11 +25,17 @@ import {
   registerPageState,
   registerStateBlock,
   registerUiCopy,
+  registerPostAction,
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
   runComposerSubmitSuccess,
 } from './frontendRegistry.js'
+import {
+  resolveDiscussionAction,
+  runDiscussionAction,
+  runPostAction,
+} from './discussionActionRuntime.js'
 
 function uniqueKey(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -1865,4 +1873,91 @@ test('ui copy resolves auth session modal copy', () => {
   assert.equal(fieldErrorResult.text, '邮箱=>invalid')
   assert.equal(turnstileErrorResult.key, turnstileErrorKey)
   assert.equal(turnstileErrorResult.text, 'turnstile load failed')
+})
+
+test('discussion action runtime confirms then dispatches to handler map', async () => {
+  let confirmedPayload = null
+  let handlerCalls = 0
+  const discussionActionKey = uniqueKey('discussion-runtime-delete')
+
+  registerDiscussionAction({
+    key: discussionActionKey,
+    resolve: () => ({
+      key: discussionActionKey,
+      label: '删除讨论',
+      tone: 'danger',
+      confirm: {
+        confirmText: '删除',
+      },
+    }),
+  })
+
+  const item = resolveDiscussionAction(discussionActionKey, {})
+
+  const result = await runDiscussionAction(item, {
+    discussionActionHandlers: {
+      [discussionActionKey]: async () => {
+        handlerCalls += 1
+      },
+    },
+    modalStore: {
+      confirm: async payload => {
+        confirmedPayload = payload
+        return true
+      },
+    },
+  })
+
+  assert.equal(result, true)
+  assert.equal(handlerCalls, 1)
+  assert.equal(confirmedPayload.confirmText, '删除')
+  assert.equal(confirmedPayload.tone, 'danger')
+})
+
+test('post action runtime prefers explicit action key and respects cancellation', async () => {
+  let handlerCalls = 0
+  const postActionKey = uniqueKey('post-runtime-delete')
+
+  registerPostAction({
+    key: postActionKey,
+    resolve: () => ({
+      key: postActionKey,
+      label: '删除回复',
+      tone: 'danger',
+      confirm: {
+        confirmText: '删除',
+      },
+    }),
+  })
+
+  const postItem = {
+    ...getPostActions({}).find(item => item.key === postActionKey),
+    action: 'custom-delete-post',
+  }
+
+  const cancelled = await runPostAction(postItem, {
+    modalStore: {
+      confirm: async () => false,
+    },
+    postActionHandlers: {
+      'custom-delete-post': async () => {
+        handlerCalls += 1
+      },
+    },
+  })
+
+  const completed = await runPostAction(postItem, {
+    modalStore: {
+      confirm: async () => true,
+    },
+    postActionHandlers: {
+      'custom-delete-post': async () => {
+        handlerCalls += 1
+      },
+    },
+  })
+
+  assert.equal(cancelled, false)
+  assert.equal(completed, true)
+  assert.equal(handlerCalls, 1)
 })

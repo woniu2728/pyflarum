@@ -573,6 +573,48 @@ export function useDiscussionDetailInteractions({
     return date.toLocaleString('zh-CN')
   }
 
+  const discussionActionHandlers = {
+    delete: async () => {
+      await deleteDiscussion()
+    },
+    edit: async () => {
+      editDiscussion()
+    },
+    login: async () => {
+      goToLoginForReply()
+    },
+    reply: async () => {
+      openComposer()
+    },
+    'toggle-hide': async () => {
+      await toggleHide()
+    },
+    'toggle-lock': async () => {
+      await toggleLock()
+    },
+    'toggle-pin': async () => {
+      await togglePin()
+    },
+    'toggle-subscription': async () => {
+      await toggleSubscription()
+    },
+  }
+
+  const postActionHandlers = {
+    'delete-post': async (_, context = {}) => {
+      await deletePost(context.post)
+    },
+    'edit-post': async (_, context = {}) => {
+      editPost(context.post)
+    },
+    'open-report-modal': async (_, context = {}) => {
+      await openReportModal(context.post)
+    },
+    'toggle-hide-post': async (_, context = {}) => {
+      await togglePostHidden(context.post)
+    },
+  }
+
   return {
     canDeletePost,
     canEditDiscussion,
@@ -600,8 +642,10 @@ export function useDiscussionDetailInteractions({
     moderatePost,
     openComposer,
     openReportModal,
+    postActionHandlers,
     replyToPost,
     resolvePostFlags,
+    discussionActionHandlers,
     showSuspensionAlert,
     suspensionNotice,
     toggleHide,

@@ -1,6 +1,12 @@
 import { defineAsyncComponent } from 'vue'
 import { buildDiscussionPath, buildUserPath, formatRelativeTime, getUserInitial } from '@/utils/forum'
 import {
+  resolveDiscussionAction,
+  resolvePostAction,
+  runDiscussionAction,
+  runPostAction,
+} from '@/forum/discussionActionRuntime'
+import {
   getComposerNotices,
   getComposerSecondaryActions,
   getComposerDraftMeta,
@@ -70,6 +76,8 @@ export {
   getComposerDraftMeta,
   getComposerStatusItems,
   getComposerTools,
+  resolveDiscussionAction,
+  resolvePostAction,
   getDiscussionActions,
   getPostActions,
   getNotificationRenderers,
@@ -115,6 +123,8 @@ export {
   registerPostAction,
   registerSearchSource,
   registerUserBadge,
+  runDiscussionAction,
+  runPostAction,
   runComposerSubmitGuards,
   runComposerSubmitSuccess,
   getProfilePanels,
