@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import api from '@/api'
 import { useDiscussionListLoadState } from '@/composables/useDiscussionListLoadState'
+import { useDiscussionListRouteActions } from '@/composables/useDiscussionListRouteActions'
 import { useDiscussionListResourceState } from '@/composables/useDiscussionListResourceState'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
 import { useDiscussionListRealtimeState } from '@/composables/useDiscussionListRealtimeState'
@@ -50,36 +51,15 @@ export function useDiscussionListData({
     resourceStore,
     uiText: loadState.uiText,
   })
-
-  async function changeSortBy(sort) {
-    if (sortBy.value === sort) return
-    await routeState.push({
-      sortBy: sort,
-      listFilter: listFilter.value,
-      searchQuery: searchQuery.value,
-    })
-  }
-
-  async function changeListFilter(filterCode) {
-    if (listFilter.value === filterCode) return
-    await routeState.push({
-      listFilter: filterCode,
-      sortBy: sortBy.value,
-      searchQuery: searchQuery.value,
-    })
-  }
-
-  async function changeSearchQuery(nextQuery) {
-    if (searchQuery.value === nextQuery) return
-    await routeState.push({
-      searchQuery: nextQuery,
-      sortBy: sortBy.value,
-      listFilter: listFilter.value,
-    })
-  }
+  const routeActions = useDiscussionListRouteActions({
+    routeState,
+    listFilter,
+    searchQuery,
+    sortBy,
+  })
 
   return {
-    changeSortBy,
+    changeSortBy: routeActions.changeSortBy,
     currentTag: resourceState.currentTag,
     currentTagSlug,
     discussions: resourceState.discussions,
@@ -91,8 +71,8 @@ export function useDiscussionListData({
     loading: loadState.loading,
     loadingMore: loadState.loadingMore,
     markAllAsRead: realtimeState.markAllAsRead,
-    changeListFilter,
-    changeSearchQuery,
+    changeListFilter: routeActions.changeListFilter,
+    changeSearchQuery: routeActions.changeSearchQuery,
     markingAllRead,
     refreshPageData: loadState.refreshPageData,
     refreshDiscussionList: loadState.refreshDiscussionList,
