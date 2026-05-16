@@ -13,15 +13,18 @@ import {
   mergeForumEventPayload,
   shouldRefreshForumEvent,
 } from '@/utils/forumRealtime'
+import { useProfileRouteState } from './useProfileRouteState'
 import { useRequestedPaginatedListState } from './useRequestedPaginatedListState'
 
 export function useProfilePage({
   authStore,
   modalStore,
-  route
+  route,
+  router
 }) {
   const resourceStore = useResourceStore()
   const forumRealtimeStore = useForumRealtimeStore()
+  const routeState = useProfileRouteState({ route, router })
   const userId = ref(null)
   const discussionIds = ref([])
   const postIds = ref([])
@@ -29,7 +32,6 @@ export function useProfilePage({
   const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
   const posts = computed(() => resourceStore.list('posts', postIds.value))
   const loading = ref(true)
-  const activeTab = ref('discussions')
   const requestedPostUserId = ref(null)
   const saving = ref(false)
   const avatarUploading = ref(false)
@@ -65,6 +67,7 @@ export function useProfilePage({
   })
 
   const isOwnProfile = computed(() => authStore.user && user.value && authStore.user.id === user.value.id)
+  const activeTab = routeState.activeTab
   const discussionListState = useRequestedPaginatedListState({
     watchSources: () => [userId.value || 0],
     isRequested: () => Boolean(user.value),
@@ -247,10 +250,14 @@ export function useProfilePage({
   }
 
   function switchTab(tab) {
-    activeTab.value = tab
-    if (tab === 'posts' && userId.value) {
+    const nextTab = String(tab || '').trim() || 'discussions'
+    if (nextTab === activeTab.value) return
+    if (nextTab === 'posts' && userId.value) {
       requestedPostUserId.value = userId.value
     }
+    void routeState.push({
+      activeTab: nextTab,
+    })
   }
 
   async function saveProfile() {

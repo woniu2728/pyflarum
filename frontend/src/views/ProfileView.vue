@@ -47,7 +47,7 @@
 
 <script setup>
 import { computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
@@ -63,6 +63,7 @@ import {
 } from '@/utils/forum'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const forumStore = useForumStore()
 const modalStore = useModalStore()
@@ -102,7 +103,8 @@ const {
 } = useProfilePage({
   authStore,
   modalStore,
-  route
+  route,
+  router
 })
 const {
   isOnline,
