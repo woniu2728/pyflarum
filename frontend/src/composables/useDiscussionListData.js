@@ -1,12 +1,12 @@
 import { computed, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
+import { useDiscussionListResourceState } from '@/composables/useDiscussionListResourceState'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
 import { useDiscussionListRealtimeState } from '@/composables/useDiscussionListRealtimeState'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
-import { normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
 
 export function useDiscussionListData({
   authStore,
@@ -17,52 +17,36 @@ export function useDiscussionListData({
   const resourceStore = useResourceStore()
   const forumRealtimeStore = useForumRealtimeStore()
   const routeState = useDiscussionListRouteState({ route, router })
-  const discussionIds = ref([])
-  const tagIds = ref([])
-  const currentTagId = ref(null)
-  const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
-  const tags = computed(() => resourceStore.list('tags', tagIds.value))
-  const currentTag = computed(() => (currentTagId.value ? resourceStore.get('tags', currentTagId.value) : null))
-  const sortOptions = ref([])
-  const filterOptions = ref([])
-  const currentPage = ref(1)
-  const total = ref(0)
   const markingAllRead = ref(false)
-  const pageSize = 20
 
   const currentTagSlug = computed(() => route.params.slug || null)
   const searchQuery = routeState.searchQuery
   const sortBy = routeState.sortBy
   const listFilter = routeState.listFilter
-  const hasMore = computed(() => currentPage.value * pageSize < total.value)
   const isFollowingPage = computed(() => route.name === 'following' || listFilter.value === 'following')
+  const resourceState = useDiscussionListResourceState({
+    currentTagSlug,
+    isFollowingPage,
+    listFilter,
+    searchQuery,
+    sortBy,
+  })
   const listState = usePaginatedListState({
     watchSources: () => [route.name, route.params.slug, searchQuery.value, sortBy.value, listFilter.value],
     initialLoading: true,
-    reset() {
-      discussionIds.value = []
-      currentTagId.value = null
-      currentPage.value = 1
-      total.value = 0
-    },
+    reset: resourceState.reset,
     async load({ mode }) {
       if (mode === 'initial') {
-        await Promise.all([loadTags(), loadCurrentTag(), loadDiscussions(false)])
+        await resourceState.loadInitialResources()
         return null
       }
 
       if (mode === 'append') {
-        currentPage.value += 1
-        try {
-          await loadDiscussions(true)
-        } catch (error) {
-          currentPage.value = Math.max(1, currentPage.value - 1)
-          throw error
-        }
+        await resourceState.loadMoreDiscussions()
         return null
       }
 
-      await loadDiscussions(false)
+      await resourceState.refreshDiscussions()
       return null
     },
   })
@@ -92,7 +76,7 @@ export function useDiscussionListData({
   const realtimeState = useDiscussionListRealtimeState({
     api,
     authStore,
-    currentDiscussionIds: discussionIds,
+    currentDiscussionIds: resourceState.discussionIds,
     forumRealtimeStore,
     markingAllRead,
     modalStore,
@@ -108,8 +92,7 @@ export function useDiscussionListData({
         forceLoading: true,
       })
     } catch (error) {
-      discussionIds.value = []
-      currentTagId.value = null
+      resourceState.reset()
       console.error('加载首页列表失败:', error)
     }
   }
@@ -123,59 +106,6 @@ export function useDiscussionListData({
       console.error('刷新讨论列表失败:', error)
       await showDiscussionListError('refresh', error)
     }
-  }
-
-  async function loadTags() {
-    const response = await api.get('/tags', {
-      params: {
-        include_children: true
-      }
-    })
-    tagIds.value = unwrapList(response)
-      .map(normalizeTag)
-      .map(item => resourceStore.upsert('tags', item).id)
-  }
-
-  async function loadCurrentTag() {
-    if (!currentTagSlug.value || isFollowingPage.value) {
-      currentTagId.value = null
-      return
-    }
-
-    try {
-      const response = await api.get(`/tags/slug/${currentTagSlug.value}`)
-      const tag = resourceStore.upsert('tags', normalizeTag(response))
-      currentTagId.value = tag.id
-    } catch (error) {
-      currentTagId.value = null
-      console.error('加载标签详情失败:', error)
-    }
-  }
-
-  async function loadDiscussions(append) {
-    const response = await api.get('/discussions/', {
-      params: {
-        page: currentPage.value,
-        limit: pageSize,
-        sort: sortBy.value,
-        filter: listFilter.value,
-        q: searchQuery.value || undefined,
-        tag: currentTagSlug.value || undefined,
-      }
-    })
-
-    const items = unwrapList(response).map(normalizeDiscussion)
-    const ids = items.map(item => resourceStore.upsert('discussions', item).id)
-
-    if (append) {
-      discussionIds.value = [...discussionIds.value, ...ids]
-    } else {
-      discussionIds.value = ids
-    }
-
-    total.value = response.total || items.length
-    sortOptions.value = Array.isArray(response.available_sorts) ? response.available_sorts : []
-    filterOptions.value = Array.isArray(response.available_filters) ? response.available_filters : []
   }
 
   async function changeSortBy(sort) {
@@ -218,11 +148,11 @@ export function useDiscussionListData({
 
   return {
     changeSortBy,
-    currentTag,
+    currentTag: resourceState.currentTag,
     currentTagSlug,
-    discussions,
-    filterOptions,
-    hasMore,
+    discussions: resourceState.discussions,
+    filterOptions: resourceState.filterOptions,
+    hasMore: resourceState.hasMore,
     isFollowingPage,
     listFilter,
     loadMore,
@@ -236,7 +166,7 @@ export function useDiscussionListData({
     refreshDiscussionList,
     refreshing,
     sortBy,
-    sortOptions,
-    tags
+    sortOptions: resourceState.sortOptions,
+    tags: resourceState.tags
   }
 }
