@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
+import { useProfileAccountActions } from '@/composables/useProfileAccountActions'
 import { useProfilePageLifecycle } from '@/composables/useProfilePageLifecycle'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
@@ -163,7 +164,7 @@ export function useProfilePage({
   async function refreshProfile() {
     await loadUser()
     if (isOwnProfile.value) {
-      await loadPreferences()
+      await profileAccountActions.loadPreferences()
     }
   }
 
@@ -273,200 +274,35 @@ export function useProfilePage({
     })
   }
 
-  async function saveProfile() {
-    saving.value = true
-    settingsSuccess.value = ''
-    settingsError.value = ''
-
-    try {
-      const previousEmail = user.value.email
-      const updatedUser = await api.patch(`/users/${user.value.id}`, editForm.value)
-
-      const nextUser = resourceStore.upsert('users', {
-        ...user.value,
-        ...normalizeUser(updatedUser)
-      })
-      userId.value = nextUser.id
-
-      editForm.value = {
-        display_name: nextUser.display_name || '',
-        bio: nextUser.bio || '',
-        email: nextUser.email || ''
-      }
-
-      await authStore.fetchUser()
-
-      settingsSuccess.value = getUiCopy({
-        surface: 'profile-settings-save-success',
-        emailChanged: previousEmail !== nextUser.email,
-        email: nextUser.email,
-      })?.text || (previousEmail !== nextUser.email
-        ? `资料已保存，验证邮件已发送到 ${nextUser.email}`
-        : '资料已保存')
-    } catch (error) {
-      settingsError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-settings-save-error', {}, '保存失败')
-      )
-    } finally {
-      saving.value = false
-    }
-  }
-
-  async function loadPreferences() {
-    loadingPreferences.value = true
-    preferencesError.value = ''
-
-    try {
-      const data = await api.get('/users/me/preferences')
-      preferences.value = {
-        values: { ...(data.values || {}) },
-        definitions: Array.isArray(data.definitions) ? data.definitions : []
-      }
-      if (authStore.user) {
-        authStore.user.preferences = { ...data }
-      }
-    } catch (error) {
-      preferencesError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-preferences-load-error', {}, '加载通知偏好失败')
-      )
-    } finally {
-      loadingPreferences.value = false
-    }
-  }
-
-  async function savePreferences() {
-    savingPreferences.value = true
-    preferencesSuccess.value = ''
-    preferencesError.value = ''
-
-    try {
-      const data = await api.patch('/users/me/preferences', {
-        values: { ...(preferences.value.values || {}) }
-      })
-
-      preferences.value = {
-        values: { ...(data.values || {}) },
-        definitions: Array.isArray(data.definitions) ? data.definitions : []
-      }
-      if (authStore.user) {
-        authStore.user.preferences = { ...data }
-      }
-      preferencesSuccess.value = getUiCopy({
-        surface: 'profile-preferences-save-success',
-      })?.text || '通知偏好已保存'
-    } catch (error) {
-      preferencesError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-preferences-save-error', {}, '保存通知偏好失败')
-      )
-    } finally {
-      savingPreferences.value = false
-    }
-  }
-
-  async function resendVerificationEmail() {
-    verificationSending.value = true
-    verificationSuccess.value = ''
-    verificationError.value = ''
-
-    try {
-      const data = await api.post('/users/me/resend-email-verification')
-      verificationSuccess.value = data.message || getUiCopy({
-        surface: 'profile-verification-success',
-      })?.text || '验证邮件已发送'
-    } catch (error) {
-      verificationError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-verification-error', {}, '发送失败')
-      )
-    } finally {
-      verificationSending.value = false
-    }
-  }
-
-  async function changePassword() {
-    passwordSuccess.value = ''
-    passwordError.value = ''
-
-    if (!passwordForm.value.old_password || !passwordForm.value.new_password) {
-      passwordError.value = getUiCopy({
-        surface: 'profile-password-empty-error',
-      })?.text || '请完整填写密码信息'
-      return
-    }
-
-    if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
-      passwordError.value = getUiCopy({
-        surface: 'profile-password-mismatch-error',
-      })?.text || '两次输入的新密码不一致'
-      return
-    }
-
-    changingPassword.value = true
-    try {
-      const data = await api.post(`/users/${user.value.id}/password`, {
-        old_password: passwordForm.value.old_password,
-        new_password: passwordForm.value.new_password
-      })
-      passwordSuccess.value = data.message || getUiCopy({
-        surface: 'profile-password-success',
-      })?.text || '密码修改成功'
-      passwordForm.value = {
-        old_password: '',
-        new_password: '',
-        confirm_password: ''
-      }
-    } catch (error) {
-      passwordError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-password-error', {}, '密码修改失败')
-      )
-    } finally {
-      changingPassword.value = false
-    }
-  }
-
-  async function handleAvatarSelected(event) {
-    const file = event.target.files?.[0]
-    if (!file || !user.value) return
-
-    avatarUploading.value = true
-    try {
-      const formData = new FormData()
-      formData.append('avatar', file)
-
-      const updatedUser = await api.post(`/users/${user.value.id}/avatar`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-
-      const nextUser = resourceStore.upsert('users', normalizeUser(updatedUser))
-      userId.value = nextUser.id
-      editForm.value = {
-        display_name: nextUser.display_name || '',
-        bio: nextUser.bio || '',
-        email: nextUser.email || ''
-      }
-      await authStore.fetchUser()
-    } catch (error) {
-      await modalStore.alert({
-        title: getProfileUiCopy('profile-avatar-upload-error-title', {}, '头像上传失败'),
-        message: getProfileErrorMessage(
-          error,
-          getProfileUiCopy('profile-avatar-upload-error-message', {}, '未知错误')
-        ),
-        tone: 'danger'
-      })
-    } finally {
-      avatarUploading.value = false
-      if (avatarInput.value) {
-        avatarInput.value.value = ''
-      }
-    }
-  }
+  const profileAccountActions = useProfileAccountActions({
+    apiClient: api,
+    authStore,
+    avatarInput,
+    avatarUploading,
+    changingPassword,
+    editForm,
+    getProfileErrorMessage,
+    getProfileUiCopy,
+    loadingPreferences,
+    modalStore,
+    passwordError,
+    passwordForm,
+    passwordSuccess,
+    preferences,
+    preferencesError,
+    preferencesSuccess,
+    resourceStore,
+    saving,
+    savingPreferences,
+    settingsError,
+    settingsSuccess,
+    user,
+    userId,
+    verificationError,
+    verificationSending,
+    verificationSuccess,
+    normalizeUser,
+  })
 
   async function handleForumEvent(event) {
     const detail = event.detail || {}
@@ -520,10 +356,10 @@ export function useProfilePage({
     preferences,
     isOwnProfile,
     switchTab,
-    saveProfile,
-    savePreferences,
-    resendVerificationEmail,
-    changePassword,
-    handleAvatarSelected
+    saveProfile: profileAccountActions.saveProfile,
+    savePreferences: profileAccountActions.savePreferences,
+    resendVerificationEmail: profileAccountActions.resendVerificationEmail,
+    changePassword: profileAccountActions.changePassword,
+    handleAvatarSelected: profileAccountActions.handleAvatarSelected
   }
 }
