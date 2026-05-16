@@ -10,6 +10,8 @@ const composerSecondaryActions = []
 const composerStatusItems = []
 const composerDraftMetaItems = []
 const composerSubmitSuccessHandlers = []
+const composerMentionProviders = []
+const composerPreviewTransformers = []
 const profilePanels = []
 const notificationRenderers = []
 const searchSources = []
@@ -247,6 +249,16 @@ export function getComposerDraftMeta(context = {}) {
 export function registerComposerSubmitSuccess(item) {
   const normalizedItem = normalizeRegisteredItem(item)
   return upsertByKey(composerSubmitSuccessHandlers, normalizedItem.key, normalizedItem)
+}
+
+export function registerComposerMentionProvider(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerMentionProviders, normalizedItem.key, normalizedItem)
+}
+
+export function registerComposerPreviewTransformer(item) {
+  const normalizedItem = normalizeRegisteredItem(item)
+  return upsertByKey(composerPreviewTransformers, normalizedItem.key, normalizedItem)
 }
 
 export function registerProfilePanel(item) {
@@ -614,4 +626,83 @@ export async function runComposerSubmitSuccess(context = {}) {
       await handler.run(context)
     }
   }
+}
+
+export async function runComposerMentionProviders(context = {}) {
+  const providers = [...composerMentionProviders]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+
+  const items = []
+  const seenKeys = new Set()
+
+  for (const provider of providers) {
+    const isVisible = typeof provider.isVisible === 'function' ? provider.isVisible(context) : true
+    if (!isVisible) {
+      continue
+    }
+
+    const result = typeof provider.search === 'function'
+      ? await provider.search(context)
+      : []
+
+    if (!Array.isArray(result)) {
+      continue
+    }
+
+    for (const item of result) {
+      if (!item) {
+        continue
+      }
+      const itemKey = String(item.id ?? item.username ?? item.key ?? '')
+      if (itemKey && seenKeys.has(itemKey)) {
+        continue
+      }
+      if (itemKey) {
+        seenKeys.add(itemKey)
+      }
+      items.push(item)
+    }
+  }
+
+  return items
+}
+
+export async function runComposerPreviewTransformers(context = {}) {
+  const transformers = [...composerPreviewTransformers]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+
+  let transformed = {
+    ...context,
+    html: String(context.html || ''),
+  }
+
+  for (const transformer of transformers) {
+    const isVisible = typeof transformer.isVisible === 'function' ? transformer.isVisible(transformed) : true
+    if (!isVisible) {
+      continue
+    }
+
+    if (typeof transformer.transform !== 'function') {
+      continue
+    }
+
+    const result = await transformer.transform(transformed)
+    if (typeof result === 'string') {
+      transformed = {
+        ...transformed,
+        html: result,
+      }
+      continue
+    }
+
+    if (result && typeof result === 'object') {
+      transformed = {
+        ...transformed,
+        ...result,
+        html: String(result.html ?? transformed.html ?? ''),
+      }
+    }
+  }
+
+  return transformed
 }

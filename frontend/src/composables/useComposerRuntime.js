@@ -1,5 +1,4 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import api from '@/api'
 import { runComposerSecondaryAction } from '@/forum/composerRuntime'
 import {
   getComposerDraftMeta,
@@ -8,8 +7,9 @@ import {
   getComposerStatusItems,
   getComposerTools,
   getUiCopy,
+  runComposerMentionProviders,
+  runComposerPreviewTransformers,
 } from '@/forum/registry'
-import { renderTwemojiHtml } from '@/utils/twemoji'
 import {
   BASE_COMPOSER_TOOLS,
   COMPOSER_EMOJI_PICKER_WIDTH,
@@ -491,12 +491,10 @@ export function useComposerRuntime(options = {}) {
     const requestId = ++mentionRequestId
     mentionTimer = setTimeout(async () => {
       try {
-        const users = await api.get('/users', {
-          params: {
-            q: query,
-            limit: 5,
-          },
-        })
+        const users = await runComposerMentionProviders(buildExtensionContext({
+          mentionQuery: query,
+          limit: 5,
+        }))
         if (requestId !== mentionRequestId || !mentionState.value) return
         mentionUsers.value = Array.isArray(users) ? users.slice(0, 5) : []
         mentionActiveIndex.value = 0
@@ -562,7 +560,12 @@ export function useComposerRuntime(options = {}) {
     try {
       const data = await fetchComposerPreview(content.value)
       if (!showPreview.value) return
-      previewHtml.value = renderTwemojiHtml(data.html || '')
+      const transformed = await runComposerPreviewTransformers(buildExtensionContext({
+        content: content.value,
+        data,
+        html: data.html || '',
+      }))
+      previewHtml.value = transformed?.html || data.html || ''
     } catch (error) {
       previewError.value = getComposerErrorMessage(error, getUiCopy({
         surface: 'composer-preview-load-failed',

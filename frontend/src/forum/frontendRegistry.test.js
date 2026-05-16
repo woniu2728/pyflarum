@@ -15,6 +15,8 @@ import {
   getPostReviewBanner,
   getPostStateBadges,
   registerComposerDraftMeta,
+  registerComposerMentionProvider,
+  registerComposerPreviewTransformer,
   registerComposerSubmitSuccess,
   registerApprovalNote,
   registerDiscussionAction,
@@ -29,6 +31,8 @@ import {
   registerPostFlagPanel,
   registerPostReviewBanner,
   registerPostStateBadge,
+  runComposerMentionProviders,
+  runComposerPreviewTransformers,
   runComposerSubmitSuccess,
 } from './frontendRegistry.js'
 import {
@@ -1702,6 +1706,72 @@ test('composer submit success handlers run in order and respect visibility', asy
   })
 
   assert.deepEqual(calls, ['first:7', 'second:7'])
+})
+
+test('composer mention providers merge ordered results and dedupe by username/id', async () => {
+  const firstKey = uniqueKey('composer-mention-provider-first')
+  const secondKey = uniqueKey('composer-mention-provider-second')
+
+  registerComposerMentionProvider({
+    key: firstKey,
+    order: 20,
+    async search() {
+      return [
+        { id: 2, username: 'beta' },
+        { id: 3, username: 'shared' },
+      ]
+    },
+  })
+
+  registerComposerMentionProvider({
+    key: secondKey,
+    order: 10,
+    async search() {
+      return [
+        { id: 1, username: 'alpha' },
+        { id: 3, username: 'shared' },
+      ]
+    },
+  })
+
+  const result = await runComposerMentionProviders({
+    mentionQuery: 'a',
+    limit: 5,
+  })
+
+  assert.deepEqual(
+    result.map(item => item.username),
+    ['alpha', 'shared', 'beta']
+  )
+})
+
+test('composer preview transformers run in order and pass transformed html forward', async () => {
+  const firstKey = uniqueKey('composer-preview-transform-first')
+  const secondKey = uniqueKey('composer-preview-transform-second')
+
+  registerComposerPreviewTransformer({
+    key: firstKey,
+    order: 10,
+    async transform({ html }) {
+      return {
+        html: `${html}<strong>first</strong>`,
+      }
+    },
+  })
+
+  registerComposerPreviewTransformer({
+    key: secondKey,
+    order: 20,
+    async transform({ html }) {
+      return `${html}<em>second</em>`
+    },
+  })
+
+  const result = await runComposerPreviewTransformers({
+    html: '<p>base</p>',
+  })
+
+  assert.equal(result.html, '<p>base</p><strong>first</strong><em>second</em>')
 })
 
 test('ui copy resolves profile feedback copy', () => {

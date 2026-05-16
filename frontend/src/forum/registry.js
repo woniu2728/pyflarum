@@ -1,4 +1,5 @@
 import { defineAsyncComponent } from 'vue'
+import api from '@/api'
 import { buildDiscussionPath, buildUserPath, formatRelativeTime, getUserInitial } from '@/utils/forum'
 import {
   resolveDiscussionAction,
@@ -10,6 +11,8 @@ import {
   getComposerNotices,
   getComposerSecondaryActions,
   getComposerDraftMeta,
+  runComposerMentionProviders,
+  runComposerPreviewTransformers,
   getComposerStatusItems,
   getComposerTools,
   getForumNavItems,
@@ -50,6 +53,8 @@ import {
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerDraftMeta,
+  registerComposerMentionProvider,
+  registerComposerPreviewTransformer,
   registerComposerStatusItem,
   registerComposerSubmitSuccess,
   registerComposerSubmitGuard,
@@ -74,6 +79,8 @@ export {
   getComposerNotices,
   getComposerSecondaryActions,
   getComposerDraftMeta,
+  runComposerMentionProviders,
+  runComposerPreviewTransformers,
   getComposerStatusItems,
   getComposerTools,
   resolveDiscussionAction,
@@ -111,6 +118,8 @@ export {
   registerComposerNotice,
   registerComposerSecondaryAction,
   registerComposerDraftMeta,
+  registerComposerMentionProvider,
+  registerComposerPreviewTransformer,
   registerComposerStatusItem,
   registerComposerSubmitSuccess,
   registerComposerSubmitGuard,
@@ -5726,6 +5735,30 @@ registerComposerTool({
       })
     },
   }),
+})
+
+registerComposerMentionProvider({
+  key: 'default-users',
+  order: 10,
+  async search({ mentionQuery = '', limit = 5 }) {
+    const users = await api.get('/users', {
+      params: {
+        q: mentionQuery,
+        limit,
+      },
+    })
+    return Array.isArray(users) ? users.slice(0, limit) : []
+  },
+})
+
+registerComposerPreviewTransformer({
+  key: 'twemoji-preview',
+  order: 10,
+  async transform({ html }) {
+    return {
+      html: renderTwemojiHtml(html || ''),
+    }
+  },
 })
 
 registerComposerSubmitGuard({
