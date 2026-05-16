@@ -174,7 +174,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getNotificationIconClass,
@@ -190,13 +189,13 @@ import ForumPrimaryNav from '@/components/forum/ForumPrimaryNav.vue'
 import ForumSearchFilterNav from '@/components/forum/ForumSearchFilterNav.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
-import { useNotificationPage } from '@/composables/useNotificationPage'
+import { useNotificationViewModel } from '@/composables/useNotificationViewModel'
 import { useComposerStore } from '@/stores/composer'
 import { useAuthStore } from '@/stores/auth'
+import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
 import { useNotificationStore } from '@/stores/notification'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
-import { getUiCopy } from '@/forum/registry'
 import {
   formatRelativeTime,
   getUserAvatarColor,
@@ -208,6 +207,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
+const forumStore = useForumStore()
 const modalStore = useModalStore()
 const notificationStore = useNotificationStore()
 const { startDiscussion } = useStartDiscussionAction({
@@ -233,6 +233,18 @@ const {
   notificationTypeItems,
   viewModeItems,
   groupedNotifications,
+  activeNotificationLabel,
+  heroTitleText,
+  heroPillText,
+  heroDescriptionText,
+  markAllButtonText,
+  clearReadButtonText,
+  unreadToggleText,
+  preferencesLinkText,
+  filterDescriptionText,
+  openDiscussionText,
+  markGroupReadText,
+  clearGroupReadText,
   markAsRead,
   markAllAsRead,
   clearReadNotifications,
@@ -243,60 +255,15 @@ const {
   changeType,
   changeViewMode,
   toggleUnreadOnly,
-  changePage
-} = useNotificationPage({
+  changePage,
+  groupCountText,
+} = useNotificationViewModel({
+  forumStore,
   modalStore,
   notificationStore,
   route,
   router
 })
-
-const activeNotificationLabel = computed(() => {
-  const activeItem = notificationTypeItems.value.find(item => item.value === activeType.value)
-  return getUiCopy({
-    surface: 'notification-page-active-filter-label',
-    label: activeItem?.label || '',
-    value: activeType.value,
-  })?.text || activeItem?.label || '全部通知'
-})
-const heroTitleText = computed(() => getUiCopy({
-  surface: 'notification-page-hero-title',
-})?.text || '通知')
-const heroPillText = computed(() => getUiCopy({
-  surface: 'notification-page-hero-pill',
-})?.text || '消息中心')
-const heroDescriptionText = computed(() => getUiCopy({
-  surface: 'notification-page-hero-description',
-})?.text || '这里会显示回复、提及、点赞、审核和账号状态相关通知。')
-const markAllButtonText = computed(() => getUiCopy({
-  surface: 'notification-page-mark-all',
-  marking: marking.value,
-  hasActiveFilter: hasActiveFilter.value,
-})?.text || (marking.value ? '处理中...' : (hasActiveFilter.value ? '当前筛选标记已读' : '全部标记为已读')))
-const clearReadButtonText = computed(() => getUiCopy({
-  surface: 'notification-page-clear-read',
-  marking: marking.value,
-  hasActiveFilter: hasActiveFilter.value,
-})?.text || (marking.value ? '处理中...' : (hasActiveFilter.value ? '当前筛选清除已读' : '当前页清除已读')))
-const unreadToggleText = computed(() => getUiCopy({
-  surface: 'notification-page-unread-toggle',
-  unreadOnly: unreadOnly.value,
-})?.text || (unreadOnly.value ? '查看全部通知' : '仅看未读'))
-const preferencesLinkText = computed(() => getUiCopy({
-  surface: 'notification-page-preferences-link',
-})?.text || '通知偏好前往个人设置')
-const filterDescriptionText = computed(() => getUiCopy({
-  surface: 'notification-page-filter-description',
-})?.text || '按通知类型筛选消息流，方便集中处理提及、点赞、审核和账号状态通知。')
-const openDiscussionText = computed(() => getUiCopy({
-  surface: 'notification-page-open-discussion',
-})?.text || '打开讨论')
-const markGroupReadText = computed(() => getUiCopy({
-  surface: 'notification-page-mark-group-read',
-})?.text || '整组标记已读')
-const clearGroupReadText = computed(() => getUiCopy({
-  surface: 'notification-page-clear-group-read',
-})?.text || '整组清理已读')
 
 function handleStartDiscussion() {
   startDiscussion({
@@ -306,13 +273,6 @@ function handleStartDiscussion() {
 
 function formatDate(dateString) {
   return formatRelativeTime(dateString)
-}
-
-function groupCountText(count) {
-  return getUiCopy({
-    surface: 'notification-page-group-count',
-    count,
-  })?.text || `${count} 条通知`
 }
 
 function getNotificationMessageHtml(notification) {
