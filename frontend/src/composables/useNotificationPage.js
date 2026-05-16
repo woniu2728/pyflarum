@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useNotificationBulkActions } from '@/composables/useNotificationBulkActions'
+import { useNotificationDisplayState } from '@/composables/useNotificationDisplayState'
 import { useNotificationItemActions } from '@/composables/useNotificationItemActions'
 import { useNotificationLoadState } from '@/composables/useNotificationLoadState'
 import { useNotificationRouteActions } from '@/composables/useNotificationRouteActions'
@@ -47,62 +48,24 @@ export function useNotificationPage({
   const hasActiveFilter = computed(() => unreadOnly.value || Boolean(activeType.value))
   const loading = loadState.listState.loading
   const loadError = loadState.listState.loadError
-  const emptyStateText = computed(() => {
-    const emptyState = getEmptyState({
-      surface: 'notifications-page-empty',
-      notifications: notifications.value,
-      unreadOnly: unreadOnly.value,
-      activeType: activeType.value,
-    })
-
-    return emptyState?.text || '暂无通知'
-  })
-  const loadingStateText = computed(() => {
-    const stateBlock = getStateBlock({
-      surface: 'notifications-page-loading',
-      loading: loading.value,
-      activeType: activeType.value,
-      unreadOnly: unreadOnly.value,
-    })
-
-    return stateBlock?.text || '正在加载通知...'
-  })
-
-  const notificationTypeItems = computed(() => {
-    const registeredItems = getResolvedNotificationTypes().map(item => ({
-      value: item.type,
-      label: item.label,
-      count: formatTypeCount(item.type),
-    }))
-
-    return [
-      {
-        value: '',
-        label: getUiCopy({
-          surface: 'notification-filter-all-label',
-          count: formatSummaryCount(),
-        })?.text || '全部通知',
-        count: formatSummaryCount()
-      },
-      ...registeredItems,
-    ]
-  })
-
-  const viewModeItems = computed(() => {
-    return [
-      {
-        value: 'timeline',
-        label: getUiCopy({
-          surface: 'notification-view-mode-timeline',
-        })?.text || '时间流'
-      },
-      {
-        value: 'grouped',
-        label: getUiCopy({
-          surface: 'notification-view-mode-grouped',
-        })?.text || '按讨论分组'
-      },
-    ]
+  const displayState = useNotificationDisplayState({
+    activeType,
+    getEmptyStateText(context) {
+      return getEmptyState(context)?.text || ''
+    },
+    getNotificationUiCopy,
+    getRegistryUiCopy(context) {
+      return getUiCopy(context)?.text || ''
+    },
+    getResolvedTypes: getResolvedNotificationTypes,
+    getStateBlockText(context) {
+      return getStateBlock(context)?.text || ''
+    },
+    loading,
+    notificationStore,
+    notifications,
+    totalCount: loadState.totalCount,
+    unreadOnly,
   })
 
   function getNotificationUiCopy(surface, context = {}, fallback = '') {
@@ -122,27 +85,6 @@ export function useNotificationPage({
       message: getNotificationErrorMessage(error),
       tone: 'danger'
     })
-  }
-
-  function formatSummaryCount() {
-    return getNotificationUiCopy('notification-summary-count', {
-      unreadOnly: unreadOnly.value,
-      count: unreadOnly.value
-        ? notifications.value.length
-        : (loadState.totalCount.value || notifications.value.length || 0),
-    }, unreadOnly.value
-      ? `${notifications.value.length || 0} 未读`
-      : String(loadState.totalCount.value || notifications.value.length || 0))
-  }
-
-  function formatTypeCount(type) {
-    const total = Number(notificationStore.typeCounts?.[type] || 0)
-    const unread = Number(notificationStore.unreadTypeCounts?.[type] || 0)
-    return getNotificationUiCopy('notification-type-count', {
-      total,
-      unread,
-      type,
-    }, unread > 0 ? `${total} / ${unread} 未读` : String(total))
   }
 
   const bulkActions = useNotificationBulkActions({
@@ -169,8 +111,8 @@ export function useNotificationPage({
 
   return {
     notifications,
-    emptyStateText,
-    loadingStateText,
+    emptyStateText: displayState.emptyStateText,
+    loadingStateText: displayState.loadingStateText,
     loading,
     loadError,
     marking,
@@ -182,8 +124,8 @@ export function useNotificationPage({
     filteredUnreadCount,
     filteredReadCount,
     hasActiveFilter,
-    notificationTypeItems,
-    viewModeItems,
+    notificationTypeItems: displayState.notificationTypeItems,
+    viewModeItems: displayState.viewModeItems,
     groupedNotifications,
     markAsRead: itemActions.markAsRead,
     markAllAsRead: bulkActions.markAllAsRead,
