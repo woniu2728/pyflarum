@@ -903,6 +903,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：讨论详情页新增 `useDiscussionDetailUiState`，把菜单开关、帖子菜单、移动端头部同步与全局点击/头部动作事件从 `useDiscussionDetailPage` 中独立出去；详情页页面层开始进一步只保留帖子流滚动与 scrubber 逻辑，交互状态与页面数据层的边界更清晰。
 - 已完成：讨论详情页的楼层 scrubber UI 状态继续拆到 `useDiscussionSidebarScrubber`，拖拽预览、指针跟踪、尺寸观测、百分比计算与未读区间展示不再混在页面协调 composable 里；`useDiscussionDetailPage` 进一步收敛为帖子流与页面行为协调层。
 - 已完成：讨论详情页的可见楼层跟踪、滚动节流、上下翻页自动加载与前翻锚点补偿继续拆到 `useDiscussionPostViewportState`，详情页主 composable 现在主要负责装配 `detail state / post stream / ui state / scrubber / viewport` 五层能力，阶段 3 的详情状态分层进一步清晰。
+- 已完成：讨论详情页新增 `useDiscussionDetailPageLifecycle`，把路由切换重置、首次加载、移动端头部同步 watch 和全局监听清理从 `useDiscussionDetailPage` 中独立出去，并补上独立 Node 测试；详情页页面层进一步收敛为“状态装配 + 生命周期注册”两段职责，后续继续拆页面编排时不再需要改动帖子流或 UI state 本体。
 - 已完成：讨论详情页视图脚本区新增 `useDiscussionDetailViewModel` 装配层，页面文案、展示派生、交互 handlers、菜单项和页面元信息 watch 从 `DiscussionDetailView.vue` 收口到单一 view-model composable；详情页视图本身开始接近纯模板绑定层。
 - 已完成：讨论详情页新增 `useDiscussionDetailPermissionState`，把封禁提示、绝对时间兜底与 `discussion/post` 各类 `can*` 判定从 `useDiscussionDetailInteractions` 中独立出去，并补上独立 Node 测试；详情页交互执行层开始进一步收敛为纯动作运行时，后续继续拆 moderator / author 行为时不再需要同时改权限派生与动作实现。
 - 已完成：讨论详情页新增 `useDiscussionDetailModerationActions`，把审核弹层、举报处理、隐藏/锁定/置顶/删除/关注这组 moderator 与讨论管理动作从 `useDiscussionDetailInteractions` 中拆出；详情页交互层开始进一步分成“普通用户动作 + 管理动作”两条执行链，避免大 composable 再次膨胀回单体。

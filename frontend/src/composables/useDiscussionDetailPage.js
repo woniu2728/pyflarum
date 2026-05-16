@@ -1,4 +1,5 @@
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { computed } from 'vue'
+import { useDiscussionDetailPageLifecycle } from '@/composables/useDiscussionDetailPageLifecycle'
 import { useDiscussionDetailState } from '@/composables/useDiscussionDetailState'
 import { useDiscussionPostViewportState } from '@/composables/useDiscussionPostViewportState'
 import { useDiscussionSidebarScrubber } from '@/composables/useDiscussionSidebarScrubber'
@@ -116,44 +117,27 @@ export function useDiscussionDetailPage({
     updateVisiblePostFromScroll,
   } = viewportState
 
-  watch(
-    () => [route.params.id, route.query.near],
-    async () => {
-      resetMobileHeader()
-      resetPostStream()
-      resetTransientUiState()
-      resetScrubberPreview()
-      loading.value = true
-      await refreshDiscussion()
-    }
-  )
-
-  watch(
-    () => [
-      currentVisiblePostProgress.value,
-      maxPostNumber.value,
-      discussion.value?.title,
-      hasMobileDiscussionMenuActions.value
-    ],
-    () => {
-      syncMobileHeader()
-    }
-  )
-
-  onMounted(async () => {
-    await refreshDiscussion()
-    attachGlobalListeners()
-    updateVisiblePostFromScroll()
-    syncMobileHeader()
-  })
-
-  onBeforeUnmount(() => {
-    detachGlobalListeners()
-  })
-
   async function refreshDiscussion() {
     await detailState.refreshDiscussion({ keepLoading: true })
   }
+
+  useDiscussionDetailPageLifecycle({
+    attachGlobalListeners,
+    currentVisiblePostProgress,
+    detachGlobalListeners,
+    discussionTitle: computed(() => discussion.value?.title || ''),
+    hasMobileDiscussionMenuActions,
+    loading,
+    maxPostNumber,
+    refreshDiscussion,
+    resetMobileHeader,
+    resetPostStream,
+    resetScrubberPreview,
+    resetTransientUiState,
+    route,
+    syncMobileHeader,
+    updateVisiblePostFromScroll,
+  })
 
   return {
     activePostMenuId,
