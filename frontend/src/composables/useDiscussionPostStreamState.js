@@ -10,6 +10,7 @@ import {
   mergeForumEventPayload,
   shouldRefreshForumEvent,
 } from '@/utils/forumRealtime'
+import { useDiscussionNearRouteState } from './useDiscussionNearRouteState'
 
 export function useDiscussionPostStreamState({
   authStore,
@@ -22,6 +23,7 @@ export function useDiscussionPostStreamState({
 }) {
   const resourceStore = useResourceStore()
   const forumRealtimeStore = useForumRealtimeStore()
+  const nearRouteState = useDiscussionNearRouteState({ route, router })
   const postIds = ref([])
   const posts = computed(() => resourceStore.list('posts', postIds.value))
   const loading = ref(true)
@@ -39,10 +41,7 @@ export function useDiscussionPostStreamState({
   let readStateTimer = null
   let lastReportedReadNumber = 0
 
-  const targetNearPost = computed(() => {
-    const value = Number(route.query.near)
-    return Number.isFinite(value) && value > 0 ? value : null
-  })
+  const targetNearPost = nearRouteState.near
   const hasPrevious = computed(() => firstLoadedPage.value > 1)
   const hasMore = computed(() => totalPosts.value > 0 && lastLoadedPage.value * pageLimit < totalPosts.value)
   const maxPostNumber = computed(() => {
@@ -179,13 +178,7 @@ export function useDiscussionPostStreamState({
       return
     }
 
-    router.replace({
-      path: route.path,
-      query: {
-        ...route.query,
-        near: targetNumber,
-      },
-    })
+    await nearRouteState.replaceRouteNear(targetNumber)
   }
 
   async function scrollToPost(number) {
@@ -209,7 +202,7 @@ export function useDiscussionPostStreamState({
     lastLoadedPage.value = 1
     totalPosts.value = 0
     highlightedPostNumber.value = null
-    currentVisiblePostNumber.value = normalizePostNumber(route.query.near) || 1
+    currentVisiblePostNumber.value = normalizePostNumber(targetNearPost.value) || 1
     currentVisiblePostProgress.value = currentVisiblePostNumber.value
   }
 
@@ -264,13 +257,7 @@ export function useDiscussionPostStreamState({
   }
 
   function replaceNearInAddressBar(number) {
-    if (typeof window === 'undefined') return
-
-    const url = new URL(window.location.href)
-    if (url.searchParams.get('near') === String(number)) return
-
-    url.searchParams.set('near', number)
-    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+    nearRouteState.replaceAddressBarNear(number)
   }
 
   function scheduleReadStateSync(number) {
