@@ -1,6 +1,7 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
+import { useProfilePageLifecycle } from '@/composables/useProfilePageLifecycle'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import {
@@ -120,20 +121,32 @@ export function useProfilePage({
   const loadingDiscussions = discussionListState.loading
   const loadingPosts = postListState.loading
 
-  onMounted(async () => {
-    await refreshProfile()
-    window.addEventListener('bias:forum-event', handleForumEvent)
-  })
-
-  onBeforeUnmount(() => {
-    window.removeEventListener('bias:forum-event', handleForumEvent)
-    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
-  })
-
-  watch(() => route.params.id, async () => {
+  function resetProfileScope() {
     userId.value = null
     requestedPostUserId.value = null
-    await refreshProfile()
+  }
+
+  function addForumEventListener() {
+    if (typeof window === 'undefined') return
+    window.addEventListener('bias:forum-event', handleForumEvent)
+  }
+
+  function removeForumEventListener() {
+    if (typeof window === 'undefined') return
+    window.removeEventListener('bias:forum-event', handleForumEvent)
+  }
+
+  function cleanupTrackedDiscussions() {
+    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
+  }
+
+  useProfilePageLifecycle({
+    addForumEventListener,
+    cleanupTrackedDiscussions,
+    refreshProfile,
+    removeForumEventListener,
+    resetProfileScope,
+    route,
   })
 
   function getProfileUiCopy(surface, context = {}, fallback = '') {
