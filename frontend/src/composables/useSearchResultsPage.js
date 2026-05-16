@@ -5,16 +5,12 @@ import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchResultsPageLifecycle } from '@/composables/useSearchResultsPageLifecycle'
 import { useSearchResultsRealtimeState } from '@/composables/useSearchResultsRealtimeState'
+import { useSearchResultsResourceState } from '@/composables/useSearchResultsResourceState'
 import { useSearchResultsRouteActions } from '@/composables/useSearchResultsRouteActions'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
-import {
-  getTrackedDiscussionIdsFromDiscussionItems,
-  getTrackedDiscussionIdsFromPostItems,
-} from '@/utils/forumRealtime'
-import { unwrapList } from '@/utils/forum'
 
 export function useSearchResultsPage({ route, router }) {
   const routeState = useSearchRouteState({ route, router })
@@ -22,18 +18,12 @@ export function useSearchResultsPage({ route, router }) {
   const forumRealtimeStore = useForumRealtimeStore()
   const searchSources = getSearchSources()
   const sourceMap = Object.fromEntries(searchSources.map(item => [item.routeType || item.type, item]))
-  const total = ref(0)
-  const discussionTotal = ref(0)
-  const postTotal = ref(0)
-  const userTotal = ref(0)
-  const discussionIds = ref([])
-  const postIds = ref([])
-  const userIds = ref([])
+  const resourceState = useSearchResultsResourceState({
+    resourceStore,
+    searchSources,
+  })
   let activeController = null
   let activeRequestId = 0
-  const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
-  const posts = computed(() => resourceStore.list('posts', postIds.value))
-  const users = computed(() => resourceStore.list('users', userIds.value))
   const normalizedQuery = routeState.normalizedQuery
   const searchType = routeState.searchType
   const activeSource = computed(() => sourceMap[searchType.value] || null)
@@ -46,12 +36,6 @@ export function useSearchResultsPage({ route, router }) {
     page,
     push: routeState.push,
   })
-  const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
-  const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
-  const trackedDiscussionIds = computed(() => [
-    ...getTrackedDiscussionIdsFromDiscussionItems(discussions.value),
-    ...getTrackedDiscussionIdsFromPostItems(posts.value),
-  ])
   const emptyStateText = computed(() => {
     const emptyState = getEmptyState({
       surface: 'search-page-empty',
@@ -80,17 +64,14 @@ export function useSearchResultsPage({ route, router }) {
 
     return stateBlock?.text || '搜索中...'
   })
-  const showDiscussions = computed(() => searchType.value === 'all' || searchType.value === 'discussions')
-  const showPosts = computed(() => searchType.value === 'all' || searchType.value === 'posts')
-  const showUsers = computed(() => searchType.value === 'all' || searchType.value === 'users')
   const listState = usePaginatedListState({
     watchSources: () => [normalizedQuery.value, searchType.value, page.value],
     initialLoading: false,
-    reset: resetResults,
+    reset: resourceState.resetResults,
     async load() {
       if (!normalizedQuery.value) {
         activeController?.abort()
-        resetResults()
+        resourceState.resetResults()
         return null
       }
 
@@ -115,16 +96,7 @@ export function useSearchResultsPage({ route, router }) {
           return null
         }
 
-        total.value = data.total || 0
-        discussionTotal.value = data.discussion_total ?? (data.discussions || []).length
-        postTotal.value = data.post_total ?? (data.posts || []).length
-        userTotal.value = data.user_total ?? (data.users || []).length
-        discussionIds.value = resourceStore.upsertMany('discussions', unwrapList(data.discussions || []))
-          .map(item => item.id)
-        postIds.value = resourceStore.upsertMany('posts', unwrapList(data.posts || []))
-          .map(item => item.id)
-        userIds.value = resourceStore.upsertMany('users', unwrapList(data.users || []))
-          .map(item => item.id)
+        resourceState.applySearchResponse(data)
         searchFilterCatalog.loadError.value = ''
         return data
       } catch (error) {
@@ -150,9 +122,9 @@ export function useSearchResultsPage({ route, router }) {
 
   const filterItems = computed(() => {
     const counts = {
-      discussions: discussionTotal.value,
-      posts: postTotal.value,
-      users: userTotal.value,
+      discussions: resourceState.discussionTotal.value,
+      posts: resourceState.postTotal.value,
+      users: resourceState.userTotal.value,
     }
 
     return [
@@ -160,12 +132,12 @@ export function useSearchResultsPage({ route, router }) {
         value: 'all',
         label: getUiCopy({
           surface: 'search-filter-all-label',
-          count: discussionTotal.value + postTotal.value + userTotal.value,
+          count: resourceState.discussionTotal.value + resourceState.postTotal.value + resourceState.userTotal.value,
         })?.text || '全部',
         count: getSearchUiCopy(
           'search-results-total-count',
-          { count: discussionTotal.value + postTotal.value + userTotal.value },
-          String(discussionTotal.value + postTotal.value + userTotal.value)
+          { count: resourceState.discussionTotal.value + resourceState.postTotal.value + resourceState.userTotal.value },
+          String(resourceState.discussionTotal.value + resourceState.postTotal.value + resourceState.userTotal.value)
         )
       },
       ...searchSources.map(item => ({
@@ -187,10 +159,10 @@ export function useSearchResultsPage({ route, router }) {
       surface: 'search-page-hero-description',
       hasQuery: Boolean(normalizedQuery.value),
       searchType: searchType.value,
-      total: total.value,
-      discussionTotal: discussionTotal.value,
-      postTotal: postTotal.value,
-      userTotal: userTotal.value,
+      total: resourceState.total.value,
+      discussionTotal: resourceState.discussionTotal.value,
+      postTotal: resourceState.postTotal.value,
+      userTotal: resourceState.userTotal.value,
       activeLabel: activeSource.value?.label || '结果',
     })
     if (uiCopy?.text) {
@@ -202,11 +174,11 @@ export function useSearchResultsPage({ route, router }) {
     }
 
     if (searchType.value === 'all') {
-      return `共找到 ${discussionTotal.value + postTotal.value + userTotal.value} 条结果，已按讨论、帖子和用户分组展示。`
+      return `共找到 ${resourceState.discussionTotal.value + resourceState.postTotal.value + resourceState.userTotal.value} 条结果，已按讨论、帖子和用户分组展示。`
     }
 
     const label = activeSource.value?.label || '结果'
-    return `当前显示 ${label}结果，共 ${total.value} 条。`
+    return `当前显示 ${label}结果，共 ${resourceState.total.value} 条。`
   })
   const syntaxItems = computed(() => {
     if (!searchFilterTarget.value) {
@@ -214,35 +186,10 @@ export function useSearchResultsPage({ route, router }) {
     }
     return searchFilterCatalog.filterSuggestions.value
   })
-  const searchSourceSections = computed(() => {
-    const sourceItems = {
-      discussions: discussions.value,
-      posts: posts.value,
-      users: users.value,
-    }
-    const sourceTotals = {
-      discussions: discussionTotal.value,
-      posts: postTotal.value,
-      users: userTotal.value,
-    }
-
-    return searchSources.map(source => {
-      const sourceKey = source.routeType || source.type
-      const items = sourceItems[sourceKey] || []
-      const totalForSource = Number(sourceTotals[sourceKey] || 0)
-      const resultItems = typeof source.buildResultItems === 'function'
-        ? source.buildResultItems(items, { query: normalizedQuery.value })
-        : []
-
-      return {
-        ...source,
-        key: sourceKey,
-        resultItems,
-        showMore: searchType.value === 'all' && totalForSource > items.length,
-        visible: searchType.value === 'all' || searchType.value === sourceKey,
-      }
-    })
-  })
+  const searchSourceSections = computed(() => resourceState.buildSearchSourceSections({
+    normalizedQuery: normalizedQuery.value,
+    searchType: searchType.value,
+  }))
 
   function abortActiveRequest() {
     activeController?.abort()
@@ -259,7 +206,7 @@ export function useSearchResultsPage({ route, router }) {
   }
 
   function cleanupTrackedDiscussionIds() {
-    forumRealtimeStore.untrackDiscussionIds(trackedDiscussionIds.value)
+    forumRealtimeStore.untrackDiscussionIds(resourceState.trackedDiscussionIds.value)
   }
 
   function syncTrackedDiscussionIds(nextTrackedIds, previousTrackedIds = []) {
@@ -279,24 +226,14 @@ export function useSearchResultsPage({ route, router }) {
         || error.response?.data?.detail
         || error.message
         || getSearchUiCopy('search-results-load-error', {}, '加载搜索结果失败，请稍后重试')
-      resetResults()
+      resourceState.resetResults()
     }
-  }
-
-  function resetResults() {
-    total.value = 0
-    discussionTotal.value = 0
-    postTotal.value = 0
-    userTotal.value = 0
-    discussionIds.value = []
-    postIds.value = []
-    userIds.value = []
   }
 
   const realtimeState = useSearchResultsRealtimeState({
     loadResults,
     resourceStore,
-    trackedDiscussionIds,
+    trackedDiscussionIds: resourceState.trackedDiscussionIds,
   })
   const routeActions = useSearchResultsRouteActions({
     appendFilter: searchFilterCatalog.appendFilter,
@@ -313,7 +250,7 @@ export function useSearchResultsPage({ route, router }) {
     forumEventHandler: realtimeState.handleForumEvent,
     removeForumEventListener,
     syncTrackedDiscussionIds,
-    trackedDiscussionIds,
+    trackedDiscussionIds: resourceState.trackedDiscussionIds,
   })
 
   function isCanceledRequest(error) {
@@ -323,8 +260,8 @@ export function useSearchResultsPage({ route, router }) {
   return {
     changePage: routeActions.changePage,
     changeType: routeActions.changeType,
-    discussionTotal,
-    discussions,
+    discussionTotal: resourceState.discussionTotal,
+    discussions: resourceState.discussions,
     emptyStateText,
     filterItems,
     filterCatalogLoadError: searchFilterCatalog.loadError,
@@ -332,21 +269,21 @@ export function useSearchResultsPage({ route, router }) {
     heroText,
     idleStateText,
     loadingStateText,
-    isEmpty,
+    isEmpty: resourceState.isEmpty,
     loading,
     normalizedQuery,
     page,
-    postTotal,
-    posts,
+    postTotal: resourceState.postTotal,
+    posts: resourceState.posts,
     searchType,
-    showDiscussions,
-    showPosts,
-    showUsers,
+    showDiscussions: computed(() => searchType.value === 'all' || searchType.value === 'discussions'),
+    showPosts: computed(() => searchType.value === 'all' || searchType.value === 'posts'),
+    showUsers: computed(() => searchType.value === 'all' || searchType.value === 'users'),
     searchSourceSections,
     syntaxItems,
-    total,
-    totalPages,
-    userTotal,
-    users
+    total: resourceState.total,
+    totalPages: resourceState.totalPages,
+    userTotal: resourceState.userTotal,
+    users: resourceState.users
   }
 }
