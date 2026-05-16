@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useNotificationBulkActions } from '@/composables/useNotificationBulkActions'
 import { useNotificationItemActions } from '@/composables/useNotificationItemActions'
+import { useNotificationRouteActions } from '@/composables/useNotificationRouteActions'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useRoutePagination } from '@/composables/useRoutePagination'
@@ -26,6 +27,13 @@ export function useNotificationPage({
     page: currentPage,
     push: routeState.push,
     pageStateKey: 'currentPage',
+  })
+  const routeActions = useNotificationRouteActions({
+    activeType,
+    currentPage,
+    routePagination,
+    unreadOnly,
+    viewMode,
   })
   const notifications = computed(() => notificationStore.notifications)
   const groupedNotifications = useNotificationGroups(notifications, '论坛')
@@ -146,34 +154,6 @@ export function useNotificationPage({
     }, unread > 0 ? `${total} / ${unread} 未读` : String(total))
   }
 
-  async function changeType(type) {
-    const nextType = typeof type === 'string' ? type.trim() : ''
-    if (nextType === activeType.value) {
-      return
-    }
-
-    await routePagination.resetPage({
-      activeType: nextType,
-    })
-  }
-
-  async function toggleUnreadOnly() {
-    await routePagination.resetPage({
-      unreadOnly: !unreadOnly.value,
-    })
-  }
-
-  async function changeViewMode(mode) {
-    const nextMode = mode === 'grouped' ? 'grouped' : 'timeline'
-    if (nextMode === viewMode.value) {
-      return
-    }
-
-    await routePagination.resetPage({
-      viewMode: nextMode,
-    })
-  }
-
   const bulkActions = useNotificationBulkActions({
     activeType,
     filteredReadCount,
@@ -195,10 +175,6 @@ export function useNotificationPage({
     resolvePath: resolveNotificationPath,
     router,
   })
-
-  async function changePage(page) {
-    await routePagination.changePage(page)
-  }
 
   return {
     notifications,
@@ -225,9 +201,9 @@ export function useNotificationPage({
     clearGroupReadNotifications: bulkActions.clearGroupReadNotifications,
     deleteNotification: itemActions.deleteNotification,
     handleNotificationClick: itemActions.handleNotificationClick,
-    changeType,
-    changeViewMode,
-    toggleUnreadOnly,
-    changePage
+    changeType: routeActions.changeType,
+    changeViewMode: routeActions.changeViewMode,
+    toggleUnreadOnly: routeActions.toggleUnreadOnly,
+    changePage: routeActions.changePage
   }
 }
