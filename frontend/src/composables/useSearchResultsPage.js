@@ -4,15 +4,14 @@ import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchResultsPageLifecycle } from '@/composables/useSearchResultsPageLifecycle'
+import { useSearchResultsRealtimeState } from '@/composables/useSearchResultsRealtimeState'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import {
-  FORUM_REALTIME_REFRESH_EVENT_TYPES,
   getTrackedDiscussionIdsFromDiscussionItems,
   getTrackedDiscussionIdsFromPostItems,
-  hasTrackedDiscussionId,
 } from '@/utils/forumRealtime'
 import { unwrapList } from '@/utils/forum'
 
@@ -250,12 +249,12 @@ export function useSearchResultsPage({ route, router }) {
 
   function addForumEventListener() {
     if (typeof window === 'undefined') return
-    window.addEventListener('bias:forum-event', handleForumEvent)
+    window.addEventListener('bias:forum-event', realtimeState.handleForumEvent)
   }
 
   function removeForumEventListener() {
     if (typeof window === 'undefined') return
-    window.removeEventListener('bias:forum-event', handleForumEvent)
+    window.removeEventListener('bias:forum-event', realtimeState.handleForumEvent)
   }
 
   function cleanupTrackedDiscussionIds() {
@@ -266,15 +265,6 @@ export function useSearchResultsPage({ route, router }) {
     forumRealtimeStore.untrackDiscussionIds(previousTrackedIds)
     forumRealtimeStore.trackDiscussionIds(nextTrackedIds)
   }
-
-  useSearchResultsPageLifecycle({
-    abortActiveRequest,
-    addForumEventListener,
-    cleanupTrackedDiscussionIds,
-    removeForumEventListener,
-    syncTrackedDiscussionIds,
-    trackedDiscussionIds,
-  })
 
   async function loadResults() {
     try {
@@ -302,21 +292,21 @@ export function useSearchResultsPage({ route, router }) {
     userIds.value = []
   }
 
-  async function handleForumEvent(event) {
-    const detail = event.detail || {}
-    const discussionId = Number(detail.discussion_id)
-    if (!hasTrackedDiscussionId(trackedDiscussionIds.value, discussionId)) {
-      return
-    }
+  const realtimeState = useSearchResultsRealtimeState({
+    loadResults,
+    resourceStore,
+    trackedDiscussionIds,
+  })
 
-    if (FORUM_REALTIME_REFRESH_EVENT_TYPES.has(detail.event_type)) {
-      await loadResults()
-      return
-    }
-
-    const payload = detail.payload || {}
-    resourceStore.mergePayload(payload)
-  }
+  useSearchResultsPageLifecycle({
+    abortActiveRequest,
+    addForumEventListener,
+    cleanupTrackedDiscussionIds,
+    forumEventHandler: realtimeState.handleForumEvent,
+    removeForumEventListener,
+    syncTrackedDiscussionIds,
+    trackedDiscussionIds,
+  })
 
   function changeType(type) {
     const nextType = ['all', ...searchSources.map(item => item.routeType || item.type)].includes(type) ? type : 'all'

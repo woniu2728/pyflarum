@@ -4,6 +4,7 @@ export function createSearchResultsPageLifecycle({
   abortActiveRequest,
   addForumEventListener,
   cleanupTrackedDiscussionIds,
+  forumEventHandler,
   removeForumEventListener,
   syncTrackedDiscussionIds,
 }) {
@@ -12,13 +13,13 @@ export function createSearchResultsPageLifecycle({
   }
 
   function handleMounted() {
-    addForumEventListener()
+    addForumEventListener(forumEventHandler)
   }
 
   function handleBeforeUnmount() {
     abortActiveRequest()
     cleanupTrackedDiscussionIds()
-    removeForumEventListener()
+    removeForumEventListener(forumEventHandler)
   }
 
   return {
@@ -32,6 +33,7 @@ export function useSearchResultsPageLifecycle({
   abortActiveRequest,
   addForumEventListener,
   cleanupTrackedDiscussionIds,
+  forumEventHandler,
   removeForumEventListener,
   syncTrackedDiscussionIds,
   trackedDiscussionIds,
@@ -40,6 +42,7 @@ export function useSearchResultsPageLifecycle({
     abortActiveRequest,
     addForumEventListener,
     cleanupTrackedDiscussionIds,
+    forumEventHandler,
     removeForumEventListener,
     syncTrackedDiscussionIds,
   })
