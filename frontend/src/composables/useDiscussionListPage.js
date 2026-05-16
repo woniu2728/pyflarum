@@ -1,5 +1,6 @@
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { useDiscussionListData } from '@/composables/useDiscussionListData'
+import { useDiscussionListPageActions } from '@/composables/useDiscussionListPageActions'
 import { useDiscussionListNavigation } from '@/composables/useDiscussionListNavigation'
 
 export function useDiscussionListPage({
@@ -67,13 +68,11 @@ export function useDiscussionListPage({
     route,
     tags
   })
-
-  function handleStartDiscussion() {
-    startDiscussion({
-      tagId: currentTag.value?.id,
-      source: route.name?.toString() || 'index'
-    })
-  }
+  const pageActions = useDiscussionListPageActions({
+    currentTag,
+    route,
+    startDiscussion,
+  })
 
   return {
     discussions,
@@ -107,7 +106,7 @@ export function useDiscussionListPage({
     changeSearchQuery,
     loadMore,
     markAllAsRead,
-    handleStartDiscussion,
+    handleStartDiscussion: pageActions.handleStartDiscussion,
     getSidebarTagStyle,
     isSidebarTagActive
   }
