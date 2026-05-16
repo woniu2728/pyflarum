@@ -2,8 +2,8 @@ import { computed, ref } from 'vue'
 import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useNotificationBulkActions } from '@/composables/useNotificationBulkActions'
 import { useNotificationItemActions } from '@/composables/useNotificationItemActions'
+import { useNotificationLoadState } from '@/composables/useNotificationLoadState'
 import { useNotificationRouteActions } from '@/composables/useNotificationRouteActions'
-import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
@@ -17,8 +17,6 @@ export function useNotificationPage({
 }) {
   const routeState = useNotificationRouteState({ route, router })
   const marking = ref(false)
-  const totalPages = ref(1)
-  const totalCount = ref(0)
   const activeType = routeState.activeType
   const currentPage = routeState.currentPage
   const unreadOnly = routeState.unreadOnly
@@ -36,26 +34,19 @@ export function useNotificationPage({
     viewMode,
   })
   const notifications = computed(() => notificationStore.notifications)
+  const loadState = useNotificationLoadState({
+    activeType,
+    currentPage,
+    notificationStore,
+    notifications,
+    unreadOnly,
+  })
   const groupedNotifications = useNotificationGroups(notifications, '论坛')
   const filteredUnreadCount = computed(() => notifications.value.filter(item => !item.is_read).length)
   const filteredReadCount = computed(() => notifications.value.length - filteredUnreadCount.value)
   const hasActiveFilter = computed(() => unreadOnly.value || Boolean(activeType.value))
-  const listState = usePaginatedListState({
-    watchSources: () => [currentPage.value, activeType.value, unreadOnly.value],
-    initialLoading: true,
-    async load() {
-      const data = await notificationStore.fetchNotifications({
-        page: currentPage.value,
-        ...(activeType.value ? { type: activeType.value } : {}),
-        ...(unreadOnly.value ? { is_read: false } : {})
-      })
-      totalCount.value = Number(data.total || notifications.value.length || 0)
-      totalPages.value = Math.max(1, Math.ceil((data.total || notifications.value.length) / (data.limit || 20)))
-      return data
-    },
-  })
-  const loading = listState.loading
-  const loadError = listState.loadError
+  const loading = loadState.listState.loading
+  const loadError = loadState.listState.loadError
   const emptyStateText = computed(() => {
     const emptyState = getEmptyState({
       surface: 'notifications-page-empty',
@@ -138,10 +129,10 @@ export function useNotificationPage({
       unreadOnly: unreadOnly.value,
       count: unreadOnly.value
         ? notifications.value.length
-        : (totalCount.value || notifications.value.length || 0),
+        : (loadState.totalCount.value || notifications.value.length || 0),
     }, unreadOnly.value
       ? `${notifications.value.length || 0} 未读`
-      : String(totalCount.value || notifications.value.length || 0))
+      : String(loadState.totalCount.value || notifications.value.length || 0))
   }
 
   function formatTypeCount(type) {
@@ -160,7 +151,7 @@ export function useNotificationPage({
     filteredUnreadCount,
     getNotificationUiCopy,
     hasActiveFilter,
-    listState,
+    listState: loadState.listState,
     marking,
     modalStore,
     notificationStore,
@@ -184,7 +175,7 @@ export function useNotificationPage({
     loadError,
     marking,
     currentPage,
-    totalPages,
+    totalPages: loadState.totalPages,
     activeType,
     unreadOnly,
     viewMode,
