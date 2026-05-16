@@ -1,9 +1,6 @@
 import { useDiscussionDetailMetaState } from '@/composables/useDiscussionDetailMetaState'
-import { getPostTypeDefinition } from '@/forum/postTypes'
-import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
-import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
 import { useDiscussionDetailPage } from '@/composables/useDiscussionDetailPage'
-import { useDiscussionDetailPresentation } from '@/composables/useDiscussionDetailPresentation'
+import { useDiscussionDetailPresentationState } from '@/composables/useDiscussionDetailPresentationState'
 
 export function useDiscussionDetailViewModel({
   authStore,
@@ -24,9 +21,9 @@ export function useDiscussionDetailViewModel({
     activePostMenuId,
     closePostMenu,
     discussion,
+    discussionMobileNavRef,
     hasActiveComposer,
     patchDiscussion,
-    posts,
     refreshDiscussion,
     removePost,
     scrollToPost,
@@ -34,13 +31,16 @@ export function useDiscussionDetailViewModel({
     upsertPost,
     ...pageBindings
   } = pageState
-
-  const interactions = useDiscussionDetailInteractions({
+  const presentationState = useDiscussionDetailPresentationState({
+    activePostMenuId,
     authStore,
+    closePostMenu,
     composerStore,
     discussion,
+    discussionMobileNavRef,
     hasActiveComposer,
     modalStore,
+    pageState,
     patchDiscussion,
     refreshDiscussion,
     removePost,
@@ -48,29 +48,7 @@ export function useDiscussionDetailViewModel({
     router,
     scrollToPost,
     totalPosts,
-    upsertPost
-  })
-
-  const presentation = useDiscussionDetailPresentation(discussion)
-
-  const menus = useDiscussionDetailMenus({
-    activePostMenuId,
-    authStore,
-    canDeletePost: interactions.canDeletePost,
-    canEditPost: interactions.canEditPost,
-    canModeratePostVisibility: interactions.canModeratePostVisibility,
-    canReportPost: interactions.canReportPost,
-    canEditDiscussion: interactions.canEditDiscussion,
-    canModerateDiscussionSettings: interactions.canModerateDiscussionSettings,
-    canReplyFromMenu: interactions.canReplyFromMenu,
-    discussion,
-    hasActiveComposer,
-    isSuspended: interactions.isSuspended,
-    modalStore,
-    showDiscussionMenu: pageState.showDiscussionMenu,
-    discussionActionHandlers: interactions.discussionActionHandlers,
-    postActionHandlers: interactions.postActionHandlers,
-    togglingSubscription: interactions.togglingSubscription,
+    upsertPost,
   })
   const metaState = useDiscussionDetailMetaState({
     discussion,
@@ -78,20 +56,9 @@ export function useDiscussionDetailViewModel({
     loading: pageState.loading,
   })
 
-  function resolvePostComponent(post) {
-    return getPostTypeDefinition(post?.type)?.component
-  }
-
   return {
     ...pageBindings,
-    ...interactions,
     ...metaState,
-    ...presentation,
-    ...menus,
-    activePostMenuId,
-    closePostMenu,
-    discussion,
-    hasActiveComposer,
-    resolvePostComponent,
+    ...presentationState,
   }
 }
