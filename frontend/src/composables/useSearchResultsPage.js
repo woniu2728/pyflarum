@@ -1,8 +1,7 @@
-import { computed, ref } from 'vue'
-import api from '@/api'
-import { usePaginatedListState } from '@/composables/usePaginatedListState'
+import { computed } from 'vue'
 import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
+import { useSearchResultsLoadState } from '@/composables/useSearchResultsLoadState'
 import { useSearchResultsPageLifecycle } from '@/composables/useSearchResultsPageLifecycle'
 import { useSearchResultsRealtimeState } from '@/composables/useSearchResultsRealtimeState'
 import { useSearchResultsResourceState } from '@/composables/useSearchResultsResourceState'
@@ -22,8 +21,6 @@ export function useSearchResultsPage({ route, router }) {
     resourceStore,
     searchSources,
   })
-  let activeController = null
-  let activeRequestId = 0
   const normalizedQuery = routeState.normalizedQuery
   const searchType = routeState.searchType
   const activeSource = computed(() => sourceMap[searchType.value] || null)
@@ -35,6 +32,14 @@ export function useSearchResultsPage({ route, router }) {
   const routePagination = useRoutePagination({
     page,
     push: routeState.push,
+  })
+  const loadState = useSearchResultsLoadState({
+    activeSource,
+    normalizedQuery,
+    page,
+    resourceState,
+    searchFilterCatalog,
+    searchType,
   })
   const emptyStateText = computed(() => {
     const emptyState = getEmptyState({
@@ -64,54 +69,7 @@ export function useSearchResultsPage({ route, router }) {
 
     return stateBlock?.text || '搜索中...'
   })
-  const listState = usePaginatedListState({
-    watchSources: () => [normalizedQuery.value, searchType.value, page.value],
-    initialLoading: false,
-    reset: resourceState.resetResults,
-    async load() {
-      if (!normalizedQuery.value) {
-        activeController?.abort()
-        resourceState.resetResults()
-        return null
-      }
-
-      activeController?.abort()
-      const requestId = activeRequestId + 1
-      activeRequestId = requestId
-      const controller = new AbortController()
-      activeController = controller
-
-      try {
-        const data = await api.get('/search', {
-          params: {
-            q: normalizedQuery.value,
-            type: activeSource.value?.apiType || searchType.value,
-            page: page.value,
-            limit: 20
-          },
-          signal: controller.signal
-        })
-
-        if (requestId !== activeRequestId) {
-          return null
-        }
-
-        resourceState.applySearchResponse(data)
-        searchFilterCatalog.loadError.value = ''
-        return data
-      } catch (error) {
-        if (isCanceledRequest(error)) {
-          return null
-        }
-        throw error
-      } finally {
-        if (requestId === activeRequestId) {
-          activeController = null
-        }
-      }
-    },
-  })
-  const loading = listState.loading
+  const loading = loadState.listState.loading
 
   function getSearchUiCopy(surface, context = {}, fallback = '') {
     return getUiCopy({
@@ -191,10 +149,6 @@ export function useSearchResultsPage({ route, router }) {
     searchType: searchType.value,
   }))
 
-  function abortActiveRequest() {
-    activeController?.abort()
-  }
-
   function addForumEventListener() {
     if (typeof window === 'undefined') return
     window.addEventListener('bias:forum-event', realtimeState.handleForumEvent)
@@ -214,24 +168,8 @@ export function useSearchResultsPage({ route, router }) {
     forumRealtimeStore.trackDiscussionIds(nextTrackedIds)
   }
 
-  async function loadResults() {
-    try {
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: Boolean(normalizedQuery.value),
-      })
-    } catch (error) {
-      console.error('加载搜索结果失败:', error)
-      searchFilterCatalog.loadError.value = error.response?.data?.error
-        || error.response?.data?.detail
-        || error.message
-        || getSearchUiCopy('search-results-load-error', {}, '加载搜索结果失败，请稍后重试')
-      resourceState.resetResults()
-    }
-  }
-
   const realtimeState = useSearchResultsRealtimeState({
-    loadResults,
+    loadResults: loadState.refreshResults,
     resourceStore,
     trackedDiscussionIds: resourceState.trackedDiscussionIds,
   })
@@ -244,7 +182,7 @@ export function useSearchResultsPage({ route, router }) {
   })
 
   useSearchResultsPageLifecycle({
-    abortActiveRequest,
+    abortActiveRequest: loadState.abortActiveRequest,
     addForumEventListener,
     cleanupTrackedDiscussionIds,
     forumEventHandler: realtimeState.handleForumEvent,
@@ -252,10 +190,6 @@ export function useSearchResultsPage({ route, router }) {
     syncTrackedDiscussionIds,
     trackedDiscussionIds: resourceState.trackedDiscussionIds,
   })
-
-  function isCanceledRequest(error) {
-    return error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
-  }
 
   return {
     changePage: routeActions.changePage,
