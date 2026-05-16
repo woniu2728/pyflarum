@@ -95,7 +95,6 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
@@ -110,8 +109,7 @@ import ForumSearchResultSection from '@/components/forum/ForumSearchResultSectio
 import ForumSearchStats from '@/components/forum/ForumSearchStats.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
-import { getUiCopy } from '@/forum/registry'
-import { useSearchResultsPage } from '@/composables/useSearchResultsPage'
+import { useSearchResultsViewModel } from '@/composables/useSearchResultsViewModel'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 
 const route = useRoute()
@@ -133,6 +131,8 @@ const {
   filterCatalogLoadError,
   applySyntax,
   heroText,
+  heroPillText,
+  heroTitleText,
   idleStateText,
   loadingStateText,
   isEmpty,
@@ -140,77 +140,17 @@ const {
   normalizedQuery,
   page,
   postTotal,
+  searchStatsItems,
   searchType,
-  searchSourceSections,
   syntaxItems,
   totalPages,
   userTotal,
-} = useSearchResultsPage({
+  visibleSearchSections,
+} = useSearchResultsViewModel({
+  forumStore,
   route,
   router
 })
-
-const visibleSearchSections = computed(() => searchSourceSections.value.filter(section => section.visible && section.resultItems.length))
-const heroPillText = computed(() => getUiCopy({
-  surface: 'search-page-hero-pill',
-})?.text || '全局搜索')
-const heroTitleText = computed(() => getUiCopy({
-  surface: 'search-page-hero-title',
-  query: normalizedQuery.value,
-})?.text || `“${normalizedQuery.value || '未输入关键词'}”`)
-const searchStatsItems = computed(() => [
-  {
-    key: 'discussions',
-    label: getUiCopy({
-      surface: 'search-page-stats-label',
-      itemKey: 'discussions',
-      count: discussionTotal.value,
-    })?.text || '讨论',
-    count: discussionTotal.value,
-  },
-  {
-    key: 'posts',
-    label: getUiCopy({
-      surface: 'search-page-stats-label',
-      itemKey: 'posts',
-      count: postTotal.value,
-    })?.text || '帖子',
-    count: postTotal.value,
-  },
-  {
-    key: 'users',
-    label: getUiCopy({
-      surface: 'search-page-stats-label',
-      itemKey: 'users',
-      count: userTotal.value,
-    })?.text || '用户',
-    count: userTotal.value,
-  },
-])
-
-watch(
-  () => [normalizedQuery.value, searchType.value, discussionTotal.value, postTotal.value, userTotal.value],
-  () => {
-    const query = normalizedQuery.value
-    const title = getUiCopy({
-      surface: 'search-page-meta-title',
-      query,
-    })?.text || (query ? `搜索：${query}` : '搜索')
-    const description = getUiCopy({
-      surface: 'search-page-meta-description',
-      query,
-      hasQuery: Boolean(query),
-    })?.text || (query
-      ? `查看“${query}”相关的讨论、回复和用户结果。`
-      : '搜索论坛中的讨论、回复和用户。')
-    forumStore.setPageMeta({
-      title,
-      description,
-      canonicalUrl: `/search${query ? `?q=${encodeURIComponent(query)}&type=${encodeURIComponent(searchType.value)}` : ''}`,
-    })
-  },
-  { immediate: true }
-)
 
 function handleStartDiscussion() {
   startDiscussion({
@@ -222,7 +162,6 @@ function openSearchResult(path) {
   if (!path) return
   router.push(path)
 }
-
 </script>
 
 <style scoped>
