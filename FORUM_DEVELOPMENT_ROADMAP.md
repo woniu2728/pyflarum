@@ -903,6 +903,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：搜索结果页视图脚本区新增 `useSearchResultsViewModel` 装配层，hero pill/title、统计卡片、可见分组过滤和页面 meta watch 从 `SearchResultsView.vue` 收口到单一 composable，并补上 `searchMeta` helper 测试；搜索页开始和 discussion list/detail、profile 一样进入统一的 view-model 页面组织方式。
 - 已完成：搜索结果页新增 `useSearchResultsPageLifecycle`，把实时事件监听注册/清理、tracked discussion ids 同步和请求 abort 清理从 `useSearchResultsPage` 中独立出去，并补上独立 Node 测试；搜索页 page composable 也开始和详情页、个人主页一样把“状态/行为”和“生命周期编排”拆开。
 - 已完成：搜索结果页新增 `useSearchResultsRealtimeState`，把 `forum_event` 的 tracked discussion 判定、刷新型事件回退整页刷新和 payload merge 从 `useSearchResultsPage` 中拆出，并补上独立 Node 测试；搜索页 page composable 继续从“状态 + 生命周期 + 实时消费”收口到更清晰的状态装配层。
+- 已完成：搜索结果页新增 `useSearchResultsRouteActions`，把筛选切换、分页跳转和搜索语法注入从 `useSearchResultsPage` 中拆出，并补上独立 Node 测试覆盖“非法类型归一化”“语法未变化不跳转”和分页转发；搜索页 page composable 继续向 discussion list 那种“状态层 + 路由动作层”组织方式靠拢。
 - 已完成：个人主页的讨论/回复面板新增按需请求式 `useRequestedPaginatedListState` 包装层，讨论列表切到共享分页状态底座，回复列表也保留 tab 懒加载但改为通过统一列表状态驱动；切换用户时的列表重置、讨论实时订阅替换，以及个人页回复 tab 在实时敏感事件后的强制刷新也一并收口，阶段 3 的列表状态层开始继续覆盖 profile 这条用户内容流。
 - 已完成：个人主页面板切换新增 `useProfileRouteState` 路由状态协议，`discussions/posts/settings/security` 现在会进入 URL 查询参数，并由页面在面板可见性变化时自动纠正到首个可用 tab；profile 的刷新、分享链接以及返回前进开始具备稳定的论坛级状态层行为。
 - 已完成：个人主页视图脚本区新增 `useProfileViewModel` 装配层，面板装配、页面 meta、头像区展示派生和表单字段更新 handlers 从 `ProfileView.vue` 收口到单一 composable，并补上 `profileMeta` helper 测试；profile 页面开始和 discussion list/detail 一样进入“页面只保留模板绑定”的统一组织方式。

@@ -5,6 +5,7 @@ import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchResultsPageLifecycle } from '@/composables/useSearchResultsPageLifecycle'
 import { useSearchResultsRealtimeState } from '@/composables/useSearchResultsRealtimeState'
+import { useSearchResultsRouteActions } from '@/composables/useSearchResultsRouteActions'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
@@ -297,6 +298,13 @@ export function useSearchResultsPage({ route, router }) {
     resourceStore,
     trackedDiscussionIds,
   })
+  const routeActions = useSearchResultsRouteActions({
+    appendFilter: searchFilterCatalog.appendFilter,
+    normalizedQuery,
+    routePagination,
+    searchSources,
+    searchType,
+  })
 
   useSearchResultsPageLifecycle({
     abortActiveRequest,
@@ -308,45 +316,19 @@ export function useSearchResultsPage({ route, router }) {
     trackedDiscussionIds,
   })
 
-  function changeType(type) {
-    const nextType = ['all', ...searchSources.map(item => item.routeType || item.type)].includes(type) ? type : 'all'
-    if (nextType === searchType.value) {
-      return
-    }
-
-    routePagination.resetPage({
-      searchType: nextType,
-    })
-  }
-
-  function changePage(nextPage) {
-    routePagination.changePage(nextPage)
-  }
-
-  function applySyntax(syntax) {
-    const nextQuery = searchFilterCatalog.appendFilter(normalizedQuery.value, syntax)
-    if (nextQuery === normalizedQuery.value) {
-      return
-    }
-
-    routePagination.resetPage({
-      normalizedQuery: nextQuery,
-    })
-  }
-
   function isCanceledRequest(error) {
     return error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError'
   }
 
   return {
-    changePage,
-    changeType,
+    changePage: routeActions.changePage,
+    changeType: routeActions.changeType,
     discussionTotal,
     discussions,
     emptyStateText,
     filterItems,
     filterCatalogLoadError: searchFilterCatalog.loadError,
-    applySyntax,
+    applySyntax: routeActions.applySyntax,
     heroText,
     idleStateText,
     loadingStateText,
