@@ -2,21 +2,18 @@ import { computed, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useProfileAccountActions } from '@/composables/useProfileAccountActions'
+import { useProfileContentState } from '@/composables/useProfileContentState'
 import { useProfilePageLifecycle } from '@/composables/useProfilePageLifecycle'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import {
-  normalizeDiscussion,
-  normalizePost,
   normalizeUser,
-  unwrapList
 } from '@/utils/forum'
 import {
   mergeForumEventPayload,
   shouldRefreshForumEvent,
 } from '@/utils/forumRealtime'
 import { useProfileRouteState } from './useProfileRouteState'
-import { useRequestedPaginatedListState } from './useRequestedPaginatedListState'
 
 export function useProfilePage({
   authStore,
@@ -28,13 +25,8 @@ export function useProfilePage({
   const forumRealtimeStore = useForumRealtimeStore()
   const routeState = useProfileRouteState({ route, router })
   const userId = ref(null)
-  const discussionIds = ref([])
-  const postIds = ref([])
   const user = computed(() => (userId.value ? resourceStore.get('users', userId.value) : null))
-  const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
-  const posts = computed(() => resourceStore.list('posts', postIds.value))
   const loading = ref(true)
-  const requestedPostUserId = ref(null)
   const saving = ref(false)
   const avatarUploading = ref(false)
   const avatarInput = ref(null)
@@ -70,62 +62,25 @@ export function useProfilePage({
 
   const isOwnProfile = computed(() => authStore.user && user.value && authStore.user.id === user.value.id)
   const activeTab = routeState.activeTab
-  const discussionListState = useRequestedPaginatedListState({
-    watchSources: () => [userId.value || 0],
-    isRequested: () => Boolean(user.value),
-    initialLoading: false,
-    reset() {
-      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
-      discussionIds.value = []
+  const profileContentState = useProfileContentState({
+    activeTab,
+    forumRealtimeStore,
+    getErrorMessage: getProfileErrorMessage,
+    getLoadDiscussionsErrorText() {
+      return getProfileUiCopy('profile-discussions-load-error', {}, '加载讨论失败，请稍后重试')
     },
-    async load() {
-      const data = await api.get('/discussions/', {
-        params: {
-          author: user.value.username,
-          sort: 'newest',
-          limit: 20
-        }
-      })
-      const nextDiscussionIds = unwrapList(data)
-        .map(normalizeDiscussion)
-        .map(item => resourceStore.upsert('discussions', item).id)
-
-      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
-      discussionIds.value = nextDiscussionIds
-      forumRealtimeStore.trackDiscussionIds(nextDiscussionIds)
-      return data
+    getLoadPostsErrorText() {
+      return getProfileUiCopy('profile-posts-load-error', {}, '加载回复失败，请稍后重试')
     },
+    getUser() {
+      return user.value
+    },
+    resourceStore,
+    setSettingsError(message) {
+      settingsError.value = message
+    },
+    userId,
   })
-  const postListState = useRequestedPaginatedListState({
-    watchSources: () => [userId.value || 0],
-    isRequested: () => Boolean(user.value) && (
-      activeTab.value === 'posts'
-      || Number(requestedPostUserId.value || 0) === Number(userId.value || 0)
-    ),
-    initialLoading: false,
-    reset() {
-      postIds.value = []
-    },
-    async load() {
-      const data = await api.get('/posts', {
-        params: {
-          author: user.value.username,
-          limit: 20
-        }
-      })
-      postIds.value = unwrapList(data)
-        .map(normalizePost)
-        .map(item => resourceStore.upsert('posts', item).id)
-      return data
-    },
-  })
-  const loadingDiscussions = discussionListState.loading
-  const loadingPosts = postListState.loading
-
-  function resetProfileScope() {
-    userId.value = null
-    requestedPostUserId.value = null
-  }
 
   function addForumEventListener() {
     if (typeof window === 'undefined') return
@@ -138,7 +93,12 @@ export function useProfilePage({
   }
 
   function cleanupTrackedDiscussions() {
-    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
+    profileContentState.cleanupTrackedDiscussions()
+  }
+
+  function resetProfileScope() {
+    userId.value = null
+    profileContentState.resetProfileScope()
   }
 
   useProfilePageLifecycle({
@@ -185,7 +145,7 @@ export function useProfilePage({
       const normalizedUser = resourceStore.upsert('users', normalizeUser(data))
       userId.value = normalizedUser.id
       if (activeTab.value === 'posts') {
-        requestedPostUserId.value = normalizedUser.id
+        profileContentState.markPostsRequestedForCurrentUser()
       }
 
       editForm.value = {
@@ -210,64 +170,18 @@ export function useProfilePage({
   }
 
   async function loadDiscussions() {
-    if (!user.value) return
-
-    try {
-      await discussionListState.refresh({
-        mode: 'initial',
-        forceLoading: discussionIds.value.length === 0,
-      })
-    } catch (error) {
-      console.error('加载讨论失败:', error)
-      settingsError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-discussions-load-error', {}, '加载讨论失败，请稍后重试')
-      )
-    }
+    await profileContentState.loadDiscussions()
   }
 
   async function loadPosts(options = {}) {
-    if (!user.value) return
-    if (Number(requestedPostUserId.value || 0) !== Number(userId.value || 0)) {
-      requestedPostUserId.value = userId.value
-      if (!options.force) {
-        return
-      }
-    }
-
-    if (!options.force && posts.value.length > 0) return
-
-    try {
-      await postListState.refresh({
-        mode: 'initial',
-        forceLoading: options.forceLoading ?? posts.value.length === 0,
-      })
-    } catch (error) {
-      console.error('加载回复失败:', error)
-      settingsError.value = getProfileErrorMessage(
-        error,
-        getProfileUiCopy('profile-posts-load-error', {}, '加载回复失败，请稍后重试')
-      )
-    }
-  }
-
-  function mergePostIds(ids = []) {
-    const seen = new Set()
-    postIds.value = [...postIds.value, ...ids].filter(id => {
-      const key = String(id)
-      if (seen.has(key)) {
-        return false
-      }
-      seen.add(key)
-      return true
-    })
+    await profileContentState.loadPosts(options)
   }
 
   function switchTab(tab) {
     const nextTab = String(tab || '').trim() || 'discussions'
     if (nextTab === activeTab.value) return
     if (nextTab === 'posts' && userId.value) {
-      requestedPostUserId.value = userId.value
+      profileContentState.markPostsRequestedForCurrentUser()
     }
     void routeState.push({
       activeTab: nextTab,
@@ -307,22 +221,22 @@ export function useProfilePage({
   async function handleForumEvent(event) {
     const detail = event.detail || {}
     const discussionId = Number(detail.discussion_id)
-    const visibleDiscussionIds = new Set(discussionIds.value.map(id => String(id)))
+    const visibleDiscussionIds = new Set(profileContentState.discussionIds.value.map(id => String(id)))
 
     if (discussionId && visibleDiscussionIds.has(String(discussionId))) {
       if (shouldRefreshForumEvent(detail.event_type)) {
         await loadDiscussions()
-        if (activeTab.value === 'posts' && Number(requestedPostUserId.value || 0) === Number(userId.value || 0)) {
+        if (activeTab.value === 'posts' && Number(profileContentState.requestedPostUserId.value || 0) === Number(userId.value || 0)) {
           await loadPosts({ force: true, forceLoading: false })
         }
         return
       }
 
       mergeForumEventPayload(resourceStore, detail)
-      if (detail.payload?.post && posts.value.some(post => Number(post?.discussion_id) === discussionId)) {
+      if (detail.payload?.post && profileContentState.posts.value.some(post => Number(post?.discussion_id) === discussionId)) {
         const postId = Number(detail.payload.post.id || 0)
         if (postId > 0) {
-          mergePostIds([postId])
+          profileContentState.mergePostIds([postId])
         }
       }
     }
@@ -330,11 +244,11 @@ export function useProfilePage({
 
   return {
     user,
-    discussions,
-    posts,
+    discussions: profileContentState.discussions,
+    posts: profileContentState.posts,
     loading,
-    loadingDiscussions,
-    loadingPosts,
+    loadingDiscussions: profileContentState.loadingDiscussions,
+    loadingPosts: profileContentState.loadingPosts,
     activeTab,
     saving,
     avatarUploading,
