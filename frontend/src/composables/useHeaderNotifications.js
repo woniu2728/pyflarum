@@ -5,6 +5,7 @@ import {
   resolveNotificationPath,
   useNotificationGroups
 } from '@/composables/useNotificationPresentation'
+import { useHeaderNotificationActions } from '@/composables/useHeaderNotificationActions'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 
 export function useHeaderNotifications({
@@ -75,108 +76,30 @@ export function useHeaderNotifications({
     return getNotificationPresentationModel(notification)
   }
 
-  async function refreshMenuNotifications() {
-    await notificationStore.fetchNotifications({ limit: 8 })
-  }
-
-  async function toggleNotifications() {
-    showNotifications.value = !showNotifications.value
-
-    if (!showNotifications.value) return
-
-    actionMessage.value = ''
-
-    try {
-      await refreshMenuNotifications()
-    } catch (error) {
-      console.error('加载通知失败:', error)
-    }
-  }
-
-  async function markAllNotificationsAsRead() {
-    markingAllRead.value = true
-    try {
-      const result = await notificationStore.markAllAsRead()
-      await refreshMenuNotifications()
-      actionTone.value = 'success'
-      actionMessage.value = result?.message || getNotificationUiCopy('notifications-menu-mark-all-success', {}, '已全部标记为已读')
-    } catch (error) {
-      console.error('全部标记已读失败:', error)
-      actionTone.value = 'danger'
-      actionMessage.value = getNotificationErrorMessage(
-        error,
-        getNotificationUiCopy('notifications-menu-mark-all-error', {}, '全部标记已读失败')
-      )
-      await showHeaderNotificationError(error)
-    } finally {
-      markingAllRead.value = false
-    }
-  }
-
-  async function clearReadNotifications() {
-    if (!hasReadNotifications.value) return
-
-    const confirmed = modalStore
-      ? await modalStore.confirm({
-        title: getNotificationUiCopy('notifications-menu-clear-read-confirm-title', {}, '清除已读通知'),
-        message: getNotificationUiCopy('notifications-menu-clear-read-confirm-message', {}, '确定要清除所有已读通知吗？未读通知会保留。'),
-        confirmText: getNotificationUiCopy('notifications-menu-clear-read-confirm-confirm', {}, '清除'),
-        cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
-        tone: 'danger'
-      })
-      : true
-    if (!confirmed) return
-
-    clearingRead.value = true
-    try {
-      const result = await notificationStore.clearReadNotifications()
-      await refreshMenuNotifications()
-      actionTone.value = 'success'
-      actionMessage.value = result?.message || getNotificationUiCopy('notifications-menu-clear-read-success', {}, '已清除已读通知')
-    } catch (error) {
-      console.error('清除已读通知失败:', error)
-      actionTone.value = 'danger'
-      actionMessage.value = getNotificationErrorMessage(
-        error,
-        getNotificationUiCopy('notifications-menu-clear-read-error', {}, '清除已读通知失败')
-      )
-      await showHeaderNotificationError(error)
-    } finally {
-      clearingRead.value = false
-    }
-  }
-
-  async function handleNotificationClick(notification) {
-    try {
-      if (!notification.is_read) {
-        await notificationStore.markAsRead(notification.id)
-      }
-    } catch (error) {
-      console.error('标记通知已读失败:', error)
-    }
-
-    showNotifications.value = false
-    router.push(await resolveNotificationPath(notification))
-  }
-
-  function openNotificationGroup(group) {
-    showNotifications.value = false
-    router.push(group.discussionId ? `/d/${group.discussionId}` : '/notifications')
-  }
-
-  function openNotificationsPage() {
-    showNotifications.value = false
-    router.push('/notifications')
-  }
-
-  function openNotificationsPageByType(type) {
-    showNotifications.value = false
-    router.push(type ? `/notifications?type=${encodeURIComponent(type)}` : '/notifications')
-  }
-
-  function closeNotifications() {
-    showNotifications.value = false
-  }
+  const {
+    toggleNotifications,
+    markAllNotificationsAsRead,
+    clearReadNotifications,
+    handleNotificationClick,
+    openNotificationGroup,
+    openNotificationsPage,
+    openNotificationsPageByType,
+    closeNotifications,
+  } = useHeaderNotificationActions({
+    actionMessage,
+    actionTone,
+    clearingRead,
+    getNotificationErrorMessage,
+    getNotificationUiCopy,
+    hasReadNotifications,
+    markingAllRead,
+    modalStore,
+    notificationStore,
+    resolvePath: resolveNotificationPath,
+    router,
+    showHeaderNotificationError,
+    showNotifications,
+  })
 
   return {
     showNotifications,
