@@ -1,15 +1,12 @@
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
+import { useDiscussionListRealtimeState } from '@/composables/useDiscussionListRealtimeState'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import { normalizeDiscussion, normalizeTag, unwrapList } from '@/utils/forum'
-import {
-  mergeForumEventPayload,
-  shouldRefreshForumEvent,
-} from '@/utils/forumRealtime'
 
 export function useDiscussionListData({
   authStore,
@@ -43,7 +40,6 @@ export function useDiscussionListData({
     watchSources: () => [route.name, route.params.slug, searchQuery.value, sortBy.value, listFilter.value],
     initialLoading: true,
     reset() {
-      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
       discussionIds.value = []
       currentTagId.value = null
       currentPage.value = 1
@@ -93,16 +89,16 @@ export function useDiscussionListData({
     })
   }
 
-  onMounted(async () => {
-    await refreshPageData()
-    window.addEventListener('bias:discussion-read-state-updated', handleDiscussionReadStateUpdated)
-    window.addEventListener('bias:forum-event', handleForumEvent)
-  })
-
-  onBeforeUnmount(() => {
-    window.removeEventListener('bias:discussion-read-state-updated', handleDiscussionReadStateUpdated)
-    window.removeEventListener('bias:forum-event', handleForumEvent)
-    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
+  const realtimeState = useDiscussionListRealtimeState({
+    api,
+    authStore,
+    currentDiscussionIds: discussionIds,
+    forumRealtimeStore,
+    markingAllRead,
+    modalStore,
+    refreshDiscussionList,
+    resourceStore,
+    uiText,
   })
 
   async function refreshPageData() {
@@ -176,7 +172,6 @@ export function useDiscussionListData({
     } else {
       discussionIds.value = ids
     }
-    forumRealtimeStore.trackDiscussionIds(ids)
 
     total.value = response.total || items.length
     sortOptions.value = Array.isArray(response.available_sorts) ? response.available_sorts : []
@@ -221,70 +216,6 @@ export function useDiscussionListData({
     }
   }
 
-  async function markAllAsRead() {
-    if (!authStore.isAuthenticated || markingAllRead.value) return
-
-    markingAllRead.value = true
-    try {
-      const response = await api.post('/discussions/read-all')
-      discussionIds.value.forEach(id => {
-        const discussion = resourceStore.get('discussions', id)
-        if (!discussion) return
-        resourceStore.upsert('discussions', {
-          ...discussion,
-          is_unread: false,
-          unread_count: 0,
-          last_read_post_number: discussion.last_post_number || discussion.last_read_post_number || 0,
-          last_read_at: response.marked_all_as_read_at || discussion.last_read_at
-        })
-      })
-    } catch (error) {
-      console.error('标记已读失败:', error)
-      await showDiscussionListError('mark-all-read', error)
-    } finally {
-      markingAllRead.value = false
-    }
-  }
-
-  function handleDiscussionReadStateUpdated(event) {
-    const detail = event.detail || {}
-    const discussionId = Number(detail.discussionId)
-    if (!discussionId) return
-
-    const discussion = resourceStore.get('discussions', discussionId)
-    if (!discussion) return
-
-    const lastReadPostNumber = Math.max(
-      Number(discussion.last_read_post_number || 0),
-      Number(detail.lastReadPostNumber || 0)
-    )
-    const unreadCount = Math.max(Number(detail.unreadCount || 0), 0)
-
-    resourceStore.upsert('discussions', {
-      ...discussion,
-      last_read_post_number: lastReadPostNumber,
-      last_read_at: detail.lastReadAt || discussion.last_read_at,
-      unread_count: unreadCount,
-      is_unread: unreadCount > 0
-    })
-  }
-
-  async function handleForumEvent(event) {
-    const detail = event.detail || {}
-    const discussionId = Number(detail.discussion_id)
-    const visibleDiscussionIds = new Set(discussionIds.value.map(id => String(id)))
-    if (!discussionId || !visibleDiscussionIds.has(String(discussionId))) {
-      return
-    }
-
-    if (shouldRefreshForumEvent(detail.event_type)) {
-      await refreshDiscussionList()
-      return
-    }
-
-    mergeForumEventPayload(resourceStore, detail)
-  }
-
   return {
     changeSortBy,
     currentTag,
@@ -297,7 +228,7 @@ export function useDiscussionListData({
     loadMore,
     loading,
     loadingMore,
-    markAllAsRead,
+    markAllAsRead: realtimeState.markAllAsRead,
     changeListFilter,
     changeSearchQuery,
     markingAllRead,
