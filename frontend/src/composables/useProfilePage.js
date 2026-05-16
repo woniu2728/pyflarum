@@ -13,6 +13,7 @@ import {
   mergeForumEventPayload,
   shouldRefreshForumEvent,
 } from '@/utils/forumRealtime'
+import { useRequestedPaginatedListState } from './useRequestedPaginatedListState'
 
 export function useProfilePage({
   authStore,
@@ -28,9 +29,8 @@ export function useProfilePage({
   const discussions = computed(() => resourceStore.list('discussions', discussionIds.value))
   const posts = computed(() => resourceStore.list('posts', postIds.value))
   const loading = ref(true)
-  const loadingDiscussions = ref(false)
-  const loadingPosts = ref(false)
   const activeTab = ref('discussions')
+  const requestedPostUserId = ref(null)
   const saving = ref(false)
   const avatarUploading = ref(false)
   const avatarInput = ref(null)
@@ -65,6 +65,57 @@ export function useProfilePage({
   })
 
   const isOwnProfile = computed(() => authStore.user && user.value && authStore.user.id === user.value.id)
+  const discussionListState = useRequestedPaginatedListState({
+    watchSources: () => [userId.value || 0],
+    isRequested: () => Boolean(user.value),
+    initialLoading: false,
+    reset() {
+      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
+      discussionIds.value = []
+    },
+    async load() {
+      const data = await api.get('/discussions/', {
+        params: {
+          author: user.value.username,
+          sort: 'newest',
+          limit: 20
+        }
+      })
+      const nextDiscussionIds = unwrapList(data)
+        .map(normalizeDiscussion)
+        .map(item => resourceStore.upsert('discussions', item).id)
+
+      forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
+      discussionIds.value = nextDiscussionIds
+      forumRealtimeStore.trackDiscussionIds(nextDiscussionIds)
+      return data
+    },
+  })
+  const postListState = useRequestedPaginatedListState({
+    watchSources: () => [userId.value || 0],
+    isRequested: () => Boolean(user.value) && (
+      activeTab.value === 'posts'
+      || Number(requestedPostUserId.value || 0) === Number(userId.value || 0)
+    ),
+    initialLoading: false,
+    reset() {
+      postIds.value = []
+    },
+    async load() {
+      const data = await api.get('/posts', {
+        params: {
+          author: user.value.username,
+          limit: 20
+        }
+      })
+      postIds.value = unwrapList(data)
+        .map(normalizePost)
+        .map(item => resourceStore.upsert('posts', item).id)
+      return data
+    },
+  })
+  const loadingDiscussions = discussionListState.loading
+  const loadingPosts = postListState.loading
 
   onMounted(async () => {
     await refreshProfile()
@@ -77,10 +128,8 @@ export function useProfilePage({
   })
 
   watch(() => route.params.id, async () => {
-    forumRealtimeStore.untrackDiscussionIds(discussionIds.value)
-    postIds.value = []
-    discussionIds.value = []
     userId.value = null
+    requestedPostUserId.value = null
     await refreshProfile()
   })
 
@@ -100,7 +149,6 @@ export function useProfilePage({
     if (isOwnProfile.value) {
       await loadPreferences()
     }
-    await loadDiscussions()
   }
 
   async function loadUser() {
@@ -119,6 +167,9 @@ export function useProfilePage({
 
       const normalizedUser = resourceStore.upsert('users', normalizeUser(data))
       userId.value = normalizedUser.id
+      if (activeTab.value === 'posts') {
+        requestedPostUserId.value = normalizedUser.id
+      }
 
       editForm.value = {
         display_name: normalizedUser.display_name || '',
@@ -144,52 +195,42 @@ export function useProfilePage({
   async function loadDiscussions() {
     if (!user.value) return
 
-    loadingDiscussions.value = true
     try {
-      const data = await api.get('/discussions/', {
-        params: {
-          author: user.value.username,
-          sort: 'newest',
-          limit: 20
-        }
+      await discussionListState.refresh({
+        mode: 'initial',
+        forceLoading: discussionIds.value.length === 0,
       })
-      discussionIds.value = unwrapList(data)
-        .map(normalizeDiscussion)
-        .map(item => resourceStore.upsert('discussions', item).id)
-      forumRealtimeStore.trackDiscussionIds(discussionIds.value)
     } catch (error) {
       console.error('加载讨论失败:', error)
       settingsError.value = getProfileErrorMessage(
         error,
         getProfileUiCopy('profile-discussions-load-error', {}, '加载讨论失败，请稍后重试')
       )
-    } finally {
-      loadingDiscussions.value = false
     }
   }
 
-  async function loadPosts() {
-    if (!user.value || posts.value.length > 0) return
+  async function loadPosts(options = {}) {
+    if (!user.value) return
+    if (Number(requestedPostUserId.value || 0) !== Number(userId.value || 0)) {
+      requestedPostUserId.value = userId.value
+      if (!options.force) {
+        return
+      }
+    }
 
-    loadingPosts.value = true
+    if (!options.force && posts.value.length > 0) return
+
     try {
-      const data = await api.get('/posts', {
-        params: {
-          author: user.value.username,
-          limit: 20
-        }
+      await postListState.refresh({
+        mode: 'initial',
+        forceLoading: options.forceLoading ?? posts.value.length === 0,
       })
-      postIds.value = unwrapList(data)
-        .map(normalizePost)
-        .map(item => resourceStore.upsert('posts', item).id)
     } catch (error) {
       console.error('加载回复失败:', error)
       settingsError.value = getProfileErrorMessage(
         error,
         getProfileUiCopy('profile-posts-load-error', {}, '加载回复失败，请稍后重试')
       )
-    } finally {
-      loadingPosts.value = false
     }
   }
 
@@ -207,8 +248,8 @@ export function useProfilePage({
 
   function switchTab(tab) {
     activeTab.value = tab
-    if (tab === 'posts' && posts.value.length === 0) {
-      loadPosts()
+    if (tab === 'posts' && userId.value) {
+      requestedPostUserId.value = userId.value
     }
   }
 
@@ -415,8 +456,8 @@ export function useProfilePage({
     if (discussionId && visibleDiscussionIds.has(String(discussionId))) {
       if (shouldRefreshForumEvent(detail.event_type)) {
         await loadDiscussions()
-        if (activeTab.value === 'posts' && posts.value.length) {
-          await loadPosts()
+        if (activeTab.value === 'posts' && Number(requestedPostUserId.value || 0) === Number(userId.value || 0)) {
+          await loadPosts({ force: true, forceLoading: false })
         }
         return
       }
