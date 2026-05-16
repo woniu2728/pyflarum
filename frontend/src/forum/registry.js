@@ -2107,6 +2107,60 @@ registerUiCopy({
 })
 
 registerUiCopy({
+  key: 'search-modal-recent-title',
+  order: 476,
+  surfaces: ['search-modal-recent-title'],
+  resolve: () => ({
+    text: '最近搜索',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-recent-subtitle',
+  order: 476,
+  surfaces: ['search-modal-recent-subtitle'],
+  resolve: ({ activeTabLabel }) => ({
+    text: `只看${activeTabLabel || '当前分类'}`,
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-recent-all-subtitle',
+  order: 476,
+  surfaces: ['search-modal-recent-all-subtitle'],
+  resolve: () => ({
+    text: '搜索全部内容',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-popular-tags-title',
+  order: 476,
+  surfaces: ['search-modal-popular-tags-title'],
+  resolve: () => ({
+    text: '热门标签',
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-tag-subtitle',
+  order: 476,
+  surfaces: ['search-modal-tag-subtitle'],
+  resolve: ({ count }) => ({
+    text: `${Number(count || 0)} 条讨论`,
+  }),
+})
+
+registerUiCopy({
+  key: 'search-modal-syntax-title',
+  order: 476,
+  surfaces: ['search-modal-syntax-title'],
+  resolve: () => ({
+    text: '搜索语法',
+  }),
+})
+
+registerUiCopy({
   key: 'search-page-hero-pill',
   order: 478,
   surfaces: ['search-page-hero-pill'],

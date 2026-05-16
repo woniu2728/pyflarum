@@ -895,6 +895,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：讨论详情交互 composable 里的封禁提示、审核通过/拒绝弹层、举报处理确认、点赞摘要与删除/举报/关注/状态切换失败反馈已继续切到 `uiCopy` 注册入口，并补齐讨论置顶/锁定/隐藏失败弹窗，详情页交互语义开始从行为层进一步脱离硬编码。
 - 已完成：讨论/回复 composer 里的未保存离页提醒、notice 标签、上传进度与成功提示、预览失败、提交失败/校验失败兜底，以及草稿/绝对时间 fallback 已继续切到 `uiCopy` 注册入口，双 composer 的交互反馈层开始进一步共享同一套注册化语义。
 - 已完成：前台 composer registry 新增 `mention provider` 与 `preview transformer` 两类扩展管道，`useComposerRuntime` 已改为统一通过 registry 驱动提及搜索与预览 HTML 变换，并补上默认用户提及 provider 与 Twemoji 预览 transformer；配合既有 `tool / secondary action / submit guard / submit success / draft meta` 入口，阶段 3 的 Composer 扩展运行时已形成完整闭环，新模块开始可以在不侵入页面组件的前提下注入编辑器能力、提及源、预览处理和提交钩子。
+- 已完成：全局搜索弹层已从“输入框 + 结果列表”升级为更完整的命令面板形态，空态新增最近搜索、本地持久化历史、热门标签和搜索语法三组可键盘选择的动作区；上下键与回车现在不仅能打开结果，也能直接执行空态命令，搜索弹层命令面板化这条阶段 3 任务已开始形成可用闭环。
 - 已完成：通知页 composable 里的加载失败、通用重试提示、筛选/总量统计、当前筛选标题以及批量/分组处理失败反馈已继续切到 `uiCopy` 注册入口，通知中心的交互与统计语义开始从 view/composable 内进一步脱离重复硬编码。
 - 已完成：个人页 composable 里的资料加载、讨论/回复加载、资料保存、通知偏好、验证邮件、密码修改和头像上传错误兜底已继续切到 `uiCopy` 注册入口，profile 反馈链路开始从多处分散 fallback 收口到统一 helper。
 - 已完成：头部通知菜单里的批量已读/清除已读 confirm、成功/失败反馈、通用重试提示以及摘要 chip 计数字段已继续切到 `uiCopy` 注册入口，顶部通知处理流开始与通知中心共用同一套注册化语义。

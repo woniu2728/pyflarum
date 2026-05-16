@@ -53,17 +53,35 @@
         <div v-if="!normalizedQuery" class="SearchModal-state">
           <div class="SearchModal-emptyState">
             <p>{{ idleStateText }}</p>
-            <div v-if="filterSuggestions.length" class="SearchModal-syntaxPanel">
-              <button
-                v-for="item in filterSuggestions"
-                :key="item.key"
-                type="button"
-                class="SearchModal-syntaxChip"
-                @mousedown.prevent="applyFilterSyntax(item.syntax)"
+            <div v-if="emptyPanelSections.length" class="SearchModal-commandPanel">
+              <section
+                v-for="section in emptyPanelSections"
+                :key="section.key"
+                class="SearchModal-commandSection"
               >
-                <strong>{{ item.syntax }}</strong>
-                <span>{{ item.label }}</span>
-              </button>
+                <div class="SearchModal-commandHeader">{{ section.title }}</div>
+                <div class="SearchModal-commandList">
+                  <button
+                    v-for="item in section.items"
+                    :key="item.key"
+                    type="button"
+                    class="SearchModal-commandItem"
+                    :class="{ active: activeResultIndex === item.selectIndex }"
+                    :data-select-index="item.selectIndex"
+                    @mouseenter="activeResultIndex = item.selectIndex"
+                    @mousedown.prevent="item.action()"
+                  >
+                    <span class="SearchModal-commandIcon">
+                      <i :class="item.icon"></i>
+                    </span>
+                    <span class="SearchModal-commandMain">
+                      <strong>{{ item.title }}</strong>
+                      <span>{{ item.subtitle }}</span>
+                      <small v-if="item.description">{{ item.description }}</small>
+                    </span>
+                  </button>
+                </div>
+              </section>
             </div>
           </div>
         </div>
@@ -160,6 +178,7 @@ import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useModalStore } from '@/stores/modal'
 import { useResourceStore } from '@/stores/resource'
 import api from '@/api'
+import { buildTagPath } from '@/utils/forum'
 import {
   unwrapList
 } from '@/utils/forum'
@@ -169,6 +188,10 @@ import {
   getTrackedDiscussionIdsFromPostItems,
   hasTrackedDiscussionId,
 } from '@/utils/forumRealtime'
+
+const RECENT_SEARCH_STORAGE_KEY = 'bias:search:recent'
+const RECENT_SEARCH_LIMIT = 6
+const POPULAR_TAG_LIMIT = 6
 
 const props = defineProps({
   showing: {
@@ -205,6 +228,8 @@ const loading = ref(false)
 const discussionIds = ref([])
 const postIds = ref([])
 const userIds = ref([])
+const popularTagIds = ref([])
+const recentSearches = ref(loadRecentSearches())
 const totals = ref({
   discussions: 0,
   posts: 0,
@@ -220,6 +245,7 @@ const searchResults = computed(() => ({
   posts: resourceStore.list('posts', postIds.value),
   users: resourceStore.list('users', userIds.value),
 }))
+const popularTags = computed(() => resourceStore.list('tags', popularTagIds.value))
 const trackedDiscussionIds = computed(() => [
   ...getTrackedDiscussionIdsFromDiscussionItems(searchResults.value.discussions),
   ...getTrackedDiscussionIdsFromPostItems(searchResults.value.posts),
@@ -298,6 +324,10 @@ const activeItems = computed(() => {
 })
 
 const visibleSelectableItems = computed(() => {
+  if (!normalizedQuery.value) {
+    return emptySelectableItems.value
+  }
+
   if (activeType.value === 'all') {
     return groupedSections.value.flatMap(section => section.items)
   }
@@ -340,11 +370,92 @@ const filterSuggestions = computed(() => {
   }
   return searchFilterCatalog.filterSuggestions.value
 })
+const recentSearchTitleText = computed(() => getUiCopy({
+  surface: 'search-modal-recent-title',
+})?.text || '最近搜索')
+const popularTagsTitleText = computed(() => getUiCopy({
+  surface: 'search-modal-popular-tags-title',
+})?.text || '热门标签')
+const syntaxTipsTitleText = computed(() => getUiCopy({
+  surface: 'search-modal-syntax-title',
+})?.text || '搜索语法')
+const emptyPanelSections = computed(() => {
+  if (normalizedQuery.value) {
+    return []
+  }
+
+  const sections = []
+  let selectIndex = 0
+
+  if (recentSearches.value.length) {
+    sections.push({
+      key: 'recent-searches',
+      title: recentSearchTitleText.value,
+      items: recentSearches.value.map(item => ({
+        key: `recent-${item.query}-${item.type || 'all'}`,
+        kind: 'recent-search',
+        icon: 'fas fa-history',
+        title: item.query,
+        subtitle: item.type && item.type !== 'all'
+          ? getUiCopy({
+              surface: 'search-modal-recent-subtitle',
+              activeTabLabel: tabs.value.find(tab => tab.value === item.type)?.label || item.type,
+            })?.text || `只看${tabs.value.find(tab => tab.value === item.type)?.label || item.type}`
+          : getUiCopy({
+              surface: 'search-modal-recent-all-subtitle',
+            })?.text || '搜索全部内容',
+        action: () => runRecentSearch(item),
+        selectIndex: selectIndex++,
+      })),
+    })
+  }
+
+  if (popularTags.value.length) {
+    sections.push({
+      key: 'popular-tags',
+      title: popularTagsTitleText.value,
+      items: popularTags.value.map(tag => ({
+        key: `tag-${tag.id}`,
+        kind: 'popular-tag',
+        icon: 'fas fa-tags',
+        title: tag.name,
+        subtitle: getUiCopy({
+          surface: 'search-modal-tag-subtitle',
+          count: Number(tag.discussion_count || 0),
+        })?.text || `${Number(tag.discussion_count || 0)} 条讨论`,
+        action: () => openTag(tag),
+        selectIndex: selectIndex++,
+      })),
+    })
+  }
+
+  if (filterSuggestions.value.length) {
+    sections.push({
+      key: 'search-syntax',
+      title: syntaxTipsTitleText.value,
+      items: filterSuggestions.value.map(item => ({
+        key: `syntax-${item.key}`,
+        kind: 'syntax',
+        icon: 'fas fa-terminal',
+        title: item.syntax,
+        subtitle: item.label,
+        description: item.description || '',
+        action: () => applyFilterSyntax(item.syntax),
+        selectIndex: selectIndex++,
+      })),
+    })
+  }
+
+  return sections
+})
+const emptySelectableItems = computed(() => emptyPanelSections.value.flatMap(section => section.items))
 
 watch(
   () => props.showing,
   showing => {
     if (!showing) return
+
+    loadPopularTags()
 
     nextTick(() => {
       inputRef.value?.focus()
@@ -384,11 +495,6 @@ watch(
 watch(
   () => visibleSelectableItems.value.length,
   count => {
-    if (!normalizedQuery.value) {
-      activeResultIndex.value = -1
-      return
-    }
-
     if (count >= 0 && activeResultIndex.value < 0) {
       activeResultIndex.value = 0
     }
@@ -412,6 +518,7 @@ watch(
 )
 
 onMounted(() => {
+  loadPopularTags()
   nextTick(() => {
     inputRef.value?.focus()
     inputRef.value?.select?.()
@@ -521,7 +628,13 @@ function moveSelection(direction) {
 }
 
 function submitSelection() {
-  if (!normalizedQuery.value) return
+  if (!normalizedQuery.value) {
+    const item = visibleSelectableItems.value[activeResultIndex.value]
+    if (item?.action) {
+      item.action()
+    }
+    return
+  }
 
   if (activeResultIndex.value === fullPageActionIndex.value) {
     openFullResults()
@@ -538,12 +651,21 @@ function submitSelection() {
 }
 
 function selectItem(item) {
+  saveRecentSearch({
+    query: normalizedQuery.value,
+    type: activeType.value,
+  })
   modalStore.dismiss()
   router.push(item.path)
 }
 
 function openFullResults() {
   if (!normalizedQuery.value) return
+
+  saveRecentSearch({
+    query: normalizedQuery.value,
+    type: activeType.value,
+  })
 
   modalStore.dismiss()
   router.push({
@@ -561,6 +683,80 @@ function scrollActiveOptionIntoView() {
 
   const activeNode = root.value?.querySelector(`[data-select-index="${currentIndex}"]`)
   activeNode?.scrollIntoView?.({ block: 'nearest' })
+}
+
+function runRecentSearch(item) {
+  query.value = item.query || ''
+  activeType.value = allowedTypes.includes(item.type) ? item.type : 'all'
+  nextTick(() => {
+    inputRef.value?.focus()
+  })
+}
+
+function openTag(tag) {
+  modalStore.dismiss()
+  router.push(buildTagPath(tag))
+}
+
+function saveRecentSearch(item) {
+  const queryValue = String(item?.query || '').trim()
+  if (!queryValue) return
+
+  const nextItem = {
+    query: queryValue,
+    type: allowedTypes.includes(item?.type) ? item.type : 'all',
+  }
+
+  const deduped = recentSearches.value.filter(existing => {
+    return !(existing.query === nextItem.query && existing.type === nextItem.type)
+  })
+
+  recentSearches.value = [nextItem, ...deduped].slice(0, RECENT_SEARCH_LIMIT)
+  persistRecentSearches(recentSearches.value)
+}
+
+async function loadPopularTags() {
+  try {
+    const response = await api.get('/tags/popular', {
+      params: {
+        limit: POPULAR_TAG_LIMIT,
+      }
+    })
+    popularTagIds.value = resourceStore.upsertMany('tags', unwrapList(response))
+      .map(item => item.id)
+  } catch (error) {
+    popularTagIds.value = []
+  }
+}
+
+function loadRecentSearches() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(RECENT_SEARCH_STORAGE_KEY) || '[]')
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed
+      .map(item => ({
+        query: String(item?.query || '').trim(),
+        type: String(item?.type || 'all').trim() || 'all',
+      }))
+      .filter(item => item.query)
+      .slice(0, RECENT_SEARCH_LIMIT)
+  } catch (error) {
+    return []
+  }
+}
+
+function persistRecentSearches(items) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.setItem(RECENT_SEARCH_STORAGE_KEY, JSON.stringify(items))
 }
 </script>
 
@@ -702,6 +898,91 @@ function scrollActiveOptionIntoView() {
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
+}
+
+.SearchModal-commandPanel {
+  width: 100%;
+  display: grid;
+  gap: 14px;
+}
+
+.SearchModal-commandSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(720px, 100%);
+}
+
+.SearchModal-commandHeader {
+  color: #5d6f80;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.SearchModal-commandList {
+  display: grid;
+  gap: 10px;
+}
+
+.SearchModal-commandItem {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dbe4ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #31465b;
+  text-align: left;
+}
+
+.SearchModal-commandItem:hover,
+.SearchModal-commandItem.active {
+  border-color: #4d698e;
+  background: linear-gradient(180deg, #f8fbfd 0%, #edf3f9 100%);
+  box-shadow: 0 10px 24px rgba(49, 70, 91, 0.08);
+}
+
+.SearchModal-commandIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #edf3f8;
+  color: #58708a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.SearchModal-commandMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.SearchModal-commandMain strong {
+  color: #22303d;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.SearchModal-commandMain span,
+.SearchModal-commandMain small {
+  color: #66788a;
+  line-height: 1.5;
+}
+
+.SearchModal-commandMain span {
+  font-size: 13px;
+}
+
+.SearchModal-commandMain small {
+  font-size: 12px;
 }
 
 .SearchModal-syntaxChip {
