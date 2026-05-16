@@ -1,0 +1,59 @@
+export function createDiscussionActionHandlers({
+  deleteDiscussion,
+  editDiscussion,
+  goToLoginForReply,
+  openComposer,
+  toggleHide,
+  toggleLock,
+  togglePin,
+  toggleSubscription,
+}) {
+  return {
+    delete: async () => {
+      await deleteDiscussion()
+    },
+    edit: async () => {
+      editDiscussion()
+    },
+    login: async () => {
+      goToLoginForReply()
+    },
+    reply: async () => {
+      openComposer()
+    },
+    'toggle-hide': async () => {
+      await toggleHide()
+    },
+    'toggle-lock': async () => {
+      await toggleLock()
+    },
+    'toggle-pin': async () => {
+      await togglePin()
+    },
+    'toggle-subscription': async () => {
+      await toggleSubscription()
+    },
+  }
+}
+
+export function createPostActionHandlers({
+  deletePost,
+  editPost,
+  openReportModal,
+  togglePostHidden,
+}) {
+  return {
+    'delete-post': async (_, context = {}) => {
+      await deletePost(context.post)
+    },
+    'edit-post': async (_, context = {}) => {
+      editPost(context.post)
+    },
+    'open-report-modal': async (_, context = {}) => {
+      await openReportModal(context.post)
+    },
+    'toggle-hide-post': async (_, context = {}) => {
+      await togglePostHidden(context.post)
+    },
+  }
+}
