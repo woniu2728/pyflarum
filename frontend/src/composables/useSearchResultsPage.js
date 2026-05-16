@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import api from '@/api'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
+import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
@@ -40,6 +41,10 @@ export function useSearchResultsPage({ route, router }) {
   })
   const searchFilterCatalog = useSearchFilterCatalog(searchFilterTarget)
   const page = routeState.page
+  const routePagination = useRoutePagination({
+    page,
+    push: routeState.push,
+  })
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 20)))
   const isEmpty = computed(() => !discussions.value.length && !posts.value.length && !users.value.length)
   const trackedDiscussionIds = computed(() => [
@@ -304,20 +309,13 @@ export function useSearchResultsPage({ route, router }) {
       return
     }
 
-    routeState.push({
+    routePagination.resetPage({
       searchType: nextType,
-      page: 1,
     })
   }
 
   function changePage(nextPage) {
-    if (nextPage === page.value) {
-      return
-    }
-
-    routeState.push({
-      page: nextPage,
-    })
+    routePagination.changePage(nextPage)
   }
 
   function applySyntax(syntax) {
@@ -326,9 +324,8 @@ export function useSearchResultsPage({ route, router }) {
       return
     }
 
-    routeState.push({
+    routePagination.resetPage({
       normalizedQuery: nextQuery,
-      page: 1,
     })
   }
 

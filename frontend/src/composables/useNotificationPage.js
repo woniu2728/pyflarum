@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
+import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useNotificationRouteState } from '@/composables/useNotificationRouteState'
 import { resolveNotificationPath, useNotificationGroups } from '@/composables/useNotificationPresentation'
 
@@ -19,6 +20,11 @@ export function useNotificationPage({
   const currentPage = routeState.currentPage
   const unreadOnly = routeState.unreadOnly
   const viewMode = routeState.viewMode
+  const routePagination = useRoutePagination({
+    page: currentPage,
+    push: routeState.push,
+    pageStateKey: 'currentPage',
+  })
   const notifications = computed(() => notificationStore.notifications)
   const groupedNotifications = useNotificationGroups(notifications, '论坛')
   const filteredUnreadCount = computed(() => notifications.value.filter(item => !item.is_read).length)
@@ -144,16 +150,14 @@ export function useNotificationPage({
       return
     }
 
-    await routeState.push({
+    await routePagination.resetPage({
       activeType: nextType,
-      currentPage: 1,
     })
   }
 
   async function toggleUnreadOnly() {
-    await routeState.push({
+    await routePagination.resetPage({
       unreadOnly: !unreadOnly.value,
-      currentPage: 1,
     })
   }
 
@@ -163,9 +167,8 @@ export function useNotificationPage({
       return
     }
 
-    await routeState.push({
+    await routePagination.resetPage({
       viewMode: nextMode,
-      currentPage: 1,
     })
   }
 
@@ -388,17 +391,7 @@ export function useNotificationPage({
   }
 
   async function changePage(page) {
-    if (page === currentPage.value) {
-      return
-    }
-
-    await routeState.push({
-      currentPage: page,
-    })
-
-    if (typeof window !== 'undefined') {
-      window.scrollTo(0, 0)
-    }
+    await routePagination.changePage(page)
   }
 
   return {
