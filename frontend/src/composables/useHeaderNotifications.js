@@ -6,6 +6,7 @@ import {
   useNotificationGroups
 } from '@/composables/useNotificationPresentation'
 import { useHeaderNotificationActions } from '@/composables/useHeaderNotificationActions'
+import { createHeaderNotificationDisplayState } from '@/composables/useHeaderNotificationDisplayState'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 
 export function useHeaderNotifications({
@@ -19,36 +20,35 @@ export function useHeaderNotifications({
   const actionTone = ref('info')
   const markingAllRead = ref(false)
   const clearingRead = ref(false)
-  const notificationItems = computed(() => notificationStore.notifications.slice(0, 8))
-  const hasReadNotifications = computed(() => notificationStore.readCount > 0)
-  const notificationGroups = useNotificationGroups(notificationItems, forumTitle || '论坛')
-  const notificationTypeSummaries = computed(() => {
-    return getResolvedNotificationTypes()
-      .map(item => ({
-        type: item.type,
-        label: item.label,
-        total: Number(notificationStore.typeCounts?.[item.type] || 0),
-        unread: Number(notificationStore.unreadTypeCounts?.[item.type] || 0),
-      }))
-      .filter(item => item.total > 0 || item.unread > 0)
-      .slice(0, 4)
-  })
-  const emptyStateText = computed(() => {
-    const emptyState = getEmptyState({
-      surface: 'notifications-menu-empty',
-      notifications: notificationItems.value,
-    })
-
-    return emptyState?.text || '暂无通知'
-  })
-  const loadingStateText = computed(() => {
-    const stateBlock = getStateBlock({
-      surface: 'notifications-menu-loading',
-      loading: notificationStore.loading,
-      notifications: notificationItems.value,
-    })
-
-    return stateBlock?.text || '加载中...'
+  const {
+    notificationItems,
+    hasReadNotifications,
+    notificationGroups,
+    notificationTypeSummaries,
+    emptyStateText,
+    loadingStateText,
+  } = createHeaderNotificationDisplayState({
+    createNotificationGroups(notificationItems) {
+      return useNotificationGroups(notificationItems, forumTitle || '论坛')
+    },
+    getEmptyStateText(notificationItems) {
+      return getEmptyState({
+        surface: 'notifications-menu-empty',
+        notifications: notificationItems,
+      })?.text || '暂无通知'
+    },
+    getLoadingStateText(notificationItems) {
+      return getStateBlock({
+        surface: 'notifications-menu-loading',
+        loading: notificationStore.loading,
+        notifications: notificationItems,
+      })?.text || '加载中...'
+    },
+    getReadCount: () => notificationStore.readCount,
+    getResolvedTypes: getResolvedNotificationTypes,
+    getTypeCounts: () => notificationStore.typeCounts,
+    getUnreadTypeCounts: () => notificationStore.unreadTypeCounts,
+    notifications: () => notificationStore.notifications,
   })
 
   function getNotificationUiCopy(surface, context = {}, fallback = '') {
