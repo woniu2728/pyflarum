@@ -911,6 +911,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：通知页新增 `useNotificationDisplayState`，把空状态/加载态文案、类型筛选项、视图模式项以及汇总计数字符串从 `useNotificationPage` 中拆出，并补上独立 Node 测试；通知页 page composable 进一步收口到动作装配层。
 - 已完成：头部通知新增 `useHeaderNotificationActions`，把菜单开关、批量已读/清除、点击已读后跳转以及分组/类型/通知页跳转从 `useHeaderNotifications` 中拆出，并补上独立 Node 测试覆盖刷新、失败反馈和关闭后路由分支；头部通知 composable 开始和通知中心一起对齐到“展示状态 + 动作层”的阶段 3 组织方式。
 - 已完成：头部通知新增 `useHeaderNotificationDisplayState`，把菜单前 8 条切片、已读计数派生、按讨论分组、类型摘要以及空/加载文案从 `useHeaderNotifications` 中拆出，并补上独立 Node 测试；头部通知 composable 进一步收口为反馈状态与动作/展示双装配层。
+- 已完成：个人主页新增 `useProfileAccountState`，把资料/安全/偏好表单默认值、头像上传引用以及保存/发送/修改密码等运行时反馈状态从 `useProfilePage` 中拆出，并补上基础 Node 测试；profile page composable 继续向纯装配层收口。
 - 已完成：个人主页新增 `useProfileContentState`，把讨论/回复列表的资源 id、按需请求式加载、tracked discussion 清理和帖子去重 merge 从 `useProfilePage` 中拆出，并补上独立 Node 测试；profile page composable 开始继续从“账户动作 + 生命周期 + 内容流状态”三层收口。
 - 已完成：个人主页新增 `useProfileRealtimeState`，把 forum event 的讨论可见性判定、刷新型事件回退重新拉取和帖子 payload merge/append 从 `useProfilePage` 中拆出，并补上独立 Node 测试；profile page composable 继续向“生命周期层 + 内容流状态层 + 实时消费层 + 账户动作层”拆分。
 - 已完成：个人主页新增 `useProfileUserState`，把用户资料拉取、当前查看用户切换、个人资料表单初始化和“仅本人加载偏好”刷新协议从 `useProfilePage` 中拆出，并补上独立 Node 测试；profile page composable 进一步向页面装配层收口。

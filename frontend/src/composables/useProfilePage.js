@@ -1,7 +1,7 @@
-import { computed, ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useProfileAccountActions } from '@/composables/useProfileAccountActions'
+import { useProfileAccountState } from '@/composables/useProfileAccountState'
 import { useProfileContentState } from '@/composables/useProfileContentState'
 import { useProfilePageLifecycle } from '@/composables/useProfilePageLifecycle'
 import { useProfileRealtimeState } from '@/composables/useProfileRealtimeState'
@@ -20,38 +20,7 @@ export function useProfilePage({
   const resourceStore = useResourceStore()
   const forumRealtimeStore = useForumRealtimeStore()
   const routeState = useProfileRouteState({ route, router })
-  const saving = ref(false)
-  const avatarUploading = ref(false)
-  const avatarInput = ref(null)
-  const settingsSuccess = ref('')
-  const settingsError = ref('')
-  const verificationSending = ref(false)
-  const verificationSuccess = ref('')
-  const verificationError = ref('')
-  const changingPassword = ref(false)
-  const passwordSuccess = ref('')
-  const passwordError = ref('')
-  const loadingPreferences = ref(false)
-  const savingPreferences = ref(false)
-  const preferencesSuccess = ref('')
-  const preferencesError = ref('')
-
-  const editForm = ref({
-    display_name: '',
-    bio: '',
-    email: ''
-  })
-
-  const passwordForm = ref({
-    old_password: '',
-    new_password: '',
-    confirm_password: ''
-  })
-
-  const preferences = ref({
-    values: {},
-    definitions: []
-  })
+  const accountState = useProfileAccountState()
 
   const activeTab = routeState.activeTab
   function getProfileUiCopy(surface, context = {}, fallback = '') {
@@ -81,16 +50,16 @@ export function useProfilePage({
     resourceStore,
     route,
     setEditForm(payload) {
-      editForm.value = payload
+      accountState.editForm.value = payload
     },
     setSettingsError(message) {
-      settingsError.value = message
+      accountState.settingsError.value = message
     },
     setVerificationError(message) {
-      verificationError.value = message
+      accountState.verificationError.value = message
     },
     setVerificationSuccess(message) {
-      verificationSuccess.value = message
+      accountState.verificationSuccess.value = message
     },
   })
   const profileContentState = useProfileContentState({
@@ -108,7 +77,7 @@ export function useProfilePage({
     },
     resourceStore,
     setSettingsError(message) {
-      settingsError.value = message
+      accountState.settingsError.value = message
     },
     userId: profileUserState.userId,
   })
@@ -169,30 +138,30 @@ export function useProfilePage({
   const profileAccountActions = useProfileAccountActions({
     apiClient: api,
     authStore,
-    avatarInput,
-    avatarUploading,
-    changingPassword,
-    editForm,
+    avatarInput: accountState.avatarInput,
+    avatarUploading: accountState.avatarUploading,
+    changingPassword: accountState.changingPassword,
+    editForm: accountState.editForm,
     getProfileErrorMessage,
     getProfileUiCopy,
-    loadingPreferences,
+    loadingPreferences: accountState.loadingPreferences,
     modalStore,
-    passwordError,
-    passwordForm,
-    passwordSuccess,
-    preferences,
-    preferencesError,
-    preferencesSuccess,
+    passwordError: accountState.passwordError,
+    passwordForm: accountState.passwordForm,
+    passwordSuccess: accountState.passwordSuccess,
+    preferences: accountState.preferences,
+    preferencesError: accountState.preferencesError,
+    preferencesSuccess: accountState.preferencesSuccess,
     resourceStore,
-    saving,
-    savingPreferences,
-    settingsError,
-    settingsSuccess,
+    saving: accountState.saving,
+    savingPreferences: accountState.savingPreferences,
+    settingsError: accountState.settingsError,
+    settingsSuccess: accountState.settingsSuccess,
     user: profileUserState.user,
     userId: profileUserState.userId,
-    verificationError,
-    verificationSending,
-    verificationSuccess,
+    verificationError: accountState.verificationError,
+    verificationSending: accountState.verificationSending,
+    verificationSuccess: accountState.verificationSuccess,
     normalizeUser,
   })
 
@@ -204,24 +173,24 @@ export function useProfilePage({
     loadingDiscussions: profileContentState.loadingDiscussions,
     loadingPosts: profileContentState.loadingPosts,
     activeTab,
-    saving,
-    avatarUploading,
-    avatarInput,
-    settingsSuccess,
-    settingsError,
-    verificationSending,
-    verificationSuccess,
-    verificationError,
-    changingPassword,
-    passwordSuccess,
-    passwordError,
-    loadingPreferences,
-    savingPreferences,
-    preferencesSuccess,
-    preferencesError,
-    editForm,
-    passwordForm,
-    preferences,
+    saving: accountState.saving,
+    avatarUploading: accountState.avatarUploading,
+    avatarInput: accountState.avatarInput,
+    settingsSuccess: accountState.settingsSuccess,
+    settingsError: accountState.settingsError,
+    verificationSending: accountState.verificationSending,
+    verificationSuccess: accountState.verificationSuccess,
+    verificationError: accountState.verificationError,
+    changingPassword: accountState.changingPassword,
+    passwordSuccess: accountState.passwordSuccess,
+    passwordError: accountState.passwordError,
+    loadingPreferences: accountState.loadingPreferences,
+    savingPreferences: accountState.savingPreferences,
+    preferencesSuccess: accountState.preferencesSuccess,
+    preferencesError: accountState.preferencesError,
+    editForm: accountState.editForm,
+    passwordForm: accountState.passwordForm,
+    preferences: accountState.preferences,
     isOwnProfile: profileUserState.isOwnProfile,
     switchTab,
     saveProfile: profileAccountActions.saveProfile,
