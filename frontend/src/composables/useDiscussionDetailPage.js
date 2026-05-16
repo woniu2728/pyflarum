@@ -1,6 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { formatRelativeTime } from '@/utils/forum'
 import { useDiscussionDetailState } from '@/composables/useDiscussionDetailState'
+import { useDiscussionDetailUiState } from '@/composables/useDiscussionDetailUiState'
 
 export function useDiscussionDetailPage({
   authStore,
@@ -42,13 +43,34 @@ export function useDiscussionDetailPage({
     unreadStartPostNumber,
     upsertPost,
   } = detailState.postStream
+  const isSuspended = computed(() => Boolean(authStore.user?.is_suspended))
+  const uiState = useDiscussionDetailUiState({
+    authStore,
+    composerStore,
+    currentVisiblePostProgress,
+    discussion,
+    isSuspended,
+    maxPostNumber,
+  })
+  const {
+    activePostMenuId,
+    attachGlobalListeners,
+    closePostMenu,
+    detachGlobalListeners,
+    discussionMobileNavRef,
+    discussionSidebarRef,
+    hasActiveComposer,
+    hasMobileDiscussionMenuActions,
+    resetMobileHeader,
+    resetTransientUiState,
+    showDiscussionMenu,
+    syncMobileHeader,
+    toggleDiscussionMenu,
+    togglePostMenu,
+  } = uiState
 
   const previousTrigger = ref(null)
   const nextTrigger = ref(null)
-  const discussionSidebarRef = ref(null)
-  const discussionMobileNavRef = ref(null)
-  const showDiscussionMenu = ref(false)
-  const activePostMenuId = ref(null)
   const scrubberTrackHeight = ref(300)
   const scrubberTrackMaxHeight = ref(null)
   const scrubberDragging = ref(false)
@@ -58,31 +80,6 @@ export function useDiscussionDetailPage({
   let scrubberResizeObserver = null
   let scrubberDragPointerOffset = 0
 
-  const isSuspended = computed(() => Boolean(authStore.user?.is_suspended))
-  const hasActiveComposer = computed(() => {
-    if (!discussion.value) return false
-    if (!['reply', 'edit'].includes(composerStore.current.type)) return false
-
-    return Number(composerStore.current.discussionId) === Number(discussion.value.id)
-  })
-  const hasMobileDiscussionMenuActions = computed(() => Boolean(
-    !discussion.value
-      ? false
-      : (!authStore.isAuthenticated)
-          || Boolean(
-            authStore.isAuthenticated
-            && discussion.value?.can_reply
-            && !discussion.value?.is_locked
-            && !isSuspended.value
-          )
-          || (authStore.isAuthenticated && !isSuspended.value)
-          || Boolean(
-            authStore.isAuthenticated
-            && discussion.value?.can_edit
-            && !isSuspended.value
-          )
-          || Boolean(authStore.user?.is_staff)
-  ))
   const scrubberDisplayNumber = computed(() => {
     return clampPostPosition(scrubberPreviewNumber.value ?? currentVisiblePostProgress.value)
   })
@@ -154,8 +151,7 @@ export function useDiscussionDetailPage({
     window.addEventListener('scroll', handlePostScroll, { passive: true })
     window.addEventListener('resize', handlePostScroll, { passive: true })
     window.addEventListener('resize', syncScrubberTrackMetrics, { passive: true })
-    window.addEventListener('bias:mobile-header-action', handleMobileHeaderAction)
-    document.addEventListener('mousedown', handleDocumentMouseDown)
+    attachGlobalListeners()
     await nextTick()
     syncScrubberTrackMetrics()
     attachScrubberObserver()
@@ -167,11 +163,9 @@ export function useDiscussionDetailPage({
     window.removeEventListener('scroll', handlePostScroll)
     window.removeEventListener('resize', handlePostScroll)
     window.removeEventListener('resize', syncScrubberTrackMetrics)
-    window.removeEventListener('bias:mobile-header-action', handleMobileHeaderAction)
-    document.removeEventListener('mousedown', handleDocumentMouseDown)
     detachScrubberDragListeners()
     detachScrubberObserver()
-    resetMobileHeader()
+    detachGlobalListeners()
     if (scrollFrame) {
       cancelAnimationFrame(scrollFrame)
     }
@@ -182,8 +176,7 @@ export function useDiscussionDetailPage({
     async () => {
       resetMobileHeader()
       resetPostStream()
-      showDiscussionMenu.value = false
-      activePostMenuId.value = null
+      resetTransientUiState()
       scrubberPreviewNumber.value = null
       loading.value = true
       await refreshDiscussion()
@@ -255,51 +248,6 @@ export function useDiscussionDetailPage({
     syncScrubberTrackMetrics()
     updateVisiblePostFromScroll()
     maybeAutoLoadPosts()
-  }
-
-  function handleDocumentMouseDown(event) {
-    if (showDiscussionMenu.value && !(event.target instanceof Element && event.target.closest('.discussion-actions-scope'))) {
-      showDiscussionMenu.value = false
-    }
-
-    if (activePostMenuId.value && !(event.target instanceof Element && event.target.closest('.post-controls'))) {
-      activePostMenuId.value = null
-    }
-  }
-
-  function handleMobileHeaderAction(event) {
-    if (event.detail?.action !== 'discussion-menu') return
-
-    showDiscussionMenu.value = !showDiscussionMenu.value
-
-    if (!showDiscussionMenu.value) return
-
-    nextTick(() => {
-      getDiscussionMobileNavEl()?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-  }
-
-  function syncMobileHeader() {
-    if (typeof window === 'undefined' || !discussion.value) return
-
-    window.dispatchEvent(new CustomEvent('bias:mobile-header-update', {
-      detail: {
-        route: 'discussion-detail',
-        title: `${sanitizePostNumber(currentVisiblePostProgress.value)} / ${maxPostNumber.value}`,
-        leftAction: 'back',
-        rightAction: hasMobileDiscussionMenuActions.value ? 'discussion-menu' : 'none'
-      }
-    }))
-  }
-
-  function resetMobileHeader() {
-    if (typeof window === 'undefined') return
-
-    window.dispatchEvent(new CustomEvent('bias:mobile-header-reset', {
-      detail: {
-        route: 'discussion-detail'
-      }
-    }))
   }
 
   function updateVisiblePostFromScroll() {
@@ -511,20 +459,9 @@ export function useDiscussionDetailPage({
     return discussionSidebarRef.value?.getScrubberTrackEl?.() || null
   }
 
-  function getDiscussionMobileNavEl() {
-    return discussionMobileNavRef.value?.getRootEl?.() || null
-  }
-
-  function toggleDiscussionMenu() {
-    showDiscussionMenu.value = !showDiscussionMenu.value
-  }
-
-  function togglePostMenu(postId) {
-    activePostMenuId.value = activePostMenuId.value === postId ? null : postId
-  }
-
   return {
     activePostMenuId,
+    closePostMenu,
     discussion,
     discussionMobileNavRef,
     discussionSidebarRef,

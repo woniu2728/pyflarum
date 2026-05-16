@@ -89,7 +89,7 @@
                 @open-report-modal="post => handlePostMenuSelection(post, 'open-report-modal')"
                 @moderate-post="({ post: targetPost, action }) => moderatePost(targetPost, action)"
                 @resolve-post-flags="({ post: targetPost, status }) => resolvePostFlags(targetPost, status)"
-                @close-post-menu="activePostMenuId = null"
+                @close-post-menu="closePostMenu"
               />
             </template>
           </div>
@@ -189,6 +189,7 @@ const modalStore = useModalStore()
 
 const {
   activePostMenuId,
+  closePostMenu,
   discussion,
   discussionMobileNavRef,
   discussionSidebarRef,
