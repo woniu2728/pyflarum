@@ -46,7 +46,6 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
@@ -54,13 +53,7 @@ import { useModalStore } from '@/stores/modal'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ProfileHero from '@/components/profile/ProfileHero.vue'
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue'
-import { getPageState, getProfilePanels, getUserBadges } from '@/forum/registry'
-import { useProfilePage } from '@/composables/useProfilePage'
-import { useProfilePresentation } from '@/composables/useProfilePresentation'
-import {
-  buildDiscussionPath,
-  getUserAvatarColor,
-} from '@/utils/forum'
+import { useProfileViewModel } from '@/composables/useProfileViewModel'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,174 +61,36 @@ const authStore = useAuthStore()
 const forumStore = useForumStore()
 const modalStore = useModalStore()
 const {
-  user,
-  discussions,
-  posts,
-  loading,
-  loadingDiscussions,
-  loadingPosts,
   activeTab,
-  saving,
+  activePanel,
   avatarUploading,
   avatarInput,
-  settingsSuccess,
-  settingsError,
-  verificationSending,
-  verificationSuccess,
-  verificationError,
-  changingPassword,
-  passwordSuccess,
-  passwordError,
-  loadingPreferences,
-  savingPreferences,
-  preferencesSuccess,
-  preferencesError,
-  editForm,
-  passwordForm,
-  preferences,
+  formatJoinDate,
+  formatLastSeen,
+  getUserAvatarColor,
+  getUserPrimaryGroupColor,
+  getUserPrimaryGroupIcon,
+  getUserPrimaryGroupLabel,
+  handleAvatarSelected,
+  handleEditFormUpdate,
+  handlePasswordFormUpdate,
+  handlePreferenceUpdate,
+  isOnline,
   isOwnProfile,
+  loading,
+  loadingStateText,
+  missingStateText,
+  profilePanels,
   switchTab,
-  saveProfile,
-  savePreferences,
-  resendVerificationEmail,
-  changePassword,
-  handleAvatarSelected
-} = useProfilePage({
+  user,
+  userBadges,
+} = useProfileViewModel({
   authStore,
+  forumStore,
   modalStore,
   route,
-  router
+  router,
 })
-const {
-  isOnline,
-  getUserPrimaryGroupIcon,
-  getUserPrimaryGroupColor,
-  getUserPrimaryGroupLabel,
-  formatDate,
-  formatJoinDate,
-  formatLastSeen
-} = useProfilePresentation(user)
-
-const userBadges = computed(() => {
-  if (!user.value) return []
-
-  return getUserBadges({
-    user: user.value,
-    authStore,
-  })
-})
-const loadingStateText = computed(() => {
-  const pageState = getPageState({
-    surface: 'profile-loading',
-    loading: loading.value,
-    user: user.value,
-  })
-
-  return pageState?.text || '加载中...'
-})
-const missingStateText = computed(() => {
-  const pageState = getPageState({
-    surface: 'profile-not-found',
-    loading: loading.value,
-    user: user.value,
-  })
-
-  return pageState?.text || '用户不存在'
-})
-
-const profilePanels = computed(() => {
-  if (!user.value) return []
-
-  return getProfilePanels({
-    authStore,
-    user: user.value,
-    discussions: discussions.value,
-    posts: posts.value,
-    loadingDiscussions: loadingDiscussions.value,
-    loadingPosts: loadingPosts.value,
-    isOwnProfile: isOwnProfile.value,
-    buildDiscussionPath,
-    formatDate,
-    editForm: editForm.value,
-    preferences: preferences.value,
-    saving: saving.value,
-    settingsSuccess: settingsSuccess.value,
-    settingsError: settingsError.value,
-    loadingPreferences: loadingPreferences.value,
-    savingPreferences: savingPreferences.value,
-    preferencesSuccess: preferencesSuccess.value,
-    preferencesError: preferencesError.value,
-    saveProfile,
-    savePreferences,
-    passwordForm: passwordForm.value,
-    verificationSending: verificationSending.value,
-    verificationSuccess: verificationSuccess.value,
-    verificationError: verificationError.value,
-    resendVerificationEmail,
-    changingPassword: changingPassword.value,
-    passwordSuccess: passwordSuccess.value,
-    passwordError: passwordError.value,
-    changePassword,
-  })
-})
-
-const activePanel = computed(() => {
-  return profilePanels.value.find(item => item.key === activeTab.value) || profilePanels.value[0] || null
-})
-
-watch(
-  profilePanels,
-  value => {
-    if (!value.length) return
-    if (!value.some(item => item.key === activeTab.value)) {
-      switchTab(value[0].key)
-    }
-  },
-  { immediate: true }
-)
-
-watch(
-  user,
-  value => {
-    if (!value) return
-    const displayName = value.display_name || value.username
-    const bio = String(value.bio || '').replace(/\s+/g, ' ').trim()
-    forumStore.setPageMeta({
-      title: `${displayName} 的主页`,
-      description: bio || `${displayName} 在论坛发布了 ${value.discussion_count || 0} 个讨论和 ${value.comment_count || 0} 条回复。`,
-      canonicalUrl: `/u/${value.username || value.id}`,
-    })
-  },
-  { immediate: true }
-)
-
-function handleEditFormUpdate({ key, value }) {
-  if (!editForm.value || !key) return
-  editForm.value = {
-    ...editForm.value,
-    [key]: value,
-  }
-}
-
-function handlePasswordFormUpdate({ key, value }) {
-  if (!passwordForm.value || !key) return
-  passwordForm.value = {
-    ...passwordForm.value,
-    [key]: value,
-  }
-}
-
-function handlePreferenceUpdate({ key, value }) {
-  if (!preferences.value || !key) return
-  preferences.value = {
-    ...preferences.value,
-    values: {
-      ...(preferences.value.values || {}),
-      [key]: Boolean(value),
-    },
-  }
-}
-
 </script>
 
 <style scoped>
