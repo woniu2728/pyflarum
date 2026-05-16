@@ -1,8 +1,9 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import api from '@/api'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useRoutePagination } from '@/composables/useRoutePagination'
 import { useSearchFilterCatalog } from '@/composables/useSearchFilterCatalog'
+import { useSearchResultsPageLifecycle } from '@/composables/useSearchResultsPageLifecycle'
 import { useSearchRouteState } from '@/composables/useSearchRouteState'
 import { getEmptyState, getSearchSources, getStateBlock, getUiCopy } from '@/forum/registry'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
@@ -243,22 +244,36 @@ export function useSearchResultsPage({ route, router }) {
     })
   })
 
-  watch(
-    () => trackedDiscussionIds.value,
-    (nextTrackedIds, previousTrackedIds = []) => {
-      forumRealtimeStore.untrackDiscussionIds(previousTrackedIds)
-      forumRealtimeStore.trackDiscussionIds(nextTrackedIds)
-    }
-  )
-
-  onMounted(() => {
-    window.addEventListener('bias:forum-event', handleForumEvent)
-  })
-
-  onBeforeUnmount(() => {
+  function abortActiveRequest() {
     activeController?.abort()
-    forumRealtimeStore.untrackDiscussionIds(trackedDiscussionIds.value)
+  }
+
+  function addForumEventListener() {
+    if (typeof window === 'undefined') return
+    window.addEventListener('bias:forum-event', handleForumEvent)
+  }
+
+  function removeForumEventListener() {
+    if (typeof window === 'undefined') return
     window.removeEventListener('bias:forum-event', handleForumEvent)
+  }
+
+  function cleanupTrackedDiscussionIds() {
+    forumRealtimeStore.untrackDiscussionIds(trackedDiscussionIds.value)
+  }
+
+  function syncTrackedDiscussionIds(nextTrackedIds, previousTrackedIds = []) {
+    forumRealtimeStore.untrackDiscussionIds(previousTrackedIds)
+    forumRealtimeStore.trackDiscussionIds(nextTrackedIds)
+  }
+
+  useSearchResultsPageLifecycle({
+    abortActiveRequest,
+    addForumEventListener,
+    cleanupTrackedDiscussionIds,
+    removeForumEventListener,
+    syncTrackedDiscussionIds,
+    trackedDiscussionIds,
   })
 
   async function loadResults() {

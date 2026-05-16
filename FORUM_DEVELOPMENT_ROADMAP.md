@@ -898,6 +898,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：全局搜索弹层已从“输入框 + 结果列表”升级为更完整的命令面板形态，空态新增最近搜索、本地持久化历史、热门标签和搜索语法三组可键盘选择的动作区；上下键与回车现在不仅能打开结果，也能直接执行空态命令，搜索弹层命令面板化这条阶段 3 任务已开始形成可用闭环。
 - 已完成：搜索页与通知页新增统一 `useRoutePagination` 分页路由协议，筛选/视图切换后的“重置到第 1 页”、分页跳转后的滚动复位以及页码更新逻辑开始从页面内联分支收口到共享 composable；阶段 3 的列表状态层因此不再只共享底层请求状态，也开始共享页级路由分页行为。
 - 已完成：搜索结果页视图脚本区新增 `useSearchResultsViewModel` 装配层，hero pill/title、统计卡片、可见分组过滤和页面 meta watch 从 `SearchResultsView.vue` 收口到单一 composable，并补上 `searchMeta` helper 测试；搜索页开始和 discussion list/detail、profile 一样进入统一的 view-model 页面组织方式。
+- 已完成：搜索结果页新增 `useSearchResultsPageLifecycle`，把实时事件监听注册/清理、tracked discussion ids 同步和请求 abort 清理从 `useSearchResultsPage` 中独立出去，并补上独立 Node 测试；搜索页 page composable 也开始和详情页、个人主页一样把“状态/行为”和“生命周期编排”拆开。
 - 已完成：个人主页的讨论/回复面板新增按需请求式 `useRequestedPaginatedListState` 包装层，讨论列表切到共享分页状态底座，回复列表也保留 tab 懒加载但改为通过统一列表状态驱动；切换用户时的列表重置、讨论实时订阅替换，以及个人页回复 tab 在实时敏感事件后的强制刷新也一并收口，阶段 3 的列表状态层开始继续覆盖 profile 这条用户内容流。
 - 已完成：个人主页面板切换新增 `useProfileRouteState` 路由状态协议，`discussions/posts/settings/security` 现在会进入 URL 查询参数，并由页面在面板可见性变化时自动纠正到首个可用 tab；profile 的刷新、分享链接以及返回前进开始具备稳定的论坛级状态层行为。
 - 已完成：个人主页视图脚本区新增 `useProfileViewModel` 装配层，面板装配、页面 meta、头像区展示派生和表单字段更新 handlers 从 `ProfileView.vue` 收口到单一 composable，并补上 `profileMeta` helper 测试；profile 页面开始和 discussion list/detail 一样进入“页面只保留模板绑定”的统一组织方式。
