@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
+import { useNotificationBulkActions } from '@/composables/useNotificationBulkActions'
 import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { getResolvedNotificationTypes } from '@/forum/notificationTypes'
 import { useRoutePagination } from '@/composables/useRoutePagination'
@@ -184,181 +185,18 @@ export function useNotificationPage({
     }
   }
 
-  async function markAllAsRead() {
-    const unreadCount = filteredUnreadCount.value
-    if (unreadCount === 0) return
-
-    const confirmed = await modalStore.confirm({
-      title: getNotificationUiCopy(
-        'notification-confirm-mark-all-title',
-        { hasActiveFilter: hasActiveFilter.value },
-        hasActiveFilter.value ? '标记当前筛选结果为已读' : '全部标记为已读'
-      ),
-      message: getNotificationUiCopy(
-        'notification-confirm-mark-all-message',
-        { hasActiveFilter: hasActiveFilter.value, unreadCount },
-        hasActiveFilter.value
-          ? `确定将当前筛选结果中的 ${unreadCount} 条未读通知标记为已读吗？`
-          : `确定将当前 ${unreadCount} 条未读通知标记为已读吗？`
-      ),
-      confirmText: getNotificationUiCopy('notification-confirm-mark-all-confirm', {}, '标记已读'),
-      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
-      tone: 'primary'
-    })
-    if (!confirmed) return
-
-    marking.value = true
-
-    try {
-      if (hasActiveFilter.value) {
-        await notificationStore.markFilteredAsRead({
-          type: activeType.value,
-        })
-      } else {
-        await notificationStore.markAllAsRead()
-      }
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: true,
-      })
-      await modalStore.alert({
-        title: getNotificationUiCopy('notification-alert-mark-all-success-title', {}, '已全部标记为已读'),
-        message: getNotificationUiCopy(
-          'notification-alert-mark-all-success-message',
-          { hasActiveFilter: hasActiveFilter.value },
-          hasActiveFilter.value ? '当前筛选范围内的未读通知已更新为已读。' : '当前页面的未读通知已更新为已读。'
-        ),
-        tone: 'success'
-      })
-    } catch (error) {
-      console.error('标记失败:', error)
-      await showNotificationActionError(error)
-    } finally {
-      marking.value = false
-    }
-  }
-
-  async function clearReadNotifications() {
-    const readCount = filteredReadCount.value
-    if (readCount === 0) return
-
-    const confirmed = await modalStore.confirm({
-      title: getNotificationUiCopy(
-        'notification-confirm-clear-read-title',
-        { hasActiveFilter: hasActiveFilter.value },
-        hasActiveFilter.value ? '清除当前筛选中的已读通知' : '清除当前页已读通知'
-      ),
-      message: getNotificationUiCopy(
-        'notification-confirm-clear-read-message',
-        { hasActiveFilter: hasActiveFilter.value, readCount },
-        hasActiveFilter.value
-          ? `确定清除当前筛选结果中的 ${readCount} 条已读通知吗？`
-          : `确定清除当前页中的 ${readCount} 条已读通知吗？`
-      ),
-      confirmText: getNotificationUiCopy('notification-confirm-clear-read-confirm', {}, '清除已读'),
-      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
-      tone: 'danger'
-    })
-    if (!confirmed) return
-
-    marking.value = true
-
-    try {
-      if (hasActiveFilter.value) {
-        await notificationStore.clearFilteredReadNotifications({
-          type: activeType.value,
-        })
-      } else {
-        await notificationStore.clearReadNotifications()
-      }
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: true,
-      })
-      await modalStore.alert({
-        title: getNotificationUiCopy('notification-alert-clear-read-success-title', {}, '已清除已读通知'),
-        message: getNotificationUiCopy('notification-alert-clear-read-success-message', {}, '当前范围内的已读通知已清除。'),
-        tone: 'success'
-      })
-    } catch (error) {
-      console.error('清除失败:', error)
-      await showNotificationActionError(error)
-    } finally {
-      marking.value = false
-    }
-  }
-
-  async function markGroupAsRead(group) {
-    const discussionId = Number(group?.discussionId || 0)
-    const unreadCount = Array.isArray(group?.items) ? group.items.filter(item => !item.is_read).length : 0
-    if (!discussionId || unreadCount === 0) return
-
-    const confirmed = await modalStore.confirm({
-      title: getNotificationUiCopy('notification-confirm-mark-group-title', {}, '标记该讨论通知为已读'),
-      message: getNotificationUiCopy(
-        'notification-confirm-mark-group-message',
-        { groupTitle: group.title, unreadCount },
-        `确定将“${group.title}”下的 ${unreadCount} 条未读通知标记为已读吗？`
-      ),
-      confirmText: getNotificationUiCopy('notification-confirm-mark-all-confirm', {}, '标记已读'),
-      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
-      tone: 'primary'
-    })
-    if (!confirmed) return
-
-    marking.value = true
-    try {
-      await notificationStore.markFilteredAsRead({
-        type: activeType.value,
-        discussionId,
-      })
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: true,
-      })
-    } catch (error) {
-      console.error('分组标记失败:', error)
-      await showNotificationActionError(error)
-    } finally {
-      marking.value = false
-    }
-  }
-
-  async function clearGroupReadNotifications(group) {
-    const discussionId = Number(group?.discussionId || 0)
-    const readCount = Array.isArray(group?.items) ? group.items.filter(item => item.is_read).length : 0
-    if (!discussionId || readCount === 0) return
-
-    const confirmed = await modalStore.confirm({
-      title: getNotificationUiCopy('notification-confirm-clear-group-title', {}, '清除该讨论中的已读通知'),
-      message: getNotificationUiCopy(
-        'notification-confirm-clear-group-message',
-        { groupTitle: group.title, readCount },
-        `确定清除“${group.title}”下的 ${readCount} 条已读通知吗？`
-      ),
-      confirmText: getNotificationUiCopy('notification-confirm-clear-read-confirm', {}, '清除已读'),
-      cancelText: getNotificationUiCopy('notification-confirm-cancel', {}, '取消'),
-      tone: 'danger'
-    })
-    if (!confirmed) return
-
-    marking.value = true
-    try {
-      await notificationStore.clearFilteredReadNotifications({
-        type: activeType.value,
-        discussionId,
-      })
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: true,
-      })
-    } catch (error) {
-      console.error('分组清除失败:', error)
-      await showNotificationActionError(error)
-    } finally {
-      marking.value = false
-    }
-  }
+  const bulkActions = useNotificationBulkActions({
+    activeType,
+    filteredReadCount,
+    filteredUnreadCount,
+    getNotificationUiCopy,
+    hasActiveFilter,
+    listState,
+    marking,
+    modalStore,
+    notificationStore,
+    showNotificationActionError,
+  })
 
   async function deleteNotification(notificationId) {
     const confirmed = await modalStore.confirm({
@@ -413,10 +251,10 @@ export function useNotificationPage({
     viewModeItems,
     groupedNotifications,
     markAsRead,
-    markAllAsRead,
-    clearReadNotifications,
-    markGroupAsRead,
-    clearGroupReadNotifications,
+    markAllAsRead: bulkActions.markAllAsRead,
+    clearReadNotifications: bulkActions.clearReadNotifications,
+    markGroupAsRead: bulkActions.markGroupAsRead,
+    clearGroupReadNotifications: bulkActions.clearGroupReadNotifications,
     deleteNotification,
     handleNotificationClick,
     changeType,
