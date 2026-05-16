@@ -1,4 +1,12 @@
 import { renderTwemojiHtml } from '@/utils/twemoji'
+import {
+  getDiscussionListFilterHeroDescriptionText,
+  getDiscussionListFilterHeroTitleText,
+  getDiscussionListFilterLabelText,
+  resolveDiscussionListActiveFilterCode,
+  resolveDiscussionListPageMetaDescription,
+  resolveDiscussionListPageMetaTitle,
+} from '@/utils/discussionList'
 
 export function unwrapList(payload) {
   if (Array.isArray(payload?.data)) return payload.data
@@ -56,6 +64,15 @@ export function normalizePost(post = {}) {
       title: post.discussion_title || '讨论'
     } : null)
   }
+}
+
+export {
+  getDiscussionListFilterHeroDescriptionText,
+  getDiscussionListFilterHeroTitleText,
+  getDiscussionListFilterLabelText,
+  resolveDiscussionListActiveFilterCode,
+  resolveDiscussionListPageMetaDescription,
+  resolveDiscussionListPageMetaTitle,
 }
 
 export function getUserDisplayName(user = {}) {

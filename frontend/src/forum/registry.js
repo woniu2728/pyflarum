@@ -1,6 +1,16 @@
 import { defineAsyncComponent } from 'vue'
 import api from '@/api'
-import { buildDiscussionPath, buildUserPath, formatRelativeTime, getUserInitial } from '@/utils/forum'
+import {
+  buildDiscussionPath,
+  buildUserPath,
+  formatRelativeTime,
+  getDiscussionListFilterHeroDescriptionText,
+  getDiscussionListFilterHeroTitleText,
+  getDiscussionListFilterLabelText,
+  getUserInitial,
+  resolveDiscussionListPageMetaDescription,
+  resolveDiscussionListPageMetaTitle,
+} from '@/utils/forum'
 import {
   resolveDiscussionAction,
   resolvePostAction,
@@ -362,45 +372,6 @@ function registerDefaultNotificationRenderer(definition) {
 
 function buildSearchTextHtml(value, query, limit) {
   return renderTwemojiHtml(highlightSearchText(value, query, limit))
-}
-
-function getDiscussionListDefaultFilterText(code) {
-  switch (String(code || 'all').trim()) {
-    case 'following':
-      return '关注中'
-    case 'unread':
-      return '未读'
-    case 'my':
-      return '我的讨论'
-    default:
-      return '全部讨论'
-  }
-}
-
-function getDiscussionListFilterHeroTitleText(code) {
-  switch (String(code || 'all').trim()) {
-    case 'following':
-      return '关注的讨论'
-    case 'unread':
-      return '未读讨论'
-    case 'my':
-      return '我的讨论'
-    default:
-      return '全部讨论'
-  }
-}
-
-function getDiscussionListFilterHeroDescriptionText(code) {
-  switch (String(code || 'all').trim()) {
-    case 'following':
-      return '这里会显示你已关注、并在后续收到新回复通知的讨论。'
-    case 'unread':
-      return '这里会集中显示你仍有未读回复的讨论，方便继续跟进。'
-    case 'my':
-      return '这里会集中展示你发起过的讨论与最近互动。'
-    default:
-      return '浏览论坛最新讨论、热门主题和社区回复。'
-  }
 }
 
 registerDefaultNotificationRenderer({
@@ -3433,9 +3404,9 @@ registerUiCopy({
   surfaces: ['header-mobile-page-title'],
   resolve: ({ routeName, forumTitle, listFilter }) => ({
     text: routeName === 'home'
-      ? getDiscussionListDefaultFilterText(listFilter)
+      ? getDiscussionListFilterLabelText(listFilter)
       : routeName === 'following'
-        ? getDiscussionListDefaultFilterText('following')
+        ? getDiscussionListFilterLabelText('following')
         : ({
           tags: '标签',
           profile: '个人主页',
@@ -3503,7 +3474,7 @@ registerUiCopy({
   order: 479,
   surfaces: ['discussion-list-default-filter-label'],
   resolve: ({ code }) => ({
-    text: getDiscussionListDefaultFilterText(code),
+    text: getDiscussionListFilterLabelText(code),
   }),
 })
 
@@ -3563,7 +3534,7 @@ registerUiCopy({
   order: 479,
   surfaces: ['discussion-list-filter-hero-pill'],
   resolve: ({ listFilter }) => ({
-    text: getDiscussionListDefaultFilterText(listFilter),
+    text: getDiscussionListFilterLabelText(listFilter),
   }),
 })
 
@@ -3599,10 +3570,12 @@ registerUiCopy({
   order: 479,
   surfaces: ['discussion-list-page-meta-title'],
   resolve: ({ listFilter, currentTagName, searchQuery, hasSearchQuery }) => {
-    const baseTitle = currentTagName || getDiscussionListFilterHeroTitleText(listFilter)
-
     return {
-      text: hasSearchQuery ? `${baseTitle} - 搜索“${searchQuery}”` : baseTitle,
+      text: resolveDiscussionListPageMetaTitle({
+        filterCode: listFilter,
+        currentTagName,
+        searchQuery: hasSearchQuery ? searchQuery : '',
+      }),
     }
   },
 })
@@ -3612,28 +3585,13 @@ registerUiCopy({
   order: 479,
   surfaces: ['discussion-list-page-meta-description'],
   resolve: ({ listFilter, currentTagName, currentTagDescription, searchQuery, hasSearchQuery }) => {
-    if (currentTagName) {
-      return {
-        text: hasSearchQuery
-          ? `查看标签“${currentTagName}”下与“${searchQuery}”相关的讨论。`
-          : currentTagDescription || `查看标签“${currentTagName}”下的最新讨论和回复。`,
-      }
-    }
-
-    if (hasSearchQuery) {
-      return {
-        text: `在${getDiscussionListDefaultFilterText(listFilter)}中搜索与“${searchQuery}”相关的讨论。`,
-      }
-    }
-
     return {
-      text: listFilter === 'following'
-        ? '查看你关注的讨论和最新回复。'
-        : listFilter === 'unread'
-          ? '集中查看你还有未读回复的讨论。'
-          : listFilter === 'my'
-            ? '集中查看你发起过的讨论与最新互动。'
-            : '浏览论坛最新讨论、热门主题和社区回复。',
+      text: resolveDiscussionListPageMetaDescription({
+        filterCode: listFilter,
+        currentTagName,
+        currentTagDescription,
+        searchQuery: hasSearchQuery ? searchQuery : '',
+      }),
     }
   },
 })
