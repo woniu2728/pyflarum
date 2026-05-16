@@ -1,6 +1,15 @@
 import { computed } from 'vue'
 import { getEmptyState, getForumNavItems, getStateBlock, getUiCopy } from '@/forum/registry'
 import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
+import {
+  buildDiscussionFilterLocation,
+  buildDiscussionListPrimaryTagItems,
+  buildDiscussionListSecondaryTagItems,
+  findDiscussionListSidebarContextParent,
+  getDiscussionListStartButtonStyle,
+  isDiscussionFilterActive,
+  isDiscussionSidebarTagActive,
+} from '@/utils/discussionListNavigation'
 
 const DEFAULT_DISCUSSION_FILTERS = [
   { code: 'all', icon: 'far fa-comments', sidebar_visible: true, route_path: '/' },
@@ -27,13 +36,15 @@ export function useDiscussionListNavigation({
       || (route.name === 'user-profile' && String(route.params.id) === String(authStore.user.id))
     )
   })
-  const currentTagContextParent = computed(() => findSidebarContextParent(currentTagSlug.value, tags.value))
-  const sidebarPrimaryTagItems = computed(() => buildSidebarPrimaryTagItems(tags.value, currentTagContextParent.value))
-  const sidebarSecondaryTagItems = computed(() => buildSidebarSecondaryTagItems(tags.value))
+  const normalizedTags = computed(() => unwrapList(tags.value).map(normalizeTag))
+  const flatTags = computed(() => flattenTags(tags.value))
+  const currentTagContextParent = computed(() => findDiscussionListSidebarContextParent(currentTagSlug.value, normalizedTags.value))
+  const sidebarPrimaryTagItems = computed(() => buildDiscussionListPrimaryTagItems(flatTags.value, currentTagContextParent.value))
+  const sidebarSecondaryTagItems = computed(() => buildDiscussionListSecondaryTagItems(flatTags.value))
   const sidebarFilterItems = computed(() => buildSidebarFilterItems())
   const hasSidebarTagNavigation = computed(() => tags.value.length > 0)
   const showMoreTagsLink = computed(() => sidebarSecondaryTagItems.value.length > 0)
-  const startDiscussionButtonStyle = computed(() => getStartDiscussionButtonStyle(currentTag.value))
+  const startDiscussionButtonStyle = computed(() => getDiscussionListStartButtonStyle(currentTag.value))
   const emptyStateText = computed(() => {
     const emptyState = getEmptyState({
       surface: 'discussion-list-empty',
@@ -92,117 +103,14 @@ export function useDiscussionListNavigation({
       .map(item => ({
         ...item,
         to: item.to || buildDiscussionFilterLocation(item),
-        active: isDiscussionFilterActive(item.code),
+        active: isDiscussionFilterActive({
+          currentTagSlug: currentTagSlug.value,
+          routeName: route.name,
+          isFollowingPage: isFollowingPage.value,
+          listFilter: listFilter.value,
+          filterCode: item.code,
+        }),
       }))
-  }
-
-  function buildDiscussionFilterLocation(filterItem) {
-    const filterCode = filterItem?.code
-    const routePath = String(filterItem?.route_path || '').trim()
-
-    if (routePath && routePath !== '/') {
-      return routePath
-    }
-
-    if (filterCode === 'all') {
-      return '/'
-    }
-
-    return {
-      path: '/',
-      query: {
-        filter: filterCode,
-      },
-    }
-  }
-
-  function isDiscussionFilterActive(filterCode) {
-    if (currentTagSlug.value || route.name === 'tags') {
-      return false
-    }
-
-    if (filterCode === 'following') {
-      return isFollowingPage.value
-    }
-
-    if (route.name !== 'home') {
-      return false
-    }
-
-    return listFilter.value === filterCode
-  }
-
-  function buildSidebarPrimaryTagItems(sourceTags, contextParent) {
-    return sortForumSidebarTags(flattenTags(sourceTags)).filter(tag => {
-      const position = normalizeTagPosition(tag.position)
-      if (position === null) return false
-      if (!tag.parent_id) return true
-      return Boolean(contextParent && tag.parent_id === contextParent.id)
-    })
-  }
-
-  function buildSidebarSecondaryTagItems(sourceTags) {
-    return sortForumSidebarTags(flattenTags(sourceTags))
-      .filter(tag => normalizeTagPosition(tag.position) === null)
-      .slice(0, 3)
-  }
-
-  function sortForumSidebarTags(sourceTags) {
-    const normalizedTags = unwrapList(sourceTags).map(normalizeTag)
-    const tagsById = new Map(normalizedTags.map(tag => [tag.id, tag]))
-
-    return normalizedTags.slice().sort((left, right) => {
-      const leftPosition = normalizeTagPosition(left.position)
-      const rightPosition = normalizeTagPosition(right.position)
-
-      if (leftPosition === null && rightPosition === null) {
-        return Number(right.discussion_count || 0) - Number(left.discussion_count || 0)
-      }
-
-      if (rightPosition === null) return -1
-      if (leftPosition === null) return 1
-
-      const leftParent = left.parent_id ? tagsById.get(left.parent_id) : null
-      const rightParent = right.parent_id ? tagsById.get(right.parent_id) : null
-
-      if (leftParent?.id === rightParent?.id) return leftPosition - rightPosition
-
-      if (leftParent && rightParent) {
-        return normalizeTagPosition(leftParent.position) - normalizeTagPosition(rightParent.position)
-      }
-
-      if (leftParent) {
-        return leftParent.id === right.id
-          ? 1
-          : normalizeTagPosition(leftParent.position) - rightPosition
-      }
-
-      if (rightParent) {
-        return rightParent.id === left.id
-          ? -1
-          : leftPosition - normalizeTagPosition(rightParent.position)
-      }
-
-      return 0
-    })
-  }
-
-  function findSidebarContextParent(targetSlug, sourceTags) {
-    if (!targetSlug) return null
-
-    for (const tag of unwrapList(sourceTags).map(normalizeTag)) {
-      if (tag.slug === targetSlug) return tag
-
-      if (flattenTags(tag.children).some(child => child.slug === targetSlug)) {
-        return tag
-      }
-    }
-
-    return null
-  }
-
-  function normalizeTagPosition(position) {
-    return position === null || position === undefined ? null : Number(position)
   }
 
   function getSidebarTagStyle(tag) {
@@ -211,37 +119,13 @@ export function useDiscussionListNavigation({
     }
   }
 
-  function getStartDiscussionButtonStyle(tag) {
-    if (!tag?.color) return {}
-
-    return {
-      '--tag-button-bg': tag.color,
-      '--tag-button-text': getContrastColor(tag.color)
-    }
-  }
-
-  function getContrastColor(color) {
-    const hex = String(color || '').trim().replace('#', '')
-    if (!/^[\da-fA-F]{6}$/.test(hex)) return '#ffffff'
-
-    const red = parseInt(hex.slice(0, 2), 16)
-    const green = parseInt(hex.slice(2, 4), 16)
-    const blue = parseInt(hex.slice(4, 6), 16)
-    const brightness = (red * 299 + green * 587 + blue * 114) / 1000
-
-    return brightness >= 150 ? '#243447' : '#ffffff'
-  }
-
-  function findParentTagSlug(targetSlug, sourceTags) {
-    const parent = findSidebarContextParent(targetSlug, sourceTags)
-    return parent?.slug || null
-  }
-
   function isSidebarTagActive(tag) {
-    if (currentTagSlug.value === tag.slug) return true
-
-    const currentTagParentSlug = findParentTagSlug(currentTagSlug.value, tags.value)
-    return Boolean(currentTag.value?.parent_id && currentTagParentSlug === tag.slug)
+    return isDiscussionSidebarTagActive({
+      currentTag: currentTag.value,
+      currentTagSlug: currentTagSlug.value,
+      normalizedTags: normalizedTags.value,
+      tag,
+    })
   }
 
   return {
