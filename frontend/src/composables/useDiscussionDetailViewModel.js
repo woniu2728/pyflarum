@@ -1,5 +1,4 @@
-import { computed, watch } from 'vue'
-import { getDiscussionBadges, getPageState, getUiCopy } from '@/forum/registry'
+import { useDiscussionDetailMetaState } from '@/composables/useDiscussionDetailMetaState'
 import { getPostTypeDefinition } from '@/forum/postTypes'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
 import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
@@ -73,87 +72,26 @@ export function useDiscussionDetailViewModel({
     postActionHandlers: interactions.postActionHandlers,
     togglingSubscription: interactions.togglingSubscription,
   })
-
-  const discussionBadges = computed(() => {
-    if (!discussion.value) return []
-
-    return getDiscussionBadges({
-      discussion: discussion.value,
-      surface: 'hero',
-    })
+  const metaState = useDiscussionDetailMetaState({
+    discussion,
+    forumStore,
+    loading: pageState.loading,
   })
-
-  const loadingStateText = computed(() => {
-    const pageStateResult = getPageState({
-      surface: 'discussion-detail-loading',
-      loading: pageState.loading.value,
-      discussion: discussion.value,
-    })
-
-    return pageStateResult?.text || '加载中...'
-  })
-
-  const missingStateText = computed(() => {
-    const pageStateResult = getPageState({
-      surface: 'discussion-detail-not-found',
-      loading: pageState.loading.value,
-      discussion: discussion.value,
-    })
-
-    return pageStateResult?.text || '讨论不存在'
-  })
-
-  const loadPreviousText = computed(() => getUiCopy({
-    surface: 'discussion-detail-load-previous',
-  })?.text || '加载前面的回复')
-
-  const loadMoreText = computed(() => getUiCopy({
-    surface: 'discussion-detail-load-more',
-  })?.text || '加载更多回复')
-
-  const loadingPostsText = computed(() => getUiCopy({
-    surface: 'discussion-detail-load-posts-loading',
-  })?.text || '正在加载回复...')
-
-  const unreadDividerText = computed(() => getUiCopy({
-    surface: 'discussion-detail-unread-divider',
-  })?.text || '从这里开始是未读回复')
 
   function resolvePostComponent(post) {
     return getPostTypeDefinition(post?.type)?.component
   }
 
-  watch(
-    discussion,
-    value => {
-      if (!value) return
-      const firstPostText = String(value.first_post?.content || value.excerpt || '').replace(/\s+/g, ' ').trim()
-      forumStore.setPageMeta({
-        title: value.title,
-        description: firstPostText.slice(0, 160),
-        ogType: 'article',
-        canonicalUrl: `/d/${value.id}`,
-      })
-    },
-    { immediate: true }
-  )
-
   return {
     ...pageBindings,
     ...interactions,
+    ...metaState,
     ...presentation,
     ...menus,
     activePostMenuId,
     closePostMenu,
     discussion,
-    discussionBadges,
     hasActiveComposer,
-    loadMoreText,
-    loadPreviousText,
-    loadingPostsText,
-    loadingStateText,
-    missingStateText,
     resolvePostComponent,
-    unreadDividerText,
   }
 }

@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveDiscussionDetailMetaPayload } from '../utils/discussionDetailMeta.js'
+import { resolveDiscussionDetailMetaPayload } from './discussionDetailMeta.js'
 
-test('discussion detail view model helper path resolves meta payload from discussion content', () => {
+test('discussion detail meta helper normalizes first post text into page meta payload', () => {
   assert.deepEqual(resolveDiscussionDetailMetaPayload({
     id: 12,
     title: '讨论标题',
