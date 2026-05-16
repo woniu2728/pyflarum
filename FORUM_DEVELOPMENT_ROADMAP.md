@@ -910,6 +910,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：通知页新增 `useNotificationLoadState`，把通知列表拉取、筛选参数拼装和 `totalCount/totalPages` 更新从 `useNotificationPage` 中拆出，并补上独立 Node 测试；通知页 page composable 继续向“加载层 + 路由动作层 + 动作层 + 展示派生”拆分。
 - 已完成：通知页新增 `useNotificationDisplayState`，把空状态/加载态文案、类型筛选项、视图模式项以及汇总计数字符串从 `useNotificationPage` 中拆出，并补上独立 Node 测试；通知页 page composable 进一步收口到动作装配层。
 - 已完成：个人主页新增 `useProfileContentState`，把讨论/回复列表的资源 id、按需请求式加载、tracked discussion 清理和帖子去重 merge 从 `useProfilePage` 中拆出，并补上独立 Node 测试；profile page composable 开始继续从“账户动作 + 生命周期 + 内容流状态”三层收口。
+- 已完成：个人主页新增 `useProfileRealtimeState`，把 forum event 的讨论可见性判定、刷新型事件回退重新拉取和帖子 payload merge/append 从 `useProfilePage` 中拆出，并补上独立 Node 测试；profile page composable 继续向“生命周期层 + 内容流状态层 + 实时消费层 + 账户动作层”拆分。
 - 已完成：个人主页的讨论/回复面板新增按需请求式 `useRequestedPaginatedListState` 包装层，讨论列表切到共享分页状态底座，回复列表也保留 tab 懒加载但改为通过统一列表状态驱动；切换用户时的列表重置、讨论实时订阅替换，以及个人页回复 tab 在实时敏感事件后的强制刷新也一并收口，阶段 3 的列表状态层开始继续覆盖 profile 这条用户内容流。
 - 已完成：个人主页面板切换新增 `useProfileRouteState` 路由状态协议，`discussions/posts/settings/security` 现在会进入 URL 查询参数，并由页面在面板可见性变化时自动纠正到首个可用 tab；profile 的刷新、分享链接以及返回前进开始具备稳定的论坛级状态层行为。
 - 已完成：个人主页视图脚本区新增 `useProfileViewModel` 装配层，面板装配、页面 meta、头像区展示派生和表单字段更新 handlers 从 `ProfileView.vue` 收口到单一 composable，并补上 `profileMeta` helper 测试；profile 页面开始和 discussion list/detail 一样进入“页面只保留模板绑定”的统一组织方式。

@@ -4,15 +4,12 @@ import { getUiCopy } from '@/forum/registry'
 import { useProfileAccountActions } from '@/composables/useProfileAccountActions'
 import { useProfileContentState } from '@/composables/useProfileContentState'
 import { useProfilePageLifecycle } from '@/composables/useProfilePageLifecycle'
+import { useProfileRealtimeState } from '@/composables/useProfileRealtimeState'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 import {
   normalizeUser,
 } from '@/utils/forum'
-import {
-  mergeForumEventPayload,
-  shouldRefreshForumEvent,
-} from '@/utils/forumRealtime'
 import { useProfileRouteState } from './useProfileRouteState'
 
 export function useProfilePage({
@@ -81,15 +78,21 @@ export function useProfilePage({
     },
     userId,
   })
+  const profileRealtimeState = useProfileRealtimeState({
+    activeTab,
+    contentState: profileContentState,
+    resourceStore,
+    userId,
+  })
 
   function addForumEventListener() {
     if (typeof window === 'undefined') return
-    window.addEventListener('bias:forum-event', handleForumEvent)
+    window.addEventListener('bias:forum-event', profileRealtimeState.handleForumEvent)
   }
 
   function removeForumEventListener() {
     if (typeof window === 'undefined') return
-    window.removeEventListener('bias:forum-event', handleForumEvent)
+    window.removeEventListener('bias:forum-event', profileRealtimeState.handleForumEvent)
   }
 
   function cleanupTrackedDiscussions() {
@@ -217,30 +220,6 @@ export function useProfilePage({
     verificationSuccess,
     normalizeUser,
   })
-
-  async function handleForumEvent(event) {
-    const detail = event.detail || {}
-    const discussionId = Number(detail.discussion_id)
-    const visibleDiscussionIds = new Set(profileContentState.discussionIds.value.map(id => String(id)))
-
-    if (discussionId && visibleDiscussionIds.has(String(discussionId))) {
-      if (shouldRefreshForumEvent(detail.event_type)) {
-        await loadDiscussions()
-        if (activeTab.value === 'posts' && Number(profileContentState.requestedPostUserId.value || 0) === Number(userId.value || 0)) {
-          await loadPosts({ force: true, forceLoading: false })
-        }
-        return
-      }
-
-      mergeForumEventPayload(resourceStore, detail)
-      if (detail.payload?.post && profileContentState.posts.value.some(post => Number(post?.discussion_id) === discussionId)) {
-        const postId = Number(detail.payload.post.id || 0)
-        if (postId > 0) {
-          profileContentState.mergePostIds([postId])
-        }
-      }
-    }
-  }
 
   return {
     user,
