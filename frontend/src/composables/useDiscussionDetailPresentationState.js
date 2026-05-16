@@ -1,4 +1,6 @@
+import { useDiscussionDetailPermissionState } from '@/composables/useDiscussionDetailPermissionState'
 import { getPostTypeDefinition } from '@/forum/postTypes'
+import { getUiCopy } from '@/forum/registry'
 import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
 import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
 import { useDiscussionDetailPresentation } from '@/composables/useDiscussionDetailPresentation'
@@ -22,17 +24,36 @@ export function useDiscussionDetailPresentationState({
   totalPosts,
   upsertPost,
 }) {
+  const permissionState = useDiscussionDetailPermissionState({
+    authStore,
+    discussion,
+    resolveUiText(surface, fallback, context = {}) {
+      return getUiCopy({
+        surface,
+        ...context,
+      })?.text || fallback
+    },
+  })
+
   const interactions = useDiscussionDetailInteractions({
     authStore,
+    canEditDiscussion: permissionState.canEditDiscussion,
+    canLikePost: permissionState.canLikePost,
+    canModeratePendingDiscussion: permissionState.canModeratePendingDiscussion,
+    canModeratePendingPost: permissionState.canModeratePendingPost,
+    canModeratePostVisibility: permissionState.canModeratePostVisibility,
     composerStore,
     discussion,
+    formatAbsoluteDate: permissionState.formatAbsoluteDate,
     hasActiveComposer,
+    isSuspended: permissionState.isSuspended,
     modalStore,
     patchDiscussion,
     refreshDiscussion,
     removePost,
     route,
     router,
+    suspensionNotice: permissionState.suspensionNotice,
     scrollToPost,
     totalPosts,
     upsertPost
@@ -43,16 +64,16 @@ export function useDiscussionDetailPresentationState({
   const menus = useDiscussionDetailMenus({
     activePostMenuId,
     authStore,
-    canDeletePost: interactions.canDeletePost,
-    canEditPost: interactions.canEditPost,
-    canModeratePostVisibility: interactions.canModeratePostVisibility,
-    canReportPost: interactions.canReportPost,
-    canEditDiscussion: interactions.canEditDiscussion,
-    canModerateDiscussionSettings: interactions.canModerateDiscussionSettings,
-    canReplyFromMenu: interactions.canReplyFromMenu,
+    canDeletePost: permissionState.canDeletePost,
+    canEditPost: permissionState.canEditPost,
+    canModeratePostVisibility: permissionState.canModeratePostVisibility,
+    canReportPost: permissionState.canReportPost,
+    canEditDiscussion: permissionState.canEditDiscussion,
+    canModerateDiscussionSettings: permissionState.canModerateDiscussionSettings,
+    canReplyFromMenu: permissionState.canReplyFromMenu,
     discussion,
     hasActiveComposer,
-    isSuspended: interactions.isSuspended,
+    isSuspended: permissionState.isSuspended,
     modalStore,
     showDiscussionMenu: pageState.showDiscussionMenu,
     discussionActionHandlers: interactions.discussionActionHandlers,
@@ -65,6 +86,7 @@ export function useDiscussionDetailPresentationState({
   }
 
   return {
+    ...permissionState,
     ...interactions,
     ...menus,
     ...presentation,

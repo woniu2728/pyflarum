@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
@@ -8,15 +8,23 @@ import PostReportModal from '@/components/modals/PostReportModal.vue'
 
 export function useDiscussionDetailInteractions({
   authStore,
+  canEditDiscussion,
+  canLikePost,
+  canModeratePendingDiscussion,
+  canModeratePendingPost,
+  canModeratePostVisibility,
   composerStore,
   discussion,
+  formatAbsoluteDate,
   hasActiveComposer,
+  isSuspended,
   modalStore,
   patchDiscussion,
   refreshDiscussion,
   removePost,
   route,
   router,
+  suspensionNotice,
   totalPosts,
   upsertPost
 }) {
@@ -25,46 +33,12 @@ export function useDiscussionDetailInteractions({
   const likePendingPostIds = ref([])
   const flagPendingPostIds = ref([])
 
-  const isSuspended = computed(() => Boolean(authStore.user?.is_suspended))
-  const canEditDiscussion = computed(() => Boolean(
-    authStore.isAuthenticated
-    && discussion.value?.can_edit
-    && !isSuspended.value
-  ))
-  const canReplyFromMenu = computed(() => Boolean(
-    authStore.isAuthenticated
-    && discussion.value?.can_reply
-    && !discussion.value?.is_locked
-    && !isSuspended.value
-  ))
-  const canModerateDiscussionSettings = computed(() => Boolean(authStore.user?.is_staff))
-  const canShowDiscussionMenu = computed(() => canEditDiscussion.value || canModerateDiscussionSettings.value)
-  const canModeratePendingDiscussion = computed(() => {
-    return Boolean(authStore.user?.is_staff && discussion.value?.approval_status === 'pending')
-  })
   function uiText(surface, fallback, context = {}) {
     return getUiCopy({
       surface,
       ...context,
     })?.text || fallback
   }
-
-  const suspensionNotice = computed(() => {
-    if (!isSuspended.value) return ''
-
-    const user = authStore.user || {}
-    return uiText(
-      'discussion-detail-suspension-notice',
-      user.suspended_until
-        ? `账号已被封禁至 ${formatAbsoluteDate(user.suspended_until)}，暂时无法回复、点赞、举报或关注讨论。`
-        : '账号当前已被封禁，暂时无法回复、点赞、举报或关注讨论。',
-      {
-        fallbackMessage: '暂时无法回复、点赞、举报或关注讨论。',
-        suspendedUntilText: user.suspended_until ? formatAbsoluteDate(user.suspended_until) : '',
-        user,
-      }
-    )
-  })
 
   function getUiErrorMessage(error, fallback = uiText('discussion-detail-action-retry-message', '请稍后重试')) {
     return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
@@ -236,40 +210,6 @@ export function useDiscussionDetailInteractions({
       console.error('删除失败:', error)
       await showActionError('删除', error)
     }
-  }
-
-  function canEditPost(post) {
-    if (isSuspended.value) return false
-    return authStore.user?.id === post.user.id || authStore.user?.is_staff
-  }
-
-  function canDeletePost(post) {
-    if (isSuspended.value) return false
-    return authStore.user?.id === post.user.id || authStore.user?.is_staff
-  }
-
-  function canLikePost(post) {
-    if (!authStore.isAuthenticated) return false
-    if (isSuspended.value) return false
-    return Boolean(post?.can_like ?? (post?.user?.id !== authStore.user?.id))
-  }
-
-  function canReportPost(post) {
-    if (!authStore.isAuthenticated) return false
-    if (isSuspended.value) return false
-    if (!post?.user?.id) return false
-    if (post.user.id === authStore.user?.id) return false
-    return true
-  }
-
-  function canModeratePostVisibility(post) {
-    if (!authStore.user?.is_staff) return false
-    if (!post) return false
-    return post.number > 1
-  }
-
-  function canModeratePendingPost(post) {
-    return Boolean(authStore.user?.is_staff && post?.approval_status === 'pending')
   }
 
   async function moderateDiscussion(action) {
@@ -567,12 +507,6 @@ export function useDiscussionDetailInteractions({
     })
   }
 
-  function formatAbsoluteDate(value) {
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return uiText('discussion-detail-unknown-time', '未知时间')
-    return date.toLocaleString('zh-CN')
-  }
-
   const discussionActionHandlers = {
     delete: async () => {
       await deleteDiscussion()
@@ -616,17 +550,6 @@ export function useDiscussionDetailInteractions({
   }
 
   return {
-    canDeletePost,
-    canEditDiscussion,
-    canEditPost,
-    canLikePost,
-    canModerateDiscussionSettings,
-    canModeratePostVisibility,
-    canModeratePendingDiscussion,
-    canModeratePendingPost,
-    canReplyFromMenu,
-    canReportPost,
-    canShowDiscussionMenu,
     deleteDiscussion,
     deletePost,
     editDiscussion,
