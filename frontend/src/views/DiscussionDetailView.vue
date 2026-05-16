@@ -154,7 +154,6 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ForumLoadMoreButton from '@/components/forum/ForumLoadMoreButton.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
@@ -166,12 +165,7 @@ import DiscussionHero from '@/components/discussion/DiscussionHero.vue'
 import DiscussionMobileActions from '@/components/discussion/DiscussionMobileActions.vue'
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
-import { getDiscussionBadges, getPageState, getUiCopy } from '@/forum/registry'
-import { getPostTypeDefinition } from '@/forum/postTypes'
-import { useDiscussionDetailInteractions } from '@/composables/useDiscussionDetailInteractions'
-import { useDiscussionDetailMenus } from '@/composables/useDiscussionDetailMenus'
-import { useDiscussionDetailPage } from '@/composables/useDiscussionDetailPage'
-import { useDiscussionDetailPresentation } from '@/composables/useDiscussionDetailPresentation'
+import { useDiscussionDetailViewModel } from '@/composables/useDiscussionDetailViewModel'
 import {
   buildTagPath,
   buildUserPath,
@@ -208,11 +202,7 @@ const {
   maxPostNumber,
   nextTrigger,
   posts,
-  patchDiscussion,
   previousTrigger,
-  refreshDiscussion,
-  removePost,
-  scrollToPost,
   scrubberAfterPercent,
   scrubberBeforePercent,
   scrubberDescription,
@@ -224,153 +214,17 @@ const {
   showUnreadDivider,
   toggleDiscussionMenu,
   togglePostMenu,
-  totalPosts,
   unreadCount,
   unreadHeightPercent,
   unreadTopPercent,
-  upsertPost
-} = useDiscussionDetailPage({
+} = useDiscussionDetailViewModel({
   authStore,
   composerStore,
+  forumStore,
+  modalStore,
   route,
   router
 })
-
-const discussionBadges = computed(() => {
-  if (!discussion.value) return []
-
-  return getDiscussionBadges({
-    discussion: discussion.value,
-    surface: 'hero',
-  })
-})
-const loadingStateText = computed(() => {
-  const pageState = getPageState({
-    surface: 'discussion-detail-loading',
-    loading: loading.value,
-    discussion: discussion.value,
-  })
-
-  return pageState?.text || '加载中...'
-})
-const missingStateText = computed(() => {
-  const pageState = getPageState({
-    surface: 'discussion-detail-not-found',
-    loading: loading.value,
-    discussion: discussion.value,
-  })
-
-  return pageState?.text || '讨论不存在'
-})
-const loadPreviousText = computed(() => getUiCopy({
-  surface: 'discussion-detail-load-previous',
-})?.text || '加载前面的回复')
-const loadMoreText = computed(() => getUiCopy({
-  surface: 'discussion-detail-load-more',
-})?.text || '加载更多回复')
-const loadingPostsText = computed(() => getUiCopy({
-  surface: 'discussion-detail-load-posts-loading',
-})?.text || '正在加载回复...')
-const unreadDividerText = computed(() => getUiCopy({
-  surface: 'discussion-detail-unread-divider',
-})?.text || '从这里开始是未读回复')
-const {
-  canDeletePost,
-  canEditDiscussion,
-  canEditPost,
-  canLikePost,
-  canModerateDiscussionSettings,
-  canModeratePostVisibility,
-  canModeratePendingDiscussion,
-  canModeratePendingPost,
-  canReplyFromMenu,
-  canReportPost,
-  canShowDiscussionMenu,
-  discussionActionHandlers,
-  editDiscussion,
-  flagPendingPostIds,
-  formatAbsoluteDate,
-  formatDate,
-  formatLikeSummary,
-  isSuspended,
-  likePendingPostIds,
-  moderateDiscussion,
-  moderatePost,
-  openComposer,
-  postActionHandlers,
-  replyToPost,
-  resolvePostFlags,
-  suspensionNotice,
-  toggleLike,
-  togglingSubscription
-} = useDiscussionDetailInteractions({
-  authStore,
-  composerStore,
-  discussion,
-  hasActiveComposer,
-  modalStore,
-  posts,
-  patchDiscussion,
-  refreshDiscussion,
-  removePost,
-  route,
-  router,
-  scrollToPost,
-  totalPosts,
-  upsertPost
-})
-const {
-  discussionHeaderStyle,
-  getUserPrimaryGroupIcon,
-  getUserPrimaryGroupColor,
-  getUserPrimaryGroupLabel
-} = useDiscussionDetailPresentation(discussion)
-const {
-  discussionMenuItems,
-  discussionSidebarActionItems,
-  getPostMenuOptions,
-  handleDiscussionMenuSelection,
-  handlePostMenuSelection,
-  hasPostControls
-} = useDiscussionDetailMenus({
-  activePostMenuId,
-  authStore,
-  canDeletePost,
-  canEditPost,
-  canModeratePostVisibility,
-  canReportPost,
-  canEditDiscussion,
-  canModerateDiscussionSettings,
-  canReplyFromMenu,
-  discussion,
-  hasActiveComposer,
-  isSuspended,
-  modalStore,
-  showDiscussionMenu,
-  discussionActionHandlers,
-  postActionHandlers,
-  togglingSubscription,
-})
-
-function resolvePostComponent(post) {
-  return getPostTypeDefinition(post?.type)?.component
-}
-
-watch(
-  discussion,
-  value => {
-    if (!value) return
-    const firstPostText = String(value.first_post?.content || value.excerpt || '').replace(/\s+/g, ' ').trim()
-    forumStore.setPageMeta({
-      title: value.title,
-      description: firstPostText.slice(0, 160),
-      ogType: 'article',
-      canonicalUrl: `/d/${value.id}`,
-    })
-  },
-  { immediate: true }
-)
-
 </script>
 
 <style scoped>
