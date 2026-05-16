@@ -3,6 +3,7 @@ import { getUiCopy } from '@/forum/registry'
 import { useProfileAccountActions } from '@/composables/useProfileAccountActions'
 import { useProfileAccountState } from '@/composables/useProfileAccountState'
 import { useProfileContentState } from '@/composables/useProfileContentState'
+import { useProfilePageActions } from '@/composables/useProfilePageActions'
 import { useProfilePageLifecycle } from '@/composables/useProfilePageLifecycle'
 import { useProfileRealtimeState } from '@/composables/useProfileRealtimeState'
 import { useProfileUserState } from '@/composables/useProfileUserState'
@@ -115,25 +116,16 @@ export function useProfilePage({
     resetProfileScope,
     route,
   })
-
-  async function loadDiscussions() {
-    await profileContentState.loadDiscussions()
-  }
-
-  async function loadPosts(options = {}) {
-    await profileContentState.loadPosts(options)
-  }
-
-  function switchTab(tab) {
-    const nextTab = String(tab || '').trim() || 'discussions'
-    if (nextTab === activeTab.value) return
-    if (nextTab === 'posts' && profileUserState.userId.value) {
+  const profilePageActions = useProfilePageActions({
+    activeTab,
+    markPostsRequestedForCurrentUser() {
       profileContentState.markPostsRequestedForCurrentUser()
-    }
-    void routeState.push({
-      activeTab: nextTab,
-    })
-  }
+    },
+    pushRouteState(payload) {
+      return routeState.push(payload)
+    },
+    userId: profileUserState.userId,
+  })
 
   const profileAccountActions = useProfileAccountActions({
     apiClient: api,
@@ -192,7 +184,7 @@ export function useProfilePage({
     passwordForm: accountState.passwordForm,
     preferences: accountState.preferences,
     isOwnProfile: profileUserState.isOwnProfile,
-    switchTab,
+    switchTab: profilePageActions.switchTab,
     saveProfile: profileAccountActions.saveProfile,
     savePreferences: profileAccountActions.savePreferences,
     resendVerificationEmail: profileAccountActions.resendVerificationEmail,
