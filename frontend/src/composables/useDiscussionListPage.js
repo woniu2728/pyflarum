@@ -1,7 +1,6 @@
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
-import { useDiscussionListData } from '@/composables/useDiscussionListData'
 import { useDiscussionListPageActions } from '@/composables/useDiscussionListPageActions'
-import { useDiscussionListNavigation } from '@/composables/useDiscussionListNavigation'
+import { useDiscussionListPageState } from '@/composables/useDiscussionListPageState'
 
 export function useDiscussionListPage({
   authStore,
@@ -15,99 +14,20 @@ export function useDiscussionListPage({
     composerStore,
     router
   })
-  const {
-    discussions,
-    currentTag,
-    currentTagSlug,
-    loading,
-    refreshing,
-    loadingMore,
-    sortBy,
-    markingAllRead,
-    hasMore,
-    isFollowingPage,
-    tags,
-    sortOptions,
-    filterOptions,
-    listFilter,
-    searchQuery,
-    refreshPageData,
-    refreshDiscussionList,
-    changeSortBy,
-    changeListFilter,
-    changeSearchQuery,
-    loadMore,
-    markAllAsRead
-  } = useDiscussionListData({
+  const pageState = useDiscussionListPageState({
     authStore,
     modalStore,
     route,
     router,
   })
-  const {
-    isTagsPage,
-    isAllDiscussionsPage,
-    isOwnProfilePage,
-    sidebarFilterItems,
-    sidebarPrimaryTagItems,
-    sidebarSecondaryTagItems,
-    hasSidebarTagNavigation,
-    showMoreTagsLink,
-    startDiscussionButtonStyle,
-    emptyStateText,
-    loadingStateText,
-    getSidebarTagStyle,
-    isSidebarTagActive
-  } = useDiscussionListNavigation({
-    authStore,
-    currentTag,
-    currentTagSlug,
-    filterOptions,
-    isFollowingPage,
-    listFilter,
-    route,
-    tags
-  })
   const pageActions = useDiscussionListPageActions({
-    currentTag,
+    currentTag: pageState.currentTag,
     route,
     startDiscussion,
   })
 
   return {
-    discussions,
-    currentTag,
-    loading,
-    refreshing,
-    loadingMore,
-    sortBy,
-    sortOptions,
-    filterOptions,
-    listFilter,
-    searchQuery,
-    markingAllRead,
-    hasMore,
-    isFollowingPage,
-    isTagsPage,
-    isAllDiscussionsPage,
-    isOwnProfilePage,
-    sidebarFilterItems,
-    sidebarPrimaryTagItems,
-    sidebarSecondaryTagItems,
-    hasSidebarTagNavigation,
-    showMoreTagsLink,
-    startDiscussionButtonStyle,
-    emptyStateText,
-    loadingStateText,
-    refreshPageData,
-    refreshDiscussionList,
-    changeSortBy,
-    changeListFilter,
-    changeSearchQuery,
-    loadMore,
-    markAllAsRead,
+    ...pageState,
     handleStartDiscussion: pageActions.handleStartDiscussion,
-    getSidebarTagStyle,
-    isSidebarTagActive
   }
 }
