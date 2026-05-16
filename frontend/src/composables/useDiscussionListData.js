@@ -1,10 +1,9 @@
 import { computed, ref } from 'vue'
 import api from '@/api'
-import { getUiCopy } from '@/forum/registry'
+import { useDiscussionListLoadState } from '@/composables/useDiscussionListLoadState'
 import { useDiscussionListResourceState } from '@/composables/useDiscussionListResourceState'
 import { useDiscussionListRouteState } from '@/composables/useDiscussionListRouteState'
 import { useDiscussionListRealtimeState } from '@/composables/useDiscussionListRealtimeState'
-import { usePaginatedListState } from '@/composables/usePaginatedListState'
 import { useForumRealtimeStore } from '@/stores/forumRealtime'
 import { useResourceStore } from '@/stores/resource'
 
@@ -31,47 +30,14 @@ export function useDiscussionListData({
     searchQuery,
     sortBy,
   })
-  const listState = usePaginatedListState({
-    watchSources: () => [route.name, route.params.slug, searchQuery.value, sortBy.value, listFilter.value],
-    initialLoading: true,
-    reset: resourceState.reset,
-    async load({ mode }) {
-      if (mode === 'initial') {
-        await resourceState.loadInitialResources()
-        return null
-      }
-
-      if (mode === 'append') {
-        await resourceState.loadMoreDiscussions()
-        return null
-      }
-
-      await resourceState.refreshDiscussions()
-      return null
-    },
+  const loadState = useDiscussionListLoadState({
+    modalStore,
+    resourceState,
+    route,
+    searchQuery,
+    sortBy,
+    listFilter,
   })
-  const loading = listState.loading
-  const refreshing = listState.refreshing
-  const loadingMore = listState.loadingMore
-
-  function uiText(surface, fallback, context = {}) {
-    return getUiCopy({
-      surface,
-      ...context,
-    })?.text || fallback
-  }
-
-  function getDiscussionListErrorMessage(error, fallback = uiText('discussion-list-action-retry-message', '请稍后重试')) {
-    return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
-  }
-
-  async function showDiscussionListError(actionType, error, fallback = uiText('discussion-list-action-retry-message', '请稍后重试')) {
-    await modalStore.alert({
-      title: uiText('discussion-list-action-failed-title', '操作失败', { actionType }),
-      message: getDiscussionListErrorMessage(error, fallback),
-      tone: 'danger'
-    })
-  }
 
   const realtimeState = useDiscussionListRealtimeState({
     api,
@@ -80,33 +46,10 @@ export function useDiscussionListData({
     forumRealtimeStore,
     markingAllRead,
     modalStore,
-    refreshDiscussionList,
+    refreshDiscussionList: loadState.refreshDiscussionList,
     resourceStore,
-    uiText,
+    uiText: loadState.uiText,
   })
-
-  async function refreshPageData() {
-    try {
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: true,
-      })
-    } catch (error) {
-      resourceState.reset()
-      console.error('加载首页列表失败:', error)
-    }
-  }
-
-  async function refreshDiscussionList() {
-    try {
-      await listState.refresh({
-        mode: 'refresh',
-      })
-    } catch (error) {
-      console.error('刷新讨论列表失败:', error)
-      await showDiscussionListError('refresh', error)
-    }
-  }
 
   async function changeSortBy(sort) {
     if (sortBy.value === sort) return
@@ -135,17 +78,6 @@ export function useDiscussionListData({
     })
   }
 
-  async function loadMore() {
-    try {
-      await listState.refresh({
-        mode: 'append',
-      })
-    } catch (error) {
-      console.error('加载更多讨论失败:', error)
-      await showDiscussionListError('load-more', error)
-    }
-  }
-
   return {
     changeSortBy,
     currentTag: resourceState.currentTag,
@@ -155,16 +87,16 @@ export function useDiscussionListData({
     hasMore: resourceState.hasMore,
     isFollowingPage,
     listFilter,
-    loadMore,
-    loading,
-    loadingMore,
+    loadMore: loadState.loadMore,
+    loading: loadState.loading,
+    loadingMore: loadState.loadingMore,
     markAllAsRead: realtimeState.markAllAsRead,
     changeListFilter,
     changeSearchQuery,
     markingAllRead,
-    refreshPageData,
-    refreshDiscussionList,
-    refreshing,
+    refreshPageData: loadState.refreshPageData,
+    refreshDiscussionList: loadState.refreshDiscussionList,
+    refreshing: loadState.refreshing,
     sortBy,
     sortOptions: resourceState.sortOptions,
     tags: resourceState.tags
