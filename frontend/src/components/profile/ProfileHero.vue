@@ -76,8 +76,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { getHeroMetaItems, getUiCopy } from '@/forum/registry'
+import { toRef } from 'vue'
+import { useProfileHeroState } from '@/composables/useProfileHeroState'
 
 const props = defineProps({
   user: {
@@ -130,23 +130,20 @@ const props = defineProps({
   }
 })
 
-const userBadges = computed(() => Array.isArray(props.userBadges) ? props.userBadges : [])
-const primaryGroupBadge = computed(() => userBadges.value.find(item => item.variant === 'group') || null)
-const inlineBadges = computed(() => userBadges.value.filter(item => item.variant !== 'group'))
-const heroMetaItems = computed(() => getHeroMetaItems({
-  user: props.user,
-  isOnline: props.isOnline,
+const {
+  avatarUploadText,
+  heroMetaItems,
+  inlineBadges,
+  primaryGroupBadge,
+  settingsButtonText,
+} = useProfileHeroState({
+  avatarUploading: toRef(props, 'avatarUploading'),
   formatJoinDate: props.formatJoinDate,
   formatLastSeen: props.formatLastSeen,
-  surface: 'profile-hero',
-}))
-const avatarUploadText = computed(() => getUiCopy({
-  surface: 'profile-hero-avatar-upload',
-  uploading: props.avatarUploading,
-})?.text || (props.avatarUploading ? '上传中...' : '更换头像'))
-const settingsButtonText = computed(() => getUiCopy({
-  surface: 'profile-hero-settings-button',
-})?.text || '设置')
+  isOnline: toRef(props, 'isOnline'),
+  user: toRef(props, 'user'),
+  userBadges: toRef(props, 'userBadges'),
+})
 
 defineEmits(['avatar-selected', 'open-settings'])
 </script>
