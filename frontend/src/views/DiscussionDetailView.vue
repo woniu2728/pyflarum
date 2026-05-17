@@ -29,6 +29,11 @@
             :can-edit-discussion="mobileBindings.canEditDiscussion"
             :can-moderate-discussion-settings="mobileBindings.canModerateDiscussionSettings"
             :menu-items="mobileBindings.menuItems"
+            @open-composer="mobileEvents.openComposer"
+            @open-login-for-reply="mobileEvents.openLoginForReply"
+            @share-discussion="mobileEvents.shareDiscussion"
+            @toggle-subscription="mobileEvents.toggleSubscription"
+            @toggle-menu="mobileEvents.toggleDiscussionMenu"
             @menu-action="mobileEvents.menuAction"
           />
 
@@ -256,7 +261,7 @@ const {
 
 @media (max-width: 768px) {
   .discussion-detail-page {
-    padding: 0 0 24px;
+    padding: 0 0 90px;
   }
 
   .layout {

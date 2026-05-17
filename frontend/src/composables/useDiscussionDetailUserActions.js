@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import api from '@/api'
 import { getUiCopy } from '@/forum/registry'
 import { useResourceStore } from '@/stores/resource'
-import { formatRelativeTime } from '@/utils/forum'
+import { buildDiscussionPath, formatRelativeTime } from '@/utils/forum'
 import PostReportModal from '@/components/modals/PostReportModal.vue'
 
 export function useDiscussionDetailUserActions({
@@ -184,6 +184,43 @@ export function useDiscussionDetailUserActions({
     })
   }
 
+  async function shareDiscussion() {
+    if (!discussion.value) return
+
+    const path = buildDiscussionPath(discussion.value)
+    const href = typeof window === 'undefined'
+      ? path
+      : new URL(path, window.location.origin).toString()
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({
+          title: discussion.value.title || uiText('discussion-detail-share-title', '讨论'),
+          url: href,
+        })
+        return
+      }
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(href)
+        await modalStore.alert({
+          title: uiText('discussion-detail-share-copied-title', '链接已复制'),
+          message: uiText('discussion-detail-share-copied-message', '讨论链接已复制到剪贴板。')
+        })
+        return
+      }
+
+      await modalStore.alert({
+        title: uiText('discussion-detail-share-manual-title', '分享讨论'),
+        message: href
+      })
+    } catch (error) {
+      if (error?.name === 'AbortError') return
+      console.error('分享讨论失败:', error)
+      await showActionError('分享讨论', error, uiText('discussion-detail-share-fallback', '请稍后重试'))
+    }
+  }
+
   async function deletePost(post) {
     try {
       await api.delete(`/posts/${post.id}`)
@@ -260,6 +297,7 @@ export function useDiscussionDetailUserActions({
     openComposer,
     openReportModal,
     replyToPost,
+    shareDiscussion,
     showActionError,
     showSuspensionAlert,
     toggleLike,

@@ -7,6 +7,7 @@ function createBindings(overrides = {}) {
   return createDiscussionDetailViewBindings({
     activePostMenuId: ref(7),
     authStore: { isAuthenticated: true },
+    buildDiscussionPath: value => `/d/${value.id || value}`,
     buildTagPath: value => `/tags/${value.slug || value}`,
     buildUserPath: value => `/u/${value.id || value}`,
     canDeletePost: ref(true),
@@ -66,6 +67,7 @@ function createBindings(overrides = {}) {
     moderatePost() {},
     nextTrigger: ref(null),
     openComposer() {},
+    shareDiscussion() {},
     posts: ref([{ id: 8, number: 3 }, { id: 9, number: 4 }]),
     previousTrigger: ref(null),
     replyToPost() {},
@@ -82,6 +84,7 @@ function createBindings(overrides = {}) {
     showUnreadDivider: post => post.number === 4,
     suspensionNotice: ref('账号已停用'),
     toggleDiscussionMenu() {},
+    toggleSubscription() {},
     toggleLike() {},
     togglePostMenu() {},
     togglingSubscription: ref(false),
@@ -144,6 +147,9 @@ test('discussion detail view bindings expose stable event handlers', () => {
     openComposer() {
       calls.push('open-composer')
     },
+    shareDiscussion() {
+      calls.push('share-discussion')
+    },
     replyToPost(post) {
       calls.push(['reply', post.id])
     },
@@ -152,6 +158,9 @@ test('discussion detail view bindings expose stable event handlers', () => {
     },
     toggleDiscussionMenu() {
       calls.push('toggle-menu')
+    },
+    toggleSubscription() {
+      calls.push('toggle-subscription')
     },
     toggleLike(post) {
       calls.push(['like', post.id])
@@ -163,6 +172,11 @@ test('discussion detail view bindings expose stable event handlers', () => {
 
   bindings.heroEvents.editDiscussion()
   bindings.heroEvents.moderateDiscussion('approve')
+  bindings.mobileEvents.openComposer()
+  bindings.mobileEvents.openLoginForReply()
+  bindings.mobileEvents.shareDiscussion()
+  bindings.mobileEvents.toggleSubscription()
+  bindings.mobileEvents.toggleDiscussionMenu()
   bindings.mobileEvents.menuAction('reply')
   bindings.postStreamEvents.loadPreviousPosts()
   bindings.postStreamEvents.jumpToPost(12)
@@ -188,6 +202,11 @@ test('discussion detail view bindings expose stable event handlers', () => {
   assert.deepEqual(calls, [
     'edit-discussion',
     ['moderate-discussion', 'approve'],
+    'open-composer',
+    ['discussion-menu', 'login'],
+    'share-discussion',
+    'toggle-subscription',
+    'toggle-menu',
     ['discussion-menu', 'reply'],
     'load-previous',
     ['jump', 12],

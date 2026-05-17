@@ -3,6 +3,7 @@ export function createDiscussionActionHandlers({
   editDiscussion,
   goToLoginForReply,
   openComposer,
+  shareDiscussion,
   toggleHide,
   toggleLock,
   togglePin,
@@ -20,6 +21,9 @@ export function createDiscussionActionHandlers({
     },
     reply: async () => {
       openComposer()
+    },
+    share: async () => {
+      await shareDiscussion()
     },
     'toggle-hide': async () => {
       await toggleHide()

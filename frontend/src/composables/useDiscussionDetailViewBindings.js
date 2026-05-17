@@ -62,6 +62,7 @@ export function createDiscussionDetailViewBindings({
   moderatePost,
   nextTrigger,
   openComposer,
+  shareDiscussion,
   posts,
   previousTrigger,
   replyToPost,
@@ -78,6 +79,7 @@ export function createDiscussionDetailViewBindings({
   showUnreadDivider,
   suspensionNotice,
   toggleDiscussionMenu,
+  toggleSubscription,
   toggleLike,
   togglePostMenu,
   togglingSubscription,
@@ -122,6 +124,11 @@ export function createDiscussionDetailViewBindings({
   }))
 
   const mobileEvents = {
+    openComposer,
+    openLoginForReply: handleDiscussionMenuSelection.bind(null, 'login'),
+    shareDiscussion,
+    toggleDiscussionMenu,
+    toggleSubscription,
     menuAction: handleDiscussionMenuSelection,
   }
 

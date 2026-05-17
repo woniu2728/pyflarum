@@ -10,8 +10,8 @@
       </main>
     </template>
     <template v-else>
-      <Header />
-      <div v-if="showAnnouncement" class="site-announcement" :class="`site-announcement--${announcementTone}`">
+      <Header v-if="showGlobalNavigation" />
+      <div v-if="showAnnouncement && showGlobalNavigation" class="site-announcement" :class="`site-announcement--${announcementTone}`">
         <div class="site-announcement-inner">
           <i :class="announcementIcon"></i>
           <p>{{ announcementMessage }}</p>
@@ -53,6 +53,7 @@ const forumRealtimeStore = useForumRealtimeStore()
 const notificationStore = useNotificationStore()
 const route = useRoute()
 const dismissedAnnouncementKey = ref('')
+const viewportWidth = ref(typeof window === 'undefined' ? 1280 : window.innerWidth)
 const showMaintenance = computed(() => forumStore.settings.maintenance_mode && !authStore.user?.is_staff)
 const announcementMessage = computed(() => String(forumStore.settings.announcement_message || '').trim())
 const announcementTone = computed(() => {
@@ -68,11 +69,23 @@ const announcementKey = computed(() => {
   if (!announcementMessage.value) return ''
   return `${announcementTone.value}:${announcementMessage.value}`
 })
+const showGlobalNavigation = computed(() => !(
+  viewportWidth.value <= 768
+  && route.name === 'discussion-detail'
+  && composerStore.isOpen
+  && !composerStore.isMinimized
+  && ['reply', 'edit'].includes(composerStore.current.type)
+))
 const showAnnouncement = computed(() => (
   Boolean(forumStore.settings.announcement_enabled)
   && Boolean(announcementMessage.value)
   && dismissedAnnouncementKey.value !== announcementKey.value
 ))
+
+function syncViewportWidth() {
+  if (typeof window === 'undefined') return
+  viewportWidth.value = window.innerWidth
+}
 
 function loadDismissedAnnouncementKey() {
   if (typeof window === 'undefined') return
@@ -118,8 +131,10 @@ onMounted(async () => {
   await forumStore.initialize()
   applyRouteMeta()
   loadDismissedAnnouncementKey()
+  syncViewportWidth()
 
   window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('resize', syncViewportWidth)
   window.addEventListener('bias:auth-required', handleAuthRequired)
   window.addEventListener('bias:auth-invalidated', handleAuthInvalidated)
 
@@ -179,6 +194,7 @@ function applyRouteMeta() {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('resize', syncViewportWidth)
   window.removeEventListener('bias:auth-required', handleAuthRequired)
   window.removeEventListener('bias:auth-invalidated', handleAuthInvalidated)
 })
