@@ -4,39 +4,39 @@
       <template #sidebar>
         <div class="search-sidebar-stack">
           <DiscussionListSidebarStartButton
-            v-if="!authStore.isAuthenticated || authStore.canStartDiscussion"
+            v-if="sidebarBindings.showStartDiscussionButton"
             :current-tag="null"
             :start-discussion-button-style="{}"
-            @click="handleStartDiscussion"
+            @click="sidebarEvents.startDiscussion"
           />
 
           <ForumSearchFilterNav
-            :items="filterItems"
-            :active-value="searchType"
-            @change="changeType"
+            :items="sidebarBindings.filterItems"
+            :active-value="sidebarBindings.searchType"
+            @change="sidebarEvents.changeType"
           />
         </div>
       </template>
 
       <main class="search-content">
         <ForumHeroPanel
-          :pill="heroPillText"
-          :title="heroTitleText"
-          :description="heroText"
-          variant="primary"
+          :pill="heroBindings.pill"
+          :title="heroBindings.title"
+          :description="heroBindings.description"
+          :variant="heroBindings.variant"
         >
           <template #meta>
             <ForumSearchStats
-              v-if="normalizedQuery"
-              :items="searchStatsItems"
+              v-if="heroBindings.normalizedQuery"
+              :items="heroBindings.searchStatsItems"
             />
-            <div v-if="syntaxItems.length" class="search-syntax-row">
+            <div v-if="heroBindings.syntaxItems.length" class="search-syntax-row">
               <button
-                v-for="item in syntaxItems"
+                v-for="item in heroBindings.syntaxItems"
                 :key="item.key"
                 type="button"
                 class="search-syntax-chip"
-                @click="applySyntax(item.syntax)"
+                @click="heroEvents.applySyntax(item.syntax)"
               >
                 <strong>{{ item.syntax }}</strong>
                 <span>{{ item.label }}</span>
@@ -45,26 +45,26 @@
           </template>
         </ForumHeroPanel>
 
-        <ForumInlineMessage v-if="filterCatalogLoadError" tone="danger">
-          {{ filterCatalogLoadError }}
+        <ForumInlineMessage v-if="contentBindings.filterCatalogLoadError" tone="danger">
+          {{ contentBindings.filterCatalogLoadError }}
         </ForumInlineMessage>
 
-        <ForumStateBlock v-if="!normalizedQuery">
-          {{ idleStateText }}
+        <ForumStateBlock v-if="!contentBindings.normalizedQuery">
+          {{ contentBindings.idleStateText }}
         </ForumStateBlock>
-        <ForumStateBlock v-else-if="loading">
-          {{ loadingStateText }}
+        <ForumStateBlock v-else-if="contentBindings.loading">
+          {{ contentBindings.loadingStateText }}
         </ForumStateBlock>
-        <ForumStateBlock v-else-if="isEmpty">
-          {{ emptyStateText }}
+        <ForumStateBlock v-else-if="contentBindings.isEmpty">
+          {{ contentBindings.emptyStateText }}
         </ForumStateBlock>
         <template v-else>
           <ForumSearchResultSection
-            v-for="section in visibleSearchSections"
+            v-for="section in contentBindings.visibleSearchSections"
             :key="section.key"
             :title="section.label"
             :show-more="section.showMore"
-            @show-more="changeType(section.key)"
+            @show-more="contentEvents.changeType(section.key)"
           >
             <ForumSearchResultCard
               v-for="item in section.resultItems"
@@ -78,15 +78,15 @@
               :meta-items="item.metaItems || []"
               :title-html="item.titleHtml"
               :user-layout="Boolean(item.userLayout)"
-              @click="openSearchResult(item.path)"
+              @click="contentEvents.openSearchResult(item.path)"
             />
           </ForumSearchResultSection>
 
           <ForumPagination
-            v-if="searchType !== 'all' && totalPages > 1"
-            :current-page="page"
-            :total-pages="totalPages"
-            @change="changePage"
+            v-if="contentBindings.searchType !== 'all' && contentBindings.totalPages > 1"
+            :current-page="contentBindings.page"
+            :total-pages="contentBindings.totalPages"
+            @change="contentEvents.changePage"
           />
         </template>
       </main>
@@ -110,58 +110,26 @@ import ForumSearchStats from '@/components/forum/ForumSearchStats.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
 import { useSearchResultsViewModel } from '@/composables/useSearchResultsViewModel'
-import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const forumStore = useForumStore()
-const { startDiscussion } = useStartDiscussionAction({
+const {
+  contentBindings,
+  contentEvents,
+  heroBindings,
+  heroEvents,
+  sidebarBindings,
+  sidebarEvents,
+} = useSearchResultsViewModel({
   authStore,
   composerStore,
-  router
-})
-const {
-  changePage,
-  changeType,
-  discussionTotal,
-  emptyStateText,
-  filterItems,
-  filterCatalogLoadError,
-  applySyntax,
-  heroText,
-  heroPillText,
-  heroTitleText,
-  idleStateText,
-  loadingStateText,
-  isEmpty,
-  loading,
-  normalizedQuery,
-  page,
-  postTotal,
-  searchStatsItems,
-  searchType,
-  syntaxItems,
-  totalPages,
-  userTotal,
-  visibleSearchSections,
-} = useSearchResultsViewModel({
   forumStore,
   route,
   router
 })
-
-function handleStartDiscussion() {
-  startDiscussion({
-    source: 'search'
-  })
-}
-
-function openSearchResult(path) {
-  if (!path) return
-  router.push(path)
-}
 </script>
 
 <style scoped>

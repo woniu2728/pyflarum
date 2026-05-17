@@ -1,9 +1,13 @@
 import { computed, watch } from 'vue'
 import { getUiCopy } from '@/forum/registry'
 import { useSearchResultsPage } from '@/composables/useSearchResultsPage'
+import { useSearchResultsViewBindings } from '@/composables/useSearchResultsViewBindings'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
 import { resolveSearchMetaPayload } from '@/utils/searchMeta'
 
 export function useSearchResultsViewModel({
+  authStore,
+  composerStore,
   forumStore,
   pageState: injectedPageState,
   route,
@@ -11,6 +15,11 @@ export function useSearchResultsViewModel({
 }) {
   const pageState = injectedPageState || useSearchResultsPage({
     route,
+    router,
+  })
+  const { startDiscussion } = useStartDiscussionAction({
+    authStore,
+    composerStore,
     router,
   })
 
@@ -91,10 +100,50 @@ export function useSearchResultsViewModel({
     { immediate: true }
   )
 
+  function handleStartDiscussion() {
+    startDiscussion({
+      source: 'search',
+    })
+  }
+
+  function openSearchResult(path) {
+    if (!path) return
+    router.push(path)
+  }
+
+  const viewBindings = useSearchResultsViewBindings({
+    applySyntax: pageState.applySyntax,
+    authStore,
+    changePage: pageState.changePage,
+    changeType: pageState.changeType,
+    emptyStateText: pageState.emptyStateText,
+    filterCatalogLoadError: pageState.filterCatalogLoadError,
+    filterItems: pageState.filterItems,
+    handleStartDiscussion,
+    heroPillText,
+    heroText: pageState.heroText,
+    heroTitleText,
+    idleStateText: pageState.idleStateText,
+    isEmpty: pageState.isEmpty,
+    loading: pageState.loading,
+    loadingStateText: pageState.loadingStateText,
+    normalizedQuery: pageState.normalizedQuery,
+    openSearchResult,
+    page: pageState.page,
+    searchStatsItems,
+    searchType: pageState.searchType,
+    syntaxItems: pageState.syntaxItems,
+    totalPages: pageState.totalPages,
+    visibleSearchSections,
+  })
+
   return {
     ...pageState,
     heroPillText,
     heroTitleText,
+    ...viewBindings,
+    handleStartDiscussion,
+    openSearchResult,
     searchStatsItems,
     visibleSearchSections,
   }
