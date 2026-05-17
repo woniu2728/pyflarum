@@ -42,6 +42,7 @@ const adminAuditLogsPageConfig = []
 const adminApprovalQueuePageCopies = []
 const adminApprovalQueuePageConfig = []
 const adminApprovalQueuePageActionMeta = []
+const adminApprovalQueueNoteTemplates = []
 const adminFlagsPageCopies = []
 const adminFlagsPageConfig = []
 const adminFlagsPageActionMeta = []
@@ -635,10 +636,19 @@ export function registerAdminApprovalQueuePageConfig(item) {
 }
 
 export function getAdminApprovalQueuePageConfig(context = {}) {
-  return [...adminApprovalQueuePageConfig]
+  const config = [...adminApprovalQueuePageConfig]
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
+
+  if (!config) {
+    return null
+  }
+
+  return {
+    ...config,
+    noteTemplates: getAdminApprovalQueueNoteTemplates(context),
+  }
 }
 
 export function registerAdminApprovalQueuePageActionMeta(item) {
@@ -655,6 +665,22 @@ export function getAdminApprovalQueuePageActionMeta(context = {}) {
     .sort((left, right) => (left.order || 100) - (right.order || 100))
     .map(item => resolveAdminItem(item, context))
     .find(Boolean) || null
+}
+
+export function registerAdminApprovalQueueNoteTemplate(item) {
+  const normalizedItem = {
+    order: 100,
+    ...item,
+  }
+
+  return upsertByKey(adminApprovalQueueNoteTemplates, normalizedItem)
+}
+
+export function getAdminApprovalQueueNoteTemplates(context = {}) {
+  return [...adminApprovalQueueNoteTemplates]
+    .sort((left, right) => (left.order || 100) - (right.order || 100))
+    .map(item => resolveAdminItem(item, context))
+    .filter(Boolean)
 }
 
 export function registerAdminFlagsPageCopy(item) {
@@ -2332,6 +2358,8 @@ registerAdminApprovalQueuePageCopy({
     modalApproveDescription: '通过后内容会对有权限的用户可见。',
     modalRejectDescription: '拒绝后作者仍可看到审核反馈。',
     noteLabel: '审核备注',
+    noteTemplatesLabel: '常用模板',
+    noteTemplatesHint: '点击可快速填入审核反馈，你仍可继续修改。',
     approveNotePlaceholder: '例如：内容符合社区规范，已放行',
     rejectNotePlaceholder: '例如：内容质量不足，已拒绝',
     confirmApproveText: '通过审核',
@@ -2363,6 +2391,62 @@ registerAdminApprovalQueuePageActionMeta({
     rejectSuccessMessage: '内容已拒绝并隐藏。',
     submitFailedTitle: '提交失败',
     submitFailedMessage: '未知错误',
+  }),
+})
+
+registerAdminApprovalQueueNoteTemplate({
+  key: 'approval-approve-compliant',
+  order: 10,
+  resolve: () => ({
+    label: '内容符合规范',
+    value: '内容符合社区规范，已放行。',
+    description: '适用于无需额外修改的通过场景。',
+    actions: ['approve'],
+  }),
+})
+
+registerAdminApprovalQueueNoteTemplate({
+  key: 'approval-approve-context-complete',
+  order: 20,
+  resolve: () => ({
+    label: '补充后通过',
+    value: '已补充必要上下文，现已通过审核。',
+    description: '适用于作者补充说明后的放行场景。',
+    actions: ['approve'],
+  }),
+})
+
+registerAdminApprovalQueueNoteTemplate({
+  key: 'approval-reject-quality',
+  order: 30,
+  resolve: () => ({
+    label: '内容质量不足',
+    value: '内容质量不足，请补充更完整的信息后重新提交。',
+    description: '适用于讨论或回复内容过短、信息不足的场景。',
+    actions: ['reject'],
+  }),
+})
+
+registerAdminApprovalQueueNoteTemplate({
+  key: 'approval-reject-duplicate',
+  order: 40,
+  resolve: () => ({
+    label: '重复内容',
+    value: '内容与现有讨论重复，请优先在已有主题下继续交流。',
+    description: '适用于重复发帖或重复回复场景。',
+    actions: ['reject'],
+    itemTypes: ['discussion', 'post'],
+  }),
+})
+
+registerAdminApprovalQueueNoteTemplate({
+  key: 'approval-reject-format',
+  order: 50,
+  resolve: () => ({
+    label: '表达不完整',
+    value: '表达不完整或缺少必要上下文，请整理后重新提交。',
+    description: '适用于语义不清、缺少上下文的场景。',
+    actions: ['reject'],
   }),
 })
 

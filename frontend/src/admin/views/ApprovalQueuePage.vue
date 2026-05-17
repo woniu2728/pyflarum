@@ -50,11 +50,15 @@
       :title="pendingAction === 'approve' ? (approvalCopy?.modalApproveTitle || '审核通过') : (approvalCopy?.modalRejectTitle || '拒绝内容')"
       :description="pendingAction === 'approve' ? (approvalCopy?.modalApproveDescription || '通过后内容会对有权限的用户可见。') : (approvalCopy?.modalRejectDescription || '拒绝后作者仍可看到审核反馈。')"
       :note-label="approvalCopy?.noteLabel || '审核备注'"
+      :templates-label="approvalCopy?.noteTemplatesLabel || '常用模板'"
+      :templates-hint="approvalCopy?.noteTemplatesHint || ''"
+      :templates="noteTemplates"
       :placeholder="pendingAction === 'approve' ? (approvalCopy?.approveNotePlaceholder || '例如：内容符合社区规范，已放行') : (approvalCopy?.rejectNotePlaceholder || '例如：内容质量不足，已拒绝')"
       :confirm-text="pendingAction === 'approve' ? (approvalCopy?.confirmApproveText || '通过审核') : (approvalCopy?.confirmRejectText || '拒绝并隐藏')"
       :confirm-tone="pendingAction === 'approve' ? 'primary' : 'danger'"
       :saving="saving"
       @close="closeModal"
+      @select-template="applyNoteTemplate"
       @submit="submitAction"
     />
   </AdminPage>
@@ -62,6 +66,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { resolveApprovalTemplateOptions } from '../composables/approvalQueueTemplates'
 import AdminActionNoteModal from '../components/AdminActionNoteModal.vue'
 import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import AdminPage from '../components/AdminPage.vue'
@@ -88,6 +93,10 @@ const approvalCopy = computed(() => getAdminApprovalQueuePageCopy())
 const approvalConfig = computed(() => getAdminApprovalQueuePageConfig())
 const approvalActionMeta = computed(() => getAdminApprovalQueuePageActionMeta())
 const approvalFilters = computed(() => approvalConfig.value?.filters || [])
+const noteTemplates = computed(() => resolveApprovalTemplateOptions(approvalConfig.value, {
+  action: pendingAction.value,
+  itemType: selectedItem.value?.type || '',
+}))
 
 onMounted(() => {
   loadItems()
@@ -129,6 +138,10 @@ function closeModal() {
   pendingAction.value = 'approve'
   actionNote.value = ''
   saving.value = false
+}
+
+function applyNoteTemplate(value) {
+  actionNote.value = value || ''
 }
 
 async function submitAction() {

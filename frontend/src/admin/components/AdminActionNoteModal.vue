@@ -10,6 +10,23 @@
       <div class="Modal-body">
         <div class="Form-group">
           <label for="admin-action-note">{{ noteLabel }}</label>
+          <div v-if="templates.length" class="AdminActionNoteModal-templates">
+            <span class="AdminActionNoteModal-templatesLabel">{{ templatesLabel }}</span>
+            <div class="AdminActionNoteModal-templateList">
+              <button
+                v-for="template in templates"
+                :key="template.value"
+                type="button"
+                class="AdminActionNoteModal-templateButton"
+                :disabled="saving"
+                @click="$emit('select-template', template.value)"
+              >
+                <span class="AdminActionNoteModal-templateName">{{ template.label }}</span>
+                <span v-if="template.description" class="AdminActionNoteModal-templateDesc">{{ template.description }}</span>
+              </button>
+            </div>
+            <p v-if="templatesHint" class="AdminActionNoteModal-templatesHint">{{ templatesHint }}</p>
+          </div>
           <textarea
             id="admin-action-note"
             name="note"
@@ -59,6 +76,18 @@ defineProps({
     type: String,
     default: '备注'
   },
+  templatesLabel: {
+    type: String,
+    default: '常用模板'
+  },
+  templatesHint: {
+    type: String,
+    default: ''
+  },
+  templates: {
+    type: Array,
+    default: () => []
+  },
   note: {
     type: String,
     default: ''
@@ -85,7 +114,7 @@ defineProps({
   }
 })
 
-defineEmits(['update:note', 'close', 'submit'])
+defineEmits(['update:note', 'close', 'submit', 'select-template'])
 </script>
 
 <style scoped>
@@ -98,6 +127,65 @@ defineEmits(['update:note', 'close', 'submit'])
   color: var(--forum-text-soft);
   font-size: var(--forum-font-size-sm);
   line-height: 1.6;
+}
+
+.AdminActionNoteModal-templates {
+  margin-bottom: 12px;
+}
+
+.AdminActionNoteModal-templatesLabel {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-xs);
+  font-weight: 600;
+}
+
+.AdminActionNoteModal-templateList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.AdminActionNoteModal-templateButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-sm);
+  background: var(--forum-bg-elevated-strong);
+  color: var(--forum-text-color);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--forum-motion-fast, 120ms) ease, transform var(--forum-motion-fast, 120ms) ease;
+}
+
+.AdminActionNoteModal-templateButton:hover:not(:disabled) {
+  border-color: var(--forum-primary-color);
+  transform: translateY(-1px);
+}
+
+.AdminActionNoteModal-templateButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.AdminActionNoteModal-templateName {
+  font-size: var(--forum-font-size-sm);
+  font-weight: 600;
+}
+
+.AdminActionNoteModal-templateDesc,
+.AdminActionNoteModal-templatesHint {
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-xs);
+  line-height: 1.5;
+}
+
+.AdminActionNoteModal-templatesHint {
+  margin: 8px 0 0;
 }
 
 @media (max-width: 768px) {

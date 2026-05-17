@@ -55,9 +55,11 @@ export {
   getDiscussionListFilterHeroDescriptionText,
   getDiscussionListFilterHeroTitleText,
   getDiscussionListFilterLabelText,
+  normalizeTag,
   resolveDiscussionListActiveFilterCode,
   resolveDiscussionListPageMetaDescription,
   resolveDiscussionListPageMetaTitle,
+  unwrapList,
 }
 
 export function getUserDisplayName(user = {}) {
