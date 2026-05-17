@@ -66,9 +66,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
-import { getDiscussionReviewBanner, getHeroMetaItems } from '@/forum/registry'
+import { useDiscussionHeroState } from '@/composables/useDiscussionHeroState'
 
 const props = defineProps({
   discussion: {
@@ -97,17 +97,14 @@ const props = defineProps({
   }
 })
 
-const discussionReviewBanner = computed(() => getDiscussionReviewBanner({
-  discussion: props.discussion,
-  canModeratePendingDiscussion: props.canModeratePendingDiscussion,
-  canEditDiscussion: props.canEditDiscussion,
-  surface: 'discussion-hero',
-}))
-
-const heroMetaItems = computed(() => getHeroMetaItems({
-  discussion: props.discussion,
-  surface: 'discussion-hero',
-}))
+const {
+  discussionReviewBanner,
+  heroMetaItems,
+} = useDiscussionHeroState({
+  canEditDiscussion: toRef(props, 'canEditDiscussion'),
+  canModeratePendingDiscussion: toRef(props, 'canModeratePendingDiscussion'),
+  discussion: toRef(props, 'discussion'),
+})
 
 const emit = defineEmits(['moderate-discussion', 'edit-discussion'])
 

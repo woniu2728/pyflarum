@@ -37,7 +37,7 @@ export function createProfileHeroState({
     heroMetaItems,
     inlineBadges,
     primaryGroupBadge,
-  settingsButtonText,
+    settingsButtonText,
   }
 }
 
