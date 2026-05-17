@@ -43,8 +43,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { getUiCopy } from '@/forum/registry'
+import { toRef } from 'vue'
+import { useDiscussionListToolbarState } from '@/composables/useDiscussionListToolbarState'
 
 const props = defineProps({
   authStore: {
@@ -71,48 +71,15 @@ const props = defineProps({
 
 defineEmits(['change-sort', 'change-filter', 'change-search', 'mark-all-read', 'refresh'])
 
-const normalizedSortOptions = computed(() => {
-  if (props.sortOptions.length) {
-    return props.sortOptions.filter(option => option.toolbar_visible !== false)
-  }
-
-  return [
-    {
-      code: 'latest',
-      label: getUiCopy({
-        surface: 'discussion-list-toolbar-sort-label',
-        code: 'latest',
-      })?.text || '最新活跃',
-      icon: 'fas fa-clock'
-    },
-    {
-      code: 'newest',
-      label: getUiCopy({
-        surface: 'discussion-list-toolbar-sort-label',
-        code: 'newest',
-      })?.text || '新主题',
-      icon: 'fas fa-file-alt'
-    },
-    {
-      code: 'top',
-      label: getUiCopy({
-        surface: 'discussion-list-toolbar-sort-label',
-        code: 'top',
-      })?.text || '热门',
-      icon: 'fas fa-fire'
-    },
-  ]
+const {
+  markAllReadTitleText,
+  normalizedSortOptions,
+  refreshTitleText,
+} = useDiscussionListToolbarState({
+  markingAllRead: toRef(props, 'markingAllRead'),
+  refreshing: toRef(props, 'refreshing'),
+  sortOptions: toRef(props, 'sortOptions'),
 })
-
-const markAllReadTitleText = computed(() => getUiCopy({
-  surface: 'discussion-list-toolbar-mark-read',
-  markingAllRead: props.markingAllRead,
-})?.text || '全部标记为已读')
-
-const refreshTitleText = computed(() => getUiCopy({
-  surface: 'discussion-list-toolbar-refresh',
-  refreshing: props.refreshing,
-})?.text || '刷新')
 </script>
 
 <style scoped>
