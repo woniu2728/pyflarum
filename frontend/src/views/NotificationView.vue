@@ -3,125 +3,131 @@
     <ForumPageWithSidebar>
       <template #sidebar>
         <DiscussionListSidebarStartButton
-          v-if="!authStore.isAuthenticated || authStore.canStartDiscussion"
+          v-if="sidebarBindings.showStartDiscussionButton"
           :current-tag="null"
           :start-discussion-button-style="{}"
-          @click="handleStartDiscussion"
+          @click="sidebarEvents.startDiscussion"
         />
 
-        <ForumPrimaryNav :auth-store="authStore" :notification-store="notificationStore" active-key="notifications" />
+        <ForumPrimaryNav
+          :auth-store="sidebarBindings.authStore"
+          :notification-store="sidebarBindings.notificationStore"
+          active-key="notifications"
+        />
       </template>
 
       <main class="notification-content">
         <ForumHeroPanel
-          :title="heroTitleText"
-          :pill="heroPillText"
-          :description="heroDescriptionText"
-          variant="primary"
+          :title="heroBindings.title"
+          :pill="heroBindings.pill"
+          :description="heroBindings.description"
+          :variant="heroBindings.variant"
         >
           <template #meta>
             <div class="hero-meta">
               <button
-                v-if="filteredUnreadCount > 0"
+                v-if="heroBindings.filteredUnreadCount > 0"
                 type="button"
                 class="secondary"
-                :disabled="marking"
-                @click="markAllAsRead"
+                :disabled="heroBindings.marking"
+                @click="heroEvents.markAllAsRead"
               >
-                {{ markAllButtonText }}
+                {{ heroBindings.markAllButtonText }}
               </button>
               <button
-                v-if="filteredReadCount > 0"
+                v-if="heroBindings.filteredReadCount > 0"
                 type="button"
                 class="secondary"
-                :disabled="marking"
-                @click="clearReadNotifications"
+                :disabled="heroBindings.marking"
+                @click="heroEvents.clearReadNotifications"
               >
-                {{ clearReadButtonText }}
+                {{ heroBindings.clearReadButtonText }}
               </button>
               <button
                 type="button"
                 class="secondary"
-                @click="toggleUnreadOnly"
+                @click="heroEvents.toggleUnreadOnly"
               >
-                {{ unreadToggleText }}
+                {{ heroBindings.unreadToggleText }}
               </button>
               <router-link to="/profile" class="preferences-link">
-                {{ preferencesLinkText }}
+                {{ heroBindings.preferencesLinkText }}
               </router-link>
             </div>
           </template>
         </ForumHeroPanel>
 
-        <ForumInlineMessage v-if="loadError" tone="danger">
-          {{ loadError }}
+        <ForumInlineMessage v-if="listBindings.loadError" tone="danger">
+          {{ listBindings.loadError }}
         </ForumInlineMessage>
 
         <section class="notification-filters-card">
           <div class="notification-filters-header">
             <div>
-              <h2>{{ activeNotificationLabel }}</h2>
-              <p>{{ filterDescriptionText }}</p>
+              <h2>{{ filterCardBindings.activeNotificationLabel }}</h2>
+              <p>{{ filterCardBindings.filterDescriptionText }}</p>
             </div>
             <div class="notification-view-toggle">
               <button
-                v-for="item in viewModeItems"
+                v-for="item in filterCardBindings.viewModeItems"
                 :key="item.value"
                 type="button"
                 class="notification-view-toggle-button"
-                :class="{ 'is-active': viewMode === item.value }"
-                @click="changeViewMode(item.value)"
+                :class="{ 'is-active': filterCardBindings.viewMode === item.value }"
+                @click="filterCardEvents.changeViewMode(item.value)"
               >
                 {{ item.label }}
               </button>
             </div>
           </div>
           <ForumSearchFilterNav
-            :items="notificationTypeItems"
-            :active-value="activeType"
-            @change="changeType"
+            :items="filterCardBindings.notificationTypeItems"
+            :active-value="filterCardBindings.activeType"
+            @change="filterCardEvents.changeType"
           />
         </section>
 
-        <ForumStateBlock v-if="loading" class="notification-state">{{ loadingStateText }}</ForumStateBlock>
+        <ForumStateBlock v-if="listBindings.loading" class="notification-state">
+          {{ listBindings.loadingStateText }}
+        </ForumStateBlock>
 
-        <ForumStateBlock v-else-if="notifications.length === 0" class="notification-state">
-          {{ emptyStateText }}
+        <ForumStateBlock v-else-if="listBindings.notifications.length === 0" class="notification-state">
+          {{ listBindings.emptyStateText }}
         </ForumStateBlock>
 
         <ForumNotificationList
-          v-else-if="viewMode === 'timeline'"
-          :notifications="notifications"
-          :format-date="formatDate"
-          :get-avatar-color="getNotificationAvatarColor"
-          :get-avatar-initial="getNotificationAvatarInitial"
-          :get-display-name="getUserDisplayName"
-          :get-icon-class="getNotificationIconClass"
-          :get-message-html="getNotificationMessageHtml"
-          :get-presentation="getNotificationPresentation"
-          @click="handleNotificationClick"
-          @mark-read="markAsRead"
-          @delete="deleteNotification"
+          v-else-if="listBindings.viewMode === 'timeline'"
+          :notifications="listBindings.notifications"
+          :format-date="listBindings.formatDate"
+          :get-avatar-color="listBindings.getNotificationAvatarColor"
+          :get-avatar-initial="listBindings.getNotificationAvatarInitial"
+          :get-display-name="listBindings.getUserDisplayName"
+          :get-icon-class="listBindings.getNotificationIconClass"
+          :get-message-html="listBindings.getNotificationMessageHtml"
+          :get-presentation="listBindings.getNotificationPresentation"
+          @click="listEvents.handleNotificationClick"
+          @mark-read="listEvents.markAsRead"
+          @delete="listEvents.deleteNotification"
         />
 
         <div v-else class="notification-group-stack">
           <section
-            v-for="group in groupedNotifications"
+            v-for="group in listBindings.groupedNotifications"
             :key="group.key"
             class="notification-group-panel"
           >
             <header class="notification-group-panel-header">
               <div>
                 <h3>{{ group.title }}</h3>
-                <p>{{ groupCountText(group.items.length) }}</p>
+                <p>{{ listBindings.groupCountText(group.items.length) }}</p>
               </div>
               <button
                 v-if="group.discussionId"
                 type="button"
                 class="secondary"
-                @click="router.push(`/d/${group.discussionId}`)"
+                @click="listEvents.openDiscussion(group.discussionId)"
               >
-                {{ openDiscussionText }}
+                {{ listBindings.openDiscussionText }}
               </button>
             </header>
 
@@ -130,43 +136,43 @@
                 v-if="group.items.some(item => !item.is_read)"
                 type="button"
                 class="secondary"
-                :disabled="marking"
-                @click="markGroupAsRead(group)"
+                :disabled="listBindings.marking"
+                @click="listEvents.markGroupAsRead(group)"
               >
-                {{ markGroupReadText }}
+                {{ listBindings.markGroupReadText }}
               </button>
               <button
                 v-if="group.items.some(item => item.is_read)"
                 type="button"
                 class="secondary danger"
-                :disabled="marking"
-                @click="clearGroupReadNotifications(group)"
+                :disabled="listBindings.marking"
+                @click="listEvents.clearGroupReadNotifications(group)"
               >
-                {{ clearGroupReadText }}
+                {{ listBindings.clearGroupReadText }}
               </button>
             </div>
 
             <ForumNotificationList
               :notifications="group.items"
-              :format-date="formatDate"
-              :get-avatar-color="getNotificationAvatarColor"
-              :get-avatar-initial="getNotificationAvatarInitial"
-              :get-display-name="getUserDisplayName"
-              :get-icon-class="getNotificationIconClass"
-              :get-message-html="getNotificationMessageHtml"
-              :get-presentation="getNotificationPresentation"
-              @click="handleNotificationClick"
-              @mark-read="markAsRead"
-              @delete="deleteNotification"
+              :format-date="listBindings.formatDate"
+              :get-avatar-color="listBindings.getNotificationAvatarColor"
+              :get-avatar-initial="listBindings.getNotificationAvatarInitial"
+              :get-display-name="listBindings.getUserDisplayName"
+              :get-icon-class="listBindings.getNotificationIconClass"
+              :get-message-html="listBindings.getNotificationMessageHtml"
+              :get-presentation="listBindings.getNotificationPresentation"
+              @click="listEvents.handleNotificationClick"
+              @mark-read="listEvents.markAsRead"
+              @delete="listEvents.deleteNotification"
             />
           </section>
         </div>
 
         <ForumPagination
-          v-if="totalPages > 1"
-          :current-page="currentPage"
-          :total-pages="totalPages"
-          @change="changePage"
+          v-if="listBindings.totalPages > 1"
+          :current-page="listBindings.currentPage"
+          :total-pages="listBindings.totalPages"
+          @change="listEvents.changePage"
         />
       </main>
     </ForumPageWithSidebar>
@@ -175,11 +181,6 @@
 
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import {
-  getNotificationIconClass,
-  getNotificationPresentationModel,
-  getNotificationTextHtml
-} from '@/composables/useNotificationPresentation'
 import ForumHeroPanel from '@/components/forum/ForumHeroPanel.vue'
 import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
 import ForumNotificationList from '@/components/forum/ForumNotificationList.vue'
@@ -195,13 +196,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
 import { useNotificationStore } from '@/stores/notification'
-import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
-import {
-  formatRelativeTime,
-  getUserAvatarColor,
-  getUserDisplayName,
-  getUserInitial
-} from '@/utils/forum'
 
 const route = useRoute()
 const router = useRouter()
@@ -210,86 +204,24 @@ const composerStore = useComposerStore()
 const forumStore = useForumStore()
 const modalStore = useModalStore()
 const notificationStore = useNotificationStore()
-const { startDiscussion } = useStartDiscussionAction({
+const {
+  filterCardBindings,
+  filterCardEvents,
+  heroBindings,
+  heroEvents,
+  listBindings,
+  listEvents,
+  sidebarBindings,
+  sidebarEvents,
+} = useNotificationViewModel({
   authStore,
   composerStore,
-  router
-})
-const {
-  notifications,
-  emptyStateText,
-  loadingStateText,
-  loading,
-  loadError,
-  marking,
-  currentPage,
-  totalPages,
-  activeType,
-  unreadOnly,
-  viewMode,
-  filteredUnreadCount,
-  filteredReadCount,
-  hasActiveFilter,
-  notificationTypeItems,
-  viewModeItems,
-  groupedNotifications,
-  activeNotificationLabel,
-  heroTitleText,
-  heroPillText,
-  heroDescriptionText,
-  markAllButtonText,
-  clearReadButtonText,
-  unreadToggleText,
-  preferencesLinkText,
-  filterDescriptionText,
-  openDiscussionText,
-  markGroupReadText,
-  clearGroupReadText,
-  markAsRead,
-  markAllAsRead,
-  clearReadNotifications,
-  markGroupAsRead,
-  clearGroupReadNotifications,
-  deleteNotification,
-  handleNotificationClick,
-  changeType,
-  changeViewMode,
-  toggleUnreadOnly,
-  changePage,
-  groupCountText,
-} = useNotificationViewModel({
   forumStore,
   modalStore,
   notificationStore,
   route,
   router
 })
-
-function handleStartDiscussion() {
-  startDiscussion({
-    source: 'notifications'
-  })
-}
-
-function formatDate(dateString) {
-  return formatRelativeTime(dateString)
-}
-
-function getNotificationMessageHtml(notification) {
-  return getNotificationTextHtml(notification)
-}
-
-function getNotificationPresentation(notification) {
-  return getNotificationPresentationModel(notification)
-}
-
-function getNotificationAvatarInitial(notification) {
-  return getUserInitial(notification.from_user || {})
-}
-
-function getNotificationAvatarColor(notification) {
-  return getUserAvatarColor(notification.from_user || {})
-}
 </script>
 
 <style scoped>

@@ -1,9 +1,24 @@
 import { computed, watch } from 'vue'
 import { getUiCopy } from '@/forum/registry'
 import { useNotificationPage } from '@/composables/useNotificationPage'
+import {
+  getNotificationIconClass,
+  getNotificationPresentationModel,
+  getNotificationTextHtml,
+} from '@/composables/useNotificationPresentation'
+import { useNotificationViewBindings } from '@/composables/useNotificationViewBindings'
+import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
+import {
+  formatRelativeTime,
+  getUserAvatarColor,
+  getUserDisplayName,
+  getUserInitial,
+} from '@/utils/forum'
 import { resolveNotificationMetaPayload } from '@/utils/notificationMeta'
 
 export function useNotificationViewModel({
+  authStore,
+  composerStore,
   forumStore,
   modalStore,
   notificationStore,
@@ -15,6 +30,11 @@ export function useNotificationViewModel({
     modalStore,
     notificationStore,
     route,
+    router,
+  })
+  const { startDiscussion } = useStartDiscussionAction({
+    authStore,
+    composerStore,
     router,
   })
 
@@ -129,6 +149,85 @@ export function useNotificationViewModel({
     })?.text || `${count} 条通知`
   }
 
+  function handleStartDiscussion() {
+    startDiscussion({
+      source: 'notifications',
+    })
+  }
+
+  function formatDate(dateString) {
+    return formatRelativeTime(dateString)
+  }
+
+  function getNotificationMessageHtml(notification) {
+    return getNotificationTextHtml(notification)
+  }
+
+  function getNotificationPresentation(notification) {
+    return getNotificationPresentationModel(notification)
+  }
+
+  function getNotificationAvatarInitial(notification) {
+    return getUserInitial(notification.from_user || {})
+  }
+
+  function getNotificationAvatarColor(notification) {
+    return getUserAvatarColor(notification.from_user || {})
+  }
+
+  const viewBindings = useNotificationViewBindings({
+    activeNotificationLabel,
+    activeType: pageState.activeType,
+    authStore,
+    changePage: pageState.changePage,
+    changeType: pageState.changeType,
+    changeViewMode: pageState.changeViewMode,
+    clearGroupReadNotifications: pageState.clearGroupReadNotifications,
+    clearGroupReadText,
+    clearReadButtonText,
+    clearReadNotifications: pageState.clearReadNotifications,
+    currentPage: pageState.currentPage,
+    deleteNotification: pageState.deleteNotification,
+    emptyStateText: pageState.emptyStateText,
+    filterDescriptionText,
+    filteredReadCount: pageState.filteredReadCount,
+    filteredUnreadCount: pageState.filteredUnreadCount,
+    formatDate,
+    getNotificationAvatarColor,
+    getNotificationAvatarInitial,
+    getNotificationIconClass,
+    getNotificationMessageHtml,
+    getNotificationPresentation,
+    getUserDisplayName,
+    groupedNotifications: pageState.groupedNotifications,
+    groupCountText,
+    handleNotificationClick: pageState.handleNotificationClick,
+    handleStartDiscussion,
+    heroDescriptionText,
+    heroPillText,
+    heroTitleText,
+    loadError: pageState.loadError,
+    loading: pageState.loading,
+    loadingStateText: pageState.loadingStateText,
+    markAllAsRead: pageState.markAllAsRead,
+    markAllButtonText,
+    markAsRead: pageState.markAsRead,
+    marking: pageState.marking,
+    markGroupAsRead: pageState.markGroupAsRead,
+    markGroupReadText,
+    notificationStore,
+    notificationTypeItems: pageState.notificationTypeItems,
+    notifications: pageState.notifications,
+    openDiscussionText,
+    preferencesLinkText,
+    router,
+    toggleUnreadOnly: pageState.toggleUnreadOnly,
+    totalPages: pageState.totalPages,
+    unreadToggleText,
+    viewMode: pageState.viewMode,
+    viewModeItems: pageState.viewModeItems,
+  })
+
   return {
     ...pageState,
     activeNotificationLabel,
@@ -144,5 +243,14 @@ export function useNotificationViewModel({
     openDiscussionText,
     preferencesLinkText,
     unreadToggleText,
+    formatDate,
+    getNotificationAvatarColor,
+    getNotificationAvatarInitial,
+    getNotificationIconClass,
+    getNotificationMessageHtml,
+    getNotificationPresentation,
+    getUserDisplayName,
+    handleStartDiscussion,
+    ...viewBindings,
   }
 }
