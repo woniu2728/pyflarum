@@ -968,6 +968,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：通知页 composable 里的加载失败、通用重试提示、筛选/总量统计、当前筛选标题以及批量/分组处理失败反馈已继续切到 `uiCopy` 注册入口，通知中心的交互与统计语义开始从 view/composable 内进一步脱离重复硬编码。
 - 已完成：通知页新增 `useNotificationViewBindings`，把侧栏起帖入口、hero 操作区、筛选卡片与列表事件/属性映射从 `NotificationView.vue` 收口到独立视图绑定层，并补上 Node 测试；通知页开始和 tags / profile / discussion list 一样进入“page state + view model + view bindings”三段式页面装配结构。
 - 已完成：搜索结果页新增 `useSearchResultsViewBindings`，把侧栏起帖入口、hero 搜索语法/统计区以及结果列表/分页绑定从 `SearchResultsView.vue` 收口到独立视图绑定层，并让起帖与结果跳转动作并回 `useSearchResultsViewModel` 统一装配，同时补上 Node 测试；搜索页因此开始和通知页、标签页、个人页一样进入“view 只消费 bindings”的阶段 3 页面组织方式。
+- 已完成：讨论详情页新增 `useDiscussionDetailViewBindings`，把页面级状态块、hero、移动端动作、帖子流、回复区与侧栏 scrubber 的 props/events 绑定从 `DiscussionDetailView.vue` 收口到独立视图绑定层，并让 `buildUserPath/buildTagPath` 与用户展示 helper 回到 `useDiscussionDetailViewModel` 装配，同时补上 Node 测试；详情页开始继续从“已拆出 page/presentation/meta”推进到“模板只消费 bindings”的阶段 3 页面组织方式。
 - 已完成：个人页 composable 里的资料加载、讨论/回复加载、资料保存、通知偏好、验证邮件、密码修改和头像上传错误兜底已继续切到 `uiCopy` 注册入口，profile 反馈链路开始从多处分散 fallback 收口到统一 helper。
 - 已完成：头部通知菜单里的批量已读/清除已读 confirm、成功/失败反馈、通用重试提示以及摘要 chip 计数字段已继续切到 `uiCopy` 注册入口，顶部通知处理流开始与通知中心共用同一套注册化语义。
 - 已完成：搜索页与过滤目录 composable 里的过滤目录加载失败、搜索结果加载失败、筛选计数字段以及错误提示展示已继续切到 `uiCopy` 注册入口，搜索链路的错误/统计反馈开始从内联 fallback 收口到统一 registry 语义。

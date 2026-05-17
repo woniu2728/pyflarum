@@ -1,152 +1,152 @@
 <template>
   <div class="discussion-detail-page">
     <div class="container">
-      <ForumStateBlock v-if="loading" class="discussion-state-block">{{ loadingStateText }}</ForumStateBlock>
-      <ForumStateBlock v-else-if="!discussion" class="discussion-state-block">{{ missingStateText }}</ForumStateBlock>
+      <ForumStateBlock v-if="stateBindings.loading" class="discussion-state-block">{{ stateBindings.loadingStateText }}</ForumStateBlock>
+      <ForumStateBlock v-else-if="!stateBindings.discussion" class="discussion-state-block">{{ stateBindings.missingStateText }}</ForumStateBlock>
       <div v-else class="layout">
         <!-- 主内容区 -->
         <main class="main-content">
           <DiscussionHero
-            :discussion="discussion"
-            :discussion-badges="discussionBadges"
-            :discussion-header-style="discussionHeaderStyle"
-            :can-moderate-pending-discussion="canModeratePendingDiscussion"
-            :can-edit-discussion="canEditDiscussion"
-            :build-tag-path="buildTagPath"
-            @moderate-discussion="moderateDiscussion"
-            @edit-discussion="editDiscussion"
+            :discussion="heroBindings.discussion"
+            :discussion-badges="heroBindings.discussionBadges"
+            :discussion-header-style="heroBindings.discussionHeaderStyle"
+            :can-moderate-pending-discussion="heroBindings.canModeratePendingDiscussion"
+            :can-edit-discussion="heroBindings.canEditDiscussion"
+            :build-tag-path="heroBindings.buildTagPath"
+            @moderate-discussion="heroEvents.moderateDiscussion"
+            @edit-discussion="heroEvents.editDiscussion"
           />
 
           <DiscussionMobileActions
-            ref="discussionMobileNavRef"
-            :discussion="discussion"
-            :auth-store="authStore"
-            :is-suspended="isSuspended"
-            :show-discussion-menu="showDiscussionMenu"
-            :can-reply-from-menu="canReplyFromMenu"
-            :has-active-composer="hasActiveComposer"
-            :toggling-subscription="togglingSubscription"
-            :can-edit-discussion="canEditDiscussion"
-            :can-moderate-discussion-settings="canModerateDiscussionSettings"
-            :menu-items="discussionMenuItems"
-            @menu-action="handleDiscussionMenuSelection"
+            :ref="mobileBindings.discussionMobileNavRef"
+            :discussion="mobileBindings.discussion"
+            :auth-store="mobileBindings.authStore"
+            :is-suspended="mobileBindings.isSuspended"
+            :show-discussion-menu="mobileBindings.showDiscussionMenu"
+            :can-reply-from-menu="mobileBindings.canReplyFromMenu"
+            :has-active-composer="mobileBindings.hasActiveComposer"
+            :toggling-subscription="mobileBindings.togglingSubscription"
+            :can-edit-discussion="mobileBindings.canEditDiscussion"
+            :can-moderate-discussion-settings="mobileBindings.canModerateDiscussionSettings"
+            :menu-items="mobileBindings.menuItems"
+            @menu-action="mobileEvents.menuAction"
           />
 
-          <div v-if="hasPrevious" ref="previousTrigger" class="load-more load-previous">
+          <div v-if="postStreamBindings.hasPrevious" :ref="postStreamBindings.previousTrigger" class="load-more load-previous">
             <ForumLoadMoreButton
               compact
-              :loading="loadingPrevious"
-              :text="loadPreviousText"
-              :loading-text="loadingPostsText"
-              @click="loadPreviousPosts"
+              :loading="postStreamBindings.loadingPrevious"
+              :text="postStreamBindings.loadPreviousText"
+              :loading-text="postStreamBindings.loadingPostsText"
+              @click="postStreamEvents.loadPreviousPosts"
             />
           </div>
 
           <!-- 帖子列表 -->
           <div class="posts">
-            <template v-for="post in posts" :key="post.id">
+            <template v-for="post in postStreamBindings.posts" :key="post.id">
               <div
-                v-if="showUnreadDivider(post)"
+                v-if="postStreamBindings.showUnreadDivider(post)"
                 class="post-unread-divider"
               >
-                <span>{{ unreadDividerText }}</span>
+                <span>{{ postStreamBindings.unreadDividerText }}</span>
               </div>
 
               <component
-                :is="resolvePostComponent(post)"
+                :is="postStreamBindings.resolvePostComponent(post)"
                 :post="post"
-                :discussion="discussion"
-                :auth-store="authStore"
-                :is-target="highlightedPostNumber === post.number"
-                :is-suspended="isSuspended"
-                :is-post-menu-open="activePostMenuId === post.id"
-                :like-pending="likePendingPostIds.includes(post.id)"
-                :flag-pending="flagPendingPostIds.includes(post.id)"
-                :can-like-post="canLikePost"
-                :can-edit-post="canEditPost"
-                :can-delete-post="canDeletePost"
-                :can-report-post="canReportPost"
-                :can-moderate-pending-post="canModeratePendingPost"
-                :has-post-controls="hasPostControls"
-                :build-user-path="buildUserPath"
-                :get-user-display-name="getUserDisplayName"
-                :get-user-avatar-color="getUserAvatarColor"
-                :get-user-initial="getUserInitial"
-                :get-user-primary-group-icon="getUserPrimaryGroupIcon"
-                :get-user-primary-group-color="getUserPrimaryGroupColor"
-                :get-user-primary-group-label="getUserPrimaryGroupLabel"
-                :format-absolute-date="formatAbsoluteDate"
-                :format-date="formatDate"
-                :format-like-summary="formatLikeSummary"
-                :post-menu-items="getPostMenuOptions(post)"
-                @jump-to-post="jumpToPost"
-                @toggle-like="toggleLike"
-                @reply-to-post="replyToPost"
-                @toggle-post-menu="togglePostMenu"
-                @edit-post="post => handlePostMenuSelection(post, 'edit-post')"
-                @delete-post="post => handlePostMenuSelection(post, 'delete-post')"
-                @toggle-hide-post="post => handlePostMenuSelection(post, 'toggle-hide-post')"
-                @open-report-modal="post => handlePostMenuSelection(post, 'open-report-modal')"
-                @moderate-post="({ post: targetPost, action }) => moderatePost(targetPost, action)"
-                @resolve-post-flags="({ post: targetPost, status }) => resolvePostFlags(targetPost, status)"
-                @close-post-menu="closePostMenu"
+                :discussion="postStreamBindings.discussion"
+                :auth-store="postStreamBindings.authStore"
+                :is-target="postStreamBindings.isTargetPost(post)"
+                :is-suspended="postStreamBindings.isSuspended"
+                :is-post-menu-open="postStreamBindings.isPostMenuOpen(post)"
+                :like-pending="postStreamBindings.isLikePending(post)"
+                :flag-pending="postStreamBindings.isFlagPending(post)"
+                :can-like-post="postStreamBindings.canLikePost"
+                :can-edit-post="postStreamBindings.canEditPost"
+                :can-delete-post="postStreamBindings.canDeletePost"
+                :can-report-post="postStreamBindings.canReportPost"
+                :can-moderate-pending-post="postStreamBindings.canModeratePendingPost"
+                :has-post-controls="postStreamBindings.hasPostControls"
+                :build-user-path="postStreamBindings.buildUserPath"
+                :get-user-display-name="postStreamBindings.getUserDisplayName"
+                :get-user-avatar-color="postStreamBindings.getUserAvatarColor"
+                :get-user-initial="postStreamBindings.getUserInitial"
+                :get-user-primary-group-icon="postStreamBindings.getUserPrimaryGroupIcon"
+                :get-user-primary-group-color="postStreamBindings.getUserPrimaryGroupColor"
+                :get-user-primary-group-label="postStreamBindings.getUserPrimaryGroupLabel"
+                :format-absolute-date="postStreamBindings.formatAbsoluteDate"
+                :format-date="postStreamBindings.formatDate"
+                :format-like-summary="postStreamBindings.formatLikeSummary"
+                :post-menu-items="postStreamBindings.getPostMenuOptions(post)"
+                @jump-to-post="postStreamEvents.jumpToPost"
+                @toggle-like="postStreamEvents.toggleLike"
+                @reply-to-post="postStreamEvents.replyToPost"
+                @toggle-post-menu="postStreamEvents.togglePostMenu"
+                @edit-post="postStreamEvents.editPost"
+                @delete-post="postStreamEvents.deletePost"
+                @toggle-hide-post="postStreamEvents.toggleHidePost"
+                @open-report-modal="postStreamEvents.openReportModal"
+                @moderate-post="postStreamEvents.moderatePost"
+                @resolve-post-flags="postStreamEvents.resolvePostFlags"
+                @close-post-menu="postStreamEvents.closePostMenu"
               />
             </template>
           </div>
 
           <!-- 加载更多 -->
-          <div v-if="hasMore" ref="nextTrigger" class="load-more">
+          <div v-if="postStreamBindings.hasMore" :ref="postStreamBindings.nextTrigger" class="load-more">
             <ForumLoadMoreButton
               compact
-              :loading="loadingMore"
-              :text="loadMoreText"
-              :loading-text="loadingPostsText"
-              @click="loadMorePosts"
+              :loading="postStreamBindings.loadingMore"
+              :text="postStreamBindings.loadMoreText"
+              :loading-text="postStreamBindings.loadingPostsText"
+              @click="postStreamEvents.loadMorePosts"
             />
           </div>
 
           <DiscussionReplyState
-            :auth-store="authStore"
-            :discussion="discussion"
-            :is-suspended="isSuspended"
-            :suspension-notice="suspensionNotice"
-            :has-active-composer="hasActiveComposer"
-            @open-composer="openComposer"
+            :auth-store="postStreamBindings.authStore"
+            :discussion="postStreamBindings.discussion"
+            :is-suspended="postStreamBindings.isSuspended"
+            :suspension-notice="postStreamBindings.suspensionNotice"
+            :has-active-composer="postStreamBindings.hasActiveComposer"
+            @open-composer="postStreamEvents.openComposer"
           />
         </main>
 
         <DiscussionSidebar
-          v-if="discussion"
-          ref="discussionSidebarRef"
-          :discussion="discussion"
-          :auth-store="authStore"
-          :is-suspended="isSuspended"
-          :suspension-notice="suspensionNotice"
-          :has-active-composer="hasActiveComposer"
-          :can-show-discussion-menu="canShowDiscussionMenu"
-          :can-edit-discussion="canEditDiscussion"
-          :can-moderate-discussion-settings="canModerateDiscussionSettings"
-          :show-discussion-menu="showDiscussionMenu"
-          :toggling-subscription="togglingSubscription"
-          :menu-items="discussionMenuItems"
-          :sidebar-action-items="discussionSidebarActionItems"
-          :scrubber-scrollbar-style="scrubberScrollbarStyle"
-          :scrubber-before-percent="scrubberBeforePercent"
-          :scrubber-after-percent="scrubberAfterPercent"
-          :scrubber-handle-percent="scrubberHandlePercent"
-          :scrubber-dragging="scrubberDragging"
-          :unread-count="unreadCount"
-          :unread-top-percent="unreadTopPercent"
-          :unread-height-percent="unreadHeightPercent"
-          :scrubber-position-text="scrubberPositionText"
-          :scrubber-description="scrubberDescription"
-          :max-post-number="maxPostNumber"
-          @sidebar-action="handleDiscussionMenuSelection"
-          @toggle-menu="toggleDiscussionMenu"
-          @menu-action="handleDiscussionMenuSelection"
-          @jump-to-post="jumpToPost"
-          @scrubber-track-click="handleScrubberTrackClick"
-          @scrubber-handle-pointerdown="handleScrubberMouseDown"
+          v-if="sidebarBindings.discussion"
+          :ref="sidebarBindings.discussionSidebarRef"
+          :discussion="sidebarBindings.discussion"
+          :auth-store="sidebarBindings.authStore"
+          :is-suspended="sidebarBindings.isSuspended"
+          :suspension-notice="sidebarBindings.suspensionNotice"
+          :has-active-composer="sidebarBindings.hasActiveComposer"
+          :can-show-discussion-menu="sidebarBindings.canShowDiscussionMenu"
+          :can-edit-discussion="sidebarBindings.canEditDiscussion"
+          :can-moderate-discussion-settings="sidebarBindings.canModerateDiscussionSettings"
+          :show-discussion-menu="sidebarBindings.showDiscussionMenu"
+          :toggling-subscription="sidebarBindings.togglingSubscription"
+          :menu-items="sidebarBindings.menuItems"
+          :sidebar-action-items="sidebarBindings.sidebarActionItems"
+          :scrubber-scrollbar-style="sidebarBindings.scrubberScrollbarStyle"
+          :scrubber-before-percent="sidebarBindings.scrubberBeforePercent"
+          :scrubber-after-percent="sidebarBindings.scrubberAfterPercent"
+          :scrubber-handle-percent="sidebarBindings.scrubberHandlePercent"
+          :scrubber-dragging="sidebarBindings.scrubberDragging"
+          :unread-count="sidebarBindings.unreadCount"
+          :unread-top-percent="sidebarBindings.unreadTopPercent"
+          :unread-height-percent="sidebarBindings.unreadHeightPercent"
+          :scrubber-position-text="sidebarBindings.scrubberPositionText"
+          :scrubber-description="sidebarBindings.scrubberDescription"
+          :max-post-number="sidebarBindings.maxPostNumber"
+          @sidebar-action="sidebarEvents.sidebarAction"
+          @toggle-menu="sidebarEvents.toggleMenu"
+          @menu-action="sidebarEvents.menuAction"
+          @jump-to-post="sidebarEvents.jumpToPost"
+          @scrubber-track-click="sidebarEvents.scrubberTrackClick"
+          @scrubber-handle-pointerdown="sidebarEvents.scrubberHandlePointerdown"
         />
       </div>
     </div>
@@ -166,13 +166,6 @@ import DiscussionMobileActions from '@/components/discussion/DiscussionMobileAct
 import DiscussionReplyState from '@/components/discussion/DiscussionReplyState.vue'
 import DiscussionSidebar from '@/components/discussion/DiscussionSidebar.vue'
 import { useDiscussionDetailViewModel } from '@/composables/useDiscussionDetailViewModel'
-import {
-  buildTagPath,
-  buildUserPath,
-  getUserAvatarColor,
-  getUserDisplayName,
-  getUserInitial
-} from '@/utils/forum'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,41 +175,15 @@ const forumStore = useForumStore()
 const modalStore = useModalStore()
 
 const {
-  activePostMenuId,
-  closePostMenu,
-  discussion,
-  discussionMobileNavRef,
-  discussionSidebarRef,
-  hasActiveComposer,
-  hasMore,
-  hasPrevious,
-  handleScrubberMouseDown,
-  handleScrubberTrackClick,
-  highlightedPostNumber,
-  jumpToPost,
-  loadMorePosts,
-  loading,
-  loadingMore,
-  loadingPrevious,
-  loadPreviousPosts,
-  maxPostNumber,
-  nextTrigger,
-  posts,
-  previousTrigger,
-  scrubberAfterPercent,
-  scrubberBeforePercent,
-  scrubberDescription,
-  scrubberDragging,
-  scrubberHandlePercent,
-  scrubberPositionText,
-  scrubberScrollbarStyle,
-  showDiscussionMenu,
-  showUnreadDivider,
-  toggleDiscussionMenu,
-  togglePostMenu,
-  unreadCount,
-  unreadHeightPercent,
-  unreadTopPercent,
+  heroBindings,
+  heroEvents,
+  mobileBindings,
+  mobileEvents,
+  postStreamBindings,
+  postStreamEvents,
+  sidebarBindings,
+  sidebarEvents,
+  stateBindings,
 } = useDiscussionDetailViewModel({
   authStore,
   composerStore,

@@ -1,6 +1,14 @@
 import { useDiscussionDetailMetaState } from '@/composables/useDiscussionDetailMetaState'
 import { useDiscussionDetailPage } from '@/composables/useDiscussionDetailPage'
 import { useDiscussionDetailPresentationState } from '@/composables/useDiscussionDetailPresentationState'
+import { useDiscussionDetailViewBindings } from '@/composables/useDiscussionDetailViewBindings'
+import {
+  buildTagPath,
+  buildUserPath,
+  getUserAvatarColor,
+  getUserDisplayName,
+  getUserInitial,
+} from '@/utils/forum'
 
 export function useDiscussionDetailViewModel({
   authStore,
@@ -55,10 +63,22 @@ export function useDiscussionDetailViewModel({
     forumStore,
     loading: pageState.loading,
   })
+  const viewBindings = useDiscussionDetailViewBindings({
+    ...pageBindings,
+    ...metaState,
+    ...presentationState,
+    authStore,
+    buildTagPath,
+    buildUserPath,
+    getUserAvatarColor,
+    getUserDisplayName,
+    getUserInitial,
+  })
 
   return {
     ...pageBindings,
     ...metaState,
     ...presentationState,
+    ...viewBindings,
   }
 }
