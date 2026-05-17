@@ -721,7 +721,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                 DiscussionListFilterDefinition(
                     code="following",
                     label="关注中",
-                    module_id="discussions",
+                    module_id="subscriptions",
                     applier=_apply_following_discussion_list_filter,
                     description="仅显示当前用户已关注的讨论。",
                     icon="fas fa-bell",
@@ -796,7 +796,7 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                 SearchFilterDefinition(
                     code="is_following",
                     label="仅关注讨论",
-                    module_id="discussions",
+                    module_id="subscriptions",
                     target="discussion",
                     parser=_parse_following_search_filter,
                     applier=_apply_discussion_following_search_filter,
