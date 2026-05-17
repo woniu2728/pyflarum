@@ -1,0 +1,55 @@
+import { computed } from 'vue'
+import {
+  getApprovalNote,
+  getDiscussionStateBadges,
+  getUiCopy,
+} from '../forum/frontendRegistry.js'
+
+export function createDiscussionListItemMetaState({
+  discussion,
+  formatRelativeTime,
+  getDiscussionApprovalNote = getApprovalNote,
+  getDiscussionBadges = getDiscussionStateBadges,
+  getText = getUiCopy,
+}) {
+  const discussionStateBadges = computed(() => getDiscussionBadges({
+    discussion: discussion.value,
+    surface: 'discussion-list-item',
+  }))
+
+  const approvalNote = computed(() => getDiscussionApprovalNote({
+    discussion: discussion.value,
+    surface: 'discussion-list-item',
+  }))
+
+  const createdAtText = computed(() => {
+    const relativeTime = formatRelativeTime(discussion.value.created_at)
+
+    return getText({
+      surface: 'discussion-list-item-created-at',
+      createdAt: discussion.value.created_at,
+      relativeTime,
+    })?.text || `发起于 ${relativeTime}`
+  })
+
+  const lastPostedAtText = computed(() => {
+    const relativeTime = formatRelativeTime(discussion.value.last_posted_at)
+
+    return getText({
+      surface: 'discussion-list-item-last-posted-at',
+      lastPostedAt: discussion.value.last_posted_at,
+      relativeTime,
+    })?.text || `最后回复 ${relativeTime}`
+  })
+
+  return {
+    approvalNote,
+    createdAtText,
+    discussionStateBadges,
+    lastPostedAtText,
+  }
+}
+
+export function useDiscussionListItemMetaState(options) {
+  return createDiscussionListItemMetaState(options)
+}

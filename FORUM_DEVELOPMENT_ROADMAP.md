@@ -934,6 +934,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：讨论列表视图脚本区新增 `useDiscussionListViewBindings`，把侧边栏与内容区的大量 prop/event 绑线从 `DiscussionListView.vue` 收口为聚合 bindings，并补上独立 Node 测试；discussion list 页面模板开始继续向“只消费 bindings”的极薄视图层推进。
 - 已完成：讨论列表侧边栏新增 `useDiscussionListSidebarState`，把发帖按钮显隐、个人主页入口显隐以及侧边栏链接文案从 `DiscussionListSidebar.vue` 中拆出，并补上独立 Node 测试；discussion list 左侧导航区继续按轻量状态层方式收口。
 - 已完成：讨论列表侧边栏发帖按钮新增 `useDiscussionListSidebarStartButtonState`，把按钮文案派生从 `DiscussionListSidebarStartButton.vue` 中拆出，并补上独立 Node 测试；discussion list 左侧导航区开始进一步把局部按钮语义收口到独立状态层。
+- 已完成：讨论列表条目元信息新增 `useDiscussionListItemMetaState`，把状态徽章、审核提示以及“发起于/最后回复”时间文案从 `DiscussionListItemMeta.vue` 中拆出，并补上独立 Node 测试；discussion list 条目主体开始继续向模板消费轻量 meta state 收口。
 - 已完成：个人主页新增 `useProfilePageLifecycle`，把首刷、路由切换重置、实时事件监听注册/清理与讨论跟踪释放从 `useProfilePage` 中独立出去，并补上独立 Node 测试；profile 页面层开始和 discussion detail 一样把“状态装配”和“生命周期编排”拆成两段职责。
 - 已完成：个人主页新增 `useProfileAccountActions`，把资料保存、通知偏好、验证邮件、密码修改与头像上传从 `useProfilePage` 中拆出，并补上基础 Node 测试；profile 页面开始和通知页一样继续从 page 状态层向独立动作层收口。
 - 已完成：讨论详情页的楼层 `near` 状态新增 `useDiscussionNearRouteState` 协议，主动楼层跳转继续通过路由驱动详情刷新，被动滚动位置同步则统一改由同一 composable 负责地址栏 `replaceState`；详情页不再在帖子流 composable 内分散维护两套 `near` URL 写法。

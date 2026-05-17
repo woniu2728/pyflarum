@@ -49,10 +49,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import ForumTagBadge from '@/components/forum/ForumTagBadge.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getApprovalNote, getDiscussionStateBadges, getUiCopy } from '@/forum/registry'
+import { useDiscussionListItemMetaState } from '@/composables/useDiscussionListItemMetaState'
 
 const props = defineProps({
   discussion: {
@@ -81,27 +81,15 @@ const props = defineProps({
   }
 })
 
-const discussionStateBadges = computed(() => getDiscussionStateBadges({
-  discussion: props.discussion,
-  surface: 'discussion-list-item',
-}))
-
-const approvalNote = computed(() => getApprovalNote({
-  discussion: props.discussion,
-  surface: 'discussion-list-item',
-}))
-
-const createdAtText = computed(() => getUiCopy({
-  surface: 'discussion-list-item-created-at',
-  createdAt: props.discussion.created_at,
-  relativeTime: props.formatRelativeTime(props.discussion.created_at),
-})?.text || `发起于 ${props.formatRelativeTime(props.discussion.created_at)}`)
-
-const lastPostedAtText = computed(() => getUiCopy({
-  surface: 'discussion-list-item-last-posted-at',
-  lastPostedAt: props.discussion.last_posted_at,
-  relativeTime: props.formatRelativeTime(props.discussion.last_posted_at),
-})?.text || `最后回复 ${props.formatRelativeTime(props.discussion.last_posted_at)}`)
+const {
+  approvalNote,
+  createdAtText,
+  discussionStateBadges,
+  lastPostedAtText,
+} = useDiscussionListItemMetaState({
+  discussion: toRef(props, 'discussion'),
+  formatRelativeTime: props.formatRelativeTime,
+})
 </script>
 
 <style scoped>
