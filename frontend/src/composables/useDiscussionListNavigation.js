@@ -1,6 +1,6 @@
 import { computed } from 'vue'
-import { getEmptyState, getForumNavItems, getStateBlock, getUiCopy } from '@/forum/registry'
-import { flattenTags, normalizeTag, unwrapList } from '@/utils/forum'
+import { getEmptyState, getForumNavItems, getStateBlock, getUiCopy } from '../forum/frontendRegistry.js'
+import { flattenTags, normalizeTag, unwrapList } from '../utils/forumData.js'
 import {
   buildDiscussionFilterLocation,
   buildDiscussionListPrimaryTagItems,
@@ -9,18 +9,25 @@ import {
   getDiscussionListStartButtonStyle,
   isDiscussionFilterActive,
   isDiscussionSidebarTagActive,
-} from '@/utils/discussionListNavigation'
+} from '../utils/discussionListNavigation.js'
 
 const DEFAULT_DISCUSSION_FILTERS = [
   { code: 'all', icon: 'far fa-comments', sidebar_visible: true, route_path: '/' },
   { code: 'following', icon: 'fas fa-bell', requires_authenticated_user: true, sidebar_visible: true, route_path: '/following' },
 ]
 
-export function useDiscussionListNavigation({
+export function createDiscussionListNavigation({
   authStore,
   currentTag,
   currentTagSlug,
   filterOptions,
+  getDefaultFilterLabelText = (code) => getUiCopy({
+    surface: 'discussion-list-default-filter-label',
+    code,
+  })?.text || code,
+  getDiscussionEmptyState = getEmptyState,
+  getDiscussionForumNavItems = getForumNavItems,
+  getDiscussionLoadingState = getStateBlock,
   isFollowingPage,
   listFilter,
   route,
@@ -46,7 +53,7 @@ export function useDiscussionListNavigation({
   const showMoreTagsLink = computed(() => sidebarSecondaryTagItems.value.length > 0)
   const startDiscussionButtonStyle = computed(() => getDiscussionListStartButtonStyle(currentTag.value))
   const emptyStateText = computed(() => {
-    const emptyState = getEmptyState({
+    const emptyState = getDiscussionEmptyState({
       surface: 'discussion-list-empty',
       isFollowingPage: isFollowingPage.value,
       listFilter: listFilter.value,
@@ -56,7 +63,7 @@ export function useDiscussionListNavigation({
     return emptyState?.text || '暂无讨论。'
   })
   const loadingStateText = computed(() => {
-    const stateBlock = getStateBlock({
+    const stateBlock = getDiscussionLoadingState({
       surface: 'discussion-list-loading',
       loading: true,
       listFilter: listFilter.value,
@@ -67,7 +74,7 @@ export function useDiscussionListNavigation({
   })
 
   function buildSidebarFilterItems() {
-    const navItems = getForumNavItems({
+    const navItems = getDiscussionForumNavItems({
       authStore,
       surface: 'discussion-sidebar',
     })
@@ -87,10 +94,7 @@ export function useDiscussionListNavigation({
       .map(item => {
         const fallback = fallbackByCode.get(item.code) || {}
         const navItem = navItemsByCode.get(item.code) || {}
-        const fallbackLabel = getUiCopy({
-          surface: 'discussion-list-default-filter-label',
-          code: item.code,
-        })?.text || item.code
+        const fallbackLabel = getDefaultFilterLabelText(item.code)
         return {
           ...fallback,
           ...navItem,
@@ -143,4 +147,8 @@ export function useDiscussionListNavigation({
     sidebarSecondaryTagItems,
     startDiscussionButtonStyle
   }
+}
+
+export function useDiscussionListNavigation(options) {
+  return createDiscussionListNavigation(options)
 }

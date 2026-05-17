@@ -7,22 +7,7 @@ import {
   resolveDiscussionListPageMetaDescription,
   resolveDiscussionListPageMetaTitle,
 } from '@/utils/discussionList'
-
-export function unwrapList(payload) {
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.results)) return payload.results
-  if (Array.isArray(payload)) return payload
-  return []
-}
-
-export function normalizeTag(tag = {}) {
-  return {
-    ...tag,
-    color: tag.color || '#6c7a89',
-    children: unwrapList(tag.children).map(normalizeTag),
-    last_posted_discussion: tag.last_posted_discussion || null
-  }
-}
+import { flattenTags, normalizeTag, unwrapList } from '@/utils/forumData'
 
 export function normalizeUser(user = {}) {
   return {
@@ -90,13 +75,6 @@ export function getUserAvatarColor(user = {}) {
   const colors = ['#4d698e', '#e67e22', '#3498db', '#27ae60', '#c0392b', '#8e44ad']
   const identifier = Number(user?.id || 0)
   return colors[identifier % colors.length]
-}
-
-export function flattenTags(tags) {
-  return unwrapList(tags).flatMap(tag => {
-    const normalized = normalizeTag(tag)
-    return [normalized, ...flattenTags(normalized.children)]
-  })
 }
 
 export function buildDiscussionPath(discussionOrId) {
