@@ -49,4 +49,17 @@ test('discussion list helper resolves page meta with search and tag context', ()
     currentTagDescription: '',
     searchQuery: '修复',
   }), '在未读中搜索与“修复”相关的讨论。')
+
+  assert.equal(resolveDiscussionListPageMetaTitle({
+    filterCode: 'following',
+    currentTagName: '',
+    searchQuery: '',
+  }), '关注的讨论')
+
+  assert.equal(resolveDiscussionListPageMetaDescription({
+    filterCode: 'following',
+    currentTagName: '',
+    currentTagDescription: '',
+    searchQuery: '',
+  }), '查看你关注的讨论和最新回复。')
 })

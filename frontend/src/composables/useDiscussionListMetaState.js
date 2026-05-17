@@ -1,44 +1,48 @@
 import { computed, watch } from 'vue'
-import { getUiCopy } from '@/forum/registry'
+import { getUiCopy } from '../forum/frontendRegistry.js'
 import {
   resolveDiscussionListActiveFilterCode,
   resolveDiscussionListPageMetaDescription,
   resolveDiscussionListPageMetaTitle,
-} from '@/utils/forum'
+} from '../utils/discussionList.js'
 
-export function useDiscussionListMetaState({
+export function createDiscussionListMetaState({
   currentTag,
   forumStore,
   isFollowingPage,
   listFilter,
+  getText = getUiCopy,
+  resolveActiveFilterCode = resolveDiscussionListActiveFilterCode,
+  resolveMetaDescription = resolveDiscussionListPageMetaDescription,
+  resolveMetaTitle = resolveDiscussionListPageMetaTitle,
   route,
   searchQuery,
 }) {
-  const activeFilterCode = computed(() => resolveDiscussionListActiveFilterCode({
+  const activeFilterCode = computed(() => resolveActiveFilterCode({
     isFollowingPage: isFollowingPage.value,
     listFilter: listFilter.value,
   }))
 
-  const pageMetaTitle = computed(() => getUiCopy({
+  const pageMetaTitle = computed(() => getText({
     surface: 'discussion-list-page-meta-title',
     listFilter: activeFilterCode.value,
     currentTagName: currentTag.value?.name || '',
     searchQuery: searchQuery.value,
     hasSearchQuery: Boolean(searchQuery.value),
-  })?.text || resolveDiscussionListPageMetaTitle({
+  })?.text || resolveMetaTitle({
     filterCode: activeFilterCode.value,
     currentTagName: currentTag.value?.name || '',
     searchQuery: searchQuery.value,
   }))
 
-  const pageMetaDescription = computed(() => getUiCopy({
+  const pageMetaDescription = computed(() => getText({
     surface: 'discussion-list-page-meta-description',
     listFilter: activeFilterCode.value,
     currentTagName: currentTag.value?.name || '',
     currentTagDescription: currentTag.value?.description || '',
     searchQuery: searchQuery.value,
     hasSearchQuery: Boolean(searchQuery.value),
-  })?.text || resolveDiscussionListPageMetaDescription({
+  })?.text || resolveMetaDescription({
     filterCode: activeFilterCode.value,
     currentTagName: currentTag.value?.name || '',
     currentTagDescription: currentTag.value?.description || '',
@@ -62,4 +66,8 @@ export function useDiscussionListMetaState({
     pageMetaDescription,
     pageMetaTitle,
   }
+}
+
+export function useDiscussionListMetaState(options) {
+  return createDiscussionListMetaState(options)
 }

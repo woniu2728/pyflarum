@@ -95,6 +95,7 @@ export function useDiscussionListData({
     refreshPageData: loadState.refreshPageData,
     refreshDiscussionList: loadState.refreshDiscussionList,
     refreshing: loadState.listState.refreshing,
+    searchQuery,
     sortBy,
     sortOptions: resourceState.sortOptions,
     tags: resourceState.tags,
