@@ -4,36 +4,24 @@
     <ForumStateBlock v-else-if="!user" class="profile-state-block">{{ missingStateText }}</ForumStateBlock>
     <div v-else>
       <ProfileHero
-        :user="user"
-        :user-badges="userBadges"
-        :is-own-profile="isOwnProfile"
-        :is-online="isOnline"
-        :avatar-uploading="avatarUploading"
-        :avatar-input-ref="avatarInput"
-        :format-join-date="formatJoinDate"
-        :format-last-seen="formatLastSeen"
-        :get-user-avatar-color="getUserAvatarColor"
-        :get-user-primary-group-icon="getUserPrimaryGroupIcon"
-        :get-user-primary-group-color="getUserPrimaryGroupColor"
-        :get-user-primary-group-label="getUserPrimaryGroupLabel"
-        @avatar-selected="handleAvatarSelected"
-        @open-settings="switchTab('settings')"
+        v-bind="heroBindings"
+        @avatar-selected="heroEvents.avatarSelected"
+        @open-settings="heroEvents.openSettings"
       />
 
       <div class="container">
         <div class="user-page-layout">
           <ProfileSidebar
-            :active-tab="activeTab"
-            :items="profilePanels"
-            @change-tab="switchTab"
+            v-bind="sidebarBindings"
+            @change-tab="sidebarEvents.changeTab"
           />
 
           <main class="user-content">
             <component
-              :is="activePanel?.component"
-              v-if="activePanel?.component"
-              v-bind="activePanel.componentProps || {}"
-              v-on="activePanel.componentEvents || {}"
+              :is="activePanelComponent"
+              v-if="activePanelComponent"
+              v-bind="activePanelProps"
+              v-on="activePanelEvents"
               @update-edit-form="handleEditFormUpdate"
               @update-password-form="handlePasswordFormUpdate"
               @update-preference="handlePreferenceUpdate"
@@ -61,29 +49,20 @@ const authStore = useAuthStore()
 const forumStore = useForumStore()
 const modalStore = useModalStore()
 const {
-  activeTab,
-  activePanel,
-  avatarUploading,
-  avatarInput,
-  formatJoinDate,
-  formatLastSeen,
-  getUserAvatarColor,
-  getUserPrimaryGroupColor,
-  getUserPrimaryGroupIcon,
-  getUserPrimaryGroupLabel,
-  handleAvatarSelected,
+  activePanelComponent,
+  activePanelEvents,
+  activePanelProps,
   handleEditFormUpdate,
   handlePasswordFormUpdate,
   handlePreferenceUpdate,
-  isOnline,
-  isOwnProfile,
+  heroBindings,
+  heroEvents,
   loading,
   loadingStateText,
   missingStateText,
-  profilePanels,
-  switchTab,
+  sidebarBindings,
+  sidebarEvents,
   user,
-  userBadges,
 } = useProfileViewModel({
   authStore,
   forumStore,
