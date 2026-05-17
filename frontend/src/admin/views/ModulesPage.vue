@@ -219,6 +219,18 @@
               </div>
 
               <div>
+                <h5>{{ modulesCopy?.notificationRenderersTitle || '通知渲染器' }}</h5>
+                <ul v-if="module.notification_renderers.length" class="ModuleList">
+                  <li v-for="renderer in module.notification_renderers" :key="renderer.code">
+                    <code>{{ renderer.code }}</code>
+                    <span>{{ renderer.label }}</span>
+                    <small>{{ renderer.navigation_scope }}</small>
+                  </li>
+                </ul>
+                <p v-else class="ModuleEmpty">{{ modulesCopy?.noNotificationRenderersText || '暂无通知渲染器' }}</p>
+              </div>
+
+              <div>
                 <h5>{{ modulesCopy?.userPreferencesTitle || '用户偏好' }}</h5>
                 <ul v-if="module.user_preferences.length" class="ModuleList">
                   <li v-for="preference in module.user_preferences" :key="preference.key">
@@ -358,6 +370,26 @@
               </li>
             </ul>
             <p v-else class="ModuleEmpty">{{ modulesCopy?.noNotificationTypesText || '暂无通知类型' }}</p>
+          </article>
+
+          <article class="ModuleCard">
+            <div class="ModuleCard-header">
+              <div>
+                <div class="ModuleCard-titleRow">
+                  <h4>{{ modulesCopy?.notificationRenderersCardTitle || '通知渲染器' }}</h4>
+                </div>
+                <p>{{ modulesCopy?.notificationRenderersCardDescription || '当前前端已注册的通知展示与跳转 renderer。' }}</p>
+              </div>
+            </div>
+
+            <ul v-if="filteredNotificationRenderers.length" class="ModuleList ModuleList--dense">
+              <li v-for="renderer in filteredNotificationRenderers" :key="`${renderer.module_id}:${renderer.code}`">
+                <code>{{ renderer.code }}</code>
+                <span>{{ renderer.label }}</span>
+                <small>{{ moduleNameMap[renderer.module_id] || renderer.module_id }} · {{ renderer.navigation_scope }}</small>
+              </li>
+            </ul>
+            <p v-else class="ModuleEmpty">{{ modulesCopy?.noNotificationRenderersText || '暂无通知渲染器' }}</p>
           </article>
 
           <article class="ModuleCard">
@@ -584,6 +616,7 @@ import AdminSummaryGrid from '../components/AdminSummaryGrid.vue'
 import AdminToolbar from '../components/AdminToolbar.vue'
 import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import api from '../../api'
+import { getResolvedNotificationTypes } from '../../forum/notificationTypes'
 import {
   getAdminModulesPageActionMeta,
   getAdminModulesPageConfig,
@@ -598,6 +631,30 @@ const categorySummaries = ref([])
 const dependencyAttention = ref([])
 const adminPages = ref([])
 const notificationTypes = ref([])
+const notificationRenderers = computed(() => {
+  const moduleIdsByCode = Object.fromEntries(
+    notificationTypes.value.map(item => [item.code, item.module_id])
+  )
+
+  return getResolvedNotificationTypes()
+    .map(item => {
+      const code = String(item.type || item.code || item.key || '').trim()
+      const moduleId = normalizeModuleId(item.moduleId || item.module_id || moduleIdsByCode[code])
+      if (!code || !moduleId) {
+        return null
+      }
+
+      return {
+        code,
+        label: item.label || code,
+        module_id: moduleId,
+        icon: item.icon || 'fas fa-bell',
+        navigation_scope: item.navigationScope || item.navigation_scope || 'notifications',
+        group_label: item.groupLabel || '',
+      }
+    })
+    .filter(Boolean)
+})
 const userPreferences = ref([])
 const eventListeners = ref([])
 const postTypes = ref([])
@@ -656,6 +713,8 @@ const filteredModules = computed(() => {
       ...module.dependencies,
       ...module.permissions.map(item => item.code),
       ...module.admin_pages.map(item => item.path),
+      ...module.notification_renderers.map(item => item.code),
+      ...module.notification_renderers.map(item => item.label),
     ]
       .filter(Boolean)
       .join(' ')
@@ -669,6 +728,7 @@ const filteredModuleIds = computed(() => new Set(filteredModules.value.map(item 
 
 const filteredAdminPages = computed(() => adminPages.value.filter(item => filteredModuleIds.value.has(item.module_id)))
 const filteredNotificationTypes = computed(() => notificationTypes.value.filter(item => filteredModuleIds.value.has(item.module_id)))
+const filteredNotificationRenderers = computed(() => notificationRenderers.value.filter(item => filteredModuleIds.value.has(item.module_id)))
 const filteredUserPreferences = computed(() => userPreferences.value.filter(item => filteredModuleIds.value.has(item.module_id)))
 const filteredEventListeners = computed(() => eventListeners.value.filter(item => filteredModuleIds.value.has(item.module_id)))
 const filteredPostTypes = computed(() => postTypes.value.filter(item => filteredModuleIds.value.has(item.module_id)))
@@ -687,6 +747,7 @@ const summaryItems = computed(() => {
     { label: labels.permission_count || '权限声明', value: String(summary.value.permission_count ?? 0) },
     { label: labels.admin_page_count || '后台入口', value: String(summary.value.admin_page_count ?? adminPages.value.length) },
     { label: labels.notification_type_count || '通知类型', value: String(summary.value.notification_type_count ?? notificationTypes.value.length) },
+    { label: labels.notification_renderer_count || '通知渲染器', value: String(notificationRenderers.value.length) },
     { label: labels.user_preference_count || '用户偏好', value: String(summary.value.user_preference_count ?? userPreferences.value.length) },
     { label: labels.event_listener_count || '事件监听', value: String(summary.value.event_listener_count ?? eventListeners.value.length) },
     { label: labels.post_type_count || '帖子类型', value: String(summary.value.post_type_count ?? postTypes.value.length) },
@@ -707,7 +768,12 @@ function resolveCategoryLabel(category) {
   return '功能模块'
 }
 
+function normalizeModuleId(value) {
+  return String(value || '').trim()
+}
+
 function normalizeModule(module) {
+  const moduleId = normalizeModuleId(module.id)
   return {
     ...module,
     category_label: module.category_label || resolveCategoryLabel(module.category),
@@ -716,6 +782,7 @@ function normalizeModule(module) {
     permissions: module.permissions || [],
     admin_pages: module.admin_pages || [],
     notification_types: module.notification_types || [],
+    notification_renderers: notificationRenderers.value.filter(item => item.module_id === moduleId),
     user_preferences: module.user_preferences || [],
     event_listeners: module.event_listeners || [],
     post_types: module.post_types || [],
@@ -748,11 +815,11 @@ async function loadModules() {
   try {
     const data = await api.get('/admin/modules')
     summary.value = data.summary || {}
-    modules.value = (data.modules || []).map(normalizeModule)
     categorySummaries.value = data.category_summaries || []
     dependencyAttention.value = data.dependency_attention || []
     adminPages.value = data.admin_pages || []
     notificationTypes.value = data.notification_types || []
+    modules.value = (data.modules || []).map(normalizeModule)
     userPreferences.value = data.user_preferences || []
     eventListeners.value = data.event_listeners || []
     postTypes.value = data.post_types || []
@@ -777,6 +844,7 @@ function buildModuleSummary(module) {
     { label: labels.dependencies || '依赖数', value: String(module.dependencies?.length || 0) },
     { label: labels.capabilities || '能力项', value: String(module.capabilities?.length || 0) },
     { label: labels.notification_types || '通知数', value: String(counts.notification_types ?? module.notification_types?.length ?? 0) },
+    { label: labels.notification_renderers || '渲染器', value: String(module.notification_renderers?.length ?? 0) },
     { label: labels.user_preferences || '偏好项', value: String(counts.user_preferences ?? module.user_preferences?.length ?? 0) },
     { label: labels.event_listeners || '监听器', value: String(counts.event_listeners ?? module.event_listeners?.length ?? 0) },
     { label: labels.post_types || '帖子类型', value: String(counts.post_types ?? module.post_types?.length ?? 0) },

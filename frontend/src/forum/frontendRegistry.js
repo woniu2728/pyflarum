@@ -274,10 +274,20 @@ export function getProfilePanels(context = {}) {
 }
 
 export function registerNotificationRenderer(item) {
+  const moduleId = String(item?.moduleId || item?.module_id || '').trim()
+  const navigationScope = String(item?.navigationScope || item?.navigation_scope || '').trim()
   const normalizedItem = normalizeRegisteredItem(item, {
     icon: 'fas fa-bell',
     navigationScope: 'notifications',
   })
+  if (moduleId) {
+    normalizedItem.moduleId = moduleId
+    normalizedItem.module_id = moduleId
+  }
+  if (navigationScope) {
+    normalizedItem.navigationScope = navigationScope
+    normalizedItem.navigation_scope = navigationScope
+  }
   return upsertByKey(notificationRenderers, normalizedItem.key, normalizedItem)
 }
 

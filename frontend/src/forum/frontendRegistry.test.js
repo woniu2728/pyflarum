@@ -7,6 +7,7 @@ import {
   getDiscussionReviewBanner,
   getEmptyState,
   getHeroMetaItems,
+  getNotificationRenderers,
   getPageState,
   getPostActions,
   getStateBlock,
@@ -24,6 +25,7 @@ import {
   registerDiscussionReviewBanner,
   registerEmptyState,
   registerHeroMeta,
+  registerNotificationRenderer,
   registerPageState,
   registerStateBlock,
   registerUiCopy,
@@ -170,6 +172,25 @@ test('hero meta resolves ordered surface-specific items', () => {
   assert.equal(discussionItems.some(item => item.key === profileMetaKey), false)
   assert.equal(profileItems[0].key, profileMetaKey)
   assert.equal(profileItems[0].text, 'online')
+})
+
+test('notification renderers normalize module and navigation metadata aliases', () => {
+  const rendererKey = uniqueKey('notification-renderer')
+
+  registerNotificationRenderer({
+    key: rendererKey,
+    type: 'customNotification',
+    label: '自定义通知',
+    module_id: 'mentions',
+    navigation_scope: 'post',
+  })
+
+  const renderer = getNotificationRenderers().find(item => item.key === rendererKey)
+
+  assert.equal(renderer.moduleId, 'mentions')
+  assert.equal(renderer.module_id, 'mentions')
+  assert.equal(renderer.navigationScope, 'post')
+  assert.equal(renderer.navigation_scope, 'post')
 })
 
 test('post review banner prefers matching surface-specific item', () => {

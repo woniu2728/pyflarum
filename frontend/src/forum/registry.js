@@ -376,6 +376,7 @@ function buildSearchTextHtml(value, query, limit) {
 
 registerDefaultNotificationRenderer({
   type: 'discussionReply',
+  moduleId: 'notifications',
   label: '讨论新回复',
   icon: 'fas fa-reply',
   navigationScope: 'post',
@@ -390,6 +391,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'postLiked',
+  moduleId: 'likes',
   label: '回复被点赞',
   icon: 'fas fa-thumbs-up',
   navigationScope: 'post',
@@ -403,6 +405,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'userMentioned',
+  moduleId: 'mentions',
   label: '@提及通知',
   icon: 'fas fa-at',
   navigationScope: 'post',
@@ -416,6 +419,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'postReply',
+  moduleId: 'notifications',
   label: '回复被回应',
   icon: 'fas fa-comment-dots',
   navigationScope: 'post',
@@ -429,6 +433,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'discussionApproved',
+  moduleId: 'approval',
   label: '讨论审核通过',
   icon: 'fas fa-circle-check',
   navigationScope: 'discussion',
@@ -443,6 +448,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'discussionRejected',
+  moduleId: 'approval',
   label: '讨论审核拒绝',
   icon: 'fas fa-circle-xmark',
   navigationScope: 'discussion',
@@ -458,6 +464,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'postApproved',
+  moduleId: 'approval',
   label: '回复审核通过',
   icon: 'fas fa-check',
   navigationScope: 'post',
@@ -472,6 +479,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'postRejected',
+  moduleId: 'approval',
   label: '回复审核拒绝',
   icon: 'fas fa-xmark',
   navigationScope: 'post',
@@ -487,6 +495,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'userSuspended',
+  moduleId: 'notifications',
   label: '账号封禁通知',
   icon: 'fas fa-user-lock',
   navigationScope: 'profile',
@@ -501,6 +510,7 @@ registerDefaultNotificationRenderer({
 
 registerDefaultNotificationRenderer({
   type: 'userUnsuspended',
+  moduleId: 'notifications',
   label: '账号解除封禁',
   icon: 'fas fa-user-check',
   navigationScope: 'profile',

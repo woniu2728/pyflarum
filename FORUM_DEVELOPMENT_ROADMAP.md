@@ -985,6 +985,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：后台审核队列已补齐批量通过/拒绝接口与多选操作栏，批量审核继续复用既有单条审核权限、通知与备注模板链路，并补上 Django/Node 两侧测试锁定权限、模板适配与选择状态；阶段 4 的 `approval` 模块因此从“单条审核可配置”继续推进到“后台治理批量操作可用”，但仍限定在复用现有审批语义的窄切片内，没有提前引入新的审批存储或异步任务模型。
 - 已完成：后台权限管理页的页面文案、权限统计说明、用户组弹层、保存/删除确认反馈与默认颜色配置已继续切到 admin registry，权限矩阵和分组维护流开始进入统一注册化配置。
 - 已完成：后台模块中心页的页面文案、筛选项、摘要标签、模块卡片语义、注册表表头与能力文案已继续切到 admin registry，模块注册快照页开始具备完整的注册化页面配置。
+- 已完成：前端通知 renderer 已补齐 `moduleId` 归属元数据，模块中心页现在会同时展示通知类型与通知 renderer 快照，并按模块筛选展示前端通知展示/跳转接入面；阶段 4 的 `notifications / likes / mentions / approval` 通知链路因此从“后端声明类型”进一步收口到“类型与前端 renderer 归属一致”的窄闭环，没有提前扩成新的通知协议或聚合模型。
 - 已完成：后端新增统一 `ResourceQueryOptions` / `fields[...]` / `include` 解析层，讨论、帖子、标签、通知四条主读接口已开始通过同一套资源查询协议裁剪注册字段并显式展开关系，阶段 2 的 Resource API 已从“能挂字段”推进到“主接口可查询”的实际形态。
 - 已完成：后端 `ResourceRegistry` 新增资源级预加载协议，注册字段与关系现在可以声明 `select_related/prefetch_related` 依赖；discussion / post / notification 主读接口已接入统一预加载计划并补齐查询回归测试，阶段 2 的 Resource API 开始从“可查询”继续推进到“可扩展且可控查询成本”。
 - 已完成：搜索 API 与用户列表/详情接口已接入统一资源查询与预加载协议，`search_discussion/search_post/search_user/user_detail` 现在开始共用 `fields[...]` 与 registry 预加载计划，搜索用户结果和用户列表的主用户组查询也已补齐回归测试，阶段 2 的 Resource API 覆盖面进一步扩到搜索与用户域。
