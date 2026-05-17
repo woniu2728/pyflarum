@@ -919,6 +919,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：个人主页的讨论/回复面板新增按需请求式 `useRequestedPaginatedListState` 包装层，讨论列表切到共享分页状态底座，回复列表也保留 tab 懒加载但改为通过统一列表状态驱动；切换用户时的列表重置、讨论实时订阅替换，以及个人页回复 tab 在实时敏感事件后的强制刷新也一并收口，阶段 3 的列表状态层开始继续覆盖 profile 这条用户内容流。
 - 已完成：个人主页面板切换新增 `useProfileRouteState` 路由状态协议，`discussions/posts/settings/security` 现在会进入 URL 查询参数，并由页面在面板可见性变化时自动纠正到首个可用 tab；profile 的刷新、分享链接以及返回前进开始具备稳定的论坛级状态层行为。
 - 已完成：个人主页视图脚本区新增 `useProfileViewModel` 装配层，面板装配、页面 meta、头像区展示派生和表单字段更新 handlers 从 `ProfileView.vue` 收口到单一 composable，并补上 `profileMeta` helper 测试；profile 页面开始和 discussion list/detail 一样进入“页面只保留模板绑定”的统一组织方式。
+- 已完成：个人主页新增 `useProfilePanelState`，把面板注册上下文组装、当前 panel 选择、不可见 tab 自动回退以及资料/密码/偏好表单字段桥接从 `useProfileViewModel` 中拆出，并补上独立 Node 测试；profile view model 开始进一步对齐 discussion detail 的“展示态 + 面板态 + meta 态”分层方式。
 - 已完成：个人主页新增 `useProfilePageLifecycle`，把首刷、路由切换重置、实时事件监听注册/清理与讨论跟踪释放从 `useProfilePage` 中独立出去，并补上独立 Node 测试；profile 页面层开始和 discussion detail 一样把“状态装配”和“生命周期编排”拆成两段职责。
 - 已完成：个人主页新增 `useProfileAccountActions`，把资料保存、通知偏好、验证邮件、密码修改与头像上传从 `useProfilePage` 中拆出，并补上基础 Node 测试；profile 页面开始和通知页一样继续从 page 状态层向独立动作层收口。
 - 已完成：讨论详情页的楼层 `near` 状态新增 `useDiscussionNearRouteState` 协议，主动楼层跳转继续通过路由驱动详情刷新，被动滚动位置同步则统一改由同一 composable 负责地址栏 `replaceState`；详情页不再在帖子流 composable 内分散维护两套 `near` URL 写法。
