@@ -23,14 +23,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { getUiCopy } from '@/forum/registry'
-import {
-  getDiscussionListFilterHeroDescriptionText,
-  getDiscussionListFilterHeroTitleText,
-  getDiscussionListFilterLabelText,
-  resolveDiscussionListActiveFilterCode,
-} from '@/utils/forum'
+import { toRef } from 'vue'
+import { useDiscussionListHeroState } from '@/composables/useDiscussionListHeroState'
 
 const props = defineProps({
   currentTag: {
@@ -47,42 +41,18 @@ const props = defineProps({
   }
 })
 
-const activeFilterCode = computed(() => resolveDiscussionListActiveFilterCode({
-  isFollowingPage: props.isFollowingPage,
-  listFilter: props.listFilter,
-}))
-const showFilterHero = computed(() => !props.currentTag && activeFilterCode.value !== 'all')
-
-const filterHeroPillText = computed(() => getUiCopy({
-  surface: 'discussion-list-filter-hero-pill',
-  listFilter: activeFilterCode.value,
-})?.text || getDiscussionListFilterLabelText(activeFilterCode.value))
-
-const filterHeroTitleText = computed(() => getUiCopy({
-  surface: 'discussion-list-filter-hero-title',
-  listFilter: activeFilterCode.value,
-})?.text || getDiscussionListFilterHeroTitleText(activeFilterCode.value))
-
-const filterHeroDescriptionText = computed(() => getUiCopy({
-  surface: 'discussion-list-filter-hero-description',
-  listFilter: activeFilterCode.value,
-})?.text || getDiscussionListFilterHeroDescriptionText(activeFilterCode.value))
-
-const filterHeroIcon = computed(() => {
-  switch (activeFilterCode.value) {
-    case 'unread':
-      return 'fas fa-inbox'
-    case 'my':
-      return 'fas fa-user-pen'
-    default:
-      return 'fas fa-bell'
-  }
+const {
+  currentTagDescriptionText,
+  filterHeroDescriptionText,
+  filterHeroIcon,
+  filterHeroPillText,
+  filterHeroTitleText,
+  showFilterHero,
+} = useDiscussionListHeroState({
+  currentTag: toRef(props, 'currentTag'),
+  isFollowingPage: toRef(props, 'isFollowingPage'),
+  listFilter: toRef(props, 'listFilter'),
 })
-
-const currentTagDescriptionText = computed(() => getUiCopy({
-  surface: 'discussion-list-tag-hero-description',
-  tagName: props.currentTag?.name || '',
-})?.text || '这个标签下的讨论会集中显示在这里。')
 </script>
 
 <style scoped>
