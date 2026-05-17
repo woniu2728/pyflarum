@@ -74,11 +74,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import DiscussionListSidebarNavLink from '@/components/discussion/DiscussionListSidebarNavLink.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
 import DiscussionListSidebarTagLink from '@/components/discussion/DiscussionListSidebarTagLink.vue'
-import { getUiCopy } from '@/forum/registry'
+import { useDiscussionListSidebarState } from '@/composables/useDiscussionListSidebarState'
 
 const props = defineProps({
   authStore: {
@@ -139,27 +139,15 @@ const props = defineProps({
   }
 })
 
-const showStartDiscussionButton = computed(() => {
-  if (props.authStore.isRestoringSession && props.authStore.isAuthenticated && !props.authStore.user) {
-    return false
-  }
-
-  return !props.authStore.isAuthenticated || props.authStore.canStartDiscussion
+const {
+  moreTagsLinkLabel,
+  profileLinkLabel,
+  showProfileLink,
+  showStartDiscussionButton,
+  tagsLinkLabel,
+} = useDiscussionListSidebarState({
+  authStore: toRef(props, 'authStore'),
 })
-
-const showProfileLink = computed(() => Boolean(props.authStore?.user))
-
-const profileLinkLabel = computed(() => getUiCopy({
-  surface: 'discussion-list-sidebar-profile-link',
-})?.text || '我的主页')
-
-const tagsLinkLabel = computed(() => getUiCopy({
-  surface: 'discussion-list-sidebar-tags-link',
-})?.text || '标签')
-
-const moreTagsLinkLabel = computed(() => getUiCopy({
-  surface: 'discussion-list-sidebar-more-tags-link',
-})?.text || '更多标签')
 
 defineEmits(['start-discussion'])
 </script>
