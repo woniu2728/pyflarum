@@ -56,6 +56,56 @@ export function resolveVisiblePostMetrics({
   }
 }
 
+export function resolveAnchorScrollDelta({
+  anchorTop = null,
+  currentTop = null,
+  threshold = 1,
+}) {
+  if (typeof anchorTop !== 'number' || typeof currentTop !== 'number') {
+    return null
+  }
+
+  const delta = currentTop - anchorTop
+  if (Math.abs(delta) <= threshold) {
+    return null
+  }
+
+  return delta
+}
+
+export async function settleAnchorScrollPosition({
+  anchorTop = null,
+  getCurrentTop,
+  scrollBy,
+  scheduleFrame = callback => requestAnimationFrame(callback),
+  maxFrames = 4,
+  threshold = 1,
+}) {
+  if (typeof anchorTop !== 'number' || typeof getCurrentTop !== 'function' || typeof scrollBy !== 'function') {
+    return false
+  }
+
+  for (let frame = 0; frame < maxFrames; frame += 1) {
+    const delta = resolveAnchorScrollDelta({
+      anchorTop,
+      currentTop: getCurrentTop(),
+      threshold,
+    })
+
+    if (delta === null) {
+      return frame > 0
+    }
+
+    scrollBy(delta)
+
+    if (frame < maxFrames - 1) {
+      await waitForNextFrame(scheduleFrame)
+    }
+  }
+
+  return true
+}
+
 export function useDiscussionPostViewportState({
   currentVisiblePostNumber,
   hasMore,
@@ -74,6 +124,7 @@ export function useDiscussionPostViewportState({
 }) {
   const previousTrigger = ref(null)
   const nextTrigger = ref(null)
+  const settlingPreviousAnchor = ref(false)
   let scrollFrame = null
 
   onMounted(() => {
@@ -104,6 +155,10 @@ export function useDiscussionPostViewportState({
   }
 
   function maybeAutoLoadPosts() {
+    if (settlingPreviousAnchor.value) {
+      return
+    }
+
     if (hasPrevious.value && !loadingPrevious.value && previousTrigger.value) {
       const previousRect = previousTrigger.value.getBoundingClientRect()
       if (previousRect.top <= 220) {
@@ -129,13 +184,25 @@ export function useDiscussionPostViewportState({
 
   async function loadPreviousPostsWithAnchor() {
     const anchorNumber = posts.value[0]?.number
-    const anchorTop = anchorNumber ? document.getElementById(`post-${anchorNumber}`)?.getBoundingClientRect().top : null
+    const getAnchorTop = () => {
+      if (!anchorNumber) return null
+      return document.getElementById(`post-${anchorNumber}`)?.getBoundingClientRect().top ?? null
+    }
+    const anchorTop = getAnchorTop()
     await loadPreviousPosts()
     await nextTick()
     if (anchorNumber && anchorTop !== null) {
-      const newTop = document.getElementById(`post-${anchorNumber}`)?.getBoundingClientRect().top
-      if (typeof newTop === 'number') {
-        window.scrollBy({ top: newTop - anchorTop })
+      settlingPreviousAnchor.value = true
+      try {
+        await settleAnchorScrollPosition({
+          anchorTop,
+          getCurrentTop: getAnchorTop,
+          scrollBy: delta => {
+            window.scrollBy({ top: delta })
+          },
+        })
+      } finally {
+        settlingPreviousAnchor.value = false
       }
     }
     syncScrubberTrackMetrics()
@@ -188,4 +255,10 @@ function clampPostPosition(value, maxPostNumber) {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 1
   return Math.min(Number(maxPostNumber || 1), Math.max(1, parsed))
+}
+
+function waitForNextFrame(scheduleFrame) {
+  return new Promise(resolve => {
+    scheduleFrame(() => resolve())
+  })
 }

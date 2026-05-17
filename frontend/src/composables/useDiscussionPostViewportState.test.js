@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveVisiblePostMetrics } from './useDiscussionPostViewportState.js'
+import {
+  resolveAnchorScrollDelta,
+  resolveVisiblePostMetrics,
+  settleAnchorScrollPosition,
+} from './useDiscussionPostViewportState.js'
 
 test('resolveVisiblePostMetrics prefers closest visible post and interpolated progress', () => {
   const result = resolveVisiblePostMetrics({
@@ -39,4 +43,57 @@ test('resolveVisiblePostMetrics pins progress to max when already at page bottom
 
   assert.equal(result.trackedPostNumber, 20)
   assert.equal(result.progress, 20)
+})
+
+test('resolveAnchorScrollDelta ignores tiny anchor drift', () => {
+  const delta = resolveAnchorScrollDelta({
+    anchorTop: 240,
+    currentTop: 240.4,
+    threshold: 1,
+  })
+
+  assert.equal(delta, null)
+})
+
+test('settleAnchorScrollPosition keeps correcting until anchor stabilizes', async () => {
+  const topSequence = [344, 332, 320]
+  const applied = []
+  let readCount = 0
+
+  const settled = await settleAnchorScrollPosition({
+    anchorTop: 320,
+    getCurrentTop: () => {
+      const index = Math.min(readCount, topSequence.length - 1)
+      const value = topSequence[index]
+      readCount += 1
+      return value
+    },
+    scrollBy: delta => {
+      applied.push(delta)
+    },
+    scheduleFrame: callback => callback(),
+    maxFrames: 4,
+    threshold: 1,
+  })
+
+  assert.equal(settled, true)
+  assert.deepEqual(applied, [24, 12])
+})
+
+test('settleAnchorScrollPosition exits immediately when anchor is already stable', async () => {
+  const applied = []
+
+  const settled = await settleAnchorScrollPosition({
+    anchorTop: 200,
+    getCurrentTop: () => 200,
+    scrollBy: delta => {
+      applied.push(delta)
+    },
+    scheduleFrame: callback => callback(),
+    maxFrames: 3,
+    threshold: 1,
+  })
+
+  assert.equal(settled, false)
+  assert.deepEqual(applied, [])
 })
