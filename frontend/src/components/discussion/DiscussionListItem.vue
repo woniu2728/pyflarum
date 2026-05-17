@@ -26,11 +26,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import DiscussionListItemAvatar from '@/components/discussion/DiscussionListItemAvatar.vue'
 import DiscussionListItemMeta from '@/components/discussion/DiscussionListItemMeta.vue'
 import DiscussionListItemStats from '@/components/discussion/DiscussionListItemStats.vue'
-import { getDiscussionBadges } from '@/forum/registry'
+import { useDiscussionListItemState } from '@/composables/useDiscussionListItemState'
 
 const props = defineProps({
   discussion: {
@@ -67,10 +67,9 @@ const props = defineProps({
   }
 })
 
-const discussionBadges = computed(() => getDiscussionBadges({
-  discussion: props.discussion,
-  surface: 'discussion-list-item',
-}))
+const { discussionBadges } = useDiscussionListItemState({
+  discussion: toRef(props, 'discussion'),
+})
 </script>
 
 <style scoped>
