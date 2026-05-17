@@ -61,12 +61,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import DiscussionListHeaderSection from '@/components/discussion/DiscussionListHeaderSection.vue'
 import DiscussionListItem from '@/components/discussion/DiscussionListItem.vue'
 import ForumLoadMoreButton from '@/components/forum/ForumLoadMoreButton.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
-import { getUiCopy } from '@/forum/registry'
+import { useDiscussionListContentState } from '@/composables/useDiscussionListContentState'
 
 defineProps({
   authStore: {
@@ -165,17 +164,11 @@ defineProps({
 
 defineEmits(['change-sort', 'change-filter', 'change-search', 'mark-all-read', 'refresh', 'load-more'])
 
-const refreshingText = computed(() => getUiCopy({
-  surface: 'discussion-list-refreshing',
-})?.text || '正在刷新讨论')
-
-const loadMoreText = computed(() => getUiCopy({
-  surface: 'discussion-list-load-more',
-})?.text || '加载更多讨论')
-
-const loadingMoreText = computed(() => getUiCopy({
-  surface: 'discussion-list-loading-more',
-})?.text || '正在加载讨论...')
+const {
+  loadMoreText,
+  loadingMoreText,
+  refreshingText,
+} = useDiscussionListContentState()
 </script>
 
 <style scoped>
