@@ -2,53 +2,18 @@
   <div class="index-page">
     <div class="index-container">
       <DiscussionListSidebar
-        :auth-store="authStore"
-        :current-tag="currentTag"
-        :is-own-profile-page="isOwnProfilePage"
-        :sidebar-filter-items="sidebarFilterItems"
-        :is-tags-page="isTagsPage"
-        :has-sidebar-tag-navigation="hasSidebarTagNavigation"
-        :sidebar-primary-tag-items="sidebarPrimaryTagItems"
-        :sidebar-secondary-tag-items="sidebarSecondaryTagItems"
-        :show-more-tags-link="showMoreTagsLink"
-        :start-discussion-button-style="startDiscussionButtonStyle"
-        :build-user-path="buildUserPath"
-        :build-tag-path="buildTagPath"
-        :is-sidebar-tag-active="isSidebarTagActive"
-        :get-sidebar-tag-style="getSidebarTagStyle"
-        @start-discussion="handleStartDiscussion"
+        v-bind="sidebarBindings"
+        @start-discussion="sidebarEvents.startDiscussion"
       />
 
       <DiscussionListContent
-        :auth-store="authStore"
-        :current-tag="currentTag"
-        :is-following-page="isFollowingPage"
-        :sort-by="sortBy"
-        :sort-options="sortOptions"
-        :list-filter="listFilter"
-        :filter-options="filterOptions"
-        :search-query="searchQuery"
-        :marking-all-read="markingAllRead"
-        :loading="loading"
-        :refreshing="refreshing"
-        :discussions="discussions"
-        :empty-state-text="emptyStateText"
-        :loading-state-text="loadingStateText"
-        :has-more="hasMore"
-        :loading-more="loadingMore"
-        :build-discussion-path="buildDiscussionPath"
-        :build-tag-path="buildTagPath"
-        :build-user-path="buildUserPath"
-        :format-relative-time="formatRelativeTime"
-        :get-user-avatar-color="getUserAvatarColor"
-        :get-user-display-name="getUserDisplayName"
-        :get-user-initial="getUserInitial"
-        @change-sort="changeSortBy"
-        @change-filter="changeListFilter"
-        @change-search="changeSearchQuery"
-        @mark-all-read="markAllAsRead"
-        @refresh="refreshDiscussionList"
-        @load-more="loadMore"
+        v-bind="contentBindings"
+        @change-sort="contentEvents.changeSort"
+        @change-filter="contentEvents.changeFilter"
+        @change-search="contentEvents.changeSearch"
+        @mark-all-read="contentEvents.markAllRead"
+        @refresh="contentEvents.refresh"
+        @load-more="contentEvents.loadMore"
       />
     </div>
   </div>
@@ -63,15 +28,6 @@ import { useComposerStore } from '@/stores/composer'
 import { useForumStore } from '@/stores/forum'
 import { useModalStore } from '@/stores/modal'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  buildDiscussionPath,
-  buildTagPath,
-  buildUserPath,
-  formatRelativeTime,
-  getUserAvatarColor,
-  getUserDisplayName,
-  getUserInitial
-} from '@/utils/forum'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
@@ -80,38 +36,10 @@ const modalStore = useModalStore()
 const route = useRoute()
 const router = useRouter()
 const {
-  discussions,
-  currentTag,
-  loading,
-  refreshing,
-  loadingMore,
-  sortBy,
-  sortOptions,
-  listFilter,
-  filterOptions,
-  searchQuery,
-  markingAllRead,
-  hasMore,
-  isFollowingPage,
-  isTagsPage,
-  isOwnProfilePage,
-  sidebarFilterItems,
-  sidebarPrimaryTagItems,
-  sidebarSecondaryTagItems,
-  hasSidebarTagNavigation,
-  showMoreTagsLink,
-  startDiscussionButtonStyle,
-  emptyStateText,
-  loadingStateText,
-  refreshDiscussionList,
-  changeSortBy,
-  changeListFilter,
-  changeSearchQuery,
-  loadMore,
-  markAllAsRead,
-  handleStartDiscussion,
-  getSidebarTagStyle,
-  isSidebarTagActive
+  contentBindings,
+  contentEvents,
+  sidebarBindings,
+  sidebarEvents,
 } = useDiscussionListViewModel({
   authStore,
   composerStore,
