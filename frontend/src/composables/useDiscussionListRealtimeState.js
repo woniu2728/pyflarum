@@ -1,50 +1,24 @@
-import { onBeforeUnmount, onMounted, watch } from 'vue'
 import {
-  mergeForumEventPayload,
-  shouldRefreshForumEvent,
-} from '@/utils/forumRealtime'
+  mergeForumEventPayload as defaultMergeForumEventPayload,
+  shouldRefreshForumEvent as defaultShouldRefreshForumEvent,
+} from '../utils/forumRealtime.js'
 import {
-  getDiscussionListTrackingDiff,
   resolveDiscussionMarkAllReadPatch,
   resolveDiscussionReadStatePatch,
-} from '@/utils/discussionListRealtime'
+} from '../utils/discussionListRealtime.js'
 
-export function useDiscussionListRealtimeState({
+export function createDiscussionListRealtimeState({
   api,
   authStore,
   currentDiscussionIds,
-  forumRealtimeStore,
   markingAllRead,
   modalStore,
+  mergeEventPayload = defaultMergeForumEventPayload,
   refreshDiscussionList,
   resourceStore,
+  shouldRefreshEvent = defaultShouldRefreshForumEvent,
   uiText,
 }) {
-  watch(
-    currentDiscussionIds,
-    (nextIds, previousIds = []) => {
-      const { trackIds, untrackIds } = getDiscussionListTrackingDiff(nextIds, previousIds)
-      if (untrackIds.length) {
-        forumRealtimeStore.untrackDiscussionIds(untrackIds)
-      }
-      if (trackIds.length) {
-        forumRealtimeStore.trackDiscussionIds(trackIds)
-      }
-    },
-    { immediate: true }
-  )
-
-  onMounted(() => {
-    window.addEventListener('bias:discussion-read-state-updated', handleDiscussionReadStateUpdated)
-    window.addEventListener('bias:forum-event', handleForumEvent)
-  })
-
-  onBeforeUnmount(() => {
-    forumRealtimeStore.untrackDiscussionIds(currentDiscussionIds.value)
-    window.removeEventListener('bias:discussion-read-state-updated', handleDiscussionReadStateUpdated)
-    window.removeEventListener('bias:forum-event', handleForumEvent)
-  })
-
   async function markAllAsRead() {
     if (!authStore.isAuthenticated || markingAllRead.value) return
 
@@ -92,15 +66,21 @@ export function useDiscussionListRealtimeState({
       return
     }
 
-    if (shouldRefreshForumEvent(detail.event_type)) {
+    if (shouldRefreshEvent(detail.event_type)) {
       await refreshDiscussionList()
       return
     }
 
-    mergeForumEventPayload(resourceStore, detail)
+    mergeEventPayload(resourceStore, detail)
   }
 
   return {
+    handleDiscussionReadStateUpdated,
+    handleForumEvent,
     markAllAsRead,
   }
+}
+
+export function useDiscussionListRealtimeState(options) {
+  return createDiscussionListRealtimeState(options)
 }

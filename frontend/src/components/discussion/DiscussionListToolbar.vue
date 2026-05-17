@@ -69,7 +69,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['change-sort', 'change-filter', 'change-search', 'mark-all-read', 'refresh'])
+defineEmits(['change-sort', 'mark-all-read', 'refresh'])
 
 const {
   markAllReadTitleText,

@@ -898,6 +898,13 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：全局搜索弹层已从“输入框 + 结果列表”升级为更完整的命令面板形态，空态新增最近搜索、本地持久化历史、热门标签和搜索语法三组可键盘选择的动作区；上下键与回车现在不仅能打开结果，也能直接执行空态命令，搜索弹层命令面板化这条阶段 3 任务已开始形成可用闭环。
 - 已完成：搜索页与通知页新增统一 `useRoutePagination` 分页路由协议，筛选/视图切换后的“重置到第 1 页”、分页跳转后的滚动复位以及页码更新逻辑开始从页面内联分支收口到共享 composable；阶段 3 的列表状态层因此不再只共享底层请求状态，也开始共享页级路由分页行为。
 - 已完成：通知页视图脚本区新增 `useNotificationViewModel` 装配层，hero 文案、筛选标题、批量操作按钮文案、分组计数和页面 meta 从 `NotificationView.vue` 收口到单一 composable，并补上 `notificationMeta` helper 测试；通知页开始并入和 search/profile/detail 一致的 view-model 页面组织方式。
+- 已完成：讨论列表头部装配链路已继续收口，`DiscussionListViewBindings` 与 `DiscussionListContent/Header/Toolbar` 不再继续透传未消费的 `filter/search` 死接口，并补上绑定层测试；阶段 3 的讨论列表状态层开始从“已拆分”进一步走向“按当前 UI 真正收紧接口面”。
+- 已完成：讨论列表新增 `useDiscussionListPageLifecycle`，把 tracked discussion 同步与 `discussion-read-state/forum-event` 监听注册从 `useDiscussionListRealtimeState` 中拆出，并为 lifecycle/realtime state 补上独立 Node 测试；讨论列表 page data 组织开始和 search/profile/detail 一样把“实时消费逻辑”与“生命周期编排”显式分层。
+- 已完成：讨论列表新增 `createDiscussionListLoadState` 纯工厂，把初始加载/刷新/加载更多的 paginated wrapper、错误弹窗和文案解析从组合式入口中抽离，并补上独立 Node 测试；讨论列表加载层开始和搜索页一样具备可直接回归校验的纯逻辑边界。
+- 已完成：讨论列表新增 `useDiscussionListRealtimeLifecycleState`，把 `window` 事件监听与 tracked discussion diff/清理从 `useDiscussionListData` 中继续抽到独立 adapter，并补上独立 Node 测试；discussion list data 层开始进一步收口为 route/resource/load/realtime 装配，而不再直接承接浏览器监听和 realtime store 细节。
+- 已完成：`approval` 模块的 registry 元数据已补齐审核通过/拒绝四类事件监听定义，审核通知/标签统计/时间线消费不再错误地挂在 `notifications` 模块名下；模块中心现在开始更准确反映审核能力的真实边界，为阶段 4 的内置模块迁移闭环继续收口。
+- 已完成：`approval` 与 `flags` 模块已补齐后台审核/举报权限注册定义，模块中心与权限注册化开始能够显式暴露“查看审核队列 / 通过 / 拒绝 / 查看举报 / 处理举报”这组现有后台能力；审核与举报模块因此开始从“已有后台页”进一步收口到“权限、页面、事件元数据一致归属”的模块闭环。
+- 已完成：后台审核队列与举报处理接口已接入 `admin.approval.* / admin.flag.*` 权限码校验，不再只是 `staff` 兜底；`approval/flags` 模块的权限注册开始从“可展示元数据”推进到“实际控制后台行为”，阶段 1 的权限注册化因此真正落到审核与举报主链路。
 - 已完成：通知页新增 `useNotificationBulkActions`，把“全部标记已读 / 清除已读 / 分组标记 / 分组清除”这组批量动作从 `useNotificationPage` 中拆出，并补上独立 Node 测试覆盖确认弹窗与 filtered action 分支；通知页 page composable 开始和详情页动作层拆分类似，继续从页面状态层向独立动作层收口。
 - 已完成：通知页新增 `useNotificationItemActions`，把单条通知的已读标记、删除确认与点击跳转从 `useNotificationPage` 中拆出，并补上独立 Node 测试覆盖“未读先标已读再跳转”和删除确认分支；通知页动作层继续从“批量动作”扩展到“单项动作”，page composable 开始收敛为状态与动作装配层。
 - 已完成：搜索结果页视图脚本区新增 `useSearchResultsViewModel` 装配层，hero pill/title、统计卡片、可见分组过滤和页面 meta watch 从 `SearchResultsView.vue` 收口到单一 composable，并补上 `searchMeta` helper 测试；搜索页开始和 discussion list/detail、profile 一样进入统一的 view-model 页面组织方式。

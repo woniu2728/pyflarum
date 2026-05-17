@@ -9,8 +9,6 @@ test('discussion list view bindings expose sidebar and content bindings', () => 
     buildDiscussionPath: value => `/d/${value.id || value}`,
     buildTagPath: value => `/t/${value.slug || value}`,
     buildUserPath: value => `/u/${value.id || value}`,
-    changeListFilter() {},
-    changeSearchQuery() {},
     changeSortBy() {},
     currentTag: ref({ name: '公告' }),
     discussions: ref([{ id: 1 }]),
@@ -27,7 +25,6 @@ test('discussion list view bindings expose sidebar and content bindings', () => 
     isOwnProfilePage: ref(false),
     isSidebarTagActive: () => false,
     isTagsPage: ref(false),
-    listFilter: ref('all'),
     loading: ref(false),
     loadingMore: ref(false),
     loadingStateText: ref('loading'),
@@ -36,7 +33,6 @@ test('discussion list view bindings expose sidebar and content bindings', () => 
     markAllAsRead() {},
     refreshDiscussionList() {},
     refreshing: ref(false),
-    searchQuery: ref(''),
     showMoreTagsLink: ref(true),
     sidebarFilterItems: ref([{ key: 'all' }]),
     sidebarPrimaryTagItems: ref([{ key: '公告' }]),
@@ -49,6 +45,10 @@ test('discussion list view bindings expose sidebar and content bindings', () => 
   assert.equal(bindings.sidebarBindings.value.currentTag.name, '公告')
   assert.deepEqual(bindings.contentBindings.value.discussions, [{ id: 1 }])
   assert.equal(bindings.contentBindings.value.sortBy, 'latest')
+  assert.equal('searchQuery' in bindings.contentBindings.value, false)
+  assert.equal('filterOptions' in bindings.contentBindings.value, false)
   assert.equal(typeof bindings.sidebarEvents.startDiscussion, 'function')
   assert.equal(typeof bindings.contentEvents.refresh, 'function')
+  assert.equal('changeFilter' in bindings.contentEvents, false)
+  assert.equal('changeSearch' in bindings.contentEvents, false)
 })

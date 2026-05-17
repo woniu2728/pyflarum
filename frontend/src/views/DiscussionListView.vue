@@ -9,8 +9,6 @@
       <DiscussionListContent
         v-bind="contentBindings"
         @change-sort="contentEvents.changeSort"
-        @change-filter="contentEvents.changeFilter"
-        @change-search="contentEvents.changeSearch"
         @mark-all-read="contentEvents.markAllRead"
         @refresh="contentEvents.refresh"
         @load-more="contentEvents.loadMore"

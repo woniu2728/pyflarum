@@ -1,5 +1,6 @@
-import { getUiCopy } from '@/forum/registry'
-import { usePaginatedListState } from '@/composables/usePaginatedListState'
+import { getUiCopy } from '../forum/registry.js'
+import { createDiscussionListLoadState } from './discussionListLoadState.shared.js'
+import { usePaginatedListState } from './usePaginatedListState.js'
 
 export function useDiscussionListLoadState({
   modalStore,
@@ -9,86 +10,25 @@ export function useDiscussionListLoadState({
   sortBy,
   listFilter,
 }) {
-  const listState = usePaginatedListState({
-    watchSources: () => [route.name, route.params.slug, searchQuery.value, sortBy.value, listFilter.value],
-    initialLoading: true,
-    reset: resourceState.reset,
-    async load({ mode }) {
-      if (mode === 'initial') {
-        await resourceState.loadInitialResources()
-        return null
-      }
-
-      if (mode === 'append') {
-        await resourceState.loadMoreDiscussions()
-        return null
-      }
-
-      await resourceState.refreshDiscussions()
-      return null
+  return createDiscussionListLoadState({
+    getErrorMessage(error, fallback = getUiCopy({
+      surface: 'discussion-list-action-retry-message',
+    })?.text || '请稍后重试') {
+      return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
     },
+    getText: getUiCopy,
+    listStateFactory({ load, reset }) {
+      return usePaginatedListState({
+        watchSources: () => [route.name, route.params.slug, searchQuery.value, sortBy.value, listFilter.value],
+        initialLoading: true,
+        load,
+        reset,
+      })
+    },
+    loadInitialResources: resourceState.loadInitialResources,
+    loadMoreDiscussions: resourceState.loadMoreDiscussions,
+    modalStore,
+    refreshDiscussions: resourceState.refreshDiscussions,
+    resetResources: resourceState.reset,
   })
-
-  function uiText(surface, fallback, context = {}) {
-    return getUiCopy({
-      surface,
-      ...context,
-    })?.text || fallback
-  }
-
-  function getDiscussionListErrorMessage(error, fallback = uiText('discussion-list-action-retry-message', '请稍后重试')) {
-    return error.response?.data?.error || error.response?.data?.detail || error.message || fallback
-  }
-
-  async function showDiscussionListError(actionType, error, fallback = uiText('discussion-list-action-retry-message', '请稍后重试')) {
-    await modalStore.alert({
-      title: uiText('discussion-list-action-failed-title', '操作失败', { actionType }),
-      message: getDiscussionListErrorMessage(error, fallback),
-      tone: 'danger'
-    })
-  }
-
-  async function refreshPageData() {
-    try {
-      await listState.refresh({
-        mode: 'initial',
-        forceLoading: true,
-      })
-    } catch (error) {
-      resourceState.reset()
-      console.error('加载首页列表失败:', error)
-    }
-  }
-
-  async function refreshDiscussionList() {
-    try {
-      await listState.refresh({
-        mode: 'refresh',
-      })
-    } catch (error) {
-      console.error('刷新讨论列表失败:', error)
-      await showDiscussionListError('refresh', error)
-    }
-  }
-
-  async function loadMore() {
-    try {
-      await listState.refresh({
-        mode: 'append',
-      })
-    } catch (error) {
-      console.error('加载更多讨论失败:', error)
-      await showDiscussionListError('load-more', error)
-    }
-  }
-
-  return {
-    loadMore,
-    loading: listState.loading,
-    loadingMore: listState.loadingMore,
-    refreshDiscussionList,
-    refreshPageData,
-    refreshing: listState.refreshing,
-    uiText,
-  }
 }
