@@ -37,10 +37,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumStateBadge from '@/components/forum/ForumStateBadge.vue'
-import { getApprovalNote, getEmptyState, getPostStateBadges, getStateBlock } from '@/forum/registry'
+import { useProfileContentSectionState } from '@/composables/useProfileContentSectionState'
 
 const props = defineProps({
   posts: {
@@ -65,39 +65,17 @@ const props = defineProps({
   }
 })
 
-const loadingStateText = computed(() => {
-  const stateBlock = getStateBlock({
-    surface: 'profile-post-loading',
-    loading: props.loading,
-    posts: props.posts,
-    isOwnProfile: props.isOwnProfile,
-  })
-
-  return stateBlock?.text || '加载中...'
+const {
+  emptyStateText,
+  getApprovalNoteText,
+  getStateBadges,
+  loadingStateText,
+} = useProfileContentSectionState({
+  isOwnProfile: toRef(props, 'isOwnProfile'),
+  items: toRef(props, 'posts'),
+  kind: 'post',
+  loading: toRef(props, 'loading'),
 })
-const emptyStateText = computed(() => {
-  const emptyState = getEmptyState({
-    posts: props.posts,
-    isOwnProfile: props.isOwnProfile,
-    surface: 'profile-post-empty',
-  })
-
-  return emptyState?.text || '暂无回复'
-})
-
-function getStateBadges(post) {
-  return getPostStateBadges({
-    post,
-    surface: 'profile-post',
-  })
-}
-
-function getApprovalNoteText(post) {
-  return getApprovalNote({
-    post,
-    surface: 'profile-post',
-  })?.text || ''
-}
 </script>
 
 <style scoped>
