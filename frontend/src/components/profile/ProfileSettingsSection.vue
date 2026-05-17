@@ -118,10 +118,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
-import { getStateBlock, getUiCopy } from '@/forum/registry'
+import { useProfileSettingsSectionState } from '@/composables/useProfileSettingsSectionState'
 
 const props = defineProps({
   user: {
@@ -166,84 +166,29 @@ const props = defineProps({
   }
 })
 
-const groupedPreferences = computed(() => {
-  const items = Array.isArray(props.preferences?.definitions) ? props.preferences.definitions : []
-  const groups = new Map()
-
-  items.forEach(item => {
-    const category = String(item.category || 'notification')
-    if (!groups.has(category)) {
-      groups.set(category, {
-        key: category,
-        label: getUiCopy({
-          surface: 'profile-preferences-group-label',
-          category,
-        })?.text || (category === 'behavior' ? '自动关注' : '通知订阅'),
-        description: getUiCopy({
-          surface: 'profile-preferences-group-description',
-          category,
-        })?.text || (category === 'behavior'
-          ? '控制发帖和回帖时的默认关注行为。'
-          : '控制哪些站内通知会推送给你。'),
-        items: []
-      })
-    }
-    groups.get(category).items.push(item)
-  })
-
-  return Array.from(groups.values())
+const {
+  bioLabelText,
+  bioPlaceholderText,
+  displayNameLabelText,
+  displayNamePlaceholderText,
+  emailHelpText,
+  emailLabelText,
+  emailPlaceholderText,
+  groupedPreferences,
+  preferencesDescriptionText,
+  preferencesLoadingStateText,
+  preferencesTitleText,
+  savePreferencesButtonText,
+  saveProfileButtonText,
+  sectionDescriptionText,
+  sectionTitleText,
+} = useProfileSettingsSectionState({
+  loadingPreferences: toRef(props, 'loadingPreferences'),
+  preferences: toRef(props, 'preferences'),
+  saving: toRef(props, 'saving'),
+  savingPreferences: toRef(props, 'savingPreferences'),
+  user: toRef(props, 'user'),
 })
-const sectionTitleText = computed(() => getUiCopy({
-  surface: 'profile-settings-section-title',
-})?.text || '个人设置')
-const sectionDescriptionText = computed(() => getUiCopy({
-  surface: 'profile-settings-section-description',
-})?.text || '维护你的显示名称、邮箱、个人简介和通知偏好。')
-const displayNameLabelText = computed(() => getUiCopy({
-  surface: 'profile-settings-display-name-label',
-})?.text || '显示名称')
-const emailLabelText = computed(() => getUiCopy({
-  surface: 'profile-settings-email-label',
-})?.text || '邮箱')
-const bioLabelText = computed(() => getUiCopy({
-  surface: 'profile-settings-bio-label',
-})?.text || '个人简介')
-const preferencesTitleText = computed(() => getUiCopy({
-  surface: 'profile-preferences-section-title',
-})?.text || '通知偏好')
-const preferencesDescriptionText = computed(() => getUiCopy({
-  surface: 'profile-preferences-section-description',
-})?.text || '按模块统一管理自动关注和通知订阅，新增通知类型后可以直接从注册表接入这里。')
-const preferencesLoadingStateText = computed(() => {
-  const stateBlock = getStateBlock({
-    surface: 'profile-preferences-loading',
-    loading: props.loadingPreferences,
-    preferences: props.preferences,
-  })
-
-  return stateBlock?.text || '加载偏好中...'
-})
-const displayNamePlaceholderText = computed(() => getUiCopy({
-  surface: 'profile-settings-display-name-placeholder',
-})?.text || '显示名称')
-const emailPlaceholderText = computed(() => getUiCopy({
-  surface: 'profile-settings-email-placeholder',
-})?.text || 'name@example.com')
-const bioPlaceholderText = computed(() => getUiCopy({
-  surface: 'profile-settings-bio-placeholder',
-})?.text || '介绍一下自己...')
-const emailHelpText = computed(() => getUiCopy({
-  surface: 'profile-settings-email-help',
-  isEmailConfirmed: props.user.is_email_confirmed,
-})?.text || (props.user.is_email_confirmed ? '当前邮箱已完成验证。' : '修改邮箱后会重新进入未验证状态。'))
-const saveProfileButtonText = computed(() => getUiCopy({
-  surface: 'profile-settings-save-button',
-  saving: props.saving,
-})?.text || (props.saving ? '保存中...' : '保存资料'))
-const savePreferencesButtonText = computed(() => getUiCopy({
-  surface: 'profile-preferences-save-button',
-  saving: props.savingPreferences,
-})?.text || (props.savingPreferences ? '保存中...' : '保存偏好'))
 
 defineEmits(['save-profile', 'save-preferences', 'update-edit-form', 'update-preference'])
 </script>
