@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveApprovalTemplateOptions } from './approvalQueueTemplates.js'
+import { resolveApprovalSelectionState, resolveApprovalTemplateOptions } from './approvalQueueTemplates.js'
 
 test('approval queue templates resolve by action and item type', () => {
   const options = resolveApprovalTemplateOptions({
@@ -44,4 +44,59 @@ test('approval queue templates resolve by action and item type', () => {
       description: '',
     },
   ])
+})
+
+test('approval queue templates keep only templates compatible with all selected item types', () => {
+  const options = resolveApprovalTemplateOptions({
+    noteTemplates: [
+      {
+        label: '通用拒绝',
+        value: '请补充更多信息后重新提交。',
+        actions: ['reject'],
+      },
+      {
+        label: '仅讨论',
+        value: '讨论主题重复，请合并到已有讨论。',
+        actions: ['reject'],
+        itemTypes: ['discussion'],
+      },
+      {
+        label: '讨论和回复',
+        value: '内容表达不完整，请整理后重新提交。',
+        actions: ['reject'],
+        itemTypes: ['discussion', 'post'],
+      },
+    ],
+  }, {
+    action: 'reject',
+    itemTypes: ['discussion', 'post'],
+  })
+
+  assert.deepEqual(options, [
+    {
+      label: '通用拒绝',
+      value: '请补充更多信息后重新提交。',
+      description: '',
+    },
+    {
+      label: '讨论和回复',
+      value: '内容表达不完整，请整理后重新提交。',
+      description: '',
+    },
+  ])
+})
+
+test('approval selection state derives current multi-select summary', () => {
+  const state = resolveApprovalSelectionState([
+    { type: 'discussion', id: 1 },
+    { type: 'post', id: 2 },
+  ], new Set(['discussion-1']))
+
+  assert.deepEqual(state, {
+    selectableKeys: ['discussion-1', 'post-2'],
+    selectedItems: [{ type: 'discussion', id: 1 }],
+    selectedCount: 1,
+    allSelected: false,
+    hasSelection: true,
+  })
 })

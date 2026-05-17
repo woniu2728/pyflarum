@@ -8,13 +8,50 @@
     <AdminFilterTabs v-model="contentType" :options="approvalFilters" @change="loadItems" />
 
     <div class="ApprovalQueue-list">
+      <div v-if="selectionState.hasSelection" class="ApprovalBulkBar">
+        <div class="ApprovalBulkBar-summary">
+          {{ approvalCopy?.bulkSelectionSummary?.(selectionState.selectedCount) || `已选择 ${selectionState.selectedCount} 项` }}
+        </div>
+        <div class="ApprovalBulkBar-actions">
+          <button type="button" class="Button Button--primary" @click="openBulkAction('approve')">
+            {{ approvalCopy?.bulkApproveLabel || '批量通过' }}
+          </button>
+          <button type="button" class="Button Button--secondary" @click="openBulkAction('reject')">
+            {{ approvalCopy?.bulkRejectLabel || '批量拒绝' }}
+          </button>
+          <button type="button" class="Button Button--ghost" @click="clearSelection">
+            {{ approvalCopy?.clearSelectionLabel || '清空选择' }}
+          </button>
+        </div>
+      </div>
+
       <AdminStateBlock v-if="loading" class="ApprovalQueue-empty" tone="subtle">{{ approvalCopy?.loadingText || '加载中...' }}</AdminStateBlock>
       <AdminStateBlock v-else-if="loadError" class="ApprovalQueue-empty" tone="danger">
         {{ loadError }}
       </AdminStateBlock>
       <AdminStateBlock v-else-if="items.length === 0" class="ApprovalQueue-empty">{{ approvalCopy?.emptyText || '当前没有待审核内容' }}</AdminStateBlock>
       <div v-else class="ApprovalList">
+        <div class="ApprovalList-toolbar">
+          <label class="ApprovalSelectAll">
+            <input
+              type="checkbox"
+              :checked="selectionState.allSelected"
+              @change="toggleSelectAll"
+            >
+            <span>{{ approvalCopy?.selectAllLabel || '全选当前列表' }}</span>
+          </label>
+        </div>
         <article v-for="item in items" :key="`${item.type}-${item.id}`" class="ApprovalCard">
+          <div class="ApprovalCard-select">
+            <label class="ApprovalSelect">
+              <input
+                type="checkbox"
+                :checked="isSelected(item)"
+                @change="toggleItemSelection(item, $event)"
+              >
+              <span>{{ approvalCopy?.selectItemLabel || '选择此项' }}</span>
+            </label>
+          </div>
           <div class="ApprovalCard-header">
             <div>
               <div class="ApprovalCard-title">
@@ -66,7 +103,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { resolveApprovalTemplateOptions } from '../composables/approvalQueueTemplates'
+import { resolveApprovalSelectionState, resolveApprovalTemplateOptions } from '../composables/approvalQueueTemplates'
 import AdminActionNoteModal from '../components/AdminActionNoteModal.vue'
 import AdminFilterTabs from '../components/AdminFilterTabs.vue'
 import AdminPage from '../components/AdminPage.vue'
@@ -86,6 +123,7 @@ const items = ref([])
 const contentType = ref('all')
 const showModal = ref(false)
 const selectedItem = ref(null)
+const selectedKeys = ref(new Set())
 const pendingAction = ref('approve')
 const actionNote = ref('')
 const modalStore = useModalStore()
@@ -93,9 +131,16 @@ const approvalCopy = computed(() => getAdminApprovalQueuePageCopy())
 const approvalConfig = computed(() => getAdminApprovalQueuePageConfig())
 const approvalActionMeta = computed(() => getAdminApprovalQueuePageActionMeta())
 const approvalFilters = computed(() => approvalConfig.value?.filters || [])
+const selectionState = computed(() => resolveApprovalSelectionState(items.value, selectedKeys.value))
+const selectedItemTypes = computed(() => {
+  const types = selectionState.value.selectedItems.map(item => item.type).filter(Boolean)
+  return [...new Set(types)]
+})
+const isBulkMode = computed(() => !selectedItem.value && selectionState.value.selectedCount > 0)
 const noteTemplates = computed(() => resolveApprovalTemplateOptions(approvalConfig.value, {
   action: pendingAction.value,
   itemType: selectedItem.value?.type || '',
+  itemTypes: isBulkMode.value ? selectedItemTypes.value : [],
 }))
 
 onMounted(() => {
@@ -110,6 +155,9 @@ async function loadItems() {
       params: { content_type: contentType.value }
     })
     items.value = data.data || []
+    selectedKeys.value = new Set(
+      [...selectedKeys.value].filter(key => items.value.some(item => `${item.type}-${item.id}` === key))
+    )
   } catch (error) {
     console.error('加载审核队列失败:', error)
     loadError.value = error.response?.data?.error || error.message || approvalActionMeta.value?.loadErrorText || '加载审核队列失败，请稍后重试'
@@ -132,6 +180,14 @@ function openAction(item, action) {
   showModal.value = true
 }
 
+function openBulkAction(action) {
+  if (!selectionState.value.hasSelection) return
+  selectedItem.value = null
+  pendingAction.value = action
+  actionNote.value = ''
+  showModal.value = true
+}
+
 function closeModal() {
   showModal.value = false
   selectedItem.value = null
@@ -144,25 +200,95 @@ function applyNoteTemplate(value) {
   actionNote.value = value || ''
 }
 
+function getItemKey(item) {
+  return `${item.type}-${item.id}`
+}
+
+function isSelected(item) {
+  return selectedKeys.value.has(getItemKey(item))
+}
+
+function toggleItemSelection(item, event) {
+  const next = new Set(selectedKeys.value)
+  const key = getItemKey(item)
+  if (event.target.checked) {
+    next.add(key)
+  } else {
+    next.delete(key)
+  }
+  selectedKeys.value = next
+}
+
+function toggleSelectAll(event) {
+  if (event.target.checked) {
+    selectedKeys.value = new Set(selectionState.value.selectableKeys)
+    return
+  }
+  clearSelection()
+}
+
+function clearSelection() {
+  selectedKeys.value = new Set()
+}
+
 async function submitAction() {
-  if (!selectedItem.value) return
+  if (!selectedItem.value && !selectionState.value.hasSelection) return
 
   const action = pendingAction.value
+  const bulkMode = !selectedItem.value && selectionState.value.hasSelection
+  const selectedCount = selectionState.value.selectedCount
   saving.value = true
   try {
-    await api.post(
-      `/admin/approval-queue/${selectedItem.value.type}/${selectedItem.value.id}/${action}`,
-      { note: actionNote.value }
-    )
+    if (selectedItem.value) {
+      await api.post(
+        `/admin/approval-queue/${selectedItem.value.type}/${selectedItem.value.id}/${action}`,
+        { note: actionNote.value }
+      )
+    } else {
+      const confirmed = await modalStore.confirm({
+        title: action === 'approve'
+          ? (approvalCopy.value?.bulkApproveConfirmTitle || '批量通过审核')
+          : (approvalCopy.value?.bulkRejectConfirmTitle || '批量拒绝内容'),
+        message: action === 'approve'
+          ? (approvalCopy.value?.bulkApproveConfirmMessage?.(selectedCount) || `确定批量通过这 ${selectedCount} 条待审核内容吗？`)
+          : (approvalCopy.value?.bulkRejectConfirmMessage?.(selectedCount) || `确定批量拒绝这 ${selectedCount} 条待审核内容吗？`),
+        confirmText: action === 'approve'
+          ? (approvalCopy.value?.bulkApproveConfirmText || '批量通过')
+          : (approvalCopy.value?.bulkRejectConfirmText || '批量拒绝'),
+        cancelText: approvalCopy.value?.bulkActionCancelText || '取消',
+        tone: action === 'approve' ? 'warning' : 'danger'
+      })
+      if (!confirmed) {
+        return
+      }
+
+      await api.post(`/admin/approval-queue/bulk/${action}`, {
+        note: actionNote.value,
+        items: selectionState.value.selectedItems.map(item => ({
+          type: item.type,
+          id: item.id,
+        })),
+      })
+    }
+
     closeModal()
+    clearSelection()
     await loadItems()
     await modalStore.alert({
-      title: action === 'approve'
-        ? (approvalActionMeta.value?.approveSuccessTitle || '审核已通过')
-        : (approvalActionMeta.value?.rejectSuccessTitle || '内容已拒绝'),
-      message: action === 'approve'
-        ? (approvalActionMeta.value?.approveSuccessMessage || '内容已放行，用户现在可以正常查看。')
-        : (approvalActionMeta.value?.rejectSuccessMessage || '内容已拒绝并隐藏。'),
+      title: bulkMode
+        ? (action === 'approve'
+          ? (approvalActionMeta.value?.bulkApproveSuccessTitle || '批量审核已通过')
+          : (approvalActionMeta.value?.bulkRejectSuccessTitle || '批量拒绝已完成'))
+        : (action === 'approve'
+          ? (approvalActionMeta.value?.approveSuccessTitle || '审核已通过')
+          : (approvalActionMeta.value?.rejectSuccessTitle || '内容已拒绝')),
+      message: bulkMode
+        ? (action === 'approve'
+          ? (approvalActionMeta.value?.bulkApproveSuccessMessage?.(selectedCount) || `已批量通过 ${selectedCount} 条内容。`)
+          : (approvalActionMeta.value?.bulkRejectSuccessMessage?.(selectedCount) || `已批量拒绝 ${selectedCount} 条内容。`))
+        : (action === 'approve'
+          ? (approvalActionMeta.value?.approveSuccessMessage || '内容已放行，用户现在可以正常查看。')
+          : (approvalActionMeta.value?.rejectSuccessMessage || '内容已拒绝并隐藏。')),
       tone: 'success'
     })
   } catch (error) {
@@ -195,12 +321,53 @@ function formatDate(value) {
   gap: 16px;
 }
 
+.ApprovalList-toolbar,
+.ApprovalBulkBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--forum-border-color);
+  border-radius: var(--forum-radius-md);
+  background: var(--forum-bg-elevated);
+  box-shadow: var(--forum-shadow-sm);
+}
+
+.ApprovalBulkBar {
+  margin-bottom: 16px;
+}
+
+.ApprovalBulkBar-summary {
+  color: var(--forum-text-color);
+  font-weight: 600;
+}
+
+.ApprovalBulkBar-actions,
+.ApprovalSelectAll,
+.ApprovalSelect {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .ApprovalCard {
+  position: relative;
   background: var(--forum-bg-elevated);
   border: 1px solid var(--forum-border-color);
   border-radius: var(--forum-radius-md);
   padding: 18px 20px;
   box-shadow: var(--forum-shadow-sm);
+}
+
+.ApprovalCard-select {
+  margin-bottom: 12px;
+}
+
+.ApprovalSelect,
+.ApprovalSelectAll {
+  color: var(--forum-text-soft);
+  font-size: var(--forum-font-size-sm);
 }
 
 .ApprovalCard-header {
@@ -270,11 +437,20 @@ function formatDate(value) {
 }
 
 @media (max-width: 768px) {
+  .ApprovalList-toolbar,
+  .ApprovalBulkBar,
   .ApprovalCard {
     border-radius: 16px;
+  }
+
+  .ApprovalList-toolbar,
+  .ApprovalBulkBar,
+  .ApprovalCard {
     padding: 16px;
   }
 
+  .ApprovalList-toolbar,
+  .ApprovalBulkBar,
   .ApprovalCard-header,
   .ApprovalCard-actions {
     flex-direction: column;
@@ -294,5 +470,14 @@ function formatDate(value) {
     text-align: center;
   }
 
+  .ApprovalBulkBar-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .ApprovalBulkBar-actions .Button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

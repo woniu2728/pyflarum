@@ -1715,68 +1715,114 @@ def list_approval_queue(request, page: int = 1, limit: int = 20, content_type: s
     }
 
 
+def process_approval_action(request, content_type: str, content_id: int, action: str, note: str = "") -> Dict[str, Any]:
+    if content_type == "discussion":
+        discussion = get_object_or_404(
+            Discussion.objects.select_related("user"),
+            id=content_id,
+            approval_status=Discussion.APPROVAL_PENDING,
+        )
+        if action == "approve":
+            processed = DiscussionService.approve_discussion(discussion, request.auth, note=note)
+            log_action = "admin.approval.approve"
+        else:
+            processed = DiscussionService.reject_discussion(discussion, request.auth, note=note)
+            log_action = "admin.approval.reject"
+
+        log_admin_action(
+            request,
+            log_action,
+            target_type="discussion",
+            target_id=processed.id,
+            data={"note": note, "title": processed.title},
+        )
+        return serialize_approval_item("discussion", processed)
+
+    if content_type == "post":
+        post = get_object_or_404(
+            Post.objects.select_related("discussion", "user"),
+            id=content_id,
+            approval_status=Post.APPROVAL_PENDING,
+        )
+        if action == "approve":
+            processed = PostService.approve_post(post, request.auth, note=note)
+            log_action = "admin.approval.approve"
+        else:
+            processed = PostService.reject_post(post, request.auth, note=note)
+            log_action = "admin.approval.reject"
+
+        log_admin_action(
+            request,
+            log_action,
+            target_type="post",
+            target_id=processed.id,
+            data={"note": note, "discussion_id": processed.discussion_id},
+        )
+        return serialize_approval_item("post", processed)
+
+    raise ValidationError("无效的审核内容类型")
+
+
 @router.post("/approval-queue/{content_type}/{content_id}/approve", auth=AccessTokenAuth(), tags=["Admin"])
 @require_admin_permission("admin.approval.approve", "没有通过审核内容的权限")
 def approve_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
     note = payload.get("note", "")
-
-    if content_type == "discussion":
-        discussion = get_object_or_404(Discussion, id=content_id, approval_status=Discussion.APPROVAL_PENDING)
-        approved = DiscussionService.approve_discussion(discussion, request.auth, note=note)
-        log_admin_action(
-            request,
-            "admin.approval.approve",
-            target_type="discussion",
-            target_id=approved.id,
-            data={"note": note, "title": approved.title},
-        )
-        return serialize_approval_item("discussion", approved)
-
-    if content_type == "post":
-        post = get_object_or_404(Post.objects.select_related("discussion", "user"), id=content_id, approval_status=Post.APPROVAL_PENDING)
-        approved = PostService.approve_post(post, request.auth, note=note)
-        log_admin_action(
-            request,
-            "admin.approval.approve",
-            target_type="post",
-            target_id=approved.id,
-            data={"note": note, "discussion_id": approved.discussion_id},
-        )
-        return serialize_approval_item("post", approved)
-
-    return admin_error("无效的审核内容类型", status=400)
+    try:
+        return process_approval_action(request, content_type, content_id, "approve", note)
+    except ValidationError as exc:
+        return admin_error(str(exc), status=400)
 
 
 @router.post("/approval-queue/{content_type}/{content_id}/reject", auth=AccessTokenAuth(), tags=["Admin"])
 @require_admin_permission("admin.approval.reject", "没有拒绝审核内容的权限")
 def reject_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
     note = payload.get("note", "")
+    try:
+        return process_approval_action(request, content_type, content_id, "reject", note)
+    except ValidationError as exc:
+        return admin_error(str(exc), status=400)
 
-    if content_type == "discussion":
-        discussion = get_object_or_404(Discussion, id=content_id, approval_status=Discussion.APPROVAL_PENDING)
-        rejected = DiscussionService.reject_discussion(discussion, request.auth, note=note)
-        log_admin_action(
-            request,
-            "admin.approval.reject",
-            target_type="discussion",
-            target_id=rejected.id,
-            data={"note": note, "title": rejected.title},
-        )
-        return serialize_approval_item("discussion", rejected)
 
-    if content_type == "post":
-        post = get_object_or_404(Post.objects.select_related("discussion", "user"), id=content_id, approval_status=Post.APPROVAL_PENDING)
-        rejected = PostService.reject_post(post, request.auth, note=note)
-        log_admin_action(
-            request,
-            "admin.approval.reject",
-            target_type="post",
-            target_id=rejected.id,
-            data={"note": note, "discussion_id": rejected.discussion_id},
-        )
-        return serialize_approval_item("post", rejected)
+@router.post("/approval-queue/bulk/{action}", auth=AccessTokenAuth(), tags=["Admin"])
+def bulk_process_approval_queue(request, action: str, payload: Dict[str, Any] = Body(...)):
+    if action not in {"approve", "reject"}:
+        return admin_error("无效的审核动作", status=400)
 
-    return admin_error("无效的审核内容类型", status=400)
+    permission_code = "admin.approval.approve" if action == "approve" else "admin.approval.reject"
+    permission_message = "没有通过审核内容的权限" if action == "approve" else "没有拒绝审核内容的权限"
+    permission_error = require_admin_permission(permission_code, permission_message)(lambda req: None)(request)
+    if permission_error is not None:
+        return permission_error
+
+    note = payload.get("note", "")
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        return admin_error("请至少选择一条待审核内容", status=400)
+
+    processed_items = []
+
+    try:
+        with transaction.atomic():
+            for raw_item in raw_items:
+                if not isinstance(raw_item, dict):
+                    raise ValidationError("审核项格式无效")
+
+                content_type = str(raw_item.get("type") or "").strip()
+                content_id = raw_item.get("id")
+                if not content_type or not content_id:
+                    raise ValidationError("审核项缺少类型或 ID")
+
+                processed_items.append(
+                    process_approval_action(request, content_type, int(content_id), action, note)
+                )
+    except ValidationError as exc:
+        return admin_error(str(exc), status=400)
+
+    return {
+        "processed_count": len(processed_items),
+        "action": action,
+        "data": processed_items,
+    }
 
 
 @router.post("/flags/{flag_id}/resolve", auth=AccessTokenAuth(), tags=["Admin"])

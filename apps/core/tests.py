@@ -4380,6 +4380,68 @@ class AdminApprovalQueueApiTests(TestCase):
         self.assertEqual(rejected_notification.from_user_id, self.admin.id)
         self.assertEqual(rejected_notification.data["approval_note"], "回复质量不足")
 
+    def test_admin_can_bulk_process_approval_queue(self):
+        response = self.client.post(
+            "/api/admin/approval-queue/bulk/approve",
+            data=json.dumps({
+                "note": "批量审核通过",
+                "items": [
+                    {"type": "discussion", "id": self.pending_discussion.id},
+                    {"type": "post", "id": self.post.id},
+                ],
+            }),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual(payload["processed_count"], 2)
+        self.assertEqual(payload["action"], "approve")
+        self.assertEqual(len(payload["data"]), 2)
+
+        self.pending_discussion.refresh_from_db()
+        self.post.refresh_from_db()
+        self.assertEqual(self.pending_discussion.approval_status, "approved")
+        self.assertEqual(self.post.approval_status, "approved")
+
+        discussion_notification = Notification.objects.get(
+            user=self.pending_author,
+            type="discussionApproved",
+            subject_id=self.pending_discussion.id,
+        )
+        post_notification = Notification.objects.get(
+            user=self.replier,
+            type="postApproved",
+            subject_id=self.post.id,
+        )
+        self.assertEqual(discussion_notification.data["approval_note"], "批量审核通过")
+        self.assertEqual(post_notification.data["approval_note"], "批量审核通过")
+
+    def test_bulk_approval_queue_rejects_invalid_payload(self):
+        response = self.client.post(
+            "/api/admin/approval-queue/bulk/reject",
+            data=json.dumps({"note": "批量拒绝", "items": []}),
+            content_type="application/json",
+            **self.auth_header(),
+        )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn("请至少选择一条待审核内容", response.json()["error"])
+
+    def test_admin_without_approval_permissions_is_denied_for_bulk_processing(self):
+        with patch("apps.core.admin_api.UserService.has_forum_permission", return_value=False):
+            response = self.client.post(
+                "/api/admin/approval-queue/bulk/approve",
+                data=json.dumps({
+                    "note": "尝试越权批量审核",
+                    "items": [{"type": "discussion", "id": self.pending_discussion.id}],
+                }),
+                content_type="application/json",
+                **self.auth_header(),
+            )
+            self.assertEqual(response.status_code, 403, response.content)
+
     def test_non_staff_cannot_access_or_process_approval_queue(self):
         member_token = RefreshToken.for_user(self.pending_author).access_token
         auth = {"HTTP_AUTHORIZATION": f"Bearer {member_token}"}
@@ -4405,6 +4467,17 @@ class AdminApprovalQueueApiTests(TestCase):
             **auth,
         )
         self.assertEqual(reject_post_response.status_code, 403, reject_post_response.content)
+
+        bulk_response = self.client.post(
+            "/api/admin/approval-queue/bulk/approve",
+            data=json.dumps({
+                "note": "尝试越权批量审核",
+                "items": [{"type": "discussion", "id": self.pending_discussion.id}],
+            }),
+            content_type="application/json",
+            **auth,
+        )
+        self.assertEqual(bulk_response.status_code, 403, bulk_response.content)
 
     def test_admin_without_approval_permissions_is_denied(self):
         with patch("apps.core.admin_api.UserService.has_forum_permission", return_value=False):
