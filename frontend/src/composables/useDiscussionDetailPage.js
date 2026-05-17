@@ -36,6 +36,7 @@ export function useDiscussionDetailPage({
     scheduleNearUrlSync,
     scheduleReadStateSync,
     scrollToPost,
+    syncWindowToRouteNear,
     setCurrentVisiblePostNumber,
     setCurrentVisiblePostProgress,
     showUnreadDivider,
@@ -135,6 +136,7 @@ export function useDiscussionDetailPage({
     resetScrubberPreview,
     resetTransientUiState,
     route,
+    syncNearPostWindow: syncWindowToRouteNear,
     syncMobileHeader,
     updateVisiblePostFromScroll,
   })

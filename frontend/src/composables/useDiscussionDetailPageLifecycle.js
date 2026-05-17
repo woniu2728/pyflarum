@@ -9,16 +9,21 @@ export function createDiscussionDetailPageLifecycle({
   resetPostStream,
   resetScrubberPreview,
   resetTransientUiState,
+  syncNearPostWindow,
   syncMobileHeader,
   updateVisiblePostFromScroll,
 }) {
-  async function handleRouteScopeChange() {
+  async function handleDiscussionScopeChange() {
     resetMobileHeader()
     resetPostStream()
     resetTransientUiState()
     resetScrubberPreview()
     loading.value = true
     await refreshDiscussion()
+  }
+
+  async function handleNearRouteChange() {
+    await syncNearPostWindow()
   }
 
   function handleHeaderSync() {
@@ -38,9 +43,10 @@ export function createDiscussionDetailPageLifecycle({
 
   return {
     handleBeforeUnmount,
+    handleDiscussionScopeChange,
     handleHeaderSync,
     handleMounted,
-    handleRouteScopeChange,
+    handleNearRouteChange,
   }
 }
 
@@ -58,6 +64,7 @@ export function useDiscussionDetailPageLifecycle({
   resetScrubberPreview,
   resetTransientUiState,
   route,
+  syncNearPostWindow,
   syncMobileHeader,
   updateVisiblePostFromScroll,
 }) {
@@ -70,13 +77,19 @@ export function useDiscussionDetailPageLifecycle({
     resetPostStream,
     resetScrubberPreview,
     resetTransientUiState,
+    syncNearPostWindow,
     syncMobileHeader,
     updateVisiblePostFromScroll,
   })
 
   watch(
-    () => [route.params.id, route.query.near],
-    lifecycle.handleRouteScopeChange
+    () => route.params.id,
+    lifecycle.handleDiscussionScopeChange
+  )
+
+  watch(
+    () => route.query.near,
+    lifecycle.handleNearRouteChange
   )
 
   watch(

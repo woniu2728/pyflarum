@@ -103,12 +103,13 @@ export function useDiscussionPostStreamState({
   }
 
   async function loadInitialPosts() {
-    const data = await fetchPosts({ near: targetNearPost.value || 1 })
-    replacePosts(data)
-
     if (targetNearPost.value) {
-      await scrollToPost(targetNearPost.value)
+      await syncWindowToRouteNear()
+      return
     }
+
+    const data = await fetchPosts({ near: 1 })
+    replacePosts(data)
   }
 
   async function fetchPosts(params = {}) {
@@ -126,6 +127,7 @@ export function useDiscussionPostStreamState({
     firstLoadedPostNumber.value = Number(data.current_start || items[0]?.number || 0)
     lastLoadedPostNumber.value = Number(data.current_end || items[items.length - 1]?.number || 0)
     totalPosts.value = data.total || items.length
+    return items
   }
 
   function appendPosts(data) {
@@ -186,12 +188,36 @@ export function useDiscussionPostStreamState({
 
     highlightedPostNumber.value = number
     currentVisiblePostNumber.value = number
+    currentVisiblePostProgress.value = number
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
     setTimeout(() => {
       if (highlightedPostNumber.value === number) {
         highlightedPostNumber.value = null
       }
     }, 2400)
+  }
+
+  async function syncWindowToRouteNear() {
+    const targetNumber = normalizePostNumber(targetNearPost.value)
+    if (!targetNumber) return null
+
+    if (posts.value.some(post => post.number === targetNumber)) {
+      await scrollToPost(targetNumber)
+      return targetNumber
+    }
+
+    const data = await fetchPosts({ near: targetNumber })
+    const items = replacePosts(data)
+    const resolvedNumber = items.find(post => post.number === targetNumber)?.number
+      || items[0]?.number
+      || null
+
+    if (!resolvedNumber) return null
+
+    await scrollToPost(resolvedNumber)
+    replaceNearInAddressBar(resolvedNumber)
+    scheduleReadStateSync(resolvedNumber)
+    return resolvedNumber
   }
 
   function resetPostStream() {
@@ -441,6 +467,7 @@ export function useDiscussionPostStreamState({
     scheduleNearUrlSync,
     scheduleReadStateSync,
     scrollToPost,
+    syncWindowToRouteNear,
     setCurrentVisiblePostNumber(value) {
       currentVisiblePostNumber.value = value
     },

@@ -29,6 +29,9 @@ function createLifecycleHarness() {
     resetTransientUiState() {
       calls.push('reset-transient-ui')
     },
+    async syncNearPostWindow() {
+      calls.push('sync-near-post-window')
+    },
     syncMobileHeader() {
       calls.push('sync-mobile-header')
     },
@@ -47,7 +50,7 @@ function createLifecycleHarness() {
 test('discussion detail page lifecycle resets page state before refreshing on route scope change', async () => {
   const harness = createLifecycleHarness()
 
-  await harness.lifecycle.handleRouteScopeChange()
+  await harness.lifecycle.handleDiscussionScopeChange()
 
   assert.equal(harness.loading.value, true)
   assert.deepEqual(harness.calls, [
@@ -57,6 +60,15 @@ test('discussion detail page lifecycle resets page state before refreshing on ro
     'reset-scrubber-preview',
     'refresh',
   ])
+})
+
+test('discussion detail page lifecycle syncs route near without resetting page state', async () => {
+  const harness = createLifecycleHarness()
+
+  await harness.lifecycle.handleNearRouteChange()
+
+  assert.equal(harness.loading.value, false)
+  assert.deepEqual(harness.calls, ['sync-near-post-window'])
 })
 
 test('discussion detail page lifecycle refreshes, attaches listeners and syncs header on mount', async () => {
