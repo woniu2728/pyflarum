@@ -2,31 +2,31 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-card">
-        <h2>{{ titleText }}</h2>
-        <p class="subtitle">{{ subtitleText }}</p>
+        <h2>{{ pageBindings.title }}</h2>
+        <p class="subtitle">{{ pageBindings.subtitle }}</p>
 
-        <form @submit.prevent="handleSubmit">
+        <form @submit.prevent="pageEvents.submit">
           <div class="form-group">
-            <label for="reset-password-token">{{ tokenLabelText }}</label>
+            <label for="reset-password-token">{{ pageBindings.tokenLabelText }}</label>
             <input
               id="reset-password-token"
-              v-model="form.token"
+              v-model="pageBindings.form.token"
               name="token"
               type="text"
-              :placeholder="tokenPlaceholderText"
+              :placeholder="pageBindings.tokenPlaceholderText"
               autocomplete="one-time-code"
               required
             />
           </div>
 
           <div class="form-group">
-            <label for="reset-password-new">{{ newPasswordLabelText }}</label>
+            <label for="reset-password-new">{{ pageBindings.newPasswordLabelText }}</label>
             <input
               id="reset-password-new"
-              v-model="form.password"
+              v-model="pageBindings.form.password"
               name="password"
               type="password"
-              :placeholder="newPasswordPlaceholderText"
+              :placeholder="pageBindings.newPasswordPlaceholderText"
               autocomplete="new-password"
               minlength="6"
               required
@@ -34,29 +34,29 @@
           </div>
 
           <div class="form-group">
-            <label for="reset-password-confirm">{{ confirmPasswordLabelText }}</label>
+            <label for="reset-password-confirm">{{ pageBindings.confirmPasswordLabelText }}</label>
             <input
               id="reset-password-confirm"
-              v-model="form.passwordConfirm"
+              v-model="pageBindings.form.passwordConfirm"
               name="password_confirm"
               type="password"
-              :placeholder="confirmPasswordPlaceholderText"
+              :placeholder="pageBindings.confirmPasswordPlaceholderText"
               autocomplete="new-password"
               minlength="6"
               required
             />
           </div>
 
-          <div v-if="error" class="error-message">{{ error }}</div>
-          <div v-if="success" class="success-message">{{ success }}</div>
+          <div v-if="pageBindings.error" class="error-message">{{ pageBindings.error }}</div>
+          <div v-if="pageBindings.success" class="success-message">{{ pageBindings.success }}</div>
 
-          <button type="submit" class="primary full-width" :disabled="loading">
-            {{ submitButtonText }}
+          <button type="submit" class="primary full-width" :disabled="pageBindings.loading">
+            {{ pageBindings.submitButtonText }}
           </button>
         </form>
 
         <div class="auth-footer">
-          <router-link to="/login" class="link">{{ backToLoginText }}</router-link>
+          <router-link to="/login" class="link">{{ pageBindings.backToLoginText }}</router-link>
         </div>
       </div>
     </div>
@@ -64,94 +64,18 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import api from '@/api'
-import { getUiCopy } from '@/forum/registry'
+import { useResetPasswordViewModel } from '@/composables/useResetPasswordViewModel'
 
 const route = useRoute()
 const router = useRouter()
-
-const form = reactive({
-  token: route.query.token?.toString() || '',
-  password: '',
-  passwordConfirm: ''
+const {
+  pageBindings,
+  pageEvents,
+} = useResetPasswordViewModel({
+  route,
+  router,
 })
-
-const loading = ref(false)
-const error = ref('')
-const success = ref('')
-const titleText = computed(() => getUiCopy({
-  surface: 'reset-password-title',
-})?.text || '重置密码')
-const subtitleText = computed(() => getUiCopy({
-  surface: 'reset-password-subtitle',
-})?.text || '输入新的密码以完成重置。如果你是通过邮件打开页面，令牌会自动填入。')
-const tokenLabelText = computed(() => getUiCopy({
-  surface: 'reset-password-token-label',
-})?.text || '重置令牌')
-const newPasswordLabelText = computed(() => getUiCopy({
-  surface: 'reset-password-new-label',
-})?.text || '新密码')
-const confirmPasswordLabelText = computed(() => getUiCopy({
-  surface: 'reset-password-confirm-label',
-})?.text || '确认新密码')
-const tokenPlaceholderText = computed(() => getUiCopy({
-  surface: 'reset-password-token-placeholder',
-})?.text || '请输入邮件中的重置令牌')
-const newPasswordPlaceholderText = computed(() => getUiCopy({
-  surface: 'reset-password-new-placeholder',
-})?.text || '请输入新密码')
-const confirmPasswordPlaceholderText = computed(() => getUiCopy({
-  surface: 'reset-password-confirm-placeholder',
-})?.text || '请再次输入新密码')
-const submitButtonText = computed(() => getUiCopy({
-  surface: 'reset-password-submit',
-  loading: loading.value,
-})?.text || (loading.value ? '提交中...' : '重置密码'))
-const backToLoginText = computed(() => getUiCopy({
-  surface: 'reset-password-back-to-login',
-})?.text || '返回登录')
-
-watch(
-  () => route.query.token,
-  (value) => {
-    form.token = value?.toString() || ''
-  }
-)
-
-async function handleSubmit() {
-  error.value = ''
-  success.value = ''
-
-  if (form.password !== form.passwordConfirm) {
-    error.value = getUiCopy({
-      surface: 'reset-password-mismatch-error',
-    })?.text || '两次输入的新密码不一致'
-    return
-  }
-
-  loading.value = true
-  try {
-    await api.post('/users/reset-password', {
-      token: form.token,
-      password: form.password
-    })
-
-    success.value = getUiCopy({
-      surface: 'reset-password-success',
-    })?.text || '密码已重置，正在返回登录页...'
-    setTimeout(() => {
-      router.push('/login')
-    }, 1500)
-  } catch (err) {
-    error.value = err.response?.data?.error || (getUiCopy({
-      surface: 'reset-password-error',
-    })?.text || '重置失败，请检查令牌或稍后重试')
-  } finally {
-    loading.value = false
-  }
-}
 </script>
 
 <style scoped>
