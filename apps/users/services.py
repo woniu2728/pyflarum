@@ -113,7 +113,7 @@ class UserService:
             return permissions
 
         permissions = UserService._get_group_permissions(user)
-        if not permissions:
+        if not permissions and not UserService._user_has_groups(user):
             permissions = set(UserService.DEFAULT_MEMBER_FORUM_PERMISSIONS)
 
         user._forum_permission_cache = permissions
@@ -133,6 +133,13 @@ class UserService:
         return set(
             Permission.objects.filter(group_id__in=group_ids).values_list("permission", flat=True)
         )
+
+    @staticmethod
+    def _user_has_groups(user: User) -> bool:
+        prefetched_groups = getattr(user, "_prefetched_objects_cache", {}).get("user_groups")
+        if prefetched_groups is not None:
+            return bool(prefetched_groups)
+        return user.user_groups.exists()
 
     @staticmethod
     def get_staff_group_managed_forum_permissions():

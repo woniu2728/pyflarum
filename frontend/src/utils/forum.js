@@ -52,6 +52,7 @@ export function normalizePost(post = {}) {
 }
 
 export {
+  flattenTags,
   getDiscussionListFilterHeroDescriptionText,
   getDiscussionListFilterHeroTitleText,
   getDiscussionListFilterLabelText,
