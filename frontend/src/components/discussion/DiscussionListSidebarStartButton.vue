@@ -12,8 +12,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { getUiCopy } from '@/forum/registry'
+import { toRef } from 'vue'
+import { useDiscussionListSidebarStartButtonState } from '@/composables/useDiscussionListSidebarStartButtonState'
 
 const props = defineProps({
   currentTag: {
@@ -28,11 +28,9 @@ const props = defineProps({
 
 defineEmits(['click'])
 
-const labelText = computed(() => getUiCopy({
-  surface: 'start-discussion-button',
-  hasTag: Boolean(props.currentTag),
-  tagName: props.currentTag?.name || '',
-})?.text || '发起讨论')
+const { labelText } = useDiscussionListSidebarStartButtonState({
+  currentTag: toRef(props, 'currentTag'),
+})
 </script>
 
 <style scoped>
