@@ -2,48 +2,28 @@
   <div class="discussion-create-redirect">
     <ForumStateBlock class="redirect-card">
       <div class="redirect-spinner"></div>
-      <h1>{{ titleText }}</h1>
-      <p>{{ descriptionText }}</p>
+      <h1>{{ cardBindings.title }}</h1>
+      <p>{{ cardBindings.description }}</p>
     </ForumStateBlock>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
-import { getUiCopy } from '@/forum/registry'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
-import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
+import { useDiscussionCreateViewModel } from '@/composables/useDiscussionCreateViewModel'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
-const { startDiscussion } = useStartDiscussionAction({
+const { cardBindings } = useDiscussionCreateViewModel({
   authStore,
   composerStore,
-  router
-})
-const titleText = computed(() => {
-  return getUiCopy({
-    surface: 'discussion-create-title',
-  })?.text || '正在打开讨论编辑器...'
-})
-const descriptionText = computed(() => {
-  return getUiCopy({
-    surface: 'discussion-create-description',
-  })?.text || '系统会自动切换到浮层编辑器。'
-})
-
-onMounted(() => {
-  startDiscussion({
-    redirectToLogin: true,
-    source: 'route',
-    tagId: typeof route.query.tag === 'string' ? route.query.tag : ''
-  })
-  router.replace(typeof route.query.returnTo === 'string' ? route.query.returnTo : '/')
+  route,
+  router,
 })
 </script>
 
