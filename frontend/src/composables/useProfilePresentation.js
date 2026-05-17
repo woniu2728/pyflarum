@@ -3,6 +3,11 @@ import {
   formatMonth,
   formatRelativeTime
 } from '@/utils/forum'
+import {
+  getUserPrimaryGroupColor,
+  getUserPrimaryGroupIcon,
+  getUserPrimaryGroupLabel,
+} from '@/utils/userPrimaryGroup'
 
 export function useProfilePresentation(user) {
   const isOnline = computed(() => {
@@ -12,22 +17,6 @@ export function useProfilePresentation(user) {
     const now = new Date()
     return (now - lastSeen) < 5 * 60 * 1000
   })
-
-  function getUserPrimaryGroup(userValue) {
-    return userValue?.primary_group || null
-  }
-
-  function getUserPrimaryGroupIcon(userValue) {
-    return getUserPrimaryGroup(userValue)?.icon || ''
-  }
-
-  function getUserPrimaryGroupColor(userValue) {
-    return getUserPrimaryGroup(userValue)?.color || '#4d698e'
-  }
-
-  function getUserPrimaryGroupLabel(userValue) {
-    return getUserPrimaryGroup(userValue)?.name || ''
-  }
 
   function formatDate(dateString) {
     return formatRelativeTime(dateString)
@@ -58,7 +47,9 @@ export function useProfilePresentation(user) {
   return {
     isOnline,
     getUserPrimaryGroupIcon,
-    getUserPrimaryGroupColor,
+    getUserPrimaryGroupColor(userValue) {
+      return getUserPrimaryGroupColor(userValue, '#4d698e')
+    },
     getUserPrimaryGroupLabel,
     formatDate,
     formatJoinDate,

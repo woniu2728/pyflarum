@@ -1,4 +1,9 @@
 import { computed } from 'vue'
+import {
+  getUserPrimaryGroupColor,
+  getUserPrimaryGroupIcon,
+  getUserPrimaryGroupLabel,
+} from '@/utils/userPrimaryGroup'
 
 export function useDiscussionDetailPresentation(discussion) {
   const discussionHeroColor = computed(() => {
@@ -15,26 +20,12 @@ export function useDiscussionDetailPresentation(discussion) {
     }
   })
 
-  function getUserPrimaryGroup(user) {
-    return user?.primary_group || null
-  }
-
-  function getUserPrimaryGroupIcon(user) {
-    return getUserPrimaryGroup(user)?.icon || ''
-  }
-
-  function getUserPrimaryGroupColor(user) {
-    return getUserPrimaryGroup(user)?.color || 'var(--forum-primary-color)'
-  }
-
-  function getUserPrimaryGroupLabel(user) {
-    return getUserPrimaryGroup(user)?.name || ''
-  }
-
   return {
     discussionHeaderStyle,
     getUserPrimaryGroupIcon,
-    getUserPrimaryGroupColor,
+    getUserPrimaryGroupColor(user) {
+      return getUserPrimaryGroupColor(user, 'var(--forum-primary-color)')
+    },
     getUserPrimaryGroupLabel
   }
 }

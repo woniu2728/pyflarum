@@ -922,6 +922,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：个人主页新增 `useProfileMetaState`，把用户徽章派生、`loading/not found` 页面状态文案和页面 meta 同步从 `useProfileViewModel` 中拆出，并补上独立 Node 测试；profile view model 继续向 discussion detail 的“meta state + panel state + presentation state”薄装配结构对齐。
 - 已完成：个人主页新增 `useProfilePanelState`，把面板注册上下文组装、当前 panel 选择、不可见 tab 自动回退以及资料/密码/偏好表单字段桥接从 `useProfileViewModel` 中拆出，并补上独立 Node 测试；profile view model 开始进一步对齐 discussion detail 的“展示态 + 面板态 + meta 态”分层方式。
 - 已完成：个人主页新增 `useProfileViewBindings`，把头像区、侧栏和当前面板组件的 prop/event 绑线从 `ProfileView.vue` 与 `useProfileViewModel` 的零散字段暴露收口为聚合 bindings，并补上独立 Node 测试；profile 页面模板开始进一步向“只消费 bindings”的极薄视图层收口。
+- 已完成：前端新增共享 `userPrimaryGroup` 展示工具，把个人主页与讨论详情里重复的主用户组图标/颜色/标签解析逻辑收口到统一 helper，并补上独立 Node 测试；阶段 3 的展示层拆分开始从单页收口推进到跨页面共享语义收口。
 - 已完成：个人主页新增 `useProfilePageLifecycle`，把首刷、路由切换重置、实时事件监听注册/清理与讨论跟踪释放从 `useProfilePage` 中独立出去，并补上独立 Node 测试；profile 页面层开始和 discussion detail 一样把“状态装配”和“生命周期编排”拆成两段职责。
 - 已完成：个人主页新增 `useProfileAccountActions`，把资料保存、通知偏好、验证邮件、密码修改与头像上传从 `useProfilePage` 中拆出，并补上基础 Node 测试；profile 页面开始和通知页一样继续从 page 状态层向独立动作层收口。
 - 已完成：讨论详情页的楼层 `near` 状态新增 `useDiscussionNearRouteState` 协议，主动楼层跳转继续通过路由驱动详情刷新，被动滚动位置同步则统一改由同一 composable 负责地址栏 `replaceState`；详情页不再在帖子流 composable 内分散维护两套 `near` URL 写法。
