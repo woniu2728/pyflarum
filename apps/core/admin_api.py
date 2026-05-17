@@ -58,6 +58,7 @@ from apps.posts.services import PostService
 from apps.tags.models import Tag
 from apps.tags.services import TagService
 from apps.users.group_utils import get_primary_group, serialize_group_badge
+from apps.users.services import UserService
 from apps.core.services import PaginationService
 from apps.core.api_errors import api_error
 
@@ -544,6 +545,20 @@ def require_staff(func):
             return admin_error("需要管理员权限", status=403)
         return func(request, *args, **kwargs)
     return wrapper
+
+
+def require_admin_permission(permission_code: str, message: str):
+    """装饰器：要求管理员具备指定后台权限码"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(request, *args, **kwargs):
+            if not request.auth or not request.auth.is_staff:
+                return admin_error("需要管理员权限", status=403)
+            if not UserService.has_forum_permission(request.auth, permission_code):
+                return admin_error(message, status=403, code="permission_denied")
+            return func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def detect_database_label() -> str:
@@ -1653,7 +1668,7 @@ def delete_admin_user(request, user_id: int):
 
 
 @router.get("/flags", auth=AccessTokenAuth(), tags=["Admin"])
-@require_staff
+@require_admin_permission("admin.flag.view", "没有查看举报队列的权限")
 def list_post_flags(request, page: int = 1, limit: int = 20, status: str = PostFlag.STATUS_OPEN):
     """获取帖子举报列表"""
     page, limit = PaginationService.normalize(page, limit)
@@ -1667,7 +1682,7 @@ def list_post_flags(request, page: int = 1, limit: int = 20, status: str = PostF
 
 
 @router.get("/approval-queue", auth=AccessTokenAuth(), tags=["Admin"])
-@require_staff
+@require_admin_permission("admin.approval.view", "没有查看审核队列的权限")
 def list_approval_queue(request, page: int = 1, limit: int = 20, content_type: str = "all"):
     page, limit = PaginationService.normalize(page, limit)
     items = []
@@ -1701,7 +1716,7 @@ def list_approval_queue(request, page: int = 1, limit: int = 20, content_type: s
 
 
 @router.post("/approval-queue/{content_type}/{content_id}/approve", auth=AccessTokenAuth(), tags=["Admin"])
-@require_staff
+@require_admin_permission("admin.approval.approve", "没有通过审核内容的权限")
 def approve_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
     note = payload.get("note", "")
 
@@ -1733,7 +1748,7 @@ def approve_content(request, content_type: str, content_id: int, payload: Dict[s
 
 
 @router.post("/approval-queue/{content_type}/{content_id}/reject", auth=AccessTokenAuth(), tags=["Admin"])
-@require_staff
+@require_admin_permission("admin.approval.reject", "没有拒绝审核内容的权限")
 def reject_content(request, content_type: str, content_id: int, payload: Dict[str, Any] = Body(...)):
     note = payload.get("note", "")
 
@@ -1765,7 +1780,7 @@ def reject_content(request, content_type: str, content_id: int, payload: Dict[st
 
 
 @router.post("/flags/{flag_id}/resolve", auth=AccessTokenAuth(), tags=["Admin"])
-@require_staff
+@require_admin_permission("admin.flag.resolve", "没有处理举报的权限")
 def resolve_post_flag(request, flag_id: int, payload: Dict[str, Any] = Body(...)):
     """处理帖子举报"""
     try:

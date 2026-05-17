@@ -13,6 +13,7 @@ import secrets
 from .models import User, Group, Permission, EmailToken, PasswordToken
 from apps.core.models import AuditLog
 from apps.core.email_service import EmailService
+from apps.core.forum_registry import get_registry_permission_codes_by_prefix
 
 
 class UserService:
@@ -28,7 +29,7 @@ class UserService:
         "discussion.deleteOwn",
     }
 
-    STAFF_FORUM_PERMISSIONS = {
+    STAFF_BASE_FORUM_PERMISSIONS = {
         "viewForum",
         "viewUserList",
         "searchUsers",
@@ -47,6 +48,11 @@ class UserService:
         "user.edit",
         "user.suspend",
     }
+
+    STAFF_GROUP_MANAGED_FORUM_PERMISSION_PREFIXES = (
+        "admin.approval.",
+        "admin.flag.",
+    )
 
     @staticmethod
     def build_suspension_notice(user: User, action_label: str = "") -> str:
@@ -94,11 +100,27 @@ class UserService:
         if cached_permissions is not None:
             return cached_permissions
 
-        if user.is_staff or user.is_superuser:
-            permissions = set(UserService.STAFF_FORUM_PERMISSIONS)
+        if user.is_superuser:
+            permissions = set(UserService.STAFF_BASE_FORUM_PERMISSIONS)
+            permissions.update(UserService.get_staff_group_managed_forum_permissions())
             user._forum_permission_cache = permissions
             return permissions
 
+        if user.is_staff:
+            permissions = set(UserService.STAFF_BASE_FORUM_PERMISSIONS)
+            permissions.update(UserService._get_group_permissions(user))
+            user._forum_permission_cache = permissions
+            return permissions
+
+        permissions = UserService._get_group_permissions(user)
+        if not permissions:
+            permissions = set(UserService.DEFAULT_MEMBER_FORUM_PERMISSIONS)
+
+        user._forum_permission_cache = permissions
+        return permissions
+
+    @staticmethod
+    def _get_group_permissions(user: User):
         prefetched_groups = getattr(user, "_prefetched_objects_cache", {}).get("user_groups")
         if prefetched_groups is not None:
             group_ids = [group.id for group in prefetched_groups]
@@ -106,13 +128,17 @@ class UserService:
             group_ids = list(user.user_groups.values_list("id", flat=True))
 
         if not group_ids:
-            permissions = set(UserService.DEFAULT_MEMBER_FORUM_PERMISSIONS)
-        else:
-            permissions = set(
-                Permission.objects.filter(group_id__in=group_ids).values_list("permission", flat=True)
-            )
+            return set()
 
-        user._forum_permission_cache = permissions
+        return set(
+            Permission.objects.filter(group_id__in=group_ids).values_list("permission", flat=True)
+        )
+
+    @staticmethod
+    def get_staff_group_managed_forum_permissions():
+        permissions = set()
+        for prefix in UserService.STAFF_GROUP_MANAGED_FORUM_PERMISSION_PREFIXES:
+            permissions.update(get_registry_permission_codes_by_prefix(prefix))
         return permissions
 
     @staticmethod

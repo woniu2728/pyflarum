@@ -28,7 +28,7 @@ from apps.core.forum_events import (
     UserSuspendedEvent,
     UserUnsuspendedEvent,
 )
-from apps.core.forum_registry import get_forum_registry
+from apps.core.forum_registry import get_forum_registry, get_registry_permission_codes_by_prefix
 from apps.core.resource_registry import (
     ResourceDefinition,
     ResourceFieldDefinition,
@@ -3071,6 +3071,21 @@ class EnsureAdminCommandTests(TestCase):
         self.assertTrue(admin.user_groups.filter(name="Admin").exists())
         self.assertTrue(admin.check_password("password123"))
 
+    def test_init_groups_syncs_registry_managed_admin_permissions(self):
+        call_command("init_groups")
+
+        admin_group = Group.objects.get(id=1)
+        permissions = set(
+            Permission.objects.filter(group=admin_group).values_list("permission", flat=True)
+        )
+
+        self.assertTrue(
+            set(get_registry_permission_codes_by_prefix("admin.approval.")).issubset(permissions)
+        )
+        self.assertTrue(
+            set(get_registry_permission_codes_by_prefix("admin.flag.")).issubset(permissions)
+        )
+
 
 class UpgradeForumCommandTests(TestCase):
     def _success_result(self, args):
@@ -3850,6 +3865,8 @@ class AdminPermissionsApiTests(TestCase):
         core_module = next(module for module in payload["modules"] if module["id"] == "core")
         posts_module = next(module for module in payload["modules"] if module["id"] == "posts")
         notifications_module = next(module for module in payload["modules"] if module["id"] == "notifications")
+        approval_module = next(module for module in payload["modules"] if module["id"] == "approval")
+        flags_module = next(module for module in payload["modules"] if module["id"] == "flags")
         tags_module = next(module for module in payload["modules"] if module["id"] == "tags")
         admin_page_paths = {page["path"] for page in payload["admin_pages"]}
         self.assertIn("/admin/modules", admin_page_paths)
@@ -3900,9 +3917,35 @@ class AdminPermissionsApiTests(TestCase):
                 for item in notifications_module["notification_types"]
             )
         )
-        self.assertTrue(any(item["event"] == "DiscussionApprovedEvent" for item in notifications_module["event_listeners"]))
+        self.assertEqual(notifications_module["event_listeners"], [])
+        self.assertTrue(any(item["event"] == "DiscussionApprovedEvent" for item in approval_module["event_listeners"]))
+        self.assertTrue(any(item["event"] == "DiscussionRejectedEvent" for item in approval_module["event_listeners"]))
+        self.assertTrue(any(item["event"] == "PostApprovedEvent" for item in approval_module["event_listeners"]))
+        self.assertTrue(any(item["event"] == "PostRejectedEvent" for item in approval_module["event_listeners"]))
+        self.assertTrue(any(item["code"] == "admin.approval.view" for item in approval_module["permissions"]))
+        self.assertTrue(any(item["code"] == "admin.approval.approve" for item in approval_module["permissions"]))
+        self.assertTrue(any(item["code"] == "admin.approval.reject" for item in approval_module["permissions"]))
+        self.assertTrue(any(item["code"] == "admin.flag.view" for item in flags_module["permissions"]))
+        self.assertTrue(any(item["code"] == "admin.flag.resolve" for item in flags_module["permissions"]))
         self.assertTrue(any(item["code"] == "comment" and item["is_default"] for item in posts_module["post_types"]))
         self.assertTrue(any(item["module_id"] == "posts" and item["code"] == "comment" for item in payload["post_types"]))
+
+    def test_registry_permission_prefix_helper_returns_admin_moderation_codes(self):
+        self.assertEqual(
+            set(get_registry_permission_codes_by_prefix("admin.approval.")),
+            {
+                "admin.approval.view",
+                "admin.approval.approve",
+                "admin.approval.reject",
+            },
+        )
+        self.assertEqual(
+            set(get_registry_permission_codes_by_prefix("admin.flag.")),
+            {
+                "admin.flag.view",
+                "admin.flag.resolve",
+            },
+        )
 
     def test_search_index_definition_limits_post_index_to_registered_searchable_types(self):
         post_index = next(definition for definition in SEARCH_INDEX_DEFINITIONS if definition["name"] == "posts_content_fts_idx")
@@ -3978,6 +4021,25 @@ class AdminFlagManagementApiTests(TestCase):
         self.assertEqual(audit_log.user_id, self.admin.id)
         self.assertEqual(audit_log.target_type, "post_flag")
         self.assertEqual(audit_log.data["status"], "resolved")
+
+    def test_admin_without_flag_permission_is_denied(self):
+        with patch("apps.core.admin_api.UserService.has_forum_permission", return_value=False):
+            list_response = self.client.get(
+                "/api/admin/flags",
+                **self.auth_header(),
+            )
+            self.assertEqual(list_response.status_code, 403, list_response.content)
+
+            resolve_response = self.client.post(
+                f"/api/admin/flags/{self.flag.id}/resolve",
+                data=json.dumps({
+                    "status": "resolved",
+                    "resolution_note": "尝试越权处理举报",
+                }),
+                content_type="application/json",
+                **self.auth_header(),
+            )
+            self.assertEqual(resolve_response.status_code, 403, resolve_response.content)
 
 
 class AdminTagManagementApiTests(TestCase):
@@ -4343,3 +4405,27 @@ class AdminApprovalQueueApiTests(TestCase):
             **auth,
         )
         self.assertEqual(reject_post_response.status_code, 403, reject_post_response.content)
+
+    def test_admin_without_approval_permissions_is_denied(self):
+        with patch("apps.core.admin_api.UserService.has_forum_permission", return_value=False):
+            list_response = self.client.get(
+                "/api/admin/approval-queue",
+                **self.auth_header(),
+            )
+            self.assertEqual(list_response.status_code, 403, list_response.content)
+
+            approve_response = self.client.post(
+                f"/api/admin/approval-queue/discussion/{self.pending_discussion.id}/approve",
+                data=json.dumps({"note": "尝试越权审核"}),
+                content_type="application/json",
+                **self.auth_header(),
+            )
+            self.assertEqual(approve_response.status_code, 403, approve_response.content)
+
+            reject_post_response = self.client.post(
+                f"/api/admin/approval-queue/post/{self.post.id}/reject",
+                data=json.dumps({"note": "尝试越权拒绝回复"}),
+                content_type="application/json",
+                **self.auth_header(),
+            )
+            self.assertEqual(reject_post_response.status_code, 403, reject_post_response.content)

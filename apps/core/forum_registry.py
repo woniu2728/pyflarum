@@ -407,6 +407,18 @@ def get_forum_registry() -> ForumRegistry:
     return _registry
 
 
+def get_registry_permission_codes_by_prefix(prefix: str) -> Tuple[str, ...]:
+    normalized_prefix = str(prefix or "").strip()
+    if not normalized_prefix:
+        return ()
+
+    registry = get_forum_registry()
+    return tuple(sorted(
+        code for code in registry.get_valid_permission_codes()
+        if code.startswith(normalized_prefix)
+    ))
+
+
 def _register_builtin_modules(registry: ForumRegistry) -> None:
     registry.register_module(
         ForumModuleDefinition(
@@ -1071,6 +1083,37 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             description="讨论与回复审核队列、审核通知和审核流程。",
             category="feature",
             dependencies=("discussions", "notifications"),
+            permissions=(
+                PermissionDefinition(
+                    code="admin.approval.view",
+                    label="查看审核队列",
+                    section="moderation",
+                    section_label="审核与举报",
+                    module_id="approval",
+                    icon="fas fa-user-check",
+                    description="允许在后台查看待审核讨论与回复队列。",
+                ),
+                PermissionDefinition(
+                    code="admin.approval.approve",
+                    label="通过审核内容",
+                    section="moderation",
+                    section_label="审核与举报",
+                    module_id="approval",
+                    icon="fas fa-check-circle",
+                    description="允许在后台通过待审核讨论与回复。",
+                    required_permissions=("admin.approval.view",),
+                ),
+                PermissionDefinition(
+                    code="admin.approval.reject",
+                    label="拒绝审核内容",
+                    section="moderation",
+                    section_label="审核与举报",
+                    module_id="approval",
+                    icon="fas fa-ban",
+                    description="允许在后台拒绝待审核讨论与回复并填写审核反馈。",
+                    required_permissions=("admin.approval.view",),
+                ),
+            ),
             admin_pages=(
                 AdminPageDefinition(
                     path="/admin/approval",
@@ -1146,6 +1189,32 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     default_value=True,
                 ),
             ),
+            event_listeners=(
+                EventListenerDefinition(
+                    event="DiscussionApprovedEvent",
+                    listener="handle_discussion_approved",
+                    module_id="approval",
+                    description="讨论审核通过后通知作者、刷新标签统计并写入讨论时间线。",
+                ),
+                EventListenerDefinition(
+                    event="DiscussionRejectedEvent",
+                    listener="handle_discussion_rejected",
+                    module_id="approval",
+                    description="讨论审核拒绝后通知作者并写入讨论时间线。",
+                ),
+                EventListenerDefinition(
+                    event="PostApprovedEvent",
+                    listener="handle_post_approved",
+                    module_id="approval",
+                    description="回复审核通过后通知作者、刷新标签统计并写入讨论时间线。",
+                ),
+                EventListenerDefinition(
+                    event="PostRejectedEvent",
+                    listener="handle_post_rejected",
+                    module_id="approval",
+                    description="回复审核拒绝后通知作者并写入讨论时间线。",
+                ),
+            ),
         )
     )
 
@@ -1156,6 +1225,27 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
             description="帖子举报、处理状态和管理后台举报流。",
             category="feature",
             dependencies=("discussions", "users"),
+            permissions=(
+                PermissionDefinition(
+                    code="admin.flag.view",
+                    label="查看举报队列",
+                    section="moderation",
+                    section_label="审核与举报",
+                    module_id="flags",
+                    icon="fas fa-flag",
+                    description="允许在后台查看帖子举报记录。",
+                ),
+                PermissionDefinition(
+                    code="admin.flag.resolve",
+                    label="处理帖子举报",
+                    section="moderation",
+                    section_label="审核与举报",
+                    module_id="flags",
+                    icon="fas fa-gavel",
+                    description="允许在后台把帖子举报标记为已处理或已忽略。",
+                    required_permissions=("admin.flag.view",),
+                ),
+            ),
             admin_pages=(
                 AdminPageDefinition(
                     path="/admin/flags",
@@ -1365,20 +1455,6 @@ def _register_builtin_modules(registry: ForumRegistry) -> None:
                     description="当你的账号被封禁或解除封禁时通知你。",
                     category="notification",
                     default_value=True,
-                ),
-            ),
-            event_listeners=(
-                EventListenerDefinition(
-                    event="DiscussionApprovedEvent",
-                    listener="handle_discussion_approved",
-                    module_id="notifications",
-                    description="讨论审核通过后通知作者。",
-                ),
-                EventListenerDefinition(
-                    event="PostApprovedEvent",
-                    listener="handle_post_approved",
-                    module_id="notifications",
-                    description="回复审核通过后通知作者。",
                 ),
             ),
         )

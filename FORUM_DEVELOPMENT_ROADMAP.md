@@ -905,6 +905,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：`approval` 模块的 registry 元数据已补齐审核通过/拒绝四类事件监听定义，审核通知/标签统计/时间线消费不再错误地挂在 `notifications` 模块名下；模块中心现在开始更准确反映审核能力的真实边界，为阶段 4 的内置模块迁移闭环继续收口。
 - 已完成：`approval` 与 `flags` 模块已补齐后台审核/举报权限注册定义，模块中心与权限注册化开始能够显式暴露“查看审核队列 / 通过 / 拒绝 / 查看举报 / 处理举报”这组现有后台能力；审核与举报模块因此开始从“已有后台页”进一步收口到“权限、页面、事件元数据一致归属”的模块闭环。
 - 已完成：后台审核队列与举报处理接口已接入 `admin.approval.* / admin.flag.*` 权限码校验，不再只是 `staff` 兜底；`approval/flags` 模块的权限注册开始从“可展示元数据”推进到“实际控制后台行为”，阶段 1 的权限注册化因此真正落到审核与举报主链路。
+- 已完成：论坛 registry 新增按前缀导出权限码 helper，`init_groups` 与 staff 默认权限开始复用 registry 派生 `admin.approval.* / admin.flag.*` 这组后台治理权限；审核/举报模块的默认 Admin 权限同步因此不再继续把同一组权限硬写在 registry、用户服务和初始化命令三处，阶段 1 的权限注册化开始进一步收口到“注册即同步”的单一来源。
 - 已完成：通知页新增 `useNotificationBulkActions`，把“全部标记已读 / 清除已读 / 分组标记 / 分组清除”这组批量动作从 `useNotificationPage` 中拆出，并补上独立 Node 测试覆盖确认弹窗与 filtered action 分支；通知页 page composable 开始和详情页动作层拆分类似，继续从页面状态层向独立动作层收口。
 - 已完成：通知页新增 `useNotificationItemActions`，把单条通知的已读标记、删除确认与点击跳转从 `useNotificationPage` 中拆出，并补上独立 Node 测试覆盖“未读先标已读再跳转”和删除确认分支；通知页动作层继续从“批量动作”扩展到“单项动作”，page composable 开始收敛为状态与动作装配层。
 - 已完成：搜索结果页视图脚本区新增 `useSearchResultsViewModel` 装配层，hero pill/title、统计卡片、可见分组过滤和页面 meta watch 从 `SearchResultsView.vue` 收口到单一 composable，并补上 `searchMeta` helper 测试；搜索页开始和 discussion list/detail、profile 一样进入统一的 view-model 页面组织方式。

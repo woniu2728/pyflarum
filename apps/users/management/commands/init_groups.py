@@ -3,6 +3,7 @@
 """
 from django.core.management.base import BaseCommand
 from apps.users.models import Group, Permission
+from apps.users.services import UserService
 
 
 class Command(BaseCommand):
@@ -83,6 +84,7 @@ class Command(BaseCommand):
             'viewUserList',
             'searchUsers',
         ]
+        admin_permissions.extend(sorted(UserService.get_staff_group_managed_forum_permissions()))
 
         admin_group = Group.objects.get(id=1)
         for perm in admin_permissions:
