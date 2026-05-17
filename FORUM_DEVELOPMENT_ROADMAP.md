@@ -988,6 +988,7 @@ GET /api/discussions/:id/posts?after=123&limit=20
 - 已完成：前端通知 renderer 已补齐 `moduleId` 归属元数据，模块中心页现在会同时展示通知类型与通知 renderer 快照，并按模块筛选展示前端通知展示/跳转接入面；阶段 4 的 `notifications / likes / mentions / approval` 通知链路因此从“后端声明类型”进一步收口到“类型与前端 renderer 归属一致”的窄闭环，没有提前扩成新的通知协议或聚合模型。
 - 已完成：讨论流里的 `following` 列表过滤和 `is:following` 搜索过滤已从 `discussions` 元数据归属修正到 `subscriptions` 模块，模块中心、registry 快照与回归测试现在开始更准确反映“关注流/关注过滤属于订阅能力”这一边界；阶段 4 的 `subscriptions` 模块因此继续从“只有偏好与事件监听”推进到“过滤入口归属一致”的窄收口，但没有提前扩成新的关注模型或通知聚合行为。
 - 已完成：讨论详情页移动端主路径已补齐固定底部操作条与专注编辑态，`DiscussionMobileActions` 现在提供“回复 / 关注 / 分享 / 更多”四个主入口，现有编辑/管理动作继续收口到更多菜单，且手机端 reply/edit composer 打开时会隐藏站点头部与公告进入专注编辑模式；阶段 4 最后一条“移动端详情页主路径更清晰”验收口径因此闭合，没有额外扩到通知聚合、个人页 IA 或新的后端协议。
+- 已完成：讨论详情帖子流已开始切到阶段 5 的窗口协议，后端 `/api/discussions/:id/posts` 现在除旧 `page` 外同步支持 `near / before / after` 三种窗口查询，并返回 `current_start/current_end/has_previous/has_more` 元数据；前端 `useDiscussionPostStreamState` 也已改为按楼层窗口边界继续前后加载，而不是继续把 `near` 映射成页码。这个切片先只收口 PostStream 协议本身，没有提前扩成虚拟列表、Scrubber 重做或实时“有新回复”提示。
 - 已完成：后端新增统一 `ResourceQueryOptions` / `fields[...]` / `include` 解析层，讨论、帖子、标签、通知四条主读接口已开始通过同一套资源查询协议裁剪注册字段并显式展开关系，阶段 2 的 Resource API 已从“能挂字段”推进到“主接口可查询”的实际形态。
 - 已完成：后端 `ResourceRegistry` 新增资源级预加载协议，注册字段与关系现在可以声明 `select_related/prefetch_related` 依赖；discussion / post / notification 主读接口已接入统一预加载计划并补齐查询回归测试，阶段 2 的 Resource API 开始从“可查询”继续推进到“可扩展且可控查询成本”。
 - 已完成：搜索 API 与用户列表/详情接口已接入统一资源查询与预加载协议，`search_discussion/search_post/search_user/user_detail` 现在开始共用 `fields[...]` 与 registry 预加载计划，搜索用户结果和用户列表的主用户组查询也已补齐回归测试，阶段 2 的 Resource API 覆盖面进一步扩到搜索与用户域。

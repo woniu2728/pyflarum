@@ -29,8 +29,8 @@ export function useDiscussionPostStreamState({
   const loading = ref(true)
   const loadingMore = ref(false)
   const loadingPrevious = ref(false)
-  const firstLoadedPage = ref(1)
-  const lastLoadedPage = ref(1)
+  const firstLoadedPostNumber = ref(0)
+  const lastLoadedPostNumber = ref(0)
   const totalPosts = ref(0)
   const highlightedPostNumber = ref(null)
   const currentVisiblePostNumber = ref(1)
@@ -42,8 +42,8 @@ export function useDiscussionPostStreamState({
   let lastReportedReadNumber = 0
 
   const targetNearPost = nearRouteState.near
-  const hasPrevious = computed(() => firstLoadedPage.value > 1)
-  const hasMore = computed(() => totalPosts.value > 0 && lastLoadedPage.value * pageLimit < totalPosts.value)
+  const hasPrevious = computed(() => Boolean(firstLoadedPostNumber.value > 1))
+  const hasMore = computed(() => Boolean(totalPosts.value > 0 && lastLoadedPostNumber.value > 0 && lastLoadedPostNumber.value < totalPosts.value))
   const maxPostNumber = computed(() => {
     return discussion.value?.last_post_number || discussion.value?.comment_count || 1
   })
@@ -103,7 +103,7 @@ export function useDiscussionPostStreamState({
   }
 
   async function loadInitialPosts() {
-    const data = await fetchPosts(1, targetNearPost.value)
+    const data = await fetchPosts({ near: targetNearPost.value || 1 })
     replacePosts(data)
 
     if (targetNearPost.value) {
@@ -111,45 +111,43 @@ export function useDiscussionPostStreamState({
     }
   }
 
-  async function fetchPosts(page, near = null) {
-    const params = {
-      page,
+  async function fetchPosts(params = {}) {
+    const requestParams = {
       limit: pageLimit,
+      ...params,
     }
 
-    if (near) {
-      params.near = near
-    }
-
-    return api.get(`/discussions/${route.params.id}/posts`, { params })
+    return api.get(`/discussions/${route.params.id}/posts`, { params: requestParams })
   }
 
   function replacePosts(data) {
     const items = unwrapList(data).map(normalizePost)
     postIds.value = collectPostIds(items)
-    firstLoadedPage.value = data.page || 1
-    lastLoadedPage.value = data.page || 1
+    firstLoadedPostNumber.value = Number(data.current_start || items[0]?.number || 0)
+    lastLoadedPostNumber.value = Number(data.current_end || items[items.length - 1]?.number || 0)
     totalPosts.value = data.total || items.length
   }
 
   function appendPosts(data) {
     const items = unwrapList(data).map(normalizePost)
     mergePostIds(collectPostIds(items))
-    lastLoadedPage.value = data.page || lastLoadedPage.value + 1
+    lastLoadedPostNumber.value = Number(data.current_end || items[items.length - 1]?.number || lastLoadedPostNumber.value)
     totalPosts.value = data.total || totalPosts.value
   }
 
   function prependPosts(data) {
     const items = unwrapList(data).map(normalizePost)
     mergePostIds(collectPostIds(items), { prepend: true })
-    firstLoadedPage.value = data.page || Math.max(1, firstLoadedPage.value - 1)
+    firstLoadedPostNumber.value = Number(data.current_start || items[0]?.number || firstLoadedPostNumber.value)
     totalPosts.value = data.total || totalPosts.value
   }
 
   async function loadMorePosts() {
+    if (!hasMore.value) return
+
     loadingMore.value = true
     try {
-      const data = await fetchPosts(lastLoadedPage.value + 1)
+      const data = await fetchPosts({ after: lastLoadedPostNumber.value })
       appendPosts(data)
     } finally {
       loadingMore.value = false
@@ -161,7 +159,7 @@ export function useDiscussionPostStreamState({
 
     loadingPrevious.value = true
     try {
-      const data = await fetchPosts(firstLoadedPage.value - 1)
+      const data = await fetchPosts({ before: firstLoadedPostNumber.value })
       prependPosts(data)
     } finally {
       loadingPrevious.value = false
@@ -198,8 +196,8 @@ export function useDiscussionPostStreamState({
 
   function resetPostStream() {
     postIds.value = []
-    firstLoadedPage.value = 1
-    lastLoadedPage.value = 1
+    firstLoadedPostNumber.value = 0
+    lastLoadedPostNumber.value = 0
     totalPosts.value = 0
     highlightedPostNumber.value = null
     currentVisiblePostNumber.value = normalizePostNumber(targetNearPost.value) || 1
@@ -311,7 +309,7 @@ export function useDiscussionPostStreamState({
     const mergedPost = resourceStore.upsert('posts', newPost)
     mergePostIds([mergedPost.id])
     totalPosts.value = Math.max(totalPosts.value + 1, posts.value.length)
-    lastLoadedPage.value = Math.max(lastLoadedPage.value, Math.ceil(totalPosts.value / pageLimit))
+    lastLoadedPostNumber.value = Math.max(lastLoadedPostNumber.value, Number(newPost.number || 0))
     lastReportedReadNumber = Math.max(lastReportedReadNumber, newPost.number || 0)
     const lastReadPostNumber = Math.max(Number(discussion.value.last_read_post_number || 0), newPost.number || 0)
     const lastPostNumber = Math.max(discussion.value.last_post_number || 0, newPost.number || 0)

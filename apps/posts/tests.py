@@ -50,6 +50,52 @@ class PostPaginationTests(TestCase):
 
         self.assertEqual(page, 3)
 
+    def test_get_post_window_supports_near_before_after(self):
+        discussion = DiscussionService.create_discussion(
+            title="Windowed pagination",
+            content="First post",
+            user=self.user,
+        )
+
+        for index in range(2, 46):
+            PostService.create_post(
+                discussion_id=discussion.id,
+                content=f"Reply {index}",
+                user=self.user,
+            )
+
+        near_window = PostService.get_post_window(
+            discussion_id=discussion.id,
+            near=21,
+            limit=5,
+            user=self.user,
+        )
+        self.assertEqual([post.number for post in near_window.posts], [21, 22, 23, 24, 25])
+        self.assertEqual(near_window.current_start, 21)
+        self.assertEqual(near_window.current_end, 25)
+        self.assertTrue(near_window.has_previous)
+        self.assertTrue(near_window.has_more)
+
+        before_window = PostService.get_post_window(
+            discussion_id=discussion.id,
+            before=21,
+            limit=5,
+            user=self.user,
+        )
+        self.assertEqual([post.number for post in before_window.posts], [16, 17, 18, 19, 20])
+        self.assertEqual(before_window.current_start, 16)
+        self.assertEqual(before_window.current_end, 20)
+
+        after_window = PostService.get_post_window(
+            discussion_id=discussion.id,
+            after=25,
+            limit=5,
+            user=self.user,
+        )
+        self.assertEqual([post.number for post in after_window.posts], [26, 27, 28, 29, 30])
+        self.assertEqual(after_window.current_start, 26)
+        self.assertEqual(after_window.current_end, 30)
+
     def test_create_post_retries_on_transient_sqlite_lock(self):
         discussion = DiscussionService.create_discussion(
             title="Retry post discussion",
@@ -265,6 +311,43 @@ class PostFlagApiTests(TestCase):
         target = next(item for item in response.json()["data"] if item["id"] == self.post.id)
         self.assertTrue(target["viewer_has_open_flag"])
         self.assertEqual(target["open_flag_count"], 0)
+
+    def test_discussion_posts_api_supports_windowed_queries(self):
+        for index in range(3, 13):
+            PostService.create_post(
+                discussion_id=self.discussion.id,
+                content=f"窗口回复 {index}",
+                user=self.reporter,
+            )
+
+        near_response = self.client.get(
+            f"/api/discussions/{self.discussion.id}/posts",
+            {"near": 6, "limit": 4},
+            **self.auth_header(),
+        )
+        self.assertEqual(near_response.status_code, 200, near_response.content)
+        near_payload = near_response.json()
+        self.assertEqual([item["number"] for item in near_payload["data"]], [6, 7, 8, 9])
+        self.assertEqual(near_payload["current_start"], 6)
+        self.assertEqual(near_payload["current_end"], 9)
+        self.assertTrue(near_payload["has_previous"])
+        self.assertTrue(near_payload["has_more"])
+
+        before_response = self.client.get(
+            f"/api/discussions/{self.discussion.id}/posts",
+            {"before": 6, "limit": 3},
+            **self.auth_header(),
+        )
+        self.assertEqual(before_response.status_code, 200, before_response.content)
+        self.assertEqual([item["number"] for item in before_response.json()["data"]], [3, 4, 5])
+
+        after_response = self.client.get(
+            f"/api/discussions/{self.discussion.id}/posts",
+            {"after": 9, "limit": 3},
+            **self.auth_header(),
+        )
+        self.assertEqual(after_response.status_code, 200, after_response.content)
+        self.assertEqual([item["number"] for item in after_response.json()["data"]], [10, 11, 12])
 
     def test_staff_can_resolve_flags_from_forum_post_flow(self):
         self.client.post(

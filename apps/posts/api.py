@@ -212,6 +212,8 @@ def list_posts(
     page: int = 1,
     limit: int = 20,
     near: Optional[int] = None,
+    before: Optional[int] = None,
+    after: Optional[int] = None,
 ):
     """
     获取帖子列表
@@ -223,31 +225,33 @@ def list_posts(
     user = get_optional_user(request)
     page, limit = PaginationService.normalize(page, limit)
     resource_options = parse_resource_query_options(request, "post")
-    if near:
-        page = PostService.get_page_for_near_post(
-            discussion_id=discussion_id,
-            near=near,
-            limit=limit,
-            user=user,
-        )
-
-    posts, total = PostService.get_post_list(
+    try:
+        window = PostService.get_post_window(
         discussion_id=discussion_id,
-        page=page,
         limit=limit,
+        page=page,
+        near=near,
+        before=before,
+        after=after,
         user=user,
         preload=lambda queryset: _apply_post_resource_preloads(
             queryset,
             user=user,
             resource_options=resource_options,
         ),
-    )
+        )
+    except ValueError as error:
+        return api_error(str(error), status=400)
 
     response_payload = {
-        "total": total,
-        "page": page,
+        "total": window.total,
+        "page": window.page,
         "limit": limit,
-        "data": [_serialize_post(post, user, resource_options=resource_options) for post in posts],
+        "current_start": window.current_start,
+        "current_end": window.current_end,
+        "has_previous": window.has_previous,
+        "has_more": window.has_more,
+        "data": [_serialize_post(post, user, resource_options=resource_options) for post in window.posts],
     }
     return JsonResponse(response_payload)
 

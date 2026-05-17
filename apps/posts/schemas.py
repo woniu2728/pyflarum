@@ -130,4 +130,8 @@ class PostListSchema(BaseModel):
     total: int
     page: int
     limit: int
+    current_start: int = 1
+    current_end: int = 1
+    has_previous: bool = False
+    has_more: bool = False
     data: List[PostOutSchema]
