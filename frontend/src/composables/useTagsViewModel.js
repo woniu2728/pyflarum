@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useTagsPage } from '@/composables/useTagsPage'
 import { useTagsMetaState } from '@/composables/useTagsMetaState'
 import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
+import { useTagsViewBindings } from '@/composables/useTagsViewBindings'
 
 export function useTagsViewModel({
   authStore,
@@ -32,9 +33,23 @@ export function useTagsViewModel({
     })
   }
 
+  const viewBindings = useTagsViewBindings({
+    authStore,
+    cloudTags: pageState.cloudTags,
+    emptyStateText: metaState.emptyStateText,
+    handleStartDiscussion,
+    heroDescriptionText: metaState.heroDescriptionText,
+    heroTitleText: metaState.heroTitleText,
+    loading: pageState.loading,
+    loadingStateText: metaState.loadingStateText,
+    showStartDiscussionButton,
+    tags: pageState.tags,
+  })
+
   return {
     ...pageState,
     ...metaState,
+    ...viewBindings,
     handleStartDiscussion,
     showStartDiscussionButton,
   }

@@ -3,31 +3,31 @@
     <ForumPageWithSidebar>
       <template #sidebar>
         <DiscussionListSidebarStartButton
-          v-if="showStartDiscussionButton"
+          v-if="sidebarBindings.showStartDiscussionButton"
           :current-tag="null"
           :start-discussion-button-style="{}"
-          @click="handleStartDiscussion"
+          @click="sidebarEvents.startDiscussion"
         />
 
-        <ForumPrimaryNav :auth-store="authStore" :notification-store="null" active-key="tags" />
+        <ForumPrimaryNav :auth-store="sidebarBindings.authStore" :notification-store="null" active-key="tags" />
       </template>
 
       <main class="tags-content">
-        <ForumHeroPanel :title="heroTitleText" :description="heroDescriptionText" variant="default" />
+        <ForumHeroPanel v-bind="heroBindings" />
 
-        <ForumStateBlock v-if="loading">{{ loadingStateText }}</ForumStateBlock>
-        <ForumStateBlock v-else-if="tags.length === 0">{{ emptyStateText }}</ForumStateBlock>
+        <ForumStateBlock v-if="contentBindings.loading">{{ contentBindings.loadingStateText }}</ForumStateBlock>
+        <ForumStateBlock v-else-if="contentBindings.tags.length === 0">{{ contentBindings.emptyStateText }}</ForumStateBlock>
 
         <template v-else>
           <div class="tag-grid">
             <ForumTagTile
-              v-for="tag in tags"
+              v-for="tag in contentBindings.tags"
               :key="tag.id"
               :tag="tag"
             />
           </div>
 
-          <ForumTagCloud v-if="cloudTags.length" :tags="cloudTags" />
+          <ForumTagCloud v-if="contentBindings.cloudTags.length" :tags="contentBindings.cloudTags" />
         </template>
       </main>
     </ForumPageWithSidebar>
@@ -53,15 +53,10 @@ const composerStore = useComposerStore()
 const forumStore = useForumStore()
 const router = useRouter()
 const {
-  cloudTags,
-  emptyStateText,
-  handleStartDiscussion,
-  heroDescriptionText,
-  heroTitleText,
-  loading,
-  loadingStateText,
-  showStartDiscussionButton,
-  tags,
+  contentBindings,
+  heroBindings,
+  sidebarBindings,
+  sidebarEvents,
 } = useTagsViewModel({
   authStore,
   composerStore,
