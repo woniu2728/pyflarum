@@ -102,9 +102,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import ForumInlineMessage from '@/components/forum/ForumInlineMessage.vue'
-import { getUiCopy } from '@/forum/registry'
+import { useProfileSecuritySectionState } from '@/composables/useProfileSecuritySectionState'
 
 const props = defineProps({
   user: {
@@ -140,58 +140,28 @@ const props = defineProps({
     default: ''
   }
 })
-const securitySectionTitleText = computed(() => getUiCopy({
-  surface: 'profile-security-section-title',
-})?.text || '账号安全')
-const securitySectionDescriptionText = computed(() => getUiCopy({
-  surface: 'profile-security-section-description',
-})?.text || '查看邮箱验证状态，并修改登录密码。')
-const emailSectionTitleText = computed(() => getUiCopy({
-  surface: 'profile-security-email-section-title',
-})?.text || '邮箱验证')
-const emailSectionDescriptionText = computed(() => getUiCopy({
-  surface: 'profile-security-email-section-description',
-})?.text || '验证邮箱后，可确保找回密码和安全通知正常送达。')
-const emailStatusText = computed(() => getUiCopy({
-  surface: 'profile-security-status-label',
-  isEmailConfirmed: props.user.is_email_confirmed,
-})?.text || (props.user.is_email_confirmed ? '已验证' : '未验证'))
-const emailHelpText = computed(() => getUiCopy({
-  surface: 'profile-security-email-help',
-  isEmailConfirmed: props.user.is_email_confirmed,
-})?.text || (props.user.is_email_confirmed ? '当前邮箱已通过验证。' : '当前邮箱尚未验证，你可以重新发送验证邮件。'))
-const passwordSectionTitleText = computed(() => getUiCopy({
-  surface: 'profile-security-password-section-title',
-})?.text || '修改密码')
-const passwordSectionDescriptionText = computed(() => getUiCopy({
-  surface: 'profile-security-password-section-description',
-})?.text || '修改后，下次登录请使用新密码。')
-const oldPasswordLabelText = computed(() => getUiCopy({
-  surface: 'profile-security-old-password-label',
-})?.text || '当前密码')
-const newPasswordLabelText = computed(() => getUiCopy({
-  surface: 'profile-security-new-password-label',
-})?.text || '新密码')
-const confirmPasswordLabelText = computed(() => getUiCopy({
-  surface: 'profile-security-confirm-password-label',
-})?.text || '确认新密码')
-const resendVerificationButtonText = computed(() => getUiCopy({
-  surface: 'profile-security-resend-button',
-  sending: props.verificationSending,
-})?.text || (props.verificationSending ? '发送中...' : '重新发送验证邮件'))
-const oldPasswordPlaceholderText = computed(() => getUiCopy({
-  surface: 'profile-security-old-password-placeholder',
-})?.text || '请输入当前密码')
-const newPasswordPlaceholderText = computed(() => getUiCopy({
-  surface: 'profile-security-new-password-placeholder',
-})?.text || '请输入新密码')
-const confirmPasswordPlaceholderText = computed(() => getUiCopy({
-  surface: 'profile-security-confirm-password-placeholder',
-})?.text || '请再次输入新密码')
-const changePasswordButtonText = computed(() => getUiCopy({
-  surface: 'profile-security-submit-button',
-  submitting: props.changingPassword,
-})?.text || (props.changingPassword ? '提交中...' : '更新密码'))
+const {
+  changePasswordButtonText,
+  confirmPasswordLabelText,
+  confirmPasswordPlaceholderText,
+  emailHelpText,
+  emailSectionDescriptionText,
+  emailSectionTitleText,
+  emailStatusText,
+  newPasswordLabelText,
+  newPasswordPlaceholderText,
+  oldPasswordLabelText,
+  oldPasswordPlaceholderText,
+  passwordSectionDescriptionText,
+  passwordSectionTitleText,
+  resendVerificationButtonText,
+  securitySectionDescriptionText,
+  securitySectionTitleText,
+} = useProfileSecuritySectionState({
+  changingPassword: toRef(props, 'changingPassword'),
+  user: toRef(props, 'user'),
+  verificationSending: toRef(props, 'verificationSending'),
+})
 
 defineEmits(['resend-verification', 'change-password', 'update-password-form'])
 </script>
