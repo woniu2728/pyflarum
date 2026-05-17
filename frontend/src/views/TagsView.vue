@@ -3,7 +3,7 @@
     <ForumPageWithSidebar>
       <template #sidebar>
         <DiscussionListSidebarStartButton
-          v-if="!authStore.isAuthenticated || authStore.canStartDiscussion"
+          v-if="showStartDiscussionButton"
           :current-tag="null"
           :start-discussion-button-style="{}"
           @click="handleStartDiscussion"
@@ -35,7 +35,6 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useComposerStore } from '@/stores/composer'
 import { useForumStore } from '@/stores/forum'
@@ -47,65 +46,28 @@ import ForumStateBlock from '@/components/forum/ForumStateBlock.vue'
 import ForumTagCloud from '@/components/forum/ForumTagCloud.vue'
 import ForumTagTile from '@/components/forum/ForumTagTile.vue'
 import DiscussionListSidebarStartButton from '@/components/discussion/DiscussionListSidebarStartButton.vue'
-import { getEmptyState, getStateBlock, getUiCopy } from '@/forum/registry'
-import { useStartDiscussionAction } from '@/composables/useStartDiscussionAction'
-import { useTagsPage } from '@/composables/useTagsPage'
+import { useTagsViewModel } from '@/composables/useTagsViewModel'
 
 const authStore = useAuthStore()
 const composerStore = useComposerStore()
 const forumStore = useForumStore()
 const router = useRouter()
-const { startDiscussion } = useStartDiscussionAction({
+const {
+  cloudTags,
+  emptyStateText,
+  handleStartDiscussion,
+  heroDescriptionText,
+  heroTitleText,
+  loading,
+  loadingStateText,
+  showStartDiscussionButton,
+  tags,
+} = useTagsViewModel({
   authStore,
   composerStore,
-  router
+  forumStore,
+  router,
 })
-
-const { cloudTags, loading, tags } = useTagsPage()
-const heroTitleText = computed(() => getUiCopy({
-  surface: 'tags-page-hero-title',
-})?.text || '全部标签')
-const heroDescriptionText = computed(() => getUiCopy({
-  surface: 'tags-page-hero-description',
-  tagCount: tags.value.length,
-})?.text || (tags.value.length
-  ? `浏览 ${tags.value.length} 个论坛标签，按主题发现相关讨论。`
-  : '浏览论坛标签，按主题发现相关讨论。'))
-const emptyStateText = computed(() => {
-  const emptyState = getEmptyState({
-    surface: 'tags-page-empty',
-    tags: tags.value,
-  })
-
-  return emptyState?.text || '暂无标签'
-})
-const loadingStateText = computed(() => {
-  const stateBlock = getStateBlock({
-    surface: 'tags-page-loading',
-    loading: loading.value,
-    tags: tags.value,
-  })
-
-  return stateBlock?.text || '加载中...'
-})
-
-watch(
-  tags,
-  () => {
-    forumStore.setPageMeta({
-      title: heroTitleText.value,
-      description: heroDescriptionText.value,
-      canonicalUrl: '/tags',
-    })
-  },
-  { immediate: true }
-)
-
-function handleStartDiscussion() {
-  startDiscussion({
-    source: 'tags'
-  })
-}
 </script>
 
 <style scoped>
